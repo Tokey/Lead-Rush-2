@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 153b0e5580c9ba24d96fe69fa7b64037, type: 3}
+  m_Name: WD_AK74N
+  m_EditorClassIdentifier: LR2.Runtime::LR2.Weapons.WeaponDefinition
+  displayName: AK-74N
+  shortName: AK-74N
+  icon: {fileID: 0}
+  weaponClass: 0
+  rpm: 650
+  allowAuto: 1
+  allowBurst: 0
+  burstCount: 3
+  pellets: 1
+  magazineSize: 30
+  startingReserve: 120
+  maxReserve: 210
+  damageSteps:
+  - maxDistance: 19.84
+    damage: 30
+  - maxDistance: 40
+    damage: 26
+  - maxDistance: 999
+    damage: 22
+  headMultiplier: 1.5
+  neckMultiplier: 1.2
+  upperTorsoMultiplier: 1.1
+  lowerTorsoMultiplier: 1
+  limbMultiplier: 0.9
+  maxRange: 250
+  effectiveRange: 32
+  penetrationDepth: 0.25
+  penetrationDamageScale: 0.65
+  sprintToFireTime: 0.24
+  adsTime: 0.26
+  adsFovMultiplier: 0.72
+  equipTime: 0.55
+  reloadTime: 2.2
+  emptyReloadTime: 2.7
+  hipSpread: 2.6
+  adsSpread: 0.06
+  moveSpreadAdd: 1.6
+  airSpreadAdd: 5
+  crouchSpreadMultiplier: 0.75
+  bloomPerShot: 0.4
+  maxBloom: 2.8
+  bloomRecovery: 7
+  cameraKick: {x: 0.2, y: 0.12}
+  adsKickMultiplier: 0.7
+  audibleRadius: 70
+  suppressed: 0
+  audio: {fileID: 11400000, guid: dfe04486210241e479c7bc0048d7b970, type: 2}
+  tracerEvery: 1
+  shellPrefab: {fileID: 7496392848592200594, guid: c114d37c6341b414aa4cb01b076e2836, type: 3}
+  muzzleFlashPrefab: {fileID: 8025995091943808216, guid: 1b26fa37b150091409de8b6e8aea82d1, type: 3}

@@ -1,0 +1,385 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bccebf43edaa444bbbbf9f9128f5d4a, type: 3}
+  m_Name: LR2CommonSounds
+  m_EditorClassIdentifier: LR2.Runtime::LR2.Audio.LR2CommonSounds
+  hitmarker:
+    clips:
+    - {fileID: 8300000, guid: be78224abd0a7ec4cb86464044a3e1ee, type: 3}
+    - {fileID: 8300000, guid: 7c80d62eef261f04297321c4dce2371b, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.04}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  hitmarkerHeadshot:
+    clips:
+    - {fileID: 8300000, guid: 3f914669e5e1a1c4892792045b79e5ce, type: 3}
+    volume: 1
+    pitch: {x: 0.98, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  killConfirm:
+    clips:
+    - {fileID: 8300000, guid: 97537e6ca0df0b644aa348f6c9c478c8, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  hitmarkerArmor:
+    clips:
+    - {fileID: 8300000, guid: 92611e0f82ffbde499886da63ca70222, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  bulletWhizz:
+    clips:
+    - {fileID: 8300000, guid: 4354c1ea661435645a03c363b9d409c5, type: 3}
+    - {fileID: 8300000, guid: d1bdc44ff920df040ba516720b460938, type: 3}
+    - {fileID: 8300000, guid: 410b8012635f01549a86c4b2b6da77e7, type: 3}
+    - {fileID: 8300000, guid: 62394d60d635fc94abd3794824bd2965, type: 3}
+    - {fileID: 8300000, guid: 1461d1b3c2b336c458603d52513a337a, type: 3}
+    - {fileID: 8300000, guid: 0236e50881ba84e4ab5a868ea4fec428, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 6
+    category: 1
+    priority: 128
+  bulletCrack:
+    clips:
+    - {fileID: 8300000, guid: 9283c9a9079a4a84eaf25b14a3000348, type: 3}
+    - {fileID: 8300000, guid: a0b6d65fe84be5e4cb7dbf0d90be3d6d, type: 3}
+    - {fileID: 8300000, guid: 446f66e723d37f74fa32e74d601e3f0d, type: 3}
+    - {fileID: 8300000, guid: 1c9b1bdbbcd5a71469a56a40284d35c9, type: 3}
+    - {fileID: 8300000, guid: a6206d0b333e50541a26d25b4c660167, type: 3}
+    - {fileID: 8300000, guid: 4d25eb575e2bef24d841b6ee0d444769, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 6
+    category: 1
+    priority: 128
+  playerHurt:
+    clips:
+    - {fileID: 8300000, guid: 60d8828893082b749b9167ee4b8be678, type: 3}
+    - {fileID: 8300000, guid: 7c7febab9d90f8e4cb3adc23edf693f5, type: 3}
+    - {fileID: 8300000, guid: 5ca107450bfd9e346ab627cb6458d2dc, type: 3}
+    - {fileID: 8300000, guid: e86f23f4dfffb364d81af5708cc5e460, type: 3}
+    - {fileID: 8300000, guid: 83dc8e60c08730f4996cc0e80ae2415d, type: 3}
+    - {fileID: 8300000, guid: e592f8c239f0e1a4eaa9f257908fb043, type: 3}
+    volume: 0.9
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 6
+    priority: 128
+  lowHealthLoop:
+    clips:
+    - {fileID: 8300000, guid: e6a3176c381f4f649a8777a27a809dce, type: 3}
+    - {fileID: 8300000, guid: cf6fcdef5aa3aab4ca2f8756f17f0935, type: 3}
+    - {fileID: 8300000, guid: 7b7f42818927b3449bf9533a95cd96f7, type: 3}
+    - {fileID: 8300000, guid: c02ce1964d059f24b864e61b5f0d6a72, type: 3}
+    - {fileID: 8300000, guid: 2b27688446b83d940b0d8ca0b9d01d76, type: 3}
+    - {fileID: 8300000, guid: 00f3d2d0838a10f4d926e697a1a51701, type: 3}
+    volume: 0.6
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 0
+    priority: 128
+  playerDeath:
+    clips:
+    - {fileID: 8300000, guid: 98e2256677b9fc849b109aebeac917bf, type: 3}
+    - {fileID: 8300000, guid: 7d5d1e719cdda3b4ab44a5e9f3f00edf, type: 3}
+    - {fileID: 8300000, guid: 3be0253dbd8977243a8471934e31c9e4, type: 3}
+    - {fileID: 8300000, guid: df41c0eb5cbd145458587ce2c5d894b8, type: 3}
+    - {fileID: 8300000, guid: b29e059f88f1fbb459660fe13b5f0948, type: 3}
+    - {fileID: 8300000, guid: d85b7a47deedb3b459b86b03b0afb414, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 6
+    priority: 128
+  bodyFall:
+    clips:
+    - {fileID: 8300000, guid: 5c14bef20fca9c649a72cb0ed0b1e176, type: 3}
+    - {fileID: 8300000, guid: eebecb80b98a581418a940884843be43, type: 3}
+    - {fileID: 8300000, guid: b5681a29a547f5e4a8715496fec92be7, type: 3}
+    - {fileID: 8300000, guid: 41a40475993f0f146985394c67da1413, type: 3}
+    - {fileID: 8300000, guid: 5ef8af6e510d3a846b60ed7ccf44f23e, type: 3}
+    - {fileID: 8300000, guid: 08cd41057e6df764785b53c3481edae2, type: 3}
+    volume: 0.9
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 25
+    category: 0
+    priority: 128
+  painGrunt:
+    clips:
+    - {fileID: 8300000, guid: f1539dd5a5cf01f49a5110fcff51280a, type: 3}
+    - {fileID: 8300000, guid: 6e6ca10b640ff76419aa6b28d9df0a89, type: 3}
+    - {fileID: 8300000, guid: 83d7ef238a6897c479d19c31b1fe707e, type: 3}
+    - {fileID: 8300000, guid: 0f5f71f0915ae634cacea5110756b01a, type: 3}
+    - {fileID: 8300000, guid: c6917673910330745afdc4f93f655e24, type: 3}
+    - {fileID: 8300000, guid: 37f3814c575a282449db9a136d4a6bff, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 25
+    category: 6
+    priority: 128
+  deathGrunt:
+    clips:
+    - {fileID: 8300000, guid: ae0a57a5bb60ffb4492cc3961b2a9e73, type: 3}
+    - {fileID: 8300000, guid: 3efabe708584dad4faccb5e74917e7e1, type: 3}
+    - {fileID: 8300000, guid: 63193af2102ca544fa94a9f3d6893250, type: 3}
+    - {fileID: 8300000, guid: eaaaa92d1d44a324b93273c8bf9f4c7f, type: 3}
+    - {fileID: 8300000, guid: 113757f7fcc867c4ca684dc1eb00fc01, type: 3}
+    - {fileID: 8300000, guid: 1c36d35085c060e4993669dae55011c1, type: 3}
+    volume: 0.9
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 30
+    category: 6
+    priority: 128
+  jump:
+    clips:
+    - {fileID: 8300000, guid: b83c409cf03097e43b3d3ce84f439f5c, type: 3}
+    - {fileID: 8300000, guid: e5152ff27be563043b949ccda97ecc72, type: 3}
+    - {fileID: 8300000, guid: b7a70ab11d21ffa429d4b9782959497b, type: 3}
+    - {fileID: 8300000, guid: 1fc57195f5e3c304c9cf547790b06419, type: 3}
+    - {fileID: 8300000, guid: 884c15ca9f4ed4d41b4048701e40a9c8, type: 3}
+    volume: 0.6
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 20
+    category: 2
+    priority: 128
+  land:
+    clips:
+    - {fileID: 8300000, guid: d1c4c7a51c8e14143924eac83320e4b0, type: 3}
+    - {fileID: 8300000, guid: d9542ef0ddae4054d9f599243e443f88, type: 3}
+    - {fileID: 8300000, guid: ad636306a71f14e41af1fc245b3e1836, type: 3}
+    - {fileID: 8300000, guid: e2ca93d5c0dd5644eae12c74ddfdf6f9, type: 3}
+    - {fileID: 8300000, guid: 719556c7bbced1c4aad175aea83dbbab, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 25
+    category: 2
+    priority: 128
+  slide:
+    clips:
+    - {fileID: 8300000, guid: 8c4fc9972898db74ebe02ce1d419c512, type: 3}
+    - {fileID: 8300000, guid: e593b49c24078fa4199a4bd5a87919bb, type: 3}
+    - {fileID: 8300000, guid: 6c7f009049ea06d4abb1ca498269bfc3, type: 3}
+    - {fileID: 8300000, guid: 0d29ed37e185ecc4794d0f759ff9b329, type: 3}
+    - {fileID: 8300000, guid: e6ea52796fddb9c4ab671bb3565fc2ee, type: 3}
+    - {fileID: 8300000, guid: fc58d22f5e452f546b4475086c9468cd, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 25
+    category: 2
+    priority: 128
+  mantle:
+    clips:
+    - {fileID: 8300000, guid: 4a1bb4846c783a74181054ffe6e604c4, type: 3}
+    - {fileID: 8300000, guid: 2e48a55eabe804145affb956693c95a7, type: 3}
+    - {fileID: 8300000, guid: 563b6174b4e76094ea043c592f97db6b, type: 3}
+    - {fileID: 8300000, guid: de6af45b734e631478e3f595fbc0dc9a, type: 3}
+    - {fileID: 8300000, guid: 76c97bb432fa0f64bab1958f2536f267, type: 3}
+    - {fileID: 8300000, guid: b08747240ed121146bc4b6ac15bb9add, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 20
+    category: 2
+    priority: 128
+  adsIn:
+    clips:
+    - {fileID: 8300000, guid: 5a828327c36dda7449e31d50d41bba17, type: 3}
+    volume: 0.55
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 8
+    category: 0
+    priority: 128
+  adsOut:
+    clips:
+    - {fileID: 8300000, guid: 90b3c65f03eecab47a840db8b4963044, type: 3}
+    volume: 0.45
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 8
+    category: 0
+    priority: 128
+  weaponSwap:
+    clips:
+    - {fileID: 8300000, guid: 11c7c1ba75840cd459c7c4751ae3fb71, type: 3}
+    - {fileID: 8300000, guid: 3fda0da459151bc4abe26bd2423dffcf, type: 3}
+    - {fileID: 8300000, guid: 4481833524b04aa44a0dab10ac148526, type: 3}
+    - {fileID: 8300000, guid: 754ff0b664f23d8458908ba4b0d2849a, type: 3}
+    - {fileID: 8300000, guid: 83c4b16b421529f4587ee992aba7067a, type: 3}
+    volume: 0.7
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 12
+    category: 0
+    priority: 128
+  ammoPickup:
+    clips:
+    - {fileID: 8300000, guid: 5953832620668fe45aa046187fd2451f, type: 3}
+    - {fileID: 8300000, guid: 6db1fdb73d5f4784cb38c924ec88b704, type: 3}
+    volume: 0.9
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 12
+    category: 0
+    priority: 128
+  uiHover:
+    clips:
+    - {fileID: 8300000, guid: 8b6a6a97261d8ea48a8c86abf66a44c5, type: 3}
+    volume: 0.5
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  uiClick:
+    clips:
+    - {fileID: 8300000, guid: 51e3108d6ae6f384788f46ada865cb3f, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  uiBack:
+    clips:
+    - {fileID: 8300000, guid: f8929102e945fbd4b821abe1a00a88b5, type: 3}
+    volume: 0.7
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  medal:
+    clips:
+    - {fileID: 8300000, guid: 4a1b6b482b07278448106e582ec6476a, type: 3}
+    volume: 0.9
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  matchStart:
+    clips:
+    - {fileID: 8300000, guid: 3fa7027dbe698f04887b7a457604e98e, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  victory:
+    clips: []
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 4
+    priority: 128
+  defeat:
+    clips: []
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 4
+    priority: 128
+  countdownTick:
+    clips:
+    - {fileID: 8300000, guid: 57265a33054f7b2409fddd8e3409f3a1, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 0
+    minDistance: 1.5
+    maxDistance: 10
+    category: 3
+    priority: 128
+  orbExplode:
+    clips:
+    - {fileID: 8300000, guid: 4a5b0e9ac86ff5346a8d53b17bd500a2, type: 3}
+    - {fileID: 8300000, guid: 05bbd251b60955148b70a8c6814e1aa6, type: 3}
+    - {fileID: 8300000, guid: a5fdc083c108d854282c513abbf3e740, type: 3}
+    - {fileID: 8300000, guid: 398af314f2d758d42be900032ceca1ef, type: 3}
+    - {fileID: 8300000, guid: d9ce4d45f54fd444d9e95645c87a5447, type: 3}
+    - {fileID: 8300000, guid: 1f5fd7feb23517348a380fdd3d886b64, type: 3}
+    volume: 1
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 50
+    category: 0
+    priority: 128
+  orbAlert:
+    clips:
+    - {fileID: 8300000, guid: 9fc65e6c653ab2e4183b532a972b24cf, type: 3}
+    volume: 0.8
+    pitch: {x: 0.97, y: 1.03}
+    spatialBlend: 1
+    minDistance: 1.5
+    maxDistance: 30
+    category: 0
+    priority: 128
+  ambienceLoops:
+  - {fileID: 8300000, guid: 69f49cb37ad0fbf41ac22e0897e117be, type: 3}
+  - {fileID: 8300000, guid: e712dc2f2a6c98d48bae0a70e0848653, type: 3}
+  ambienceVolume: 0.32

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0199423b9d1e57c40900bc7ce9e32db3, type: 3}
+  m_Name: BotDifficulty_Hardened
+  m_EditorClassIdentifier: LR2.Runtime::LR2.AI.BotDifficulty
+  displayName: Hardened
+  reactionTime: {x: 0.24, y: 0.38}
+  fieldOfView: 110
+  visionRange: 75
+  detectionSpeed: 1
+  hearingMultiplier: 1
+  aimSpeed: 7.8
+  initialAimError: 3.4
+  settledAimError: 0.55
+  errorDecay: 2.6
+  headshotChance: 0.22
+  fireTolerance: 3
+  aggression: 0.7
+  strafeChance: 0.62
+  strafeInterval: {x: 0.45, y: 1.2}
+  crouchPeekChance: 0.2
+  slideChance: 0.15
+  flankChance: 0.35
+  burstSize: {x: 4, y: 7}
+  burstPause: {x: 0.18, y: 0.4}
+  retreatHealth: 0.38
+  useCoverChance: 0.6

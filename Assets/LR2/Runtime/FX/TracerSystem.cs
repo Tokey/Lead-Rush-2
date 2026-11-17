@@ -1,0 +1,20 @@
+using LR2.Core;
+using UnityEngine;
+
+namespace LR2.FX
+{
+    /// <summary>Fast streak of light travelling along a bullet path.</summary>
+
+    public static class TracerSystem
+    {
+        public static void Spawn(Vector3 from, Vector3 to)
+        {
+            var lib = SurfaceLibrary.Instance;
+            if (lib == null || lib.tracerPrefab == null) return;
+            if ((to - from).sqrMagnitude < 9f) return;
+            var tracer = LR2Pool.Spawn(lib.tracerPrefab, from, Quaternion.identity);
+            var t = tracer != null ? tracer.GetComponent<Tracer>() : null;
+            if (t != null) t.Launch(from, to);
+        }
+    }
+}

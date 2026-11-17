@@ -1,0 +1,25 @@
+{
+    "name": "LR2.Runtime",
+    "rootNamespace": "LR2",
+    "references": [
+        "FPSAnimationFramework.Runtime",
+        "KAnimationCore.Runtime",
+        "RecoilAnimation.Runtime",
+        "KinemationDemo.Runtime",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "Unity.AI.Navigation",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.HighDefinition.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,31 @@
+{
+    "name": "LR2.Editor",
+    "rootNamespace": "LR2.EditorTools",
+    "references": [
+        "LR2.Runtime",
+        "FPSAnimationFramework.Runtime",
+        "KAnimationCore.Runtime",
+        "RecoilAnimation.Runtime",
+        "KinemationDemo.Runtime",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "Unity.AI.Navigation",
+        "Unity.AI.Navigation.Editor",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Core.Editor",
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.RenderPipelines.HighDefinition.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

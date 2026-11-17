@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a04a08d9377532645b4c4832774b84eb, type: 3}
+  m_Name: TestRangeConfig
+  m_EditorClassIdentifier: LR2.Runtime::LR2.World.MapBuildConfig
+  presetVersion: 0
+  seed: 1001
+  propDensity: 0.85
+  backgroundDressing: 1
+  decals: 1
+  forest: 0
+  forestTrees: 190
+  yardTrees: 16
+  fallenTrees: 7
+  undergrowth: 1600
+  indoorDarkness: 0.94
+  practicalLights: 0
+  sunElevation: 21
+  sunAzimuth: 238
+  sunLux: 52000
+  sunTemperature: 4700
+  sunAngularDiameter: 0.53
+  fogMeanFreePath: 120
+  fogBaseHeight: 2
+  fogMaxHeight: 45
+  fogAlbedo: {r: 0.66, g: 0.72, b: 0.78, a: 1}
+  fogAnisotropy: 0.72
+  fogDepthExtent: 90
+  exposureCompensation: -0.9
+  exposureLimitMin: 8.2
+  exposureLimitMax: 11.5
+  contrast: 28
+  saturation: -6
+  temperature: 6
+  vignette: 0.28
+  bloom: 0.35
+  lensDistortion: -0.18
+  chromaticAberration: 0.12
+  filmGrain: 0.22
+  motionBlur: 0.65

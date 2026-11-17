@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38abb767dc0746e4fa801621e6979ba4, type: 3}
+  m_Name: UITheme
+  m_EditorClassIdentifier: LR2.Runtime::LR2.UI.UITheme
+  accent: {r: 1, g: 0.71, b: 0.28, a: 1}
+  friendly: {r: 0.3, g: 0.66, b: 1, a: 1}
+  enemy: {r: 1, g: 0.3, b: 0.27, a: 1}
+  text: {r: 1, g: 1, b: 1, a: 0.92}
+  textDim: {r: 1, g: 1, b: 1, a: 0.55}
+  panel: {r: 0.03, g: 0.04, b: 0.05, a: 0.62}
+  warning: {r: 1, g: 0.55, b: 0.1, a: 1}
+  headingFont: {fileID: 11400000, guid: fdd4dbc6a2930324a803620b7ff3071f, type: 2}
+  bodyFont: {fileID: 11400000, guid: 0fdb5837ba8d9ee4db4bd0898664c65b, type: 2}
+  numberFont: {fileID: 11400000, guid: 8826780deb8b1e942a4ce47dacc4dbcd, type: 2}

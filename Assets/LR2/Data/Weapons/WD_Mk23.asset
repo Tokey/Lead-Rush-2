@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 153b0e5580c9ba24d96fe69fa7b64037, type: 3}
+  m_Name: WD_Mk23
+  m_EditorClassIdentifier: LR2.Runtime::LR2.Weapons.WeaponDefinition
+  displayName: MK23
+  shortName: MK23
+  icon: {fileID: 0}
+  weaponClass: 2
+  rpm: 400
+  allowAuto: 0
+  allowBurst: 0
+  burstCount: 3
+  pellets: 1
+  magazineSize: 12
+  startingReserve: 48
+  maxReserve: 72
+  damageSteps:
+  - maxDistance: 11.16
+    damage: 38
+  - maxDistance: 22.5
+    damage: 30
+  - maxDistance: 999
+    damage: 22
+  headMultiplier: 1.8
+  neckMultiplier: 1.2
+  upperTorsoMultiplier: 1.1
+  lowerTorsoMultiplier: 1
+  limbMultiplier: 0.9
+  maxRange: 250
+  effectiveRange: 18
+  penetrationDepth: 0.25
+  penetrationDamageScale: 0.65
+  sprintToFireTime: 0.12
+  adsTime: 0.18
+  adsFovMultiplier: 0.82
+  equipTime: 0.55
+  reloadTime: 2.2
+  emptyReloadTime: 2.7
+  hipSpread: 1.6
+  adsSpread: 0.08
+  moveSpreadAdd: 1.6
+  airSpreadAdd: 5
+  crouchSpreadMultiplier: 0.75
+  bloomPerShot: 0.4
+  maxBloom: 2.8
+  bloomRecovery: 7
+  cameraKick: {x: 0.45, y: 0.1}
+  adsKickMultiplier: 0.7
+  audibleRadius: 70
+  suppressed: 0
+  audio: {fileID: 11400000, guid: 449ca98b514483d4ea5c8387dba52d12, type: 2}
+  tracerEvery: 1
+  shellPrefab: {fileID: 7496392848592200594, guid: c114d37c6341b414aa4cb01b076e2836, type: 3}
+  muzzleFlashPrefab: {fileID: 8025995091943808216, guid: 1b26fa37b150091409de8b6e8aea82d1, type: 3}
