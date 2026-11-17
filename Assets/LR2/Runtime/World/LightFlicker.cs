@@ -13,6 +13,13 @@ namespace LR2.World
         private Light _light;
         private float _base, _seed, _dropoutUntil;
 
+        public void Configure(float amt, float spd, float dropout)
+        {
+            amount = Mathf.Clamp01(amt);
+            speed = Mathf.Max(0.1f, spd);
+            dropoutChance = Mathf.Clamp01(dropout);
+        }
+
         private void Awake()
         {
             _light = GetComponent<Light>();

@@ -39,9 +39,11 @@ namespace LR2.Characters
         [SerializeField] private float strideWalk = 1.75f;
         [SerializeField] private float strideSprint = 2.5f;
         [SerializeField] private float strideCrouch = 1.25f;
+        [SerializeField] private float strideProne = 0.8f;
         [SerializeField] private float noiseWalk = 9f;
         [SerializeField] private float noiseSprint = 18f;
         [SerializeField] private float noiseCrouch = 3f;
+        [SerializeField] private float noiseProne = 1.5f;
 
         [Header("Falling")]
         [Tooltip("Landing speed (m/s) above which fall damage starts.")]
@@ -54,12 +56,15 @@ namespace LR2.Characters
         public OnActionCallback onSprintEnded;
         public OnActionCallback onCrouch;
         public OnActionCallback onUncrouch;
+        public OnActionCallback onProneStarted;
+        public OnActionCallback onProneEnded;
         public OnActionCallback onJump;
         public OnActionCallback onLanded;
         public OnActionCallback onSlideStarted;
         public OnActionCallback onSlideEnded;
 
         public ActionConditionDelegate _slideActionCondition;
+        public ActionConditionDelegate _proneActionCondition;
         public ActionConditionDelegate _sprintActionCondition;
 
         public event Action Jumped;
@@ -114,15 +119,18 @@ namespace LR2.Characters
         private static readonly int VelocityHash = Animator.StringToHash("Velocity");
         private static readonly int MovingHash = Animator.StringToHash("Moving");
         private static readonly int CrouchingHash = Animator.StringToHash("Crouching");
+        private static readonly int ProningHash = Animator.StringToHash("Proning");
         private static readonly int SprintingHash = Animator.StringToHash("Sprinting");
         private static readonly int LocoSpeedHash = Animator.StringToHash("LocoSpeed");
 
         [Header("Animation cadence")]
-        [Tooltip("Ground speed (m/s) the walk cycle was authored for. Lower walk speeds slow the cycle down instead of skating.")]
-        [SerializeField] private float walkAnimReferenceSpeed = 4.6f;
-        [SerializeField] private float sprintAnimReferenceSpeed = 6.2f;
-        [SerializeField] private float crouchAnimReferenceSpeed = 2.6f;
+        [Tooltip("Ground speed (m/s) the walk/run cycle was authored for. Lower values prevent slow-mo leg skating.")]
+        [SerializeField] private float walkAnimReferenceSpeed = 2.25f;
+        [SerializeField] private float sprintAnimReferenceSpeed = 4.75f;
+        [SerializeField] private float crouchAnimReferenceSpeed = 2.1f;
+        [SerializeField] private float proneAnimReferenceSpeed = 0.8f;
         private float _locoSpeed = 1f;
+        private float _proneTransitionUntil;
 
         // ------------------------------------------------------------------ API used by SoldierController
         public void SetMoveInput(Vector2 move) => _inputDirection = Vector2.ClampMagnitude(move, 1f);
@@ -145,7 +153,13 @@ namespace LR2.Characters
 
         public bool RequestJump()
         {
+            if (Time.time < _proneTransitionUntil) return false;
             if (State is SoldierMoveState.Mantling or SoldierMoveState.Sliding) return false;
+            if (Stance == SoldierStance.Prone)
+            {
+                if (CanUnCrouch()) ExitProne(false);
+                return false;
+            }
             if (enableMantle && TryStartMantle()) return true;
             if (State == SoldierMoveState.InAir) return false;
             if (Stance == SoldierStance.Crouching)
@@ -160,9 +174,10 @@ namespace LR2.Characters
             return true;
         }
 
-        /// <summary>Crouch toggle; while sprinting this becomes a slide (CoD style).</summary>
+        /// <summary>Crouch toggle; while sprinting this becomes a slide (CoD style). From prone, transitions cleanly to crouch.</summary>
         public void RequestCrouchToggle()
         {
+            if (Time.time < _proneTransitionUntil) return;
             if (State == SoldierMoveState.Sprinting && CanSlide())
             {
                 _slideProgress = 0f;
@@ -171,6 +186,12 @@ namespace LR2.Characters
             }
 
             if (State is not (SoldierMoveState.Idle or SoldierMoveState.Walking)) return;
+
+            if (Stance == SoldierStance.Prone)
+            {
+                ExitProne(true);
+                return;
+            }
 
             if (Stance == SoldierStance.Standing)
             {
@@ -184,9 +205,25 @@ namespace LR2.Characters
             _desiredGait = Gait(GaitKind.Walk);
         }
 
+        /// <summary>Toggles prone stance (from standing or crouching). Cannot prone mid-air.</summary>
+        public void RequestProneToggle()
+        {
+            if (Time.time < _proneTransitionUntil) return;
+            if (State is SoldierMoveState.InAir or SoldierMoveState.Mantling or SoldierMoveState.Sliding) return;
+            if (_proneActionCondition != null && !_proneActionCondition.Invoke()) return;
+
+            if (Stance == SoldierStance.Prone)
+            {
+                if (CanUnCrouch()) ExitProne(false);
+                return;
+            }
+            EnterProne();
+        }
+
         public void ForceStand()
         {
-            if (Stance == SoldierStance.Crouching && CanUnCrouch()) UnCrouch();
+            if (Stance == SoldierStance.Prone && CanUnCrouch()) ExitProne(false);
+            else if (Stance == SoldierStance.Crouching && CanUnCrouch()) UnCrouch();
         }
 
         public void Teleport(Vector3 position)
@@ -205,22 +242,28 @@ namespace LR2.Characters
             _inputDirection = Vector2.zero;
             _sprintRequested = false;
             _airborneTime = 0f;
-            if (_initialized && Stance == SoldierStance.Crouching) UnCrouch();
+            _proneTransitionUntil = 0f;
+            if (_initialized && Stance != SoldierStance.Standing)
+            {
+                if (_animator != null) _animator.SetBool(ProningHash, false);
+                UnCrouch();
+            }
             _cachedState = State = SoldierMoveState.Idle;
             _desiredGait = _cachedGait = Gait(GaitKind.Idle);
         }
 
         // ------------------------------------------------------------------ internals
-        private enum GaitKind { Idle, Walk, Sprint, Crouch }
+        private enum GaitKind { Idle, Walk, Sprint, Crouch, Prone }
 
         private GaitSettings Gait(GaitKind kind)
         {
-            if (movementSettings == null) return new GaitSettings { velocity = kind == GaitKind.Sprint ? 7f : 4.5f, velocitySmoothing = 10f };
+            if (movementSettings == null) return new GaitSettings { velocity = kind == GaitKind.Sprint ? 7f : kind == GaitKind.Prone ? 0.6f : 4.5f, velocitySmoothing = 10f };
             switch (kind)
             {
                 case GaitKind.Walk: return movementSettings.walking;
                 case GaitKind.Sprint: return movementSettings.sprinting;
                 case GaitKind.Crouch: return movementSettings.crouching;
+                case GaitKind.Prone: return movementSettings.prone;
                 default: return movementSettings.idle;
             }
         }
@@ -251,23 +294,66 @@ namespace LR2.Characters
         private void Crouch()
         {
             float crouchedHeight = _originalHeight * (movementSettings != null ? movementSettings.crouchRatio : 0.6f);
-            float diff = _originalHeight - crouchedHeight;
-            _controller.height = crouchedHeight;
-            Vector3 center = _originalCenter;
-            center.y -= diff / 2f;
-            _controller.center = center;
+            SetCapsuleHeight(crouchedHeight);
             Stance = SoldierStance.Crouching;
-            if (_animator != null) _animator.SetBool(CrouchingHash, true);
+            if (_animator != null)
+            {
+                _animator.SetBool(ProningHash, false);
+                _animator.SetBool(CrouchingHash, true);
+            }
             onCrouch?.Invoke();
         }
 
         private void UnCrouch()
         {
-            _controller.height = _originalHeight;
-            _controller.center = _originalCenter;
+            SetCapsuleHeight(_originalHeight);
             Stance = SoldierStance.Standing;
             if (_animator != null) _animator.SetBool(CrouchingHash, false);
             onUncrouch?.Invoke();
+        }
+
+        private void EnterProne()
+        {
+            StopSprint();
+            float proneHeight = Mathf.Max(_controller.radius * 2f + 0.1f, _originalHeight * 0.48f);
+            SetCapsuleHeight(proneHeight);
+            Stance = SoldierStance.Prone;
+            if (_animator != null)
+            {
+                _animator.SetBool(CrouchingHash, false);
+                _animator.SetBool(ProningHash, true);
+            }
+            _desiredGait = Gait(GaitKind.Prone);
+            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.65f;
+            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.7f);
+            onProneStarted?.Invoke();
+        }
+
+        private void ExitProne(bool toCrouch)
+        {
+            if (_animator != null) _animator.SetBool(ProningHash, false);
+            if (toCrouch)
+            {
+                Crouch();
+                _desiredGait = Gait(GaitKind.Crouch);
+            }
+            else
+            {
+                UnCrouch();
+                _desiredGait = IsMoving ? Gait(GaitKind.Walk) : Gait(GaitKind.Idle);
+            }
+            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.65f;
+            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.7f);
+            onProneEnded?.Invoke();
+        }
+
+        private void SetCapsuleHeight(float height)
+        {
+            float diff = _originalHeight - height;
+            _controller.height = height;
+            Vector3 center = _originalCenter;
+            center.y -= diff / 2f;
+            _controller.center = center;
         }
 
         private void UpdateMovementState()
@@ -325,6 +411,12 @@ namespace LR2.Characters
                     return;
             }
 
+            if (Stance == SoldierStance.Prone)
+            {
+                _desiredGait = Gait(GaitKind.Prone);
+                return;
+            }
+
             if (Stance == SoldierStance.Crouching)
             {
                 _desiredGait = Gait(GaitKind.Crouch);
@@ -360,7 +452,7 @@ namespace LR2.Characters
 
         private void UpdateGrounded()
         {
-            var normInput = _inputDirection;
+            var normInput = Time.time < _proneTransitionUntil ? Vector2.zero : _inputDirection;
             var targetDirection = transform.right * normInput.x + transform.forward * normInput.y;
 
             float maxAccelTime = movementSettings != null ? movementSettings.accelerationCurve.keys[^1].time : 0.2f;
@@ -394,7 +486,7 @@ namespace LR2.Characters
 
         private bool TryStartMantle()
         {
-            if (Stance == SoldierStance.Crouching) return false;
+            if (Stance != SoldierStance.Standing) return false;
             Vector3 fwd = transform.forward;
             Vector3 feet = transform.position;
             int mask = LR2Layers.EnvironmentMask;
@@ -461,7 +553,7 @@ namespace LR2.Characters
         private void UpdateAnimatorParams()
         {
             if (_animator == null) return;
-            var animatorVelocity = _inputDirection;
+            var animatorVelocity = Time.time < _proneTransitionUntil ? Vector2.zero : _inputDirection;
             animatorVelocity *= State is SoldierMoveState.InAir or SoldierMoveState.Mantling ? 0f : 1f;
             AnimatorVelocity = Vector2.Lerp(AnimatorVelocity, animatorVelocity, KMath.ExpDecayAlpha(_desiredGait.velocitySmoothing, Time.deltaTime));
 
@@ -471,14 +563,23 @@ namespace LR2.Characters
             _animator.SetBool(InAirHash, State == SoldierMoveState.InAir);
             _animator.SetBool(MovingHash, IsMoving);
 
+            float planar = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
             float sprintWeight = _animator.GetFloat(SprintingHash);
             float t = KMath.ExpDecayAlpha(_desiredGait.velocitySmoothing, Time.deltaTime);
-            sprintWeight = Mathf.Lerp(sprintWeight, State == SoldierMoveState.Sprinting ? 1f : 0f, t);
+            // Gently blend forward walking partway toward the upright sprint clip (natural ~4.75 m/s) for a full stride
+            // without pulling the rifle down off-screen into sprint carry.
+            float targetSprint = State == SoldierMoveState.Sprinting ? 1f
+                : (Stance == SoldierStance.Standing && _inputDirection.y > 0.35f && planar > 1.8f
+                    ? Mathf.Clamp01((planar - 1.8f) / 1.7f) * 0.20f
+                    : 0f);
+            sprintWeight = Mathf.Lerp(sprintWeight, targetSprint, t);
             _animator.SetFloat(SprintingHash, sprintWeight);
 
-            float planar = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-            float reference = State == SoldierMoveState.Sprinting ? sprintAnimReferenceSpeed : Stance == SoldierStance.Crouching ? crouchAnimReferenceSpeed : walkAnimReferenceSpeed;
-            float targetLoco = planar > 0.3f ? Mathf.Clamp(planar / Mathf.Max(0.1f, reference), 0.55f, 1.15f) : 1f;
+            float reference = Stance == SoldierStance.Prone ? proneAnimReferenceSpeed
+                : Stance == SoldierStance.Crouching ? crouchAnimReferenceSpeed
+                : State == SoldierMoveState.Sprinting ? sprintAnimReferenceSpeed
+                : walkAnimReferenceSpeed;
+            float targetLoco = planar > 0.3f ? Mathf.Clamp(planar / Mathf.Max(0.1f, reference), 0.72f, 1.50f) : 1f;
             _locoSpeed = Mathf.Lerp(_locoSpeed, targetLoco, KMath.ExpDecayAlpha(8f, Time.deltaTime));
             _animator.SetFloat(LocoSpeedHash, _locoSpeed);
 
@@ -490,18 +591,25 @@ namespace LR2.Characters
         {
             if (State is SoldierMoveState.InAir or SoldierMoveState.Mantling) return;
             float planar = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-            if (planar < 0.6f) return;
+            float minSpeed = Stance == SoldierStance.Prone ? 0.25f : 0.6f;
+            if (planar < minSpeed) return;
             _strideAccum += planar * Time.deltaTime;
 
-            float stride = State == SoldierMoveState.Sprinting ? strideSprint : Stance == SoldierStance.Crouching ? strideCrouch : strideWalk;
+            float stride = State == SoldierMoveState.Sprinting ? strideSprint
+                : Stance == SoldierStance.Prone ? strideProne
+                : Stance == SoldierStance.Crouching ? strideCrouch : strideWalk;
             if (State == SoldierMoveState.Sliding) return;
             if (_strideAccum < stride) return;
             _strideAccum = 0f;
             Footstep?.Invoke(planar);
 
-            float noise = State == SoldierMoveState.Sprinting ? noiseSprint : Stance == SoldierStance.Crouching ? noiseCrouch : noiseWalk;
+            float noise = State == SoldierMoveState.Sprinting ? noiseSprint
+                : Stance == SoldierStance.Prone ? noiseProne
+                : Stance == SoldierStance.Crouching ? noiseCrouch : noiseWalk;
             if (IsAimingSlowdown) noise *= 0.6f;
-            float intensity = State == SoldierMoveState.Sprinting ? 1f : Stance == SoldierStance.Crouching ? 0.35f : 0.7f;
+            float intensity = State == SoldierMoveState.Sprinting ? 1f
+                : Stance == SoldierStance.Prone ? 0.2f
+                : Stance == SoldierStance.Crouching ? 0.35f : 0.7f;
             PlayFootstep(intensity);
             GameEvents.RaiseNoise(_combatant, transform.position, noise, NoiseType.Footstep);
         }

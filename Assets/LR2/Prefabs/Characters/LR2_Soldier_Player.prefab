@@ -2011,14 +2011,17 @@ MonoBehaviour:
   strideWalk: 1.75
   strideSprint: 2.5
   strideCrouch: 1.25
+  strideProne: 0.8
   noiseWalk: 9
   noiseSprint: 18
   noiseCrouch: 3
+  noiseProne: 1.5
   fallDamageSpeed: 13
   fallDamagePerMs: 9
-  walkAnimReferenceSpeed: 4.6
-  sprintAnimReferenceSpeed: 6.2
-  crouchAnimReferenceSpeed: 2.6
+  walkAnimReferenceSpeed: 2.25
+  sprintAnimReferenceSpeed: 4.75
+  crouchAnimReferenceSpeed: 2.1
+  proneAnimReferenceSpeed: 0.8
 --- !u!114 &3345535596381267026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2122,6 +2125,13 @@ MonoBehaviour:
   visual: {fileID: 8698306960954869300}
   handIK: 1
   handIKWeight: 1
+  alignHips: 1
+  firstPersonHeadLock: 1
+  eyeHeight: 0.085
+  eyeForward: 0.095
+  firstPersonBodyBack: 0.02
+  replantFeet: 1
+  logAlignment: 1
 --- !u!114 &2210738732602222748
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5870,7 +5880,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48349c21b76a85c4d8c147eb7a9a5102, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LR2.Runtime::LR2.Characters.BodycamRig
-  intensity: 0
+  intensity: 1
   adsDamping: 0.65
   strideLength: 1.55
   bobVertical: 0.06

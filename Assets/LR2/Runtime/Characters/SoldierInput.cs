@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LR2.Characters
 {
-    public enum SoldierStance { Standing, Crouching }
+    public enum SoldierStance { Standing, Crouching, Prone }
 
     public enum SoldierMoveState { Idle, Walking, Sprinting, InAir, Sliding, Mantling }
 
@@ -25,6 +25,7 @@ namespace LR2.Characters
         public bool reload;
         public bool jump;
         public bool crouch;
+        public bool prone;
         public float lean;
         public int weaponSlot;
         public bool nextWeapon;
@@ -37,6 +38,7 @@ namespace LR2.Characters
             reload = false;
             jump = false;
             crouch = false;
+            prone = false;
             nextWeapon = false;
             interact = false;
             weaponSlot = -1;

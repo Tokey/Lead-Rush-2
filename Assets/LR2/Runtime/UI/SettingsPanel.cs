@@ -29,13 +29,16 @@ namespace LR2.UI
         public Toggle hitmarkerSound;
 
         [Header("Graphics")]
-        public TMP_Dropdown quality;
         public Toggle vsync;
-        public TMP_Dropdown frameLimit;
         public Toggle showFps;
+        public Button qualityPrev, qualityNext;
+        public TMP_Text qualityValue;
+        public Button frameLimitPrev, frameLimitNext;
+        public TMP_Text frameLimitValue;
 
         [Header("Gameplay")]
-        public TMP_Dropdown botDifficulty;
+        public Button botDifficultyPrev, botDifficultyNext;
+        public TMP_Text botDifficultyValue;
 
         [Header("Actions (optional)")]
         public Button resetDefaultsButton;
@@ -51,7 +54,10 @@ namespace LR2.UI
         public TMP_Text uiVolumeValue;
 
         private static readonly int[] FrameLimits = { 0, 60, 120, 144, 165, 240 };
+        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN" };
         private bool _loading;
+
+        private static int WrapStep(int cur, int count, int delta) => count > 0 ? (cur + delta % count + count) % count : 0;
 
         private void OnEnable() => Load();
 
@@ -60,7 +66,7 @@ namespace LR2.UI
             _loading = true;
             Set(sensitivity, 0.1f, 5f, LR2Settings.MouseSensitivity);
             Set(adsSensitivity, 0.3f, 1.5f, LR2Settings.AdsSensitivityMultiplier);
-            Set(fieldOfView, 70f, 115f, LR2Settings.FieldOfView, true);
+            Set(fieldOfView, 65f, 120f, LR2Settings.FieldOfView, true);
             Set(bodycamMotion, 0f, 1.5f, LR2Settings.BodycamMotion);
             Set(masterVolume, 0f, 1f, LR2Settings.MasterVolume);
             Set(sfxVolume, 0f, 1f, LR2Settings.SfxVolume);
@@ -73,25 +79,6 @@ namespace LR2.UI
             if (hitmarkerSound != null) hitmarkerSound.isOn = LR2Settings.HitmarkerSound;
             if (vsync != null) vsync.isOn = LR2Settings.VSync;
             if (showFps != null) showFps.isOn = LR2Settings.ShowFps;
-
-            if (quality != null)
-            {
-                quality.ClearOptions();
-                quality.AddOptions(new List<string>(QualitySettings.names));
-                quality.value = LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel();
-            }
-            if (frameLimit != null)
-            {
-                frameLimit.ClearOptions();
-                frameLimit.AddOptions(new List<string> { "Unlimited", "60", "120", "144", "165", "240" });
-                frameLimit.value = Mathf.Max(0, System.Array.IndexOf(FrameLimits, LR2Settings.FrameRateLimit));
-            }
-            if (botDifficulty != null)
-            {
-                botDifficulty.ClearOptions();
-                botDifficulty.AddOptions(new List<string> { "Recruit", "Regular", "Hardened", "Veteran" });
-                botDifficulty.value = LR2Settings.BotDifficulty;
-            }
             UpdateLabels();
             _loading = false;
         }
@@ -113,10 +100,27 @@ namespace LR2.UI
             Hook(hitmarkerSound, v => LR2Settings.HitmarkerSound = v);
             Hook(vsync, v => { LR2Settings.VSync = v; LR2Settings.Apply(); });
             Hook(showFps, v => LR2Settings.ShowFps = v);
-            if (quality != null) quality.onValueChanged.AddListener(i => { if (_loading) return; LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
-            if (frameLimit != null) frameLimit.onValueChanged.AddListener(i => { if (_loading) return; LR2Settings.FrameRateLimit = FrameLimits[Mathf.Clamp(i, 0, FrameLimits.Length - 1)]; LR2Settings.Apply(); });
-            if (botDifficulty != null) botDifficulty.onValueChanged.AddListener(i => { if (!_loading) LR2Settings.BotDifficulty = i; });
+            HookStep(qualityPrev, qualityNext, () => Mathf.Max(0, LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel()),
+                () => QualitySettings.names.Length, i => { LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
+            HookStep(frameLimitPrev, frameLimitNext, () => Mathf.Max(0, System.Array.IndexOf(FrameLimits, LR2Settings.FrameRateLimit)),
+                () => FrameLimits.Length, i => { LR2Settings.FrameRateLimit = FrameLimits[i]; LR2Settings.Apply(); });
+            HookStep(botDifficultyPrev, botDifficultyNext, () => Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1),
+                () => DifficultyLabels.Length, i => LR2Settings.BotDifficulty = i);
             if (resetDefaultsButton != null) resetDefaultsButton.onClick.AddListener(ResetDefaults);
+        }
+
+        private void HookStep(Button prev, Button next, System.Func<int> getIndex, System.Func<int> getCount, System.Action<int> applyIndex)
+        {
+            void Step(int delta)
+            {
+                if (_loading) return;
+                int count = getCount();
+                if (count <= 0) return;
+                applyIndex(WrapStep(getIndex(), count, delta));
+                UpdateLabels();
+            }
+            if (prev != null) prev.onClick.AddListener(() => Step(-1));
+            if (next != null) next.onClick.AddListener(() => Step(1));
         }
 
         private void OnDisable() => LR2Settings.Save();
@@ -157,11 +161,25 @@ namespace LR2.UI
             if (sfxVolumeValue != null) sfxVolumeValue.text = Mathf.RoundToInt(LR2Settings.SfxVolume * 100f) + "%";
             if (musicVolumeValue != null) musicVolumeValue.text = Mathf.RoundToInt(LR2Settings.MusicVolume * 100f) + "%";
             if (uiVolumeValue != null) uiVolumeValue.text = Mathf.RoundToInt(LR2Settings.UiVolume * 100f) + "%";
+            if (qualityValue != null)
+            {
+                int q = LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel();
+                var qNames = QualitySettings.names;
+                qualityValue.text = q >= 0 && q < qNames.Length ? qNames[q].ToUpperInvariant() : "DEFAULT";
+            }
+            if (frameLimitValue != null)
+            {
+                int f = LR2Settings.FrameRateLimit;
+                frameLimitValue.text = f <= 0 ? "UNLIMITED" : f + " FPS";
+            }
+            if (botDifficultyValue != null)
+                botDifficultyValue.text = DifficultyLabels[Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1)];
         }
 
         public void ResetDefaults()
         {
             LR2Settings.ResetToDefaults();
+            LR2Settings.Save();
             LR2Settings.Apply();
             Load();
         }

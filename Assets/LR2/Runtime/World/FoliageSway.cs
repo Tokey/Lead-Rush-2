@@ -11,7 +11,7 @@ namespace LR2.World
     {
         public Transform[] roots;
         [Tooltip("Max sway angle in degrees at full wind.")]
-        public float maxAngle = 7f;
+        public float maxAngle = 4.5f;
         public float frequency = 1.3f;
         [Tooltip("Plants taller than this (m) sway less (stiff bushes / saplings).")]
         public float stiffHeight = 2.5f;

@@ -163,7 +163,7 @@ namespace LR2.World
 
         private void TestNearestDestructible()
         {
-            var props = FindObjectsByType<DestructibleProp>(FindObjectsSortMode.None);
+            var props = FindObjectsByType<DestructibleProp>();
             DestructibleProp best = null;
             float bestD2 = float.MaxValue;
             Vector3 refPos = _soldier != null ? _soldier.transform.position : Vector3.zero;
@@ -239,8 +239,10 @@ namespace LR2.World
         {
             if (_soldier == null) return;
             var go = new GameObject("RobotThirdPersonCam");
+            bool unhidHead = _soldier.IsLocalPlayer;
             try
             {
+                if (unhidHead) _soldier.SetHeadHidden(false);
                 var t = _soldier.transform;
                 go.transform.position = t.position + t.forward * 1.9f + t.right * 0.6f + Vector3.up * 1.55f;
                 go.transform.LookAt(t.position + Vector3.up * 1.25f);
@@ -263,7 +265,11 @@ namespace LR2.World
                 Note($"Captured {fileName} (third person)");
             }
             catch (Exception ex) { Note("Third-person capture failed: " + ex.Message); }
-            finally { Destroy(go); }
+            finally
+            {
+                if (unhidHead && _soldier != null) _soldier.SetHeadHidden(true);
+                Destroy(go);
+            }
         }
 
         private void Capture(string customFileName)

@@ -190,6 +190,21 @@ namespace LR2.EditorTools
             return t;
         }
 
+        private static TMP_Text AddShadow(TMP_Text t)
+        {
+            if (t == null) return null;
+            var sh = t.gameObject.GetComponent<Shadow>() ?? t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.82f);
+            sh.effectDistance = new Vector2(1.5f, -1.5f);
+            return t;
+        }
+
+        private static void CardBacking(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Color accent)
+        {
+            var bg = Img(name, parent, _white, new Color(0.03f, 0.035f, 0.045f, 0.80f), anchor, pos, size);
+            Img(name + "_Top", bg.transform, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -1.5f), new Vector2(size.x, 3f));
+        }
+
         private static CanvasGroup Panel(string name, Transform parent, Color bg)
         {
             var rt = Stretch(name, parent);
@@ -284,17 +299,36 @@ namespace LR2.EditorTools
             return go.GetComponent<Toggle>();
         }
 
-        private static TMP_Dropdown DropdownColRow(Transform parent, string label, float colLeft, float y, float labelW = 248f, float slotW = 360f)
+        private static void BuildStepper(Transform slot, float height, out Button prev, out Button next, out TMP_Text valueText, float fontSize = 18f, Color? accentStripe = null)
+        {
+            Img("Bg", slot, _white, new Color(0.03f, 0.038f, 0.052f, 0.92f), new Vector2(0.5f, 0.5f), Vector2.zero, ((RectTransform)slot).sizeDelta);
+            Img("TopBorder", slot, _white, accentStripe ?? new Color(1f, 1f, 1f, 0.14f), new Vector2(0.5f, 1f), new Vector2(0f, -1f), new Vector2(((RectTransform)slot).sizeDelta.x, 2f));
+            Button StepBtn(string sym, float anchorX, float xOff)
+            {
+                var b = Btn(sym, slot, Vector2.zero, new Vector2(height, height));
+                var rt = (RectTransform)b.transform;
+                rt.anchorMin = rt.anchorMax = new Vector2(anchorX, 0.5f);
+                rt.anchoredPosition = new Vector2(xOff, 0f);
+                var lbl = b.GetComponentInChildren<TMP_Text>();
+                if (lbl != null)
+                {
+                    lbl.alignment = TextAlignmentOptions.Center;
+                    lbl.fontSize = Mathf.Max(18f, fontSize);
+                    lbl.rectTransform.anchoredPosition = Vector2.zero;
+                }
+                return b;
+            }
+            prev = StepBtn("<", 0f, height * 0.5f);
+            next = StepBtn(">", 1f, -height * 0.5f);
+            float textW = Mathf.Max(80f, ((RectTransform)slot).sizeDelta.x - height * 2f - 16f);
+            valueText = AddShadow(Txt("Value", slot, "", fontSize, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(textW, height), true));
+        }
+
+        private static void SelectorColRow(Transform parent, string label, float colLeft, float y, out Button prev, out Button next, out TMP_Text valueText, float labelW = 248f, float slotW = 360f)
         {
             ColRow(parent, label, colLeft, y, labelW, slotW, out var slot, out var val);
             Object.DestroyImmediate(val.gameObject);
-            var go = TMP_DefaultControls.CreateDropdown(TmpRes());
-            go.transform.SetParent(slot, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.sizeDelta = Vector2.zero;
-            return go.GetComponent<TMP_Dropdown>();
+            BuildStepper(slot, 34f, out prev, out next, out valueText, 18f);
         }
 
         private static Canvas NewCanvas(string name, int order)
@@ -313,12 +347,14 @@ namespace LR2.EditorTools
 
         private static SettingsPanel BuildSettings(Transform parent, out Button back)
         {
-            var group = Panel("SettingsPanel", parent, new Color(0.02f, 0.025f, 0.03f, 0.9f));
+            var group = Panel("SettingsPanel", parent, new Color(0.015f, 0.02f, 0.026f, 0.95f));
             var t = group.transform;
             Color accent = _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f);
 
             Txt("Title", t, "SETTINGS", 58f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(900f, 72f), true);
             Img("TitleRule", t, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -104f), new Vector2(220f, 2f));
+            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -374f), new Vector2(700f, 530f), accent);
+            CardBacking(t, "RightColCard", new Vector2(0.5f, 1f), new Vector2(392f, -432f), new Vector2(700f, 646f), accent);
 
             var s = group.gameObject.AddComponent<SettingsPanel>();
             const float leftCol = -770f;
@@ -331,7 +367,7 @@ namespace LR2.EditorTools
             s.sensitivity = SliderColRow(t, "MOUSE SENSITIVITY", leftCol, y, out s.sensitivityValue); y -= step;
             s.adsSensitivity = SliderColRow(t, "ADS SENSITIVITY", leftCol, y, out s.adsSensitivityValue); y -= step;
             s.invertY = ToggleColRow(t, "INVERT Y", leftCol, y); y -= step;
-            s.fieldOfView = SliderColRow(t, "FIELD OF VIEW", leftCol, y, out s.fovValue); y -= step;
+            s.fieldOfView = SliderColRow(t, "FOV (HORIZONTAL)", leftCol, y, out s.fovValue); y -= step;
             s.bodycamLook = ToggleColRow(t, "BODYCAM LENS LOOK", leftCol, y); y -= step;
             s.bodycamMotion = SliderColRow(t, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= step;
             s.motionBlur = ToggleColRow(t, "MOTION BLUR", leftCol, y); y -= step;
@@ -345,11 +381,11 @@ namespace LR2.EditorTools
             s.musicVolume = SliderColRow(t, "MUSIC VOLUME", rightCol, y, out s.musicVolumeValue); y -= step;
             s.uiVolume = SliderColRow(t, "UI VOLUME", rightCol, y, out s.uiVolumeValue); y -= step;
             s.hitmarkerSound = ToggleColRow(t, "HITMARKER SOUND", rightCol, y); y -= step;
-            s.quality = DropdownColRow(t, "GRAPHICS QUALITY", rightCol, y); y -= step;
+            SelectorColRow(t, "GRAPHICS QUALITY", rightCol, y, out s.qualityPrev, out s.qualityNext, out s.qualityValue); y -= step;
             s.vsync = ToggleColRow(t, "V-SYNC", rightCol, y); y -= step;
-            s.frameLimit = DropdownColRow(t, "FRAME LIMIT", rightCol, y); y -= step;
+            SelectorColRow(t, "FRAME LIMIT", rightCol, y, out s.frameLimitPrev, out s.frameLimitNext, out s.frameLimitValue); y -= step;
             s.showFps = ToggleColRow(t, "SHOW FPS", rightCol, y); y -= step;
-            s.botDifficulty = DropdownColRow(t, "BOT DIFFICULTY", rightCol, y);
+            SelectorColRow(t, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue);
 
             s.resetDefaultsButton = Btn("Reset Defaults", t, new Vector2(-190f, -446f), new Vector2(310f, 54f));
             back = Btn("Back", t, new Vector2(190f, -446f), new Vector2(310f, 54f));
@@ -402,13 +438,13 @@ namespace LR2.EditorTools
 
             // Ammo (bottom-right)
             var ammo = Rect("Ammo", hudRoot, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-70f, 60f), new Vector2(380f, 120f), new Vector2(1f, 0f));
-            hud.magText = Txt("Mag", ammo, "30", 86f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(-105f, 6f), new Vector2(200f, 90f), true);
+            hud.magText = AddShadow(Txt("Mag", ammo, "30", 86f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(-105f, 6f), new Vector2(200f, 90f), true));
             ((RectTransform)hud.magText.transform).pivot = new Vector2(1f, 0f);
-            hud.reserveText = Txt("Reserve", ammo, "120", 36f, TextAlignmentOptions.BottomLeft, new Vector2(1f, 0f), new Vector2(-92f, 14f), new Vector2(100f, 50f), true, dim);
+            hud.reserveText = AddShadow(Txt("Reserve", ammo, "120", 36f, TextAlignmentOptions.BottomLeft, new Vector2(1f, 0f), new Vector2(-92f, 14f), new Vector2(100f, 50f), true, dim));
             ((RectTransform)hud.reserveText.transform).pivot = new Vector2(0f, 0f);
-            hud.weaponName = Txt("WeaponName", ammo, "AK-12", 26f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(0f, 96f), new Vector2(360f, 30f), false, dim);
+            hud.weaponName = AddShadow(Txt("WeaponName", ammo, "AK-12", 26f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(0f, 96f), new Vector2(360f, 30f), false, dim));
             ((RectTransform)hud.weaponName.transform).pivot = new Vector2(1f, 0f);
-            hud.fireModeText = Txt("FireMode", ammo, "AUTO", 20f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(0f, -18f), new Vector2(200f, 24f), false, accent);
+            hud.fireModeText = AddShadow(Txt("FireMode", ammo, "AUTO", 20f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(0f, -18f), new Vector2(200f, 24f), false, accent));
             ((RectTransform)hud.fireModeText.transform).pivot = new Vector2(1f, 0f);
 
             // Health (bottom-left)
@@ -417,7 +453,7 @@ namespace LR2.EditorTools
             hud.healthFill = Img("HealthFill", health, _white, Color.white, new Vector2(0f, 0f), new Vector2(160f, 6f), new Vector2(320f, 8f));
             hud.healthFill.type = Image.Type.Filled;
             hud.healthFill.fillMethod = Image.FillMethod.Horizontal;
-            hud.healthText = Txt("HealthText", health, "100", 30f, TextAlignmentOptions.BottomLeft, new Vector2(0f, 0f), new Vector2(50f, 32f), new Vector2(100f, 36f), true);
+            hud.healthText = AddShadow(Txt("HealthText", health, "100", 30f, TextAlignmentOptions.BottomLeft, new Vector2(0f, 0f), new Vector2(50f, 32f), new Vector2(100f, 36f), true));
 
             // Minimap (top-left) with circular mask
             var mapRoot = Rect("Minimap", hudRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(150f, -150f), new Vector2(232f, 232f));
@@ -437,18 +473,18 @@ namespace LR2.EditorTools
 
             // Match status under the minimap
             var status = Rect("MatchStatus", hudRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -290f), new Vector2(300f, 110f), new Vector2(0f, 1f));
-            hud.modeText = Txt("Mode", status, "DUEL", 22f, TextAlignmentOptions.TopLeft, new Vector2(0f, 1f), new Vector2(150f, -14f), new Vector2(300f, 28f), false, dim);
-            hud.timerText = Txt("Timer", status, "8:00", 38f, TextAlignmentOptions.TopRight, new Vector2(0f, 1f), new Vector2(150f, -10f), new Vector2(300f, 40f), true);
-            hud.myScoreText = Txt("MyScore", status, "0", 30f, TextAlignmentOptions.Left, new Vector2(0f, 1f), new Vector2(26f, -62f), new Vector2(60f, 34f), true, TeamColor(true));
+            hud.modeText = AddShadow(Txt("Mode", status, "DUEL", 22f, TextAlignmentOptions.TopLeft, new Vector2(0f, 1f), new Vector2(150f, -14f), new Vector2(300f, 28f), false, dim));
+            hud.timerText = AddShadow(Txt("Timer", status, "8:00", 38f, TextAlignmentOptions.TopRight, new Vector2(0f, 1f), new Vector2(150f, -10f), new Vector2(300f, 40f), true));
+            hud.myScoreText = AddShadow(Txt("MyScore", status, "0", 30f, TextAlignmentOptions.Left, new Vector2(0f, 1f), new Vector2(26f, -62f), new Vector2(60f, 34f), true, TeamColor(true)));
             hud.myScoreBar = Bar(status, new Vector2(190f, -62f), TeamColor(true));
-            hud.enemyScoreText = Txt("EnemyScore", status, "0", 30f, TextAlignmentOptions.Left, new Vector2(0f, 1f), new Vector2(26f, -94f), new Vector2(60f, 34f), true, TeamColor(false));
+            hud.enemyScoreText = AddShadow(Txt("EnemyScore", status, "0", 30f, TextAlignmentOptions.Left, new Vector2(0f, 1f), new Vector2(26f, -94f), new Vector2(60f, 34f), true, TeamColor(false)));
             hud.enemyScoreBar = Bar(status, new Vector2(190f, -94f), TeamColor(false));
-            hud.limitText = Txt("Limit", status, "15", 18f, TextAlignmentOptions.Right, new Vector2(0f, 1f), new Vector2(300f, -78f), new Vector2(60f, 24f), false, dim);
+            hud.limitText = AddShadow(Txt("Limit", status, "15", 18f, TextAlignmentOptions.Right, new Vector2(0f, 1f), new Vector2(300f, -78f), new Vector2(60f, 24f), false, dim));
 
             // Compass (top-center)
             hud.compassRoot = Rect("Compass", hudRoot, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(640f, 30f));
             Img("CompassTick", hud.compassRoot, _white, new Color(1f, 1f, 1f, 0.8f), c, new Vector2(0f, -20f), new Vector2(2f, 10f));
-            hud.compassTemplate = Txt("Bearing", hud.compassRoot, "N", 20f, TextAlignmentOptions.Center, c, Vector2.zero, new Vector2(60f, 30f));
+            hud.compassTemplate = AddShadow(Txt("Bearing", hud.compassRoot, "N", 20f, TextAlignmentOptions.Center, c, Vector2.zero, new Vector2(60f, 30f)));
 
             // Kill feed (top-right)
             var feed = Rect("KillFeed", hudRoot, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-40f, -40f), new Vector2(620f, 260f), new Vector2(1f, 1f));
@@ -460,20 +496,20 @@ namespace LR2.EditorTools
             vlg.childForceExpandHeight = false;
             vlg.childForceExpandWidth = false;
             hud.killFeedRoot = feed;
-            hud.killFeedTemplate = Txt("Entry", feed, "", 24f, TextAlignmentOptions.Right, new Vector2(1f, 1f), Vector2.zero, new Vector2(620f, 30f));
+            hud.killFeedTemplate = AddShadow(Txt("Entry", feed, "", 24f, TextAlignmentOptions.Right, new Vector2(1f, 1f), Vector2.zero, new Vector2(620f, 30f)));
 
-            // Score popups + medal banner
-            hud.popupRoot = Rect("Popups", hudRoot, c, c, new Vector2(170f, 40f), new Vector2(360f, 200f));
-            hud.popupTemplate = Txt("Popup", hud.popupRoot, "+100 KILL", 26f, TextAlignmentOptions.Left, new Vector2(0f, 0.5f), Vector2.zero, new Vector2(360f, 30f), true);
+            // Score popups + medal banner (placed cleanly right of center reticle so they never overlap BF6 hitmarker / skull)
+            hud.popupRoot = Rect("Popups", hudRoot, c, c, new Vector2(135f, -30f), new Vector2(360f, 200f), new Vector2(0f, 0.5f));
+            hud.popupTemplate = AddShadow(Txt("Popup", hud.popupRoot, "+100 KILL", 26f, TextAlignmentOptions.Left, new Vector2(0f, 0.5f), Vector2.zero, new Vector2(360f, 30f), true));
             ((RectTransform)hud.popupTemplate.transform).pivot = new Vector2(0f, 0.5f);
             var medal = Rect("Medal", hudRoot, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -170f), new Vector2(700f, 70f));
             hud.medalGroup = medal.gameObject.AddComponent<CanvasGroup>();
             Img("MedalBar", medal, _white, accent, c, new Vector2(0f, -30f), new Vector2(160f, 3f));
-            hud.medalText = Txt("MedalText", medal, "", 48f, TextAlignmentOptions.Center, c, Vector2.zero, new Vector2(700f, 60f), true, accent);
+            hud.medalText = AddShadow(Txt("MedalText", medal, "", 48f, TextAlignmentOptions.Center, c, Vector2.zero, new Vector2(700f, 60f), true, accent));
 
             // Center notifications
-            hud.centerText = Txt("CenterText", hudRoot, "", 72f, TextAlignmentOptions.Center, c, new Vector2(0f, 190f), new Vector2(1400f, 90f), true);
-            hud.subText = Txt("SubText", hudRoot, "", 28f, TextAlignmentOptions.Center, c, new Vector2(0f, 250f), new Vector2(1000f, 40f), false, dim);
+            hud.centerText = AddShadow(Txt("CenterText", hudRoot, "", 72f, TextAlignmentOptions.Center, c, new Vector2(0f, 190f), new Vector2(1400f, 90f), true));
+            hud.subText = AddShadow(Txt("SubText", hudRoot, "", 28f, TextAlignmentOptions.Center, c, new Vector2(0f, 250f), new Vector2(1000f, 40f), false, dim));
 
             // Misc
             hud.fpsText = Txt("FPS", hudRoot, "", 18f, TextAlignmentOptions.TopRight, new Vector2(1f, 1f), new Vector2(-40f, -10f), new Vector2(200f, 24f), false, dim);
@@ -492,6 +528,9 @@ namespace LR2.EditorTools
             menus.restartButton = Btn("Restart Match", menus.pausePanel.transform, new Vector2(0f, -38f), new Vector2(380f, 62f));
             menus.menuButton = Btn("Main Menu", menus.pausePanel.transform, new Vector2(0f, -112f), new Vector2(380f, 62f));
             menus.quitButton = Btn("Quit", menus.pausePanel.transform, new Vector2(0f, -186f), new Vector2(380f, 62f));
+            Txt("ControlsHint", menus.pausePanel.transform,
+                "WASD MOVE  ·  SHIFT SPRINT  ·  SPACE JUMP / MANTLE  ·  C / CTRL CROUCH / SLIDE  ·  Z PRONE  ·  Q / E LEAN  ·  R RELOAD  ·  RMB ADS  ·  1 / 2 SWAP  ·  TAB SCORE",
+                19f, TextAlignmentOptions.Center, c, new Vector2(0f, -274f), new Vector2(1680f, 34f), false, dim);
             var settings = BuildSettings(root, out var settingsBack);
             menus.settingsPanel = settings.GetComponent<CanvasGroup>();
             menus.settingsBackButton = settingsBack;
@@ -558,30 +597,20 @@ namespace LR2.EditorTools
             mm.settingsButton = MenuBtn("Settings", -110f, 54f);
             mm.quitButton = MenuBtn("Quit", -180f, 54f);
 
-            TMP_Dropdown MenuDropdown(string label, float labelY, float slotY)
-            {
-                Txt(label.Replace(" ", "") + "Label", main, label, 19f, TextAlignmentOptions.Left, left, new Vector2(265f, labelY), new Vector2(400f, 26f), false, dim);
-                var slot = Rect(label.Replace(" ", "") + "Slot", main, left, left, new Vector2(320f, slotY), new Vector2(455f, 40f));
-                var ddGo = TMP_DefaultControls.CreateDropdown(TmpRes());
-                ddGo.transform.SetParent(slot, false);
-                var ddrt = (RectTransform)ddGo.transform;
-                ddrt.anchorMin = Vector2.zero;
-                ddrt.anchorMax = Vector2.one;
-                ddrt.sizeDelta = Vector2.zero;
-                return ddGo.GetComponent<TMP_Dropdown>();
-            }
-            mm.mapDropdown = MenuDropdown("MAP SELECT", -250f, -286f);
-            mm.difficulty = MenuDropdown("BOT DIFFICULTY", -346f, -382f);
+            // Bot difficulty roster selector (left/right stepper matching the Map Recon card; map dropdown removed)
+            Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -242f), new Vector2(455f, 24f), true, accent);
+            var diffRoster = Rect("BotDifficultyRoster", main, left, left, new Vector2(320f, -280f), new Vector2(455f, 48f));
+            BuildStepper(diffRoster, 48f, out mm.difficultyPrevButton, out mm.difficultyNextButton, out mm.difficultyValueText, 22f, accent);
 
-            // Right-hand Map Preview Card
-            var card = Rect("MapPreviewCard", main, mid, mid, new Vector2(305f, 12f), new Vector2(880f, 646f));
-            Img("CardBG", card, _white, new Color(0.025f, 0.032f, 0.042f, 0.86f), mid, Vector2.zero, new Vector2(880f, 646f));
-            Img("CardTopAccent", card, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -2f), new Vector2(880f, 4f));
+            // Right-hand Map Preview Card (kept clear of center Operator silhouette)
+            var card = Rect("MapPreviewCard", main, mid, mid, new Vector2(460f, 10f), new Vector2(720f, 560f));
+            Img("CardBG", card, _white, new Color(0.025f, 0.032f, 0.042f, 0.88f), mid, Vector2.zero, new Vector2(720f, 560f));
+            Img("CardTopAccent", card, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -2f), new Vector2(720f, 4f));
 
-            var reconHdr = Txt("ReconHeader", card, "TACTICAL SECTOR // MAP RECON", 18f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 1f), new Vector2(24f, -28f), new Vector2(440f, 26f), true, accent);
+            var reconHdr = Txt("ReconHeader", card, "TACTICAL SECTOR // MAP RECON", 18f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 1f), new Vector2(22f, -28f), new Vector2(400f, 26f), true, accent);
             ((RectTransform)reconHdr.transform).pivot = new Vector2(0f, 0.5f);
 
-            mm.mapPreviewIndexText = Txt("SectorIndex", card, "SECTOR 01 / 04", 18f, TextAlignmentOptions.MidlineRight, new Vector2(1f, 1f), new Vector2(-128f, -28f), new Vector2(200f, 26f), false, dim);
+            mm.mapPreviewIndexText = Txt("SectorIndex", card, "SECTOR 01 / 04", 18f, TextAlignmentOptions.MidlineRight, new Vector2(1f, 1f), new Vector2(-126f, -28f), new Vector2(180f, 26f), false, dim);
             ((RectTransform)mm.mapPreviewIndexText.transform).pivot = new Vector2(1f, 0.5f);
 
             Button ArrowBtn(string sym, float xPos)
@@ -602,21 +631,21 @@ namespace LR2.EditorTools
             mm.mapPrevButton = ArrowBtn("<", -86f);
             mm.mapNextButton = ArrowBtn(">", -36f);
 
-            Img("PreviewBorder", card, _white, new Color(1f, 1f, 1f, 0.12f), mid, new Vector2(0f, 40f), new Vector2(836f, 472f));
-            mm.mapPreviewImage = Img("PreviewImage", card, _white, Color.white, mid, new Vector2(0f, 40f), new Vector2(832f, 468f));
+            Img("PreviewBorder", card, _white, new Color(1f, 1f, 1f, 0.12f), mid, new Vector2(0f, 36f), new Vector2(684f, 386f));
+            mm.mapPreviewImage = Img("PreviewImage", card, _white, Color.white, mid, new Vector2(0f, 36f), new Vector2(680f, 382f));
             mm.mapPreviewImage.preserveAspect = false;
 
             // Subtle bottom gradient inside preview frame for readable captioning
-            Img("PreviewShade", mm.mapPreviewImage.transform, _white, new Color(0f, 0f, 0f, 0.25f), new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(832f, 44f));
+            Img("PreviewShade", mm.mapPreviewImage.transform, _white, new Color(0f, 0f, 0f, 0.25f), new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(680f, 40f));
 
-            mm.mapPreviewTitle = Txt("MapTitle", card, "SALTWORKS  -  RECLAIMED HARBOUR", 28f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 0f), new Vector2(24f, 104f), new Vector2(832f, 36f), true, Color.white);
+            mm.mapPreviewTitle = Txt("MapTitle", card, "SALTWORKS  -  RECLAIMED HARBOUR", 26f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 0f), new Vector2(22f, 102f), new Vector2(676f, 34f), true, Color.white);
             ((RectTransform)mm.mapPreviewTitle.transform).pivot = new Vector2(0f, 0.5f);
 
-            mm.mapPreviewDescription = Txt("MapDescription", card, "", 18f, TextAlignmentOptions.TopLeft, new Vector2(0f, 0f), new Vector2(24f, 76f), new Vector2(832f, 44f), false, dim);
+            mm.mapPreviewDescription = Txt("MapDescription", card, "", 17f, TextAlignmentOptions.TopLeft, new Vector2(0f, 0f), new Vector2(22f, 76f), new Vector2(676f, 42f), false, dim);
             ((RectTransform)mm.mapPreviewDescription.transform).pivot = new Vector2(0f, 1f);
             mm.mapPreviewDescription.textWrappingMode = TextWrappingModes.Normal;
 
-            mm.mapPreviewStatusText = Txt("RulesSummary", card, "", 16f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 0f), new Vector2(24f, 22f), new Vector2(832f, 26f), false, accent);
+            mm.mapPreviewStatusText = Txt("RulesSummary", card, "", 16f, TextAlignmentOptions.MidlineLeft, new Vector2(0f, 0f), new Vector2(22f, 22f), new Vector2(676f, 24f), false, accent);
             ((RectTransform)mm.mapPreviewStatusText.transform).pivot = new Vector2(0f, 0.5f);
 
             mm.versionText = Txt("Version", root, "", 18f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(-30f, 20f), new Vector2(500f, 24f), false, dim);
@@ -648,11 +677,13 @@ namespace LR2.EditorTools
 
         private static void BuildModeRulesPanel(Transform root, MainMenuController mm, Color accent, Color dim)
         {
-            mm.modeRulesPanel = Panel("ModeRulesPanel", root, new Color(0.02f, 0.025f, 0.032f, 0.92f));
+            mm.modeRulesPanel = Panel("ModeRulesPanel", root, new Color(0.015f, 0.02f, 0.028f, 0.95f));
             var t = mm.modeRulesPanel.transform;
 
             Txt("Title", t, "MODE RULES & MATCH SETUP", 56f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(960f, 68f), true);
             mm.modeRulesTitleText = Txt("SubTitle", t, "DUEL  ·  1V1 COMPETITIVE RULES", 22f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(900f, 32f), false, accent);
+            CardBacking(t, "RulesLeftCard", new Vector2(0.5f, 1f), new Vector2(-448f, -404f), new Vector2(700f, 358f), accent);
+            CardBacking(t, "RulesRightCard", new Vector2(0.5f, 1f), new Vector2(392f, -404f), new Vector2(700f, 358f), accent);
 
             Button Tab(string label, float x)
             {
@@ -674,7 +705,7 @@ namespace LR2.EditorTools
             mm.rulesTimeLimitSlider = SliderColRow(t, "TIME LIMIT (MIN)", leftCol, yL, out mm.rulesTimeLimitValue); yL -= step;
             mm.rulesRespawnSlider = SliderColRow(t, "RESPAWN DELAY", leftCol, yL, out mm.rulesRespawnValue); yL -= step;
             mm.rulesCountdownSlider = SliderColRow(t, "PRE-MATCH COUNTDOWN", leftCol, yL, out mm.rulesCountdownValue); yL -= step;
-            mm.rulesBotDifficulty = DropdownColRow(t, "MODE BOT DIFFICULTY", leftCol, yL);
+            SelectorColRow(t, "MODE BOT DIFFICULTY", leftCol, yL, out mm.rulesBotDiffPrevButton, out mm.rulesBotDiffNextButton, out mm.rulesBotDiffValueText);
 
             float yR = -268f;
             mm.rulesEnemyBotsSlider = SliderColRow(t, "ENEMY BOTS", rightCol, yR, out mm.rulesEnemyBotsValue); yR -= step;

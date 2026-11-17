@@ -112,16 +112,15 @@ namespace LR2.EditorTools
             {
                 go.AddComponent<SurfaceIdentifier>().surface = SurfaceType.Wood;
             }
-            if (mode == ColliderMode.None && parent != null && parent.name == "Undergrowth" && InPlay(pos, 2f))
+            if (mode == ColliderMode.None && parent != null && parent.name == "Undergrowth" && InPlay(pos, 3f))
             {
+                // Keep all in-play ground foliage ankle-high (<= 0.30 m) so leaves never block crouching/ADS sightlines
                 float maxY = pos.y;
                 foreach (var r in go.GetComponentsInChildren<Renderer>(true))
                     maxY = Mathf.Max(maxY, r.bounds.max.y);
                 float h = maxY - pos.y;
-                if (h > 0.50f)
-                {
-                    go.transform.localScale *= (0.50f / h);
-                }
+                if (h > 0.30f)
+                    go.transform.localScale *= (0.30f / h);
             }
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
                 if (mode == ColliderMode.None && r.bounds.size.y < 1.2f) r.shadowCastingMode = ShadowCastingMode.Off; // small plants: no shadow cost
@@ -164,15 +163,18 @@ namespace LR2.EditorTools
                 foreach (Transform t in _tactical)
                     if (t.name.StartsWith("Choke") || t.name.StartsWith("Obj")) _keepClear.Add(t.position);
             }
-            // Explicit Saltworks doorways & loading dock ramps so greenery never blocks building entrances.
+            // Explicit Saltworks doorways, stairs & loading dock ramps so greenery never blocks building entrances or stairs.
             foreach (var dp in new[]
             {
                 new Vector3(-4.5f, 0f, 2f), new Vector3(4.5f, 0f, 2f),
+                new Vector3(5.6f, 0f, -2.45f), new Vector3(-2.75f, 0f, -2.45f),
                 new Vector3(-16f, 0f, -2f), new Vector3(-19f, 0f, 4f), new Vector3(-23f, 0f, -8f),
                 new Vector3(-7f, 0f, -12f), new Vector3(5f, 0f, -12f),
+                new Vector3(-7f, 0f, -14.6f), new Vector3(5f, 0f, -14.6f),
                 new Vector3(-14f, 0f, -17f), new Vector3(14f, 0f, -17f),
-                new Vector3(-13.75f, 0f, -10.8f), new Vector3(13.75f, 0f, -10.8f),
-                new Vector3(-0.25f, 0f, -12f)
+                new Vector3(-13.8f, 0f, -10.8f), new Vector3(13.8f, 0f, -10.8f),
+                new Vector3(-0.25f, 0f, -12f),
+                new Vector3(24.6f, 0f, -14.2f), new Vector3(-17.2f, 0f, 17f)
             }) _keepClear.Add(dp);
 
             CollapseWarehouseRoof();
@@ -220,15 +222,15 @@ namespace LR2.EditorTools
                 ring++;
             }
 
-            // ---- trees that took over the yard itself (outdoors, clear of spawns, doors, and structures)
+            // ---- trees that took over the yard itself (outdoors, clear of spawns, doors, stairs, and structures)
             int inside = 0;
             for (int i = 0; i < 1500 && inside < _cfg.yardTrees; i++)
             {
-                var xz = new Vector2(R(PlayMin.x + 1.5f, PlayMax.x - 1.5f), R(PlayMin.y + 1.5f, PlayMax.y - 1.5f));
+                var xz = new Vector2(R(PlayMin.x + 2f, PlayMax.x - 2f), R(PlayMin.y + 2f, PlayMax.y - 2f));
                 if (!Ground(xz, out var hit) || hit.normal.y < 0.85f || hit.point.y > 1.6f) continue;
-                if (Indoors(hit.point) || NearKeepClear(hit.point, 4.5f) || !FarFromTrees(hit.point, 7.5f)) continue;
-                if (Physics.CheckSphere(hit.point + Vector3.up * 3.0f, 4.6f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
-                if (Plant(Pick(bigTrees), trees, hit.point - Vector3.up * 0.1f, Yaw(), R(0.8f, 1.1f), ColliderMode.Trunk, 0.3f) == null) continue;
+                if (Indoors(hit.point) || NearKeepClear(hit.point, 5.5f) || !FarFromTrees(hit.point, 8.0f)) continue;
+                if (Physics.CheckSphere(hit.point + Vector3.up * 3.0f, 5.2f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
+                if (Plant(Pick(bigTrees), trees, hit.point - Vector3.up * 0.1f, Yaw(), R(0.78f, 0.95f), ColliderMode.Trunk, 0.3f) == null) continue;
                 placedTrees.Add(hit.point);
                 inside++;
             }
@@ -239,14 +241,14 @@ namespace LR2.EditorTools
                 placedTrees.Add(whHit.point);
             }
 
-            // ---- fallen trees and logs: organic cover in the open (wide clearance from buildings/containers)
+            // ---- fallen trees and logs: organic cover in the open (wide clearance from buildings/containers/doors)
             int logs = 0;
             for (int i = 0; i < 600 && logs < _cfg.fallenTrees; i++)
             {
-                var xz = new Vector2(R(PlayMin.x + 4f, PlayMax.x - 4f), R(PlayMin.y + 4f, PlayMax.y - 4f));
-                if (!Ground(xz, out var hit) || hit.normal.y < 0.9f || Indoors(hit.point) || NearKeepClear(hit.point, 5.2f)) continue;
-                if (Physics.CheckSphere(hit.point + Vector3.up * 3.8f, 3.5f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
-                if (Plant(Pick(fallen), _structures, hit.point, Yaw(), R(0.9f, 1.1f), ColliderMode.Keep) == null) continue;
+                var xz = new Vector2(R(PlayMin.x + 4.5f, PlayMax.x - 4.5f), R(PlayMin.y + 4.5f, PlayMax.y - 4.5f));
+                if (!Ground(xz, out var hit) || hit.normal.y < 0.9f || Indoors(hit.point) || NearKeepClear(hit.point, 6.0f)) continue;
+                if (Physics.CheckSphere(hit.point + Vector3.up * 3.8f, 4.0f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
+                if (Plant(Pick(fallen), _structures, hit.point, Yaw(), R(0.9f, 1.05f), ColliderMode.Keep) == null) continue;
                 logs++;
             }
 
@@ -254,13 +256,13 @@ namespace LR2.EditorTools
             for (int i = 0; i < 70; i++)
             {
                 var xz = new Vector2(R(PlayMin.x - 10f, PlayMax.x + 10f), R(PlayMin.y - 10f, PlayMax.y + 10f));
-                if (!Ground(xz, out var hit) || Indoors(hit.point) || NearKeepClear(hit.point, 2.8f)) continue;
-                if (Physics.CheckSphere(hit.point + Vector3.up * 0.65f, 0.55f, 1 << LR2Layers.Obstacle, QueryTriggerInteraction.Ignore)) continue;
+                if (!Ground(xz, out var hit) || Indoors(hit.point) || NearKeepClear(hit.point, 3.4f)) continue;
+                if (Physics.CheckSphere(hit.point + Vector3.up * 0.65f, 0.65f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
                 bool stump = i % 3 == 0;
-                Plant(stump ? Pick(stumps) : Pick(debris), under, hit.point, Quaternion.FromToRotation(Vector3.up, hit.normal) * Yaw(), R(0.8f, 1.2f), stump ? ColliderMode.Keep : ColliderMode.None);
+                Plant(stump ? Pick(stumps) : Pick(debris), under, hit.point, Quaternion.FromToRotation(Vector3.up, hit.normal) * Yaw(), R(0.8f, 1.1f), stump ? ColliderMode.Keep : ColliderMode.None);
             }
 
-            // ---- undergrowth (noise-driven patches, thin on old concrete, none indoors except under the roof hole)
+            // ---- undergrowth (noise-driven patches on terrain only inside play, clear of doors/stairs/concrete)
             int plants = 0;
             for (int i = 0; i < _cfg.undergrowth * 3 && plants < _cfg.undergrowth; i++)
             {
@@ -269,26 +271,27 @@ namespace LR2.EditorTools
                 if (n < 0.38f) continue;
                 if (!Ground(xz, out var hit) || hit.normal.y < 0.7f) continue;
                 bool onTerrain = hit.collider is TerrainCollider;
-                if (!onTerrain && _rnd.NextDouble() < 0.7) continue;          // concrete: only cracks
-                if (Indoors(hit.point) || NearKeepClear(hit.point, 2.8f)) continue;
-                bool bush = n > 0.72f && _rnd.NextDouble() < 0.16 && !InPlay(hit.point, 2f);
+                bool inPlay = InPlay(hit.point, 3f);
+                if (!onTerrain && (inPlay || _rnd.NextDouble() < 0.75)) continue;
+                if (Indoors(hit.point) || NearKeepClear(hit.point, inPlay ? 3.5f : 2.8f)) continue;
+                bool bush = n > 0.72f && _rnd.NextDouble() < 0.16 && !inPlay;
                 Plant(bush ? Pick(bushes) : Pick(ground), under, hit.point - Vector3.up * 0.03f, Quaternion.FromToRotation(Vector3.up, hit.normal) * Yaw(),
-                      bush ? R(0.8f, 1.2f) : R(0.75f, 1.35f), ColliderMode.None);
+                      bush ? R(0.8f, 1.15f) : R(0.7f, 1.15f), ColliderMode.None);
                 plants++;
             }
 
-            // ---- buildings reclaimed: ivy on walls, grass at wall bases, moss + bushes on roofs, roots at corners
+            // ---- buildings reclaimed: ivy on tall solid walls, low grass at wall bases, roof foliage/decals (no opaque SM_Moss discs)
             var ivy = new[] { LoadLeartes("SM_Ivy"), LoadLeartes("SM_Ivy1"), LoadLeartes("SM_Ivy2") };
-            var moss = LoadLeartes("SM_Moss");
             var grassL = new[] { LoadLeartes("SM_Grass2Foliage"), LoadLeartes("SM_Grass3Foliage"), LoadLeartes("SM_Grass4Foliage") };
             var roots = new[] { Get("SM_Roots_01_01"), Get("SM_Roots_01_02"), Get("SM_Roots_01_03"), Get("SM_Roots_01_04") };
+            var leafDecal = FindLeartes("M_LeafDecal");
             int ivyCount = 0, mossCount = 0, baseGrass = 0;
             foreach (var r in _structures.GetComponentsInChildren<MeshRenderer>())
             {
                 if (r.transform.IsChildOf(_nature)) continue;
                 var b = r.bounds;
                 bool wallLike = b.size.y > 2.2f && (b.size.x < 0.6f || b.size.z < 0.6f) && Mathf.Max(b.size.x, b.size.z) > 2f;
-                bool topLike = b.size.y < 0.6f && b.size.x > 2f && b.size.z > 2f && b.max.y > 2f;
+                bool topLike = b.size.y < 0.6f && b.size.x > 4f && b.size.z > 4f && b.max.y > 6.5f;
                 if (wallLike)
                 {
                     bool alongX = b.size.x > b.size.z;
@@ -296,50 +299,54 @@ namespace LR2.EditorTools
                     int count = Mathf.Clamp(Mathf.RoundToInt(len / 4.5f), 1, 6);
                     for (int k = 0; k < count; k++)
                     {
-                        float u = R(0.1f, 0.9f);
+                        float u = R(0.12f, 0.88f);
                         float side = _rnd.NextDouble() < 0.5 ? -1f : 1f;
                         Vector3 n = alongX ? new Vector3(0f, 0f, side) : new Vector3(side, 0f, 0f);
                         Vector3 p = alongX ? new Vector3(Mathf.Lerp(b.min.x, b.max.x, u), 0f, b.center.z) : new Vector3(b.center.x, 0f, Mathf.Lerp(b.min.z, b.max.z, u));
-                        // ivy creeping down from the top edge (outside faces only, away from doorways)
-                        Vector3 top = p + Vector3.up * (b.max.y - R(0.2f, 0.8f)) + n * 1.5f;
-                        if (!Indoors(top - n * 1.5f + n * 0.6f) && Physics.Raycast(top, -n, out var wh, 2.5f, LR2Layers.EnvironmentMask) &&
-                            !NearKeepClear(wh.point, 2.4f) && ivy[k % 3] != null)
+                        // ivy only on tall solid wall spans (verified 1.8m below so it never crosses windows/doors or sinks underground)
+                        Vector3 top = p + Vector3.up * (b.max.y - R(0.2f, 0.55f)) + n * 1.5f;
+                        if (b.size.y >= 4.2f && !Indoors(top - n * 1.5f + n * 0.6f) &&
+                            Physics.Raycast(top, -n, out var wh, 2.5f, LR2Layers.EnvironmentMask) &&
+                            Physics.Raycast(top - Vector3.up * 1.8f, -n, 2.5f, LR2Layers.EnvironmentMask) &&
+                            !NearKeepClear(wh.point, 2.8f) && ivy[k % 3] != null)
                         {
-                            var g = Plant(ivy[_rnd.Next(3)], overgrowth, wh.point + wh.normal * 0.08f, Quaternion.LookRotation(-wh.normal, Vector3.up), R(0.9f, 2f), ColliderMode.None);
+                            var g = Plant(ivy[_rnd.Next(3)], overgrowth, wh.point + wh.normal * 0.04f, Quaternion.LookRotation(-wh.normal, Vector3.up), R(0.55f, 0.85f), ColliderMode.None);
                             if (g != null) AlignThinAxis(g, wh.normal);
                             ivyCount++;
                         }
-                        // grass + roots along the outside base of the wall only (never inside rooms or blocking doors)
+                        // low grass + compact roots along outside wall bases only
                         Vector3 basePt = p + n * R(0.45f, 0.85f);
                         if (!Indoors(basePt) && Ground(new Vector2(basePt.x, basePt.z), out var gh, b.min.y + 1.5f) &&
-                            !Indoors(gh.point) && !NearKeepClear(gh.point, 2.8f) &&
-                            !Physics.CheckSphere(gh.point + Vector3.up * 0.45f, 0.35f, 1 << LR2Layers.Obstacle, QueryTriggerInteraction.Ignore))
+                            gh.collider is TerrainCollider && !Indoors(gh.point) && !NearKeepClear(gh.point, 3.4f) &&
+                            !Physics.CheckSphere(gh.point + Vector3.up * 0.45f, 0.4f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
                         {
                             var gp = grassL[_rnd.Next(3)] ?? Pick(ground);
-                            Plant(gp, under, gh.point, Yaw(), R(0.75f, 1.15f), ColliderMode.None);
+                            Plant(gp, under, gh.point, Yaw(), R(0.65f, 0.95f), ColliderMode.None);
                             baseGrass++;
-                            if (_rnd.NextDouble() < 0.25 && roots[0] != null)
-                                Plant(roots[_rnd.Next(roots.Length)], overgrowth, gh.point, Quaternion.LookRotation(n) * Quaternion.Euler(0f, R(-30f, 30f), 0f), R(0.5f, 0.85f), ColliderMode.None);
+                            if (_rnd.NextDouble() < 0.2 && roots[0] != null)
+                                Plant(roots[_rnd.Next(roots.Length)], overgrowth, gh.point, Quaternion.LookRotation(n) * Quaternion.Euler(0f, R(-30f, 30f), 0f), R(0.4f, 0.62f), ColliderMode.None);
                         }
                     }
                 }
-                else if (topLike && moss != null)
+                else if (topLike)
                 {
-                    int count = Mathf.Clamp(Mathf.RoundToInt(b.size.x * b.size.z / 18f), 1, 10);
+                    int count = Mathf.Clamp(Mathf.RoundToInt(b.size.x * b.size.z / 24f), 1, 8);
                     for (int k = 0; k < count; k++)
                     {
-                        var p = new Vector3(R(b.min.x + 0.4f, b.max.x - 0.4f), b.max.y + 3f, R(b.min.z + 0.4f, b.max.z - 0.4f));
+                        var p = new Vector3(R(b.min.x + 0.8f, b.max.x - 0.8f), b.max.y + 3f, R(b.min.z + 0.8f, b.max.z - 0.8f));
                         if (!Physics.Raycast(p, Vector3.down, out var th, 4f, LR2Layers.EnvironmentMask) || th.normal.y < 0.8f) continue;
-                        if (NearKeepClear(th.point, 1.5f)) continue;
-                        var g = Plant(k % 3 == 2 ? Pick(ground) : moss, overgrowth, th.point + Vector3.up * 0.04f, Yaw(), R(0.8f, 1.6f), ColliderMode.None);
-                        if (g != null && k % 3 != 2) AlignThinAxis(g, Vector3.up);
+                        if (NearKeepClear(th.point, 2.0f)) continue;
+                        if (leafDecal != null && k % 2 == 0)
+                            CreateDecal(leafDecal, th.point, Vector3.up, R(1.6f, 2.8f), true);
+                        else
+                            Plant(Pick(ground), overgrowth, th.point, Yaw(), R(0.45f, 0.7f), ColliderMode.None);
                         mossCount++;
                     }
-                    if (b.max.y > 6.5f && _rnd.NextDouble() < 0.6)   // high roofs: bushes / saplings for silhouettes
+                    if (_rnd.NextDouble() < 0.45)
                     {
-                        var p = new Vector3(R(b.min.x + 1f, b.max.x - 1f), b.max.y + 3f, R(b.min.z + 1f, b.max.z - 1f));
+                        var p = new Vector3(R(b.min.x + 1.5f, b.max.x - 1.5f), b.max.y + 3f, R(b.min.z + 1.5f, b.max.z - 1.5f));
                         if (Physics.Raycast(p, Vector3.down, out var th, 4f, LR2Layers.EnvironmentMask) && th.normal.y > 0.8f)
-                            Plant(_rnd.NextDouble() < 0.5 ? Pick(bushes) : Pick(smallTrees), overgrowth, th.point, Yaw(), R(0.5f, 0.8f), ColliderMode.None);
+                            Plant(Pick(bushes), overgrowth, th.point, Yaw(), R(0.45f, 0.65f), ColliderMode.None);
                     }
                 }
             }
@@ -359,27 +366,37 @@ namespace LR2.EditorTools
                     Plant(w, overgrowth, c, Quaternion.LookRotation(toCenter), R(0.6f, 1f), ColliderMode.None);
                 }
             }
-            var leafDecal = FindLeartes("M_LeafDecal");
             if (leafDecal != null)
+            {
+                var leafPts = new List<Vector3>();
                 for (int i = 0; i < 90; i++)
                 {
                     var xz = new Vector2(R(PlayMin.x, PlayMax.x), R(PlayMin.y, PlayMax.y));
                     if (!Ground(xz, out var hit, 2.5f) || hit.normal.y < 0.8f) continue;
-                    var go = new GameObject("Decal_Leaves");
-                    go.transform.SetParent(_decals, false);
-                    go.transform.position = hit.point + Vector3.up * 0.05f;
-                    go.transform.rotation = Quaternion.LookRotation(Vector3.down, Vector3.forward) * Quaternion.Euler(0f, 0f, R(0f, 360f));
-                    var dp = go.AddComponent<DecalProjector>();
-                    dp.material = leafDecal;
-                    float s = R(1.5f, 3.5f);
-                    dp.size = new Vector3(s, s, 0.5f);
+                    if (hit.collider != null && hit.collider.GetComponentInParent<DestructibleProp>() != null) continue;
+                    bool dup = false;
+                    for (int j = 0; j < leafPts.Count; j++)
+                        if ((leafPts[j] - hit.point).sqrMagnitude < 1.8f * 1.8f) { dup = true; break; }
+                    if (dup) continue;
+                    CreateDecal(leafDecal, hit.point, hit.normal, R(1.5f, 3.2f), true);
+                    leafPts.Add(hit.point);
                 }
+            }
 
             DarkInteriors();
 
-            // ---- forest FX: low fog banks, falling leaves, crows overhead
+            // ---- forest FX: perimeter low fog banks outside play, falling leaves, crows overhead
             void FX(string n, Vector3 p, float s = 1f) { var pf = Get(n); if (pf != null) Plant(pf, fx, p, Yaw(), s, ColliderMode.None); }
-            for (int i = 0; i < 6; i++) FX("SM_FogBig", G(new Vector3(R(-40f, 40f), 0f, R(-45f, 30f)), 0.3f));
+            for (int i = 0; i < 6; i++)
+            {
+                Vector3 fp = Vector3.zero;
+                for (int t = 0; t < 10; t++)
+                {
+                    fp = new Vector3(R(-52f, 52f), 0f, R(-52f, 20f));
+                    if (!InPlay(fp, 6f)) break;
+                }
+                if (!InPlay(fp, 6f)) FX("SM_FogBig", G(fp, 0.3f));
+            }
             for (int i = 0; i < 5; i++) FX("SM_Leafs", G(new Vector3(R(-24f, 24f), 0f, R(-20f, 20f)), 6f));
             FX("SM_Birds", new Vector3(0f, 26f, -4f));
 
@@ -470,7 +487,7 @@ namespace LR2.EditorTools
             {
                 var day2 = Clip("S_Ambient_01_01_SwampForestDayLoop");
                 env.ambienceLoops = day2 != null ? new[] { day, day2 } : new[] { day }; // no wind loop
-                env.ambienceVolume = 0.6f;
+                env.ambienceVolume = 0.42f;
                 EditorUtility.SetDirty(env);
             }
             var shots = new GameObject("ForestOneShots").AddComponent<AmbientOneShots>();
@@ -483,7 +500,7 @@ namespace LR2.EditorTools
             }
             shots.outdoorClips = list.ToArray();
             shots.outdoorInterval = new Vector2(2.5f, 7f);
-            shots.outdoorVolume = 0.6f;
+            shots.outdoorVolume = 0.45f;
             var drops = new List<AudioClip>();
             for (int i = 1; i <= 15; i++)
             {

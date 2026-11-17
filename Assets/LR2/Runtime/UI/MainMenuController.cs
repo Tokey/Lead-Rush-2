@@ -58,7 +58,9 @@ namespace LR2.UI
         public TMP_Text rulesRespawnValue;
         public Slider rulesCountdownSlider;
         public TMP_Text rulesCountdownValue;
-        public TMP_Dropdown rulesBotDifficulty;
+        public Button rulesBotDiffPrevButton;
+        public Button rulesBotDiffNextButton;
+        public TMP_Text rulesBotDiffValueText;
         public Slider rulesEnemyBotsSlider;
         public TMP_Text rulesEnemyBotsValue;
         public Slider rulesFriendlyBotsSlider;
@@ -74,11 +76,14 @@ namespace LR2.UI
         public Image loadingBarFill;
         public TMP_Text loadingStatusText;
 
-        [Header("Misc")]
-        public TMP_Dropdown difficulty;
-        public TMP_Dropdown mapDropdown;
+        [Header("Bot Difficulty Roster")]
+        public Button difficultyPrevButton;
+        public Button difficultyNextButton;
+        public TMP_Text difficultyValueText;
         public TMP_Text versionText;
         public string mapScene = LR2Session.MapScene;
+
+        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN" };
 
         private bool _isLoading;
         private bool _loadingRules;
@@ -119,30 +124,15 @@ namespace LR2.UI
             if (settingsBackButton != null) settingsBackButton.onClick.AddListener(ReturnFromSettings);
             if (quitButton != null) quitButton.onClick.AddListener(Quit);
 
-            if (mapDropdown != null)
-            {
-                mapDropdown.ClearOptions();
-                mapDropdown.AddOptions(new List<string>(LR2Session.MapDisplayNames));
-                mapDropdown.SetValueWithoutNotify(LR2Session.SelectedMapIndex);
-                mapDropdown.onValueChanged.AddListener(SelectMap);
-            }
             if (mapPrevButton != null) mapPrevButton.onClick.AddListener(() => StepMap(-1));
             if (mapNextButton != null) mapNextButton.onClick.AddListener(() => StepMap(1));
 
-            if (difficulty != null)
-            {
-                difficulty.ClearOptions();
-                difficulty.AddOptions(new List<string> { "RECRUIT", "REGULAR", "HARDENED", "VETERAN" });
-                difficulty.SetValueWithoutNotify(Mathf.Clamp(LR2Settings.BotDifficulty, 0, 3));
-                difficulty.onValueChanged.AddListener(i =>
-                {
-                    LR2Settings.BotDifficulty = i;
-                    RefreshPreviewStatus();
-                });
-            }
+            if (difficultyPrevButton != null) difficultyPrevButton.onClick.AddListener(() => StepDifficulty(-1));
+            if (difficultyNextButton != null) difficultyNextButton.onClick.AddListener(() => StepDifficulty(1));
 
             BindModeRulesUI();
             SelectMap(LR2Session.SelectedMapIndex);
+            RefreshDifficultyLabel();
             RefreshModeButtons();
         }
 
@@ -174,10 +164,26 @@ namespace LR2.UI
 
         private void ReturnFromSettings()
         {
+            LR2Settings.Save();
             Show(settingsPanel, false);
             Show(mainPanel, true);
-            if (difficulty != null) difficulty.SetValueWithoutNotify(Mathf.Clamp(LR2Settings.BotDifficulty, 0, 3));
+            RefreshDifficultyLabel();
             RefreshPreviewStatus();
+        }
+
+        private void StepDifficulty(int delta)
+        {
+            int count = DifficultyLabels.Length;
+            int cur = Mathf.Clamp(LR2Settings.BotDifficulty, 0, count - 1);
+            LR2Settings.BotDifficulty = (cur + delta % count + count) % count;
+            RefreshDifficultyLabel();
+            RefreshPreviewStatus();
+        }
+
+        private void RefreshDifficultyLabel()
+        {
+            if (difficultyValueText != null)
+                difficultyValueText.text = DifficultyLabels[Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1)];
         }
 
         // ------------------------------------------------------------------ map selection & preview
@@ -194,7 +200,6 @@ namespace LR2.UI
             int idx = LR2Session.SelectedMapIndex;
             mapScene = LR2Session.CurrentMapScene;
 
-            if (mapDropdown != null) mapDropdown.SetValueWithoutNotify(idx);
             if (mapPreviewTitle != null && idx < LR2Session.MapDisplayNames.Length)
                 mapPreviewTitle.text = LR2Session.MapDisplayNames[idx];
             if (mapPreviewDescription != null && idx < LR2Session.MapDescriptions.Length)
@@ -361,17 +366,16 @@ namespace LR2.UI
                 Play(SettingsFor(_editingMode) ?? duelSettings);
             });
 
-            if (rulesBotDifficulty != null)
+            void StepRulesDifficulty(int delta)
             {
-                rulesBotDifficulty.ClearOptions();
-                rulesBotDifficulty.AddOptions(new List<string> { "USE GLOBAL SETTING", "RECRUIT", "REGULAR", "HARDENED", "VETERAN" });
-                rulesBotDifficulty.onValueChanged.AddListener(idx =>
-                {
-                    if (_loadingRules) return;
-                    _editingRules.botDifficulty = idx - 1;
-                    SaveCurrentRules();
-                });
+                if (_loadingRules) return;
+                int cur = Mathf.Clamp(_editingRules.botDifficulty + 1, 0, 4);
+                _editingRules.botDifficulty = (cur + delta % 5 + 5) % 5 - 1;
+                SaveCurrentRules();
+                RefreshRulesLabels();
             }
+            if (rulesBotDiffPrevButton != null) rulesBotDiffPrevButton.onClick.AddListener(() => StepRulesDifficulty(-1));
+            if (rulesBotDiffNextButton != null) rulesBotDiffNextButton.onClick.AddListener(() => StepRulesDifficulty(1));
 
             HookSlider(rulesScoreLimitSlider, v => _editingRules.scoreLimit = Mathf.RoundToInt(v));
             HookSlider(rulesTimeLimitSlider, v => _editingRules.timeLimitSeconds = Mathf.RoundToInt(v) * 60f);
@@ -435,7 +439,6 @@ namespace LR2.UI
             SetRuleSlider(rulesMaxOrbsSlider, 1f, 6f, _editingRules.maxOrbs, true);
             SetRuleSlider(rulesOrbIntervalSlider, 2f, 18f, Mathf.RoundToInt(_editingRules.orbSpawnInterval / 5f), true);
 
-            if (rulesBotDifficulty != null) rulesBotDifficulty.SetValueWithoutNotify(Mathf.Clamp(_editingRules.botDifficulty + 1, 0, 4));
             if (rulesSeekerDronesToggle != null) rulesSeekerDronesToggle.SetIsOnWithoutNotify(_editingRules.spawnOrbs);
 
             RefreshRulesLabels();
@@ -468,6 +471,11 @@ namespace LR2.UI
             if (rulesOrbIntervalSlider != null) rulesOrbIntervalSlider.interactable = dronesOn;
             if (rulesMaxOrbsValue != null) rulesMaxOrbsValue.text = dronesOn ? _editingRules.maxOrbs.ToString() : "OFF";
             if (rulesOrbIntervalValue != null) rulesOrbIntervalValue.text = dronesOn ? $"{Mathf.RoundToInt(_editingRules.orbSpawnInterval)} S" : "OFF";
+            if (rulesBotDiffValueText != null)
+            {
+                int d = _editingRules.botDifficulty;
+                rulesBotDiffValueText.text = d < 0 ? "GLOBAL SETTING" : DifficultyLabels[Mathf.Clamp(d, 0, DifficultyLabels.Length - 1)];
+            }
         }
 
         private static void SetRuleSlider(Slider s, float min, float max, float val, bool whole)

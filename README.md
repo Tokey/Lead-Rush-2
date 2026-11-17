@@ -18,9 +18,9 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 |---|---|
 | ![Foundry First-Person](Docs/Media/gameplay_foundry.png) | ![Custom Mode Rules UI](Docs/Media/mode_rules.png) |
 
-| Enemy Encounter (Skull Mask & Full-Body Retarget) |
-|---|
-| ![Enemy Bot Close-Up](Docs/Media/enemy_skullmask_ads.png) |
+| Enemy Encounter (Skull Mask & Full-Body Retarget) | Settings Steppers (No Dropdowns) |
+|---|---|
+| ![Enemy Bot Close-Up](Docs/Media/enemy_skullmask_ads.png) | ![Settings Panel Steppers](Docs/Media/settings_steppers.png) |
 
 ---
 
@@ -40,7 +40,8 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 - **Full-Body First-Person Rig (`Assets/LR2/Runtime/Characters/`):** Kinemation humanoid FPS driver (`FPSAnimator`) retargeted onto a full-body SWAT operator mesh (`RetargetProxy.cs`) with eye-locked camera alignment, leg IK foot planting, procedural weapon reload replay (`ReloadMotionBridge.cs`), wall anti-clipping (`WeaponAntiClip.cs`), standing/crouch/slide/prone/mantle stances (`SoldierMovement.cs`), and optional bodycam optics & motion (`BodycamRig.cs`).
 - **Weapons & Ballistics (`Assets/LR2/Runtime/Weapons/`, `Combat/`):** Active loadout carries the **AK-12** primary rifle (30-round mag, auto/semi, crisp iron-sight ADS) and **MK23** suppressed sidearm (12-round mag), with additional built weapon prefabs for **AK-74N**, **MK18**, and **FAL** (`LR2ContentBuilder.cs`). Physical projectile ballistics (`Ballistics.cs`), range damage dropoff, penetration & destructible glass/props (`DestructibleProp.cs`), directional impact audio, and shell ejection (`ShellEjector.cs`).
 - **Tactile Combat Feedback & Killcams:** Battlefield-inspired hit/headshot/kill markers and skull badge (`HitFeedbackHUD.cs`), dynamic `+50 HEADSHOT` / `+100 KILL` score popups & kill feed (`HUDController.cs`), 3D blood droplets that trickle across weapon meshes and camera lens (`GunBloodFX.cs`), directional damage arcs, and first-person killer-perspective killcam replays (`KillcamDirector.cs`).
-- **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, and **Team Deathmatch** with per-mode persistent customization (`Score Limit`, `Time Limit`, `Respawn Delay`, `Countdown`, `Enemy/Friendly Bots`, `Seeker Drones`, and per-mode `Bot Difficulty`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, graphics quality presets, and FPS counter persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`).
+- **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, and **Team Deathmatch** with per-mode persistent customization (`Score Limit`, `Time Limit`, `Respawn Delay`, `Countdown`, `Enemy/Friendly Bots`, `Seeker Drones`, and per-mode `Bot Difficulty`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, `< VALUE >` stepper controls for graphics quality, frame rate limit, and bot difficulty, plus FPS counter all persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`, `MainMenuController.cs`).
+- **War-Torn Procedural Arenas (`Assets/LR2/Editor/LR2MapBuilder*.cs`, `Assets/LR2/Meshes/Procedural/`):** Dented/warped corrugated containers, jagged broken masonry parapets and ruined skyline silhouettes, exposed rusty rebar, scattered rubble, destructible glass panels in steel frames, and tuned HDRP volumetric lighting across all four combat maps.
 - **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling and critically-damped aim springs across 4 difficulty presets (`Recruit`, `Regular`, `Hardened`, `Veteran`), plus LLM/external commander hooks (`IBotDirectiveProvider`, `IBotBrain`). See **[Docs/LR2_Bot_Explainer.md](Docs/LR2_Bot_Explainer.md)** for full details.
 
 ---
@@ -85,6 +86,7 @@ Assets/LR2/
 ├── Editor/         # Procedural content, UI, map, NavMesh, preview capture, and smoke-test builders
 ├── FX/             # Blood/decal/shell/tracer materials and prefabs
 ├── Materials/      # Character, weapon, and environment materials
+├── Meshes/         # Procedurally deformed war-torn containers, walls, masonry, and rubble (.asset)
 ├── Prefabs/        # Operator/bot prefabs, weapon prefabs, UI prefabs
 ├── Resources/LR2/  # Runtime-loaded MapPreviews sprites and themes
 ├── Runtime/

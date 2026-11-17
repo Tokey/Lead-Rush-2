@@ -14,8 +14,8 @@ namespace LR2.Characters
     public class BodycamRig : MonoBehaviour
     {
         [Header("Global")]
-        [Tooltip("Overall strength (0 = disabled, uses crisp Kinemation FPSCameraController directly).")]
-        [SerializeField, Range(0f, 2f)] private float intensity = 0f;
+        [Tooltip("Overall strength (0 = disabled, uses crisp Kinemation FPSCameraController directly). Also scaled by the BODYCAM MOTION setting.")]
+        [SerializeField, Range(0f, 2f)] private float intensity = 1f;
         [Tooltip("How much of the motion remains while aiming down sights (0 = none, 1 = all).")]
         [SerializeField, Range(0f, 1f)] private float adsDamping = 0.65f;
 

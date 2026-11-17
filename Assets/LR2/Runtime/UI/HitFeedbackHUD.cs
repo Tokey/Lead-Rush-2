@@ -26,7 +26,7 @@ namespace LR2.UI
         public Color killColor = new Color(1f, 0.16f, 0.12f, 1f);
 
         [Header("Kill marker")]
-        public float skullSize = 46f;
+        public float skullSize = 42f;
         public float skullHold = 0.55f;
         public float skullFade = 0.3f;
 
@@ -40,6 +40,7 @@ namespace LR2.UI
         private Color _color;
         private float _scale = 1f, _thick = 1f;
         private int _streak; // rapid consecutive hits grow the marker a little
+        private bool _headKill;
         private Combatant _player;
 
         private static AudioClip _bodyTick, _headTink, _killThump, _killChime, _headKillDing;
@@ -119,6 +120,7 @@ namespace LR2.UI
             if (e.killed)
             {
                 _killTime = now;
+                _headKill = head;
                 _skullRim.color = head ? new Color(1f, 0.72f, 0.2f, 1f) : new Color(0f, 0f, 0f, 0f);
             }
 
@@ -155,12 +157,12 @@ namespace LR2.UI
             float pop = k < 0.12f ? Mathf.Lerp(1.9f, 0.92f, k / 0.12f) : k < 0.2f ? Mathf.Lerp(0.92f, 1f, (k - 0.12f) / 0.08f) : 1f;
             if (k > skullHold) pop *= Mathf.Lerp(1f, 0.75f, Mathf.Clamp01((k - skullHold) / skullFade));
             _skullRT.localScale = Vector3.one * pop;
-            _skullRT.anchoredPosition = new Vector2(0f, 46f + 6f * Mathf.Clamp01(k / (skullHold + skullFade)));
+            _skullRT.anchoredPosition = new Vector2(0f, 52f + 8f * Mathf.Clamp01(k / (skullHold + skullFade)));
             var sc = killColor;
             sc.a = ka;
             _skull.color = sc;
             var rc = _skullRim.color;
-            rc.a = Mathf.Min(rc.a > 0f ? 1f : 0f, ka);
+            rc.a = _headKill ? ka : 0f;
             _skullRim.color = rc;
         }
 
@@ -201,7 +203,7 @@ namespace LR2.UI
 
         private static void EnsureClips()
         {
-            if (_bodyTick != null) return;
+            if (_bodyTick != null && _headTink != null && _killThump != null && _killChime != null && _headKillDing != null) return;
             const int sr = 44100;
             var rng = new System.Random(1337);
 
@@ -341,6 +343,13 @@ namespace LR2.UI
             float k = (h - y) / (2f * h); // 0 at the top, 1 at the bottom
             float edge = Mathf.Abs(x) - w * Mathf.Clamp01(k);
             return Mathf.Max(edge, Mathf.Max(-h - y, y - h));
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _bodyTick = _headTink = _killThump = _killChime = _headKillDing = null;
+            _skullSprite = _skullRimSprite = null;
         }
     }
 }

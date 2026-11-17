@@ -167,7 +167,10 @@ namespace LR2.World
                     list = new List<Snapshot>(MaxSamplesPerSoldier);
                     _histories[sc] = list;
                 }
-                Vector3 eye = sc.ViewTransform != null ? sc.ViewTransform.position : c.HeadPosition;
+                var proxy = sc.GetComponent<RetargetProxy>();
+                Vector3 eye = sc.ViewCamera != null && sc.ViewCamera.isActiveAndEnabled
+                    ? sc.ViewCamera.transform.position
+                    : (proxy != null ? proxy.VisualEyePosition : (sc.ViewTransform != null ? sc.ViewTransform.position : c.HeadPosition));
                 list.Add(new Snapshot
                 {
                     time = Time.time,
@@ -323,8 +326,9 @@ namespace LR2.World
             {
                 ApplyPose(_killerPuppet, _killerPuppetBones, _killerGunPuppet, _killerPoseReplay, sampleTime);
                 ApplyPose(_victimPuppet, _victimPuppetBones, _victimGunPuppet, _victimPoseReplay, sampleTime);
+                if (_killerPuppet != null) _killerPuppet.transform.position -= (recordedYawRot * Vector3.forward) * 0.025f;
                 var fpCam = _victim.ViewCamera;
-                fpCam.transform.SetPositionAndRotation(kSnap.eyePos + aimRot * new Vector3(0f, 0.02f, 0.06f), aimRot);
+                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, aimRot);
                 fpCam.fieldOfView = fieldOfView;
                 ReplayShots(sampleTime, aimRot);
                 if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
@@ -409,10 +413,10 @@ namespace LR2.World
             if (source == null) return null;
             var p = Instantiate(source);
             p.name = name;
+            foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true)) DestroyImmediate(mb);
             foreach (var j in p.GetComponentsInChildren<Joint>(true)) DestroyImmediate(j);
             foreach (var rb in p.GetComponentsInChildren<Rigidbody>(true)) DestroyImmediate(rb);
             foreach (var c in p.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
-            foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true)) DestroyImmediate(mb);
             foreach (var an in p.GetComponentsInChildren<Animator>(true)) DestroyImmediate(an);
             foreach (var au in p.GetComponentsInChildren<AudioSource>(true)) DestroyImmediate(au);
             foreach (var l in p.GetComponentsInChildren<Light>(true)) l.enabled = false;

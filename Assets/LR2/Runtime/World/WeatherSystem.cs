@@ -170,7 +170,8 @@ namespace LR2.World
             if (_rainSource != null)
             {
                 bool indoors = LR2Audio.IsIndoors(LR2Audio.ListenerPosition);
-                _rainSource.volume = Mathf.Lerp(_rainSource.volume, amount * rainVolume * (indoors ? 0.45f : 1f), Time.deltaTime * 2f);
+                float mix = LR2Audio.CategoryVolume(AudioCategory.Ambience) / 0.68f;
+                _rainSource.volume = Mathf.Lerp(_rainSource.volume, amount * rainVolume * mix * (indoors ? 0.45f : 1f), Time.deltaTime * 2f);
                 var lp = _rainSource.GetComponent<AudioLowPassFilter>();
                 if (lp != null) lp.cutoffFrequency = Mathf.Lerp(lp.cutoffFrequency, indoors ? 1400f : 7000f, Time.deltaTime * 3f);
             }

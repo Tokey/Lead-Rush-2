@@ -84,6 +84,7 @@ namespace LR2.Characters
         public float AimBlend { get; private set; }
         public bool IsSprinting => Movement != null && Movement.State == SoldierMoveState.Sprinting;
         public bool IsCrouching => Movement != null && Movement.Stance == SoldierStance.Crouching;
+        public bool IsProning => Movement != null && Movement.Stance == SoldierStance.Prone;
         public bool IsReloading => ActiveFirearm != null && ActiveFirearm.IsReloading;
         public bool IsDead => Health != null && !Health.IsAlive;
         public bool IsLocalPlayer => Combatant != null && Combatant.IsLocalPlayer;
@@ -173,7 +174,7 @@ namespace LR2.Characters
         private void Start()
         {
             ConfigureRole();
-            if (ViewCamera != null && IsLocalPlayer) ViewCamera.fieldOfView = LR2Settings.FieldOfView;
+            if (ViewCamera != null && IsLocalPlayer) ViewCamera.fieldOfView = LR2Settings.VerticalFov(LR2Settings.FieldOfView, ViewCamera.aspect);
             if (FPSAnimator != null) FPSAnimator.Initialize();
             CameraController = ViewCamera != null && ViewCamera.gameObject.activeInHierarchy ? ViewCamera.GetComponent<FPSCameraController>() : null;
             if (CameraController != null)
@@ -247,6 +248,9 @@ namespace LR2.Characters
             Movement.onLanded = () => PlayTransitionMotion(settings != null ? settings.jumpingMotion : null);
             Movement.onCrouch = () => PlayTransitionMotion(settings != null ? settings.crouchingMotion : null);
             Movement.onUncrouch = () => PlayTransitionMotion(settings != null ? settings.crouchingMotion : null);
+            Movement.onProneStarted = () => PlayTransitionMotion(settings != null ? settings.crouchingMotion : null);
+            Movement.onProneEnded = () => PlayTransitionMotion(settings != null ? settings.crouchingMotion : null);
+            Movement._proneActionCondition = () => !_switching && !IsDead;
             Movement.onSprintStarted = OnSprintStarted;
             Movement.onSprintEnded = OnSprintEnded;
             Movement.onSlideStarted = () =>
@@ -407,6 +411,7 @@ namespace LR2.Characters
             Movement.SetSprintRequested(_input.sprint && !_input.fire && !_input.aim && !busySwitch);
             if (_input.jump) Movement.RequestJump();
             if (_input.crouch) Movement.RequestCrouchToggle();
+            if (_input.prone) Movement.RequestProneToggle();
 
             // Lean (Kinemation lean layer)
             if (UserInput != null && settings != null && !Mathf.Approximately(_input.lean, _lastLean))
@@ -594,7 +599,11 @@ namespace LR2.Characters
             }
 
             if (CameraController != null) CameraController.enabled = false;
-            if (IsLocalPlayer) BeginDeathCam();
+            if (IsLocalPlayer)
+            {
+                SetHeadHidden(false);
+                BeginDeathCam();
+            }
             if (FPSAnimator != null) FPSAnimator.enabled = false;
             if (_ragdoll != null) _ragdoll.Activate(info);
             else if (Animator != null) Animator.enabled = false;

@@ -192,7 +192,7 @@ namespace LR2.UI
                 crosshairGroup.alpha = 0f;
                 return;
             }
-            float fov = _soldier.ViewCamera != null ? _soldier.ViewCamera.fieldOfView : 90f;
+            float fov = _soldier.ViewCamera != null ? _soldier.ViewCamera.fieldOfView : LR2Settings.VerticalFov(LR2Settings.FieldOfView, 16f / 9f);
             float canvasHalfHeight = 540f;
             float spreadPx = Mathf.Tan(gun.CurrentSpread * Mathf.Deg2Rad) / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * canvasHalfHeight;
             float gap = crosshairMinGap + spreadPx;

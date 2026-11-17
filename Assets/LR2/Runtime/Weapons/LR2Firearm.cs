@@ -23,6 +23,7 @@ namespace LR2.Weapons
         [Header("General")]
         [SerializeField] [Range(0f, 120f)] private float fieldOfView = 90f;
         [SerializeField] private FPSAnimationAsset reloadClip;
+        [SerializeField] private LR2.Characters.ReloadMotionBridge.Rest reloadRestPose;
         [Tooltip("Reload animation play rate (1 = authored speed). Below 1 = slower, more deliberate reloads.")]
         [SerializeField, Range(0.5f, 1.5f)] private float reloadPlayRate = 0.85f;
         private FPSAnimationAsset _reloadRuntime;
@@ -64,6 +65,10 @@ namespace LR2.Weapons
         public int ReserveAmmo { get; private set; }
         public int MagazineSize => definition != null ? definition.magazineSize : 30;
         public bool IsReloading { get; private set; }
+        /// <summary>Kinemation reload animation (null = timer-only reload). Read by RetargetProxy's reload bridge.</summary>
+        public FPSAnimationAsset ReloadClip => reloadClip;
+        /// <summary>Baked t=0 helper-bone rest pose from reloadClip curves (avoids identity fallback in SampleAnimation).</summary>
+        public LR2.Characters.ReloadMotionBridge.Rest ReloadRestPose => reloadRestPose;
         public bool IsEmpty => AmmoInMagazine <= 0;
         public FireMode FireMode => _fireMode;
         public Transform Muzzle => muzzle != null ? muzzle : transform;
@@ -209,8 +214,10 @@ namespace LR2.Weapons
 
         public override void UpdateFieldOfView(bool aiming)
         {
-            float hipFov = Owner != null && Owner.IsLocalPlayer ? LR2Settings.FieldOfView : fieldOfView;
-            float fov = hipFov;
+            // Settings and fieldOfView are HORIZONTAL degrees (CoD/BF convention); Unity cameras take the vertical angle.
+            float hipFovH = Owner != null && Owner.IsLocalPlayer ? LR2Settings.FieldOfView : fieldOfView;
+            var viewCam = Owner != null ? Owner.ViewCamera : null;
+            float fov = LR2Settings.VerticalFov(hipFovH, viewCam != null ? viewCam.aspect : 16f / 9f);
             float sens = 1f;
             if (aiming)
             {

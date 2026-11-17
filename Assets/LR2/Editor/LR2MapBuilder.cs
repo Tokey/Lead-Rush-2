@@ -40,6 +40,7 @@ namespace LR2.EditorTools
         private static Mats _m;
         private static MapBuildConfig _cfg;
         private static System.Random _rnd;
+        private static readonly Dictionary<string, Mesh> _procMeshes = new Dictionary<string, Mesh>();
 
         private class Mats
         {
@@ -266,6 +267,213 @@ namespace LR2.EditorTools
             return t;
         }
 
+        private const string ProcMeshDir = "Assets/LR2/Meshes/Procedural";
+
+        private static Mesh GetOrBuildProcMesh(string key, int nx, int ny, int nz, System.Func<Vector3, Vector3, Vector3> deform)
+        {
+            if (_procMeshes.TryGetValue(key, out var cached) && cached != null) return cached;
+            EnsureFolder(ProcMeshDir);
+            string path = $"{ProcMeshDir}/{key}.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            var mesh = existing != null ? existing : new Mesh { name = key };
+            mesh.Clear();
+
+            var verts = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var tris = new List<int>();
+
+            void AddFace(Vector3 normal, Vector3 uAxis, Vector3 vAxis, int nu, int nv)
+            {
+                if (Vector3.Dot(Vector3.Cross(uAxis, vAxis), normal) < 0f) (uAxis, vAxis) = (vAxis, uAxis);
+                int start = verts.Count;
+                for (int iv = 0; iv <= nv; iv++)
+                {
+                    float fv = iv / (float)nv;
+                    for (int iu = 0; iu <= nu; iu++)
+                    {
+                        float fu = iu / (float)nu;
+                        Vector3 raw = normal * 0.5f + (fu - 0.5f) * uAxis + (fv - 0.5f) * vAxis;
+                        verts.Add(deform != null ? deform(raw, normal) : raw);
+                        uvs.Add(new Vector2(fu, fv));
+                    }
+                }
+                int stride = nu + 1;
+                for (int iv = 0; iv < nv; iv++)
+                {
+                    for (int iu = 0; iu < nu; iu++)
+                    {
+                        int i00 = start + iv * stride + iu;
+                        int i10 = i00 + 1;
+                        int i01 = i00 + stride;
+                        int i11 = i01 + 1;
+                        tris.Add(i00); tris.Add(i10); tris.Add(i11);
+                        tris.Add(i00); tris.Add(i11); tris.Add(i01);
+                    }
+                }
+            }
+
+            AddFace(Vector3.forward, Vector3.right, Vector3.up, nx, ny);
+            AddFace(Vector3.back, Vector3.left, Vector3.up, nx, ny);
+            AddFace(Vector3.right, Vector3.back, Vector3.up, nz, ny);
+            AddFace(Vector3.left, Vector3.forward, Vector3.up, nz, ny);
+            AddFace(Vector3.up, Vector3.right, Vector3.back, nx, nz);
+            AddFace(Vector3.down, Vector3.right, Vector3.forward, nx, nz);
+
+            mesh.SetVertices(verts);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+
+            if (existing == null) AssetDatabase.CreateAsset(mesh, path);
+            else EditorUtility.SetDirty(mesh);
+            _procMeshes[key] = mesh;
+            return mesh;
+        }
+
+        private static Mesh GetWarpedContainerMesh(int variant)
+        {
+            int v = Mathf.Abs(variant) % 4;
+            float s = v * 17.3f + 3.1f;
+            return GetOrBuildProcMesh($"SM_LR2_Container_Warp{v}", 16, 6, 6, (p, _) =>
+            {
+                // Keep vertical corner posts crisper while corroding/denting corrugated sides & roof panels.
+                // Pure position-only deformation keeps every cube seam 100% watertight.
+                float edgeMaskX = Mathf.Clamp01((0.48f - Mathf.Abs(p.x)) * 12f);
+                float edgeMaskY = Mathf.Clamp01((0.46f - Mathf.Abs(p.y)) * 10f);
+                float edgeMaskZ = Mathf.Clamp01((0.46f - Mathf.Abs(p.z)) * 10f);
+                float panelMask = edgeMaskX * edgeMaskY;
+
+                if (Mathf.Abs(p.z) > 0.35f)
+                    p.z += Mathf.Sign(p.z) * Mathf.Sin(p.x * 28f * Mathf.PI) * 0.013f * panelMask;
+                if (p.y > 0.45f)
+                    p.y += Mathf.Sin(p.x * 22f * Mathf.PI) * 0.008f * edgeMaskX * edgeMaskZ;
+
+                // 3 localized blast/forklift dents per variant
+                float dent = 0f;
+                for (int k = 0; k < 3; k++)
+                {
+                    float cx = Mathf.Sin(s + k * 2.4f) * 0.34f;
+                    float cy = Mathf.Cos(s * 0.7f + k * 3.1f) * 0.22f;
+                    float cz = (k % 2 == 0 ? 1f : -1f) * 0.5f;
+                    float dx = (p.x - cx) * 3.8f, dy = (p.y - cy) * 3.2f, dz = (p.z - cz) * 2.6f;
+                    dent += Mathf.Exp(-(dx * dx + dy * dy + dz * dz) * 3.2f) * (0.045f + k * 0.014f);
+                }
+                if (Mathf.Abs(p.z) > 0.35f) p.z -= Mathf.Sign(p.z) * dent * panelMask;
+                if (p.y > 0.45f) p.y -= dent * 0.45f * edgeMaskX * edgeMaskZ;
+
+                // Subtle frame twist / beam sag along length
+                float bow = (Mathf.PerlinNoise(p.x * 2.3f + s, p.y * 1.9f + s) - 0.5f) * 0.026f;
+                p.z += bow;
+                p.y += (Mathf.PerlinNoise(p.x * 1.7f + s + 5f, p.z * 2.1f) - 0.55f) * 0.022f * (p.y > 0f ? 1f : 0.25f);
+                return p;
+            });
+        }
+
+        private static Mesh GetWarpedWallMesh(int variant, bool brokenTop, float breakDepth = 0.22f, float warpAmp = 0.032f)
+        {
+            int v = Mathf.Abs(variant) % 4;
+            float s = v * 23.7f + 7.4f;
+            string tag = brokenTop ? $"SM_LR2_Wall_Broken{v}_{Mathf.RoundToInt(breakDepth * 100f)}" : $"SM_LR2_Masonry_Warp{v}";
+            return GetOrBuildProcMesh(tag, brokenTop ? 18 : 10, 6, brokenTop ? 4 : 2, (p, _) =>
+            {
+                float ny = p.y + 0.5f; // 0 bottom .. 1 top
+                // Pure position-only masonry warp keeps all vertical corner seams watertight (zero corner slits)
+                float hFade = Mathf.Clamp01(ny * 1.8f);
+                float wobbleZ = (Mathf.PerlinNoise(p.x * 3.4f + s, ny * 2.8f + s) - 0.5f) * 2f * warpAmp * hFade;
+                float wobbleX = (Mathf.PerlinNoise(p.z * 3.4f + s + 11.3f, ny * 2.8f + s) - 0.5f) * 1.1f * warpAmp * hFade;
+                p.z += wobbleZ * Mathf.Clamp01(Mathf.Abs(p.z) * 2f);
+                p.x += wobbleX * Mathf.Clamp01(Mathf.Abs(p.x) * 2f);
+
+                if (brokenTop && p.y > 0.12f)
+                {
+                    float topFade = Mathf.Clamp01((p.y - 0.12f) / 0.38f);
+                    float ridgeA = Mathf.PerlinNoise(p.x * 3.1f + s, s * 0.37f);
+                    float ridgeB = Mathf.PerlinNoise(p.x * 7.8f + s * 1.9f, p.z * 2.5f + 1.1f);
+                    // Sharp angular craters/bite-outs along the upper coping
+                    float bite = Mathf.Min(0.24f, Mathf.Pow(Mathf.Clamp01(ridgeA * 0.72f + ridgeB * 0.48f), 1.45f) * breakDepth);
+                    p.y -= bite * topFade;
+                    if (topFade > 0.6f && Mathf.Abs(p.z) > 0.42f)
+                        p.z *= 1f - ridgeB * 0.08f * topFade;
+                }
+                else if (!brokenTop)
+                {
+                    // Mild chipped corners & weathered edge bevel on structural piers/blocks (position-only)
+                    float chip = Mathf.PerlinNoise(p.x * 5.1f + s, p.y * 5.7f + p.z * 3.3f + s);
+                    Vector3 inDir = new Vector3(
+                        Mathf.Abs(p.x) > 0.38f ? Mathf.Sign(p.x) * Mathf.Clamp01((Mathf.Abs(p.x) - 0.38f) * 8f) : 0f,
+                        Mathf.Abs(p.y) > 0.35f ? Mathf.Sign(p.y) * Mathf.Clamp01((Mathf.Abs(p.y) - 0.35f) * 6f) : 0f,
+                        Mathf.Abs(p.z) > 0.38f ? Mathf.Sign(p.z) * Mathf.Clamp01((Mathf.Abs(p.z) - 0.38f) * 8f) : 0f);
+                    p -= inDir * (chip * 0.025f);
+                }
+                return p;
+            });
+        }
+
+        private static Mesh GetRubbleMesh(int variant)
+        {
+            int v = Mathf.Abs(variant) % 3;
+            float s = v * 31.1f + 4.9f;
+            return GetOrBuildProcMesh($"SM_LR2_Rubble{v}", 4, 3, 4, (p, n) =>
+            {
+                float d = Mathf.PerlinNoise(p.x * 2.8f + p.z * 1.9f + s, p.y * 3.1f + s);
+                float rock = 0.62f + d * 0.65f;
+                p.x *= rock;
+                p.z *= rock;
+                if (p.y > 0f) p.y *= 0.45f + d * 0.75f;
+                return p;
+            });
+        }
+
+        private static void ApplyMeshKeepBoxCollider(GameObject go, Mesh mesh)
+        {
+            if (go == null || mesh == null) return;
+            var mf = go.GetComponent<MeshFilter>();
+            if (mf != null) mf.sharedMesh = mesh;
+        }
+
+        private static void AddWarTornWallDetails(Transform parent, Vector3 wallCenter, float wallLen, float wallTopY, float yaw, Material mat, int seedBase, bool includeRebar = true, bool includeRubble = true)
+        {
+            Vector3 right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            if (includeRebar)
+            {
+                int rods = Mathf.Clamp(Mathf.RoundToInt(wallLen * 0.35f), 2, 7);
+                for (int i = 0; i < rods; i++)
+                {
+                    float h1 = Mathf.PerlinNoise(i * 3.7f + seedBase, seedBase * 0.3f);
+                    float h2 = Mathf.PerlinNoise(seedBase * 0.5f, i * 5.3f + 2.1f);
+                    float along = Mathf.Lerp(-wallLen * 0.42f, wallLen * 0.42f, (i + 0.35f + h1 * 0.3f) / rods);
+                    float y = wallTopY - 0.14f - h2 * 0.28f;
+                    var rod = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    rod.name = "Rebar";
+                    rod.transform.SetParent(parent, false);
+                    rod.transform.localPosition = wallCenter + right * along + Vector3.up * (y - wallCenter.y) + fwd * ((h1 - 0.5f) * 0.16f);
+                    rod.transform.localRotation = Quaternion.Euler(12f + h2 * 28f, yaw + (h1 - 0.5f) * 45f, (h2 - 0.5f) * 35f);
+                    rod.transform.localScale = new Vector3(0.022f, 0.22f + h1 * 0.18f, 0.022f);
+                    rod.GetComponent<Renderer>().sharedMaterial = _m.rust;
+                    rod.layer = LR2Layers.Debris;
+                    Object.DestroyImmediate(rod.GetComponent<Collider>());
+                }
+            }
+            if (includeRubble && wallCenter.y < 3.5f)
+            {
+                int chunks = Mathf.Clamp(Mathf.RoundToInt(wallLen * 0.22f), 2, 6);
+                for (int i = 0; i < chunks; i++)
+                {
+                    float h1 = Mathf.PerlinNoise(i * 7.1f + seedBase, 1.3f);
+                    float h2 = Mathf.PerlinNoise(2.9f, i * 4.7f + seedBase);
+                    float along = Mathf.Lerp(-wallLen * 0.44f, wallLen * 0.44f, (i + h1 * 0.6f) / chunks);
+                    float sideOff = (i % 2 == 0 ? 1f : -1f) * (0.36f + h2 * 0.45f);
+                    var rb = Box("RubbleChunk", parent, new Vector3(wallCenter.x, 0.14f, wallCenter.z) + right * along + fwd * sideOff,
+                        new Vector3(0.42f + h1 * 0.55f, 0.24f + h2 * 0.26f, 0.36f + h2 * 0.45f), mat, LR2Layers.Debris, SurfaceType.Concrete, h1 * 360f);
+                    ApplyMeshKeepBoxCollider(rb, GetRubbleMesh(seedBase + i));
+                    Object.DestroyImmediate(rb.GetComponent<Collider>());
+                }
+            }
+        }
+
         private static GameObject Box(string name, Transform parent, Vector3 center, Vector3 size, Material mat, int layer = LR2Layers.Default, SurfaceType? surface = null, float yaw = 0f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -282,6 +490,9 @@ namespace LR2.EditorTools
 
         /// <summary>Wall from a to b (XZ) with rectangular openings: (offset along wall, width, bottom, top).</summary>
         private static void Wall(string name, Transform parent, Vector3 a, Vector3 b, float height, float thick, Material mat, params Vector4[] openings)
+            => WallWithFloor(name, parent, a, b, height, thick, mat, 0.102f, openings);
+
+        private static void WallWithFloor(string name, Transform parent, Vector3 a, Vector3 b, float height, float thick, Material mat, float floorOffset, params Vector4[] openings)
         {
             var root = Child(parent, name);
             Vector3 dir = (b - a);
@@ -289,20 +500,22 @@ namespace LR2.EditorTools
             float len = dir.magnitude;
             dir /= len;
             float yaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg - 90f;
+            bool xAxis = Mathf.Abs(dir.x) >= Mathf.Abs(dir.z); // X-walls span corners; Z-walls butt cleanly inside them (no Z-fighting)
             var ops = new List<Vector4>(openings);
             ops.Sort((p, q) => p.x.CompareTo(q.x));
             float cursor = 0f;
             int i = 0;
             void Seg(float from, float to, float y0, float y1)
             {
-                // Slightly inset endpoints at corners and lift base above concrete floor top (y = 0.10) to avoid Z-fighting.
                 if (to - from < 0.01f || y1 - y0 < 0.01f) return;
-                float trimFrom = Mathf.Approximately(from, 0f) ? Mathf.Min(0.01f, (to - from) * 0.1f) : from;
-                float trimTo = Mathf.Approximately(to, len) ? Mathf.Max(trimFrom + 0.01f, len - Mathf.Min(0.01f, (to - from) * 0.1f)) : to;
+                float trimFrom = Mathf.Approximately(from, 0f) ? (xAxis ? -thick * 0.5f : thick * 0.502f) : from;
+                float trimTo = Mathf.Approximately(to, len) ? len + (xAxis ? thick * 0.5f : -thick * 0.502f) : to;
                 if (trimTo - trimFrom < 0.01f) return;
-                if (y0 < 0.01f && a.y < 0.05f && y1 > 0.14f) y0 = 0.102f;
+                if (y0 < 0.01f && a.y < 0.05f && y1 > 0.14f && floorOffset > 0.001f) y0 = floorOffset;
                 Vector3 mid = a + dir * ((trimFrom + trimTo) * 0.5f);
-                Box($"Seg{i++}", root, new Vector3(mid.x, a.y + (y0 + y1) * 0.5f, mid.z), new Vector3(trimTo - trimFrom, y1 - y0, thick), mat, LR2Layers.Default, SurfaceType.Concrete, yaw);
+                var seg = Box($"Seg{i++}", root, new Vector3(mid.x, a.y + (y0 + y1) * 0.5f, mid.z), new Vector3(trimTo - trimFrom, y1 - y0, thick), mat, LR2Layers.Default, SurfaceType.Concrete, yaw);
+                if (mat == _m.wallPlaster || mat == _m.concrete || mat == _m.corrugated)
+                    ApplyMeshKeepBoxCollider(seg, GetWarpedWallMesh(i + name.GetHashCode(), false, 0.14f, 0.018f));
             }
             foreach (var o in ops)
             {
@@ -369,9 +582,14 @@ namespace LR2.EditorTools
         private static GameObject Container(Transform parent, string name, Vector3 basePos, float yaw, int color)
         {
             var mat = _m.containers[Mathf.Abs(color) % _m.containers.Length];
-            var c = Box(name, parent, basePos + Vector3.up * 1.295f, new Vector3(6.06f, 2.59f, 2.44f), mat, LR2Layers.Default, SurfaceType.Metal, yaw);
-            // door end detail (offset out past local 0.50 face to eliminate Z-fighting)
-            var door = Box("Doors", c.transform, new Vector3(0.514f, 0f, 0f), new Vector3(0.01f, 0.93f, 0.92f), _m.darkMetal);
+            bool stacked = basePos.y > 0.5f;
+            float settleY = stacked ? basePos.y : basePos.y - 0.02f;
+            float jYaw = yaw + R(-1.3f, 1.3f);
+            var c = Box(name, parent, new Vector3(basePos.x, settleY + 1.295f, basePos.z), new Vector3(6.06f, 2.59f, 2.44f), mat, LR2Layers.Default, SurfaceType.Metal, jYaw);
+            c.transform.localRotation = Quaternion.Euler(stacked ? R(-0.25f, 0.25f) : R(-0.75f, 0.75f), jYaw, stacked ? R(-0.25f, 0.25f) : R(-0.95f, 0.95f));
+            ApplyMeshKeepBoxCollider(c, GetWarpedContainerMesh(Mathf.Abs(color) + name.GetHashCode()));
+            // door end detail (flush on container face, slightly scarred frame)
+            var door = Box("Doors", c.transform, new Vector3(0.503f, 0f, 0f), new Vector3(0.01f, 0.93f, 0.92f), _m.darkMetal);
             Object.DestroyImmediate(door.GetComponent<Collider>());
             return c;
         }
@@ -428,7 +646,8 @@ namespace LR2.EditorTools
             new Vector4(-19.6f, 11.2f, -10.6f, 18.6f),  // quay west stack + loose container + stairs
             new Vector4(-11.2f, 15.6f, 9.4f, 18.5f),    // quay stacks + bridge
             new Vector4(11.6f, 18.0f, 18.6f, 21.0f),    // quay loose container (east)
-            new Vector4(-30f, 20.5f, 30f, 26f),         // quay strip
+            new Vector4(-30f, 20.5f, 30f, 26f),         // quay strip (playable)
+            new Vector4(-76f, 21.5f, 76f, 26.5f),       // full QuaySlab width so hillside never pierces slab outside play
         };
 
         /// <summary>Designed ground height (metres, relative to y = 0) at a world XZ position.</summary>
@@ -555,10 +774,14 @@ namespace LR2.EditorTools
             var g = Child(_structures, "Ground");
             BuildTerrain(g);
             Box("QuaySlab", g, new Vector3(0f, -0.22f, 24f), new Vector3(150f, 0.5f, 4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
-            // Painted safety lines
+            // Painted safety lines (conformed to terrain slope so ends never float)
             for (int i = -5; i <= 5; i++)
             {
-                var line = Box("Line", g, G(new Vector3(i * 4.5f, 0f, -8.4f), 0.035f), new Vector3(2.4f, 0.01f, 0.12f), _m.curb);
+                float lx = i * 4.5f, lz = -8.4f;
+                float yL = GroundY(lx - 1.2f, lz), yR = GroundY(lx + 1.2f, lz);
+                float slopeDeg = Mathf.Atan2(yR - yL, 2.4f) * Mathf.Rad2Deg;
+                var line = Box("Line", g, new Vector3(lx, Mathf.Max((yL + yR) * 0.5f, -0.02f) + 0.025f, lz), new Vector3(2.4f, 0.015f, 0.12f), _m.curb);
+                line.transform.localRotation = Quaternion.Euler(0f, 0f, slopeDeg);
                 Object.DestroyImmediate(line.GetComponent<Collider>());
             }
             // Water beyond the quay
@@ -585,14 +808,14 @@ namespace LR2.EditorTools
             Box("Floor", h, new Vector3(0f, 0.05f, 2f), new Vector3(9f, 0.1f, 7f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
             Box("Roof", h, new Vector3(0f, hgt + 0.1f, 2f), new Vector3(9.3f, 0.2f, 7.3f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
             float py = hgt + 0.2f;
-            // Parapet (gap at the south-west for the stairs landing)
+            // Parapet (gap at the south-west for the stairs landing; non-overlapping corners)
             Box("ParapetN", h, new Vector3(0f, py + 0.5f, z1 + 0.05f), new Vector3(9.3f, 1.0f, 0.2f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("ParapetE", h, new Vector3(x1 + 0.05f, py + 0.5f, 2f), new Vector3(0.2f, 1.0f, 7.3f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("ParapetW", h, new Vector3(x0 - 0.05f, py + 0.5f, 2f), new Vector3(0.2f, 1.0f, 7.3f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("ParapetS", h, new Vector3(1.0f, py + 0.5f, z0 - 0.05f), new Vector3(7.3f, 1.0f, 0.2f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            // Exterior steel stairs (south) + landing onto the roof
+            Box("ParapetE", h, new Vector3(x1 + 0.05f, py + 0.5f, 2f), new Vector3(0.2f, 1.0f, 6.89f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            Box("ParapetW", h, new Vector3(x0 - 0.05f, py + 0.5f, 2.095f), new Vector3(0.2f, 1.0f, 7.09f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            Box("ParapetS", h, new Vector3(0.95f, py + 0.5f, z0 - 0.05f), new Vector3(7.09f, 1.0f, 0.2f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            // Exterior steel stairs (south) + landing onto the roof (1 cm gap before Roof edge to avoid top Z-fighting)
             Stairs("Stairs", h, new Vector3(5.6f, 0f, -2.45f), new Vector3(-1.4f, py, -2.45f), 1.3f, _m.steelGrate);
-            Box("Landing", h, new Vector3(-2.75f, py - 0.05f, -2.3f), new Vector3(2.7f, 0.1f, 1.6f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
+            Box("Landing", h, new Vector3(-2.75f, py - 0.05f, -2.38f), new Vector3(2.7f, 0.1f, 1.44f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
             Railing(h, new Vector3(-4.1f, py, -3.1f), new Vector3(-1.4f, py, -3.1f));
             // Roof clutter: AC unit + vent (cover on the power position)
             Box("ACUnit", h, new Vector3(2.2f, py + 0.55f, 3.6f), new Vector3(1.8f, 1.1f, 1.2f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
@@ -626,7 +849,7 @@ namespace LR2.EditorTools
             // Upstairs: sandbag-ish cover at the east window + workbench
             Box("WindowCover", w, new Vector3(-16.9f, 4.05f, -2f), new Vector3(0.6f, 0.9f, 2.6f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
             Box("Workbench", w, new Vector3(-22f, 0.45f, 3.2f), new Vector3(3f, 0.9f, 0.9f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-            Box("ToolRack", w, new Vector3(-25.6f, 1.1f, -3f), new Vector3(0.4f, 2.2f, 2.5f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
+            Box("ToolRack", w, new Vector3(-16.35f, 1.1f, 2.2f), new Vector3(0.4f, 2.2f, 2.5f), _m.metal, LR2Layers.Default, SurfaceType.Metal); // against east wall, clear of InteriorStairs
         }
 
         private static void BuildWarehouse()
@@ -657,6 +880,9 @@ namespace LR2.EditorTools
             Rack(new Vector3(9.5f, 0f, -19.5f), 5f);
             Rack(new Vector3(-4.5f, 0f, -15.6f), 5f);
             Rack(new Vector3(5.5f, 0f, -15.6f), 4f);
+            // Smooth interior steps/ramps connecting Warehouse floor (y=0.1) up to LoadingDock platform (y=1.2)
+            Stairs("DockApproachW", wh, new Vector3(-7f, 0.1f, -14.6f), new Vector3(-7f, 1.2f, -12.1f), 3.2f, _m.concrete, false);
+            Stairs("DockApproachE", wh, new Vector3(5f, 0.1f, -14.6f), new Vector3(5f, 1.2f, -12.1f), 3.2f, _m.concrete, false);
         }
 
         private static void BuildLoadingDock()
@@ -664,11 +890,11 @@ namespace LR2.EditorTools
             var d = Child(_structures, "LoadingDock");
             Box("Platform", d, new Vector3(0f, 0.6f, -10.8f), new Vector3(24f, 1.2f, 2.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
             Box("EdgeStripe", d, new Vector3(0f, 1.21f, -9.65f), new Vector3(24f, 0.02f, 0.12f), _m.curb);
-            // Ramps (bots) — players can also mantle the 1.2 m edge
+            // Ramps (high end meets Platform at x=±12, y=1.2; low end meets ground at x=±15.6)
             foreach (float s in new[] { -1f, 1f })
             {
-                var ramp = Box("Ramp", d, new Vector3(s * 13.75f, 0.6f, -10.8f), new Vector3(3.8f, 0.2f, 2.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
-                ramp.transform.localRotation = Quaternion.Euler(0f, 0f, s * 18f);
+                var ramp = Box("Ramp", d, new Vector3(s * 13.8f, 0.55f, -10.8f), new Vector3(3.8f, 0.2f, 2.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                ramp.transform.localRotation = Quaternion.Euler(0f, 0f, -s * 18f);
             }
             for (int i = -3; i <= 3; i += 2) Box("Bumper", d, new Vector3(i * 3.2f, 0.65f, -9.5f), new Vector3(0.5f, 0.6f, 0.2f), _m.darkMetal, LR2Layers.Default, SurfaceType.Plastic);
         }
@@ -689,9 +915,9 @@ namespace LR2.EditorTools
             Railing(y, new Vector3(19.25f, 5.18f, -2.2f), new Vector3(19.25f, 5.18f, 2.7f));
             Railing(y, new Vector3(20.75f, 5.18f, -2.2f), new Vector3(20.75f, 5.18f, 2.7f));
             Stairs("StairsA", y, new Vector3(24.6f, 0f, -14.2f), new Vector3(24.6f, 5.18f, -7.2f), 1.3f, _m.steelGrate);
-            Box("StairsTopLanding", y, new Vector3(23.9f, 5.13f, -6.5f), new Vector3(2.6f, 0.1f, 1.6f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
-            // Loose containers (cover / blocks long sightlines)
-            Container(y, "C1", new Vector3(16f, 0f, -11.5f), 90f, 3);
+            Box("StairsTopLanding", y, new Vector3(24.06f, 5.13f, -6.5f), new Vector3(2.02f, 0.1f, 1.6f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
+            // Loose containers (clear of LoadingDock East Ramp)
+            Container(y, "C1", new Vector3(18.4f, 0f, -12.4f), 90f, 3);
             Container(y, "C2", new Vector3(25.2f, 0f, 1.2f), 90f, 4);
             Container(y, "C3", new Vector3(14.5f, 0f, 1.5f), 0f, 2);
         }
@@ -703,11 +929,11 @@ namespace LR2.EditorTools
             Container(q, "W2", new Vector3(-8f, 2.59f, 17f), 0f, 0);
             Container(q, "E1", new Vector3(6f, 0f, 17f), 0f, 1);
             Container(q, "E2", new Vector3(6f, 2.59f, 17f), 0f, 3);
-            Container(q, "L1", new Vector3(-18f, 0f, 14.5f), 90f, 2);
+            Container(q, "L1", new Vector3(-18.5f, 0f, 11.6f), 90f, 2); // clear of StairsWest bottom at (-17.2, 0, 17)
             Container(q, "L2", new Vector3(15f, 0f, 19.5f), 0f, 4);
             Container(q, "L3", new Vector3(-1f, 0f, 21.2f), 0f, 0);
-            // Long catwalk bridge between the stacks (exposed sniper lane)
-            Box("Bridge", q, new Vector3(-1f, 5.13f, 17f), new Vector3(8.2f, 0.1f, 1.5f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
+            // Long catwalk bridge between the stacks (flush between W2 and E2, no overlap Z-fighting)
+            Box("Bridge", q, new Vector3(-1f, 5.13f, 17f), new Vector3(7.92f, 0.1f, 1.5f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
             Railing(q, new Vector3(-5f, 5.18f, 16.25f), new Vector3(3f, 5.18f, 16.25f));
             Railing(q, new Vector3(-5f, 5.18f, 17.75f), new Vector3(3f, 5.18f, 17.75f));
             Stairs("StairsWest", q, new Vector3(-17.2f, 0f, 17f), new Vector3(-11.1f, 5.18f, 17f), 1.3f, _m.steelGrate);
@@ -756,7 +982,11 @@ namespace LR2.EditorTools
             RubbleCluster("SM_Rubble_02_01", new Vector3(9.5f, 0f, 6.5f), -40f, 1.15f);
             Prop("SM_Jersey", _props, G(new Vector3(-9.5f, 0f, -2.5f)), 25f);
             Prop("SM_Jersey", _props, G(new Vector3(9f, 0f, 4.5f)), -35f);
-            void Block(Vector3 p, float yaw) => Box("ConcreteBlock", y, G(p, 0.45f), new Vector3(1.6f, 0.9f, 0.8f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, yaw);
+            void Block(Vector3 p, float yaw)
+            {
+                var blk = Box("ConcreteBlock", y, G(p, 0.44f), new Vector3(1.6f, 0.9f, 0.8f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, yaw + R(-3f, 3f));
+                ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(Mathf.RoundToInt(p.x * 13 + p.z), true, 0.16f, 0.038f));
+            }
             Block(new Vector3(-4f, 0f, -8f), 0f);
             Block(new Vector3(6f, 0f, -6.5f), 15f);
             Block(new Vector3(-12.5f, 0f, 8f), 80f);
@@ -768,9 +998,15 @@ namespace LR2.EditorTools
         private static void BuildBoundary()
         {
             var b = Child(_structures, "Boundary");
-            Box("WallWest", b, new Vector3(-28.3f, 1.0f, 0f), new Vector3(0.5f, 6f, 52f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallSouth", b, new Vector3(0f, 1.0f, -24.3f), new Vector3(57f, 6f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallEast", b, new Vector3(28.3f, 1.0f, -6f), new Vector3(0.5f, 6f, 37f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            void BrokenBoundary(string n, Vector3 center, float len, float height, float thick, float yaw, int seed)
+            {
+                var w = Box(n, b, center, new Vector3(len, height, thick), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete, yaw);
+                ApplyMeshKeepBoxCollider(w, GetWarpedWallMesh(seed, true, 0.20f, 0.05f));
+                AddWarTornWallDetails(b, center, len, center.y + height * 0.44f, yaw, _m.wallPlaster, seed, true, false);
+            }
+            BrokenBoundary("WallWest", new Vector3(-28.3f, 1.15f, 0f), 52f, 6.4f, 0.55f, 90f, 11);
+            BrokenBoundary("WallSouth", new Vector3(0f, 1.15f, -24.3f), 57f, 6.4f, 0.55f, 0f, 23);
+            BrokenBoundary("WallEast", new Vector3(28.3f, 1.15f, -6f), 37f, 6.4f, 0.55f, 90f, 37);
             // East perimeter container wall (3-high) for a "full" skyline
             for (int i = 0; i < 4; i++)
                 for (int lvl = 0; lvl < 3; lvl++)
@@ -822,35 +1058,55 @@ namespace LR2.EditorTools
         private static void PlaceDecals()
         {
             string[] names = { "M_CrackDecal", "M_CrackDecal_2", "M_LeakDecal", "M_RustDecal", "M_GraffittiDecal", "M_Decal_Puddle_A_MIC", "M_Decal_Salt", "M_LeakDecal_2", "M_RustDecal_2" };
+            int placed = PlaceProjectedDecals(PlayMin, PlayMax, 220, names);
+            Debug.Log($"[LR2] Decals placed: {placed}");
+        }
+
+        private static int PlaceProjectedDecals(Vector2 playMin, Vector2 playMax, int tries, string[] matNames)
+        {
             var mats = new List<Material>();
-            foreach (var n in names)
+            foreach (var n in matNames)
             {
                 var m = FindLeartes(n);
                 if (m != null) mats.Add(m);
             }
-            if (mats.Count == 0) return;
+            if (mats.Count == 0) return 0;
+            var placedPoints = new List<Vector3>();
             int placed = 0;
-            for (int i = 0; i < 220; i++)
+            for (int i = 0; i < tries; i++)
             {
-                Vector3 o = new Vector3(R(PlayMin.x, PlayMax.x), 11f, R(PlayMin.y, PlayMax.y));
-                Vector3 dir = i % 3 == 0 ? Vector3.down : new Vector3(R(-1f, 1f), R(-0.3f, 0f), R(-1f, 1f)).normalized;
-                if (i % 3 != 0) o.y = R(0.5f, 4f);
-                if (!Physics.Raycast(o, dir, out var hit, 30f, LR2Layers.EnvironmentMask)) continue;
+                Vector3 o = new Vector3(R(playMin.x, playMax.x), 11f, R(playMin.y, playMax.y));
+                Vector3 dir = i % 3 == 0 ? Vector3.down : new Vector3(R(-1f, 1f), -0.15f, R(-1f, 1f)).normalized;
+                if (i % 3 != 0) o.y = R(0.6f, 3.6f);
+                if (!Physics.Raycast(o, dir, out var hit, 28f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
                 var mat = mats[i % mats.Count];
                 bool floorDecal = hit.normal.y > 0.7f;
-                if (mat.name.Contains("Puddle") || mat.name.Contains("Salt")) { if (!floorDecal) continue; }
-                var go = new GameObject("Decal_" + mat.name);
-                go.transform.SetParent(_decals, false);
-                go.transform.position = hit.point + hit.normal * 0.05f;
-                go.transform.rotation = Quaternion.LookRotation(-hit.normal, floorDecal ? Vector3.forward : Vector3.up) * Quaternion.Euler(0f, 0f, R(0f, 360f));
-                var dp = go.AddComponent<DecalProjector>();
-                dp.material = mat;
-                float s = floorDecal ? R(1.5f, 3.5f) : R(0.8f, 2.4f);
-                dp.size = new Vector3(s, s, 0.4f);
-                dp.drawDistance = 80f;
-                placed++;
+                if ((mat.name.Contains("Puddle") || mat.name.Contains("Salt")) && !floorDecal) continue;
+                if (hit.collider != null && hit.collider.GetComponentInParent<DestructibleProp>() != null) continue;
+                // Keep decals spaced apart so overlapping projectors never shimmer or Z-fight
+                bool tooClose = false;
+                for (int j = 0; j < placedPoints.Count; j++)
+                    if ((placedPoints[j] - hit.point).sqrMagnitude < 1.6f * 1.6f) { tooClose = true; break; }
+                if (tooClose) continue;
+                var dp = CreateDecal(mat, hit.point, hit.normal, floorDecal ? R(1.5f, 3.2f) : R(0.8f, 2.0f), floorDecal);
+                if (dp != null) { placedPoints.Add(hit.point); placed++; }
             }
-            Debug.Log($"[LR2] Decals placed: {placed}");
+            return placed;
+        }
+
+        private static DecalProjector CreateDecal(Material mat, Vector3 point, Vector3 normal, float sizeXY, bool floorDecal)
+        {
+            var go = new GameObject("Decal_" + mat.name);
+            go.transform.SetParent(_decals, false);
+            go.transform.position = point + normal * 0.02f;
+            go.transform.rotation = Quaternion.LookRotation(-normal, floorDecal ? Vector3.forward : Vector3.up) * Quaternion.Euler(0f, 0f, R(0f, 360f));
+            var dp = go.AddComponent<DecalProjector>();
+            dp.material = mat;
+            dp.size = new Vector3(sizeXY, sizeXY, 0.20f); // slim depth prevents bleed-through on thin walls
+            dp.startAngleFade = 65f;
+            dp.endAngleFade = 95f;
+            dp.drawDistance = 75f;
+            return dp;
         }
 
         private static void DressProps()
@@ -907,14 +1163,16 @@ namespace LR2.EditorTools
             var exposure = profile.Add<Exposure>(true);
             exposure.mode.Override(ExposureMode.AutomaticHistogram);
             exposure.compensation.Override(_cfg.exposureCompensation);
-            exposure.limitMin.Override(4.5f);
-            exposure.limitMax.Override(13.0f);
-            exposure.adaptationMode.Override(AdaptationMode.Fixed);
+            exposure.limitMin.Override(7.8f);
+            exposure.limitMax.Override(12.8f);
+            exposure.adaptationMode.Override(AdaptationMode.Progressive);
+            exposure.adaptationSpeedDarkToLight.Override(2.6f);
+            exposure.adaptationSpeedLightToDark.Override(1.5f);
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var bloom = profile.Add<Bloom>(true);
-            bloom.intensity.Override(_cfg.bloom);
-            bloom.threshold.Override(0.9f);
+            bloom.intensity.Override(Mathf.Min(_cfg.bloom, 0.16f));
+            bloom.threshold.Override(1.1f);
             bloom.scatter.Override(0.6f);
             var color = profile.Add<ColorAdjustments>(true);
             color.contrast.Override(_cfg.contrast);
@@ -932,7 +1190,7 @@ namespace LR2.EditorTools
             ao.radius.Override(1.5f);
             ao.directLightingStrength.Override(0.2f);
             var ssr = profile.Add<ScreenSpaceReflection>(true);
-            ssr.enabled.Override(true);
+            ssr.enabled.Override(false); // half-res SSR shimmered on wet/rough surfaces; sky/probe reflections stay stable
             var gi = profile.Add<GlobalIllumination>(true);
             gi.enable.Override(false); // SSGI caused noisy flicker on foliage
             var contact = profile.Add<ContactShadows>(true);
@@ -1281,7 +1539,7 @@ namespace LR2.EditorTools
             // Industrial clutter
             P("SM_Cablespool", new Vector3(-4f, 0f, 8.5f), 0f);
             P("SM_Cablespool", new Vector3(17.5f, 0f, -8.5f), 40f);
-            P("SM_Gascylender", new Vector3(-15.4f, 0f, -1f), 0f);
+            P("SM_Gascylender", new Vector3(-15.2f, 0f, -5.8f), 0f);
             P("SM_Tire", new Vector3(13f, 0f, 3f), 0f);
             P("SM_Tire", new Vector3(13.4f, 0f, 3.9f), 30f);
             P("SM_Trashcan", new Vector3(-5.2f, 0f, -1.2f), 0f);
@@ -1325,6 +1583,17 @@ namespace LR2.EditorTools
             {
                 foreach (Transform t in tactical)
                     if (t.name.StartsWith("Choke")) keepClear.Add((t.position, 2.5f, 2.1f));
+            }
+            if (structures != null)
+            {
+                // Keep both ends of every staircase/ramp collider clear of props & foliage
+                foreach (var c in structures.GetComponentsInChildren<BoxCollider>(true))
+                {
+                    if (c.name != "RampCollider") continue;
+                    Vector3 fwd = c.transform.forward * (c.size.z * 0.45f);
+                    keepClear.Add((c.transform.position - fwd, 1.8f, 1.4f));
+                    keepClear.Add((c.transform.position + fwd, 1.8f, 1.4f));
+                }
             }
 
             // Gather movable props & nature items (immediate children under each container group).
@@ -1474,15 +1743,16 @@ namespace LR2.EditorTools
                         }
                     }
 
-                    // Static structures (exact ComputePenetration when prop has a collider, else AABB MTV)
-                    if (!isFoliage)
+                    // Static structures (exact ComputePenetration when prop has a collider, else AABB MTV; keep in-play undergrowth clear of walls/props)
+                    bool inPlayUndergrowth = isFoliage && tr.parent != null && tr.parent.name == "Undergrowth" && InPlay(bi.center, 3f);
+                    if (!isFoliage || inPlayUndergrowth)
                     {
                         var itemCol = tr.GetComponentInChildren<Collider>(true);
                         for (int s = 0; s < staticObs.Count; s++)
                         {
                             var (sc, sb) = staticObs[s];
-                            if (sc == null || !TryBoxMtv(bi, sb, 0.04f, out var aabbMtv)) continue;
-                            if (itemCol != null && !itemCol.isTrigger)
+                            if (sc == null || !TryBoxMtv(bi, sb, 0.05f, out var aabbMtv)) continue;
+                            if (!isFoliage && itemCol != null && !itemCol.isTrigger)
                             {
                                 if (Physics.ComputePenetration(itemCol, itemCol.transform.position, itemCol.transform.rotation,
                                         sc, sc.transform.position, sc.transform.rotation, out var dir, out float depth) && depth > 0.03f)
@@ -1498,15 +1768,18 @@ namespace LR2.EditorTools
                             }
                         }
 
-                        // Peer props (skip non-colliding grass; separate colliding props by MTV)
-                        for (int j = 0; j < candidates.Count; j++)
+                        if (!isFoliage)
                         {
-                            if (i == j || candidates[j] == null) continue;
-                            if (nature != null && candidates[j].IsChildOf(nature) && candidates[j].GetComponentInChildren<Collider>(true) == null) continue;
-                            if (!TryBounds(candidates[j], out var bj)) continue;
-                            if (TryBoxMtv(bi, bj, 0.06f, out var pmv))
+                            // Peer props (skip non-colliding grass; separate colliding props by MTV)
+                            for (int j = 0; j < candidates.Count; j++)
                             {
-                                if (pmv.sqrMagnitude > 0.002f) totalPush += pmv * 0.55f;
+                                if (i == j || candidates[j] == null) continue;
+                                if (nature != null && candidates[j].IsChildOf(nature) && candidates[j].GetComponentInChildren<Collider>(true) == null) continue;
+                                if (!TryBounds(candidates[j], out var bj)) continue;
+                                if (TryBoxMtv(bi, bj, 0.06f, out var pmv))
+                                {
+                                    if (pmv.sqrMagnitude > 0.002f) totalPush += pmv * 0.55f;
+                                }
                             }
                         }
                     }
@@ -1552,6 +1825,14 @@ namespace LR2.EditorTools
                             if (Physics.ComputePenetration(itemCol, itemCol.transform.position, itemCol.transform.rotation,
                                     sc, sc.transform.position, sc.transform.rotation, out _, out float depth) && depth > 0.09f)
                                 bad = true;
+                        }
+                    }
+                    else if (nature != null && tr.parent != null && tr.parent.name == "Undergrowth" && InPlay(bi.center, 3f))
+                    {
+                        for (int s = 0; s < staticObs.Count && !bad; s++)
+                        {
+                            var (sc, sb) = staticObs[s];
+                            if (sc != null && TryBoxMtv(bi, sb, -0.05f, out _)) bad = true;
                         }
                     }
                 }
@@ -1651,13 +1932,18 @@ namespace LR2.EditorTools
                 if (go.GetComponent<SurfaceIdentifier>() == null)
                     go.AddComponent<SurfaceIdentifier>().surface = dp.surface;
 
-                // Dynamic NavMesh carving on solid floor-level cover (destruction opens paths in real time).
+                // Dynamic NavMesh carving on solid floor-level cover + intact glass panels (destruction opens paths in real time).
                 var rs = go.GetComponentsInChildren<Renderer>(true);
-                if (dp.surface != SurfaceType.Glass && rs.Length > 0)
+                if (rs.Length > 0)
                 {
-                    var b = rs[0].bounds;
-                    for (int r = 1; r < rs.Length; r++) b.Encapsulate(rs[r].bounds);
-                    if (b.size.y > 0.35f && b.size.magnitude < 5.0f)
+                    Bounds localBounds = ComputeLocalBounds(go.transform, rs);
+                    Vector3 worldSize = Vector3.Scale(localBounds.size, new Vector3(
+                        Mathf.Abs(go.transform.lossyScale.x),
+                        Mathf.Abs(go.transform.lossyScale.y),
+                        Mathf.Abs(go.transform.lossyScale.z)));
+                    bool glassPanel = dp.surface == SurfaceType.Glass && worldSize.y > 1.2f && Mathf.Max(worldSize.x, worldSize.z) > 1.2f;
+                    bool solidCover = dp.surface != SurfaceType.Glass && worldSize.y > 0.35f && worldSize.magnitude < 8.0f;
+                    if (glassPanel || solidCover)
                     {
                         var mod = go.GetComponent<NavMeshModifier>();
                         if (mod == null) mod = go.AddComponent<NavMeshModifier>();
@@ -1667,17 +1953,40 @@ namespace LR2.EditorTools
                         obs.shape = NavMeshObstacleShape.Box;
                         obs.carving = true;
                         obs.carveOnlyStationary = true;
-                        obs.center = go.transform.InverseTransformPoint(b.center);
-                        Vector3 ls = go.transform.lossyScale;
+                        obs.center = localBounds.center;
                         obs.size = new Vector3(
-                            b.size.x / Mathf.Max(0.01f, Mathf.Abs(ls.x)),
-                            b.size.y / Mathf.Max(0.01f, Mathf.Abs(ls.y)),
-                            b.size.z / Mathf.Max(0.01f, Mathf.Abs(ls.z)));
+                            Mathf.Max(0.2f, localBounds.size.x),
+                            Mathf.Max(0.2f, localBounds.size.y),
+                            Mathf.Max(0.2f, localBounds.size.z));
                     }
                 }
                 count++;
             }
             Debug.Log($"[LR2] Destructible objects configured: {count} ({explosives} explosive).");
+        }
+
+        private static Bounds ComputeLocalBounds(Transform root, Renderer[] rs)
+        {
+            Bounds local = default;
+            bool has = false;
+            Matrix4x4 inv = root.worldToLocalMatrix;
+            foreach (var r in rs)
+            {
+                if (r is ParticleSystemRenderer) continue;
+                var mf = r.GetComponent<MeshFilter>();
+                Bounds src = mf != null && mf.sharedMesh != null ? mf.sharedMesh.bounds : r.bounds;
+                Matrix4x4 m = mf != null && mf.sharedMesh != null ? inv * r.transform.localToWorldMatrix : inv;
+                Vector3 c = src.center, e = src.extents;
+                for (int sx = -1; sx <= 1; sx += 2)
+                for (int sy = -1; sy <= 1; sy += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    Vector3 pt = m.MultiplyPoint3x4(c + new Vector3(e.x * sx, e.y * sy, e.z * sz));
+                    if (!has) { local = new Bounds(pt, Vector3.zero); has = true; }
+                    else local.Encapsulate(pt);
+                }
+            }
+            return has ? local : new Bounds(Vector3.zero, Vector3.one);
         }
 
         // ================================================================================================= navigation / cover / minimap
@@ -1829,7 +2138,7 @@ namespace LR2.EditorTools
 
             var camGo = new GameObject("MenuCamera");
             camGo.tag = "MainCamera";
-            camGo.transform.SetPositionAndRotation(new Vector3(-1.3f, 1.55f, -1.9f), Quaternion.Euler(4f, 22f, 0f));
+            camGo.transform.SetPositionAndRotation(new Vector3(-1.05f, 1.48f, -1.85f), Quaternion.Euler(3f, 28.5f, 0f));
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 38f;
             var hd = camGo.AddComponent<HDAdditionalCameraData>();
@@ -1866,6 +2175,7 @@ namespace LR2.EditorTools
             var ex = profile.Add<Exposure>(true);
             ex.mode.Override(ExposureMode.AutomaticHistogram);
             ex.compensation.Override(0.4f);
+            ex.adaptationMode.Override(AdaptationMode.Progressive);
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var color = profile.Add<ColorAdjustments>(true);

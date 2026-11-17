@@ -23,7 +23,7 @@ namespace LR2.EditorTools
         private const int PreviewWidth = 960;
         private const int PreviewHeight = 540;
         private const string OutputFolder = "Assets/LR2/Resources/LR2/MapPreviews";
-        private const string StampVersion = "v1";
+        private const string StampVersion = "v2";
         private const string StampPath = "Library/LR2_GeminiUiStamp.txt";
         private const string ReportPath = "Library/LR2_GeminiBuildReport.txt";
         private static double _readyAt;
@@ -404,6 +404,9 @@ namespace LR2.EditorTools
         private const string KeyLog = "LR2GeminiVerify.Log";
         private const string KeyDeadline = "LR2GeminiVerify.Deadline";
         private const string VerifyDir = "Logs/LR2_GeminiVerify";
+        private static bool _flickerDone;
+        private static float _savedFov = -1f;
+        private static float _savedBodycamMotion = -1f;
 
         static LR2GeminiVerifyRunner()
         {
@@ -426,12 +429,16 @@ namespace LR2.EditorTools
             Directory.CreateDirectory(VerifyDir);
             foreach (var f in Directory.GetFiles(VerifyDir, "*.png")) File.Delete(f);
 
+            _flickerDone = false;
+            _savedFov = LR2Settings.FieldOfView;
+            _savedBodycamMotion = LR2Settings.BodycamMotion;
+
             SessionState.SetBool(KeyActive, true);
             SessionState.SetInt(KeyStage, 0);
             SessionState.SetFloat(KeyAt, 0f);
             SessionState.SetInt(KeyErrors, 0);
             SessionState.SetString(KeyLog, "");
-            SessionState.SetFloat(KeyDeadline, (float)EditorApplication.timeSinceStartup + 28f);
+            SessionState.SetFloat(KeyDeadline, (float)EditorApplication.timeSinceStartup + 55f);
 
             LR2UIBuilder.Build();
             EditorSceneManager.OpenScene("Assets/LR2/Scenes/LR2_MainMenu.unity", OpenSceneMode.Single);
@@ -514,7 +521,20 @@ namespace LR2.EditorTools
                         if (mm.modeRulesBackButton != null) mm.modeRulesBackButton.onClick.Invoke();
                         if (mm.settingsButton != null) mm.settingsButton.onClick.Invoke();
                         var sp = Object.FindAnyObjectByType<SettingsPanel>();
-                        AppendNote($"SettingsPanel uiVolume={(sp != null && sp.uiVolume != null ? "OK" : "MISSING")}");
+                        bool fovOk = sp != null && sp.fieldOfView != null && sp.fieldOfView.minValue <= 65.1f && sp.fieldOfView.maxValue >= 119.9f;
+                        if (fovOk)
+                        {
+                            sp.fieldOfView.value = 104f;
+                            LR2Settings.Save();
+                            float persisted = PlayerPrefs.GetFloat("LR2.FOV", -1f);
+                            AppendNote($"SettingsPanel uiVolume={(sp.uiVolume != null ? "OK" : "MISSING")}, fovRange=({sp.fieldOfView.minValue:0}..{sp.fieldOfView.maxValue:0}), persistedFOV={persisted:0}");
+                            sp.fieldOfView.value = _savedFov > 0f ? _savedFov : 90f;
+                            LR2Settings.Save();
+                        }
+                        else
+                        {
+                            AppendNote($"SettingsPanel uiVolume={(sp != null && sp.uiVolume != null ? "OK" : "MISSING")}, fovSlider={(sp != null && sp.fieldOfView != null ? $"{sp.fieldOfView.minValue:0}..{sp.fieldOfView.maxValue:0}" : "MISSING")}");
+                        }
                     }
                     ScreenCapture.CaptureScreenshot(Path.Combine(VerifyDir, "03_menu_settings.png"));
                     SessionState.SetInt(KeyStage, 3);
@@ -558,7 +578,6 @@ namespace LR2.EditorTools
                 }
                 case 5:
                 {
-                    var match = MatchManager.Instance;
                     var player = Combatant.FindLocalPlayer();
                     var soldier = player != null ? player.GetComponent<SoldierController>() : null;
                     if (soldier != null && soldier.ActiveFirearm != null)
@@ -585,23 +604,67 @@ namespace LR2.EditorTools
                         AppendNote($"Applied damage={dmg:0} -> HP={player.Health.Current:0}, GunDrops={(GunBloodFX.Instance != null ? GunBloodFX.Instance.ActiveGunDropletCount : -1)}");
                     }
 
+                    Combatant enemy = null;
+                    foreach (var c in Combatant.All)
+                        if (c != null && c != player) { enemy = c; break; }
+                    if (player != null && enemy != null)
+                    {
+                        GameEvents.RaiseHit(new HitEvent
+                        {
+                            attacker = player,
+                            victim = enemy,
+                            damage = 100f,
+                            zone = HitZone.Head,
+                            type = DamageType.Bullet,
+                            killed = true,
+                            point = enemy.ChestPosition,
+                            direction = Vector3.forward,
+                        });
+                        GameEvents.RaiseKilled(new KillEvent
+                        {
+                            killer = player,
+                            victim = enemy,
+                            weaponName = "AK-12",
+                            type = DamageType.Bullet,
+                            headshot = true,
+                            distance = 24f,
+                            victimPosition = enemy.Position,
+                            direction = Vector3.forward,
+                        });
+                        AppendNote($"Triggered BF6 HitFeedback+KillFeed: {player.DisplayName} -> {enemy.DisplayName} (headshot kill)");
+                    }
+
                     var hud = Object.FindAnyObjectByType<HUDController>();
                     if (hud != null)
                     {
                         string dmgSprite = hud.damageIndicatorTemplate != null && hud.damageIndicatorTemplate.sprite != null ? hud.damageIndicatorTemplate.sprite.name : "NULL";
-                        AppendNote($"HUD DamageArc.sprite={dmgSprite}");
+                        bool hfActive = hud.GetComponentInParent<Canvas>()?.GetComponentInChildren<HitFeedbackHUD>(true) != null;
+                        AppendNote($"HUD DamageArc.sprite={dmgSprite}, HitFeedbackHUD={(hfActive ? "OK" : "MISSING")}");
                     }
 
                     SessionState.SetInt(KeyStage, 6);
-                    SessionState.SetFloat(KeyAt, now + 0.4f);
+                    SessionState.SetFloat(KeyAt, now + 0.08f);
                     break;
                 }
                 case 6:
                 {
                     ScreenCapture.CaptureScreenshot(Path.Combine(VerifyDir, "04_gameplay_blood_hud.png"));
                     CaptureCamFallback(Path.Combine(VerifyDir, "05_gameplay_cam.png"));
+                    var probeGo = new GameObject("[LR2 VerifyFlickerProbe]");
+                    Object.DontDestroyOnLoad(probeGo);
+                    probeGo.AddComponent<VerifyFlickerProbe>();
                     SessionState.SetInt(KeyStage, 7);
-                    SessionState.SetFloat(KeyAt, now + 0.6f);
+                    SessionState.SetFloat(KeyAt, now + 0.4f);
+                    break;
+                }
+                case 7:
+                {
+                    if (!_flickerDone)
+                    {
+                        SessionState.SetFloat(KeyAt, now + 0.25f);
+                        return;
+                    }
+                    FinishVerify();
                     break;
                 }
                 default:
@@ -655,6 +718,11 @@ namespace LR2.EditorTools
 
         private static void FinishVerify()
         {
+            if (_savedBodycamMotion >= 0f)
+            {
+                LR2Settings.BodycamMotion = _savedBodycamMotion;
+                LR2Settings.Save();
+            }
             LR2Session.ResetModeRules(GameModeType.TeamDeathmatch);
             int errs = SessionState.GetInt(KeyErrors, 0);
             string fullLog = SessionState.GetString(KeyLog, "") + $"Errors={errs}\n";
@@ -667,6 +735,12 @@ namespace LR2.EditorTools
             bool autoExit = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2AutoExit") >= 0;
             if (autoExit)
             {
+                if (File.Exists(LR2MapBuilder.MenuScenePath))
+                {
+                    string setupPath = Path.Combine(Directory.GetCurrentDirectory(), "Library", "LastSceneManagerSetup.txt");
+                    File.WriteAllText(setupPath,
+                        "sceneSetups:\n- path: " + LR2MapBuilder.MenuScenePath.Replace('\\', '/') + "\n  isLoaded: 1\n  isActive: 1\n  isSubScene: 0\n");
+                }
                 EditorApplication.playModeStateChanged += state =>
                 {
                     if (state == PlayModeStateChange.EnteredEditMode)
@@ -674,6 +748,125 @@ namespace LR2.EditorTools
                 };
             }
             EditorApplication.isPlaying = false;
+        }
+
+        private class VerifyFlickerProbe : MonoBehaviour
+        {
+            private System.Collections.IEnumerator Start()
+            {
+                try
+                {
+                    LR2Settings.BodycamMotion = 0f;
+                    string[] scenes = LR2Session.MapScenes;
+                    for (int i = 0; i < scenes.Length; i++)
+                    {
+                        string sceneName = scenes[i];
+                        if (i > 0)
+                        {
+                            var op = SceneManager.LoadSceneAsync(sceneName);
+                            while (op != null && !op.isDone) yield return null;
+                            yield return null;
+                        }
+
+                        float waitStart = Time.realtimeSinceStartup;
+                        while (Time.realtimeSinceStartup - waitStart < 5f)
+                        {
+                            var mm = MatchManager.Instance;
+                            if (mm != null && mm.State == MatchState.Playing && Combatant.FindLocalPlayer() != null)
+                                break;
+                            yield return null;
+                        }
+
+                        var player = Combatant.FindLocalPlayer();
+                        var soldier = player != null ? player.GetComponent<SoldierController>() : null;
+                        var cam = soldier != null && soldier.ViewCamera != null && soldier.ViewCamera.isActiveAndEnabled
+                            ? soldier.ViewCamera
+                            : Camera.main;
+
+                        foreach (var bot in Object.FindObjectsByType<LR2.AI.BotController>())
+                            if (bot != null) bot.enabled = false;
+                        if (soldier != null)
+                        {
+                            var pis = soldier.GetComponent<LR2.Characters.PlayerInputSource>();
+                            if (pis != null) pis.enabled = false;
+                            if (soldier.Movement != null) soldier.Movement.StopSprint();
+                            if (cam != null)
+                            {
+                                for (int turn = 0; turn < 3 && Physics.Raycast(cam.transform.position, cam.transform.forward, 2.5f); turn++)
+                                    soldier.transform.Rotate(0f, 110f, 0f);
+                            }
+                        }
+
+                        // Let HDRP progressive exposure and TAA settle at the stationary viewpoint.
+                        yield return new WaitForSecondsRealtime(1.25f);
+
+                        Animator[] anims = soldier != null ? soldier.GetComponentsInChildren<Animator>() : System.Array.Empty<Animator>();
+                        foreach (var a in anims) if (a != null) a.speed = 0f;
+                        if (soldier != null && soldier.CameraController != null) soldier.CameraController.enabled = false;
+
+                        yield return new WaitForEndOfFrame();
+                        Vector3 posA = cam != null ? cam.transform.position : Vector3.zero;
+                        Quaternion rotA = cam != null ? cam.transform.rotation : Quaternion.identity;
+                        Texture2D texA = ScreenCapture.CaptureScreenshotAsTexture();
+
+                        for (int f = 0; f < 6; f++) yield return null;
+
+                        yield return new WaitForEndOfFrame();
+                        Vector3 posB = cam != null ? cam.transform.position : Vector3.zero;
+                        Quaternion rotB = cam != null ? cam.transform.rotation : Quaternion.identity;
+                        Texture2D texB = ScreenCapture.CaptureScreenshotAsTexture();
+
+                        if (soldier != null && soldier.CameraController != null) soldier.CameraController.enabled = true;
+                        foreach (var a in anims) if (a != null) a.speed = 1f;
+
+                        SaveAndCompareFrames(sceneName, texA, texB, Vector3.Distance(posA, posB), Quaternion.Angle(rotA, rotB));
+                    }
+                }
+                finally
+                {
+                    if (_savedBodycamMotion >= 0f) LR2Settings.BodycamMotion = _savedBodycamMotion;
+                    _flickerDone = true;
+                    Destroy(gameObject);
+                }
+            }
+
+            private static void SaveAndCompareFrames(string sceneName, Texture2D texA, Texture2D texB, float posDelta, float rotDelta)
+            {
+                if (texA == null || texB == null)
+                {
+                    AppendNote($"Flicker[{sceneName}]: capture returned null texture");
+                    if (texA != null) Object.Destroy(texA);
+                    if (texB != null) Object.Destroy(texB);
+                    return;
+                }
+
+                File.WriteAllBytes(Path.Combine(VerifyDir, $"06_{sceneName}_flickerA.png"), texA.EncodeToPNG());
+                File.WriteAllBytes(Path.Combine(VerifyDir, $"06_{sceneName}_flickerB.png"), texB.EncodeToPNG());
+
+                Color32[] a = texA.GetPixels32();
+                Color32[] b = texB.GetPixels32();
+                int count = Mathf.Min(a.Length, b.Length);
+                double sumDiff = 0;
+                int changedOver12 = 0;
+                int maxDiff = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    int dr = Mathf.Abs(a[i].r - b[i].r);
+                    int dg = Mathf.Abs(a[i].g - b[i].g);
+                    int db = Mathf.Abs(a[i].b - b[i].b);
+                    int d = Mathf.Max(dr, Mathf.Max(dg, db));
+                    sumDiff += (dr + dg + db) / 3.0;
+                    if (d > 12) changedOver12++;
+                    if (d > maxDiff) maxDiff = d;
+                }
+
+                double meanRgb = count > 0 ? sumDiff / count : 0.0;
+                double pct12 = count > 0 ? 100.0 * changedOver12 / count : 0.0;
+                AppendNote($"Flicker[{sceneName}] camDelta=({posDelta:0.0000}m,{rotDelta:0.000}deg) meanDiff={meanRgb:0.00}/255 pct>12={pct12:0.00}% maxDiff={maxDiff}");
+
+                Object.Destroy(texA);
+                Object.Destroy(texB);
+            }
         }
     }
 }

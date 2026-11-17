@@ -693,6 +693,8 @@ namespace LR2.EditorTools
             var swatReload = UseKinemationDriver ? null : ConfigureSwatAnimationRigAndReload(); // driver: Kinemation's own reload clip
             var reloadProp = so.FindProperty("reloadClip");
             if (reloadProp != null && swatReload != null) reloadProp.objectReferenceValue = swatReload;
+            var reloadAsset = reloadProp != null ? reloadProp.objectReferenceValue as FPSAnimationAsset : null;
+            BakeReloadRestPose(so, reloadAsset != null ? reloadAsset.clip : null, spec.id);
             var botTracerProp = so.FindProperty("botTracerEvery");
             if (botTracerProp != null) botTracerProp.intValue = 1;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -732,6 +734,90 @@ namespace LR2.EditorTools
             gun.Configure(def, muzzle, flash != null ? flash.GetComponent<MuzzleFlash>() : null, ejector);
             EditorUtility.SetDirty(gun);
             return SavePrefab(go, PrefabDir + $"/Weapons/LR2_{spec.id}.prefab");
+        }
+
+        private static void BakeReloadRestPose(SerializedObject so, AnimationClip clip, string id)
+        {
+            var rootProp = so.FindProperty("reloadRestPose");
+            if (rootProp == null) return;
+            var rest = default(ReloadMotionBridge.Rest);
+            rest.gunRot = Quaternion.identity;
+            rest.handLRot = Quaternion.identity;
+            rest.handRRot = Quaternion.identity;
+
+            if (clip != null)
+            {
+                var bindings = AnimationUtility.GetCurveBindings(clip);
+                bool TrySampleBone(string path, string fallbackPath, out Vector3 pos, out Quaternion rot)
+                {
+                    pos = Vector3.zero;
+                    rot = Quaternion.identity;
+                    string matched = null;
+                    foreach (var p in new[] { path, fallbackPath })
+                    {
+                        if (string.IsNullOrEmpty(p)) continue;
+                        string leaf = p.Substring(p.LastIndexOf('/') + 1);
+                        foreach (var b in bindings)
+                        {
+                            if (b.type == typeof(Transform) && b.path == p) { matched = b.path; break; }
+                        }
+                        if (matched == null)
+                        {
+                            foreach (var b in bindings)
+                            {
+                                if (b.type == typeof(Transform) && (b.path == leaf || b.path.EndsWith("/" + leaf, System.StringComparison.Ordinal)))
+                                { matched = b.path; break; }
+                            }
+                        }
+                        if (matched != null) break;
+                    }
+                    if (matched == null) return false;
+
+                    bool hasPos = false, hasRot = false, hasEuler = false;
+                    Vector3 euler = Vector3.zero;
+                    foreach (var b in bindings)
+                    {
+                        if (b.type != typeof(Transform) || b.path != matched) continue;
+                        var curve = AnimationUtility.GetEditorCurve(clip, b);
+                        if (curve == null || curve.length == 0) continue;
+                        float v = curve.Evaluate(0f);
+                        switch (b.propertyName)
+                        {
+                            case "m_LocalPosition.x": pos.x = v; hasPos = true; break;
+                            case "m_LocalPosition.y": pos.y = v; hasPos = true; break;
+                            case "m_LocalPosition.z": pos.z = v; hasPos = true; break;
+                            case "m_LocalRotation.x": rot.x = v; hasRot = true; break;
+                            case "m_LocalRotation.y": rot.y = v; hasRot = true; break;
+                            case "m_LocalRotation.z": rot.z = v; hasRot = true; break;
+                            case "m_LocalRotation.w": rot.w = v; hasRot = true; break;
+                            case "localEulerAnglesRaw.x": euler.x = v; hasEuler = true; break;
+                            case "localEulerAnglesRaw.y": euler.y = v; hasEuler = true; break;
+                            case "localEulerAnglesRaw.z": euler.z = v; hasEuler = true; break;
+                        }
+                    }
+                    if (!hasRot && hasEuler) { rot = Quaternion.Euler(euler); hasRot = true; }
+                    float magSq = rot.x * rot.x + rot.y * rot.y + rot.z * rot.z + rot.w * rot.w;
+                    rot = magSq > 1e-6f ? rot.normalized : Quaternion.identity;
+                    return hasPos || hasRot;
+                }
+
+                bool gOk = TrySampleBone("Skeleton/ik_hand_gun", "Skeleton/WeaponBone", out rest.gunPos, out rest.gunRot);
+                bool lOk = TrySampleBone("Skeleton/IK_Hand_Left", null, out rest.handLPos, out rest.handLRot);
+                bool rOk = TrySampleBone("Skeleton/IK_Hand_Right", null, out rest.handRPos, out rest.handRRot);
+                rest.valid = gOk && lOk && rOk;
+                if (rest.valid)
+                    Debug.Log($"[LR2] Baked reload rest pose for {id} ({clip.name}): gunPos={rest.gunPos:F3} gunRot={rest.gunRot.eulerAngles:F1}");
+                else
+                    Debug.LogWarning($"[LR2] Incomplete reload rest pose for {id} ({clip.name}): gun={gOk} L={lOk} R={rOk}");
+            }
+
+            rootProp.FindPropertyRelative("valid").boolValue = rest.valid;
+            rootProp.FindPropertyRelative("gunPos").vector3Value = rest.gunPos;
+            rootProp.FindPropertyRelative("gunRot").quaternionValue = rest.gunRot;
+            rootProp.FindPropertyRelative("handLPos").vector3Value = rest.handLPos;
+            rootProp.FindPropertyRelative("handLRot").quaternionValue = rest.handLRot;
+            rootProp.FindPropertyRelative("handRPos").vector3Value = rest.handRPos;
+            rootProp.FindPropertyRelative("handRRot").quaternionValue = rest.handRRot;
         }
 
         // ------------------------------------------------------------------ textured AK-12 PBR materials (object-space triplanar)
@@ -1383,6 +1469,30 @@ namespace LR2.EditorTools
 
         private static Texture2D ReadableCopy(Texture src, int maxSize)
         {
+            string assetPath = AssetDatabase.GetAssetPath(src);
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                string full = Path.GetFullPath(assetPath);
+                if (File.Exists(full))
+                {
+                    var raw = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (raw.LoadImage(File.ReadAllBytes(full)))
+                    {
+                        if (raw.width <= maxSize && raw.height <= maxSize) return raw;
+                        int rw = Mathf.Min(raw.width, maxSize), rh = Mathf.Min(raw.height, maxSize);
+                        var scaled = new Texture2D(rw, rh, TextureFormat.RGBA32, false);
+                        var dst = new Color[rw * rh];
+                        for (int y = 0; y < rh; y++)
+                            for (int x = 0; x < rw; x++)
+                                dst[y * rw + x] = raw.GetPixelBilinear((x + 0.5f) / rw, (y + 0.5f) / rh);
+                        scaled.SetPixels(dst);
+                        scaled.Apply();
+                        Object.DestroyImmediate(raw);
+                        return scaled;
+                    }
+                    Object.DestroyImmediate(raw);
+                }
+            }
             int w = Mathf.Min(src.width, maxSize), h = Mathf.Min(src.height, maxSize);
             var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             Graphics.Blit(src, rt);

@@ -93,6 +93,29 @@ namespace LR2.EditorTools
             }
         }
 
+        /// <summary>
+        /// Batch entry (no -quit): rebuild FX, audio, weapons and soldiers (no maps), then start the play-mode smoke test in
+        /// the same process. Honours -lr2Scene, -lr2Duration, -lr2OutDir and the -lr2Robot / -lr2PoseCheck harness flags.
+        /// The smoke test exits Unity when it finishes.
+        /// </summary>
+        public static void BuildCharactersThenPlayBatch()
+        {
+            bool ok = true;
+            ok &= Step("FX", LR2ContentBuilder.BuildFx);
+            ok &= Step("Audio", LR2ContentBuilder.BuildAudio);
+            ok &= Step("Weapons", LR2ContentBuilder.BuildWeapons);
+            ok &= Step("Soldiers", LR2ContentBuilder.BuildSoldiers);
+            AssetDatabase.SaveAssets();
+            EditorUtility.ClearProgressBar();
+            Debug.Log($"[LR2] Characters rebuilt: {(ok ? "SUCCESS" : "FAILED")}");
+            if (!ok && Application.isBatchMode)
+            {
+                EditorApplication.Exit(1);
+                return;
+            }
+            LR2SmokeTest.RunBatch();
+        }
+
         private static bool Run(bool interactive)
         {
             if (interactive && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return false;

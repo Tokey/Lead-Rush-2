@@ -44,7 +44,7 @@ namespace LR2.EditorTools
             }
 
             // 4 Enterable war-torn corner buildings (wide doorways, damaged parapets, destructible windows & furniture)
-            void CornerRuins(string name, float x0, float x1, float z0, float z1, bool brokenRoof)
+            void CornerRuins(string name, float x0, float x1, float z0, float z1, bool brokenRoof, bool glassOnSouthWall)
             {
                 var b = Child(_structures, name);
                 float cx = (x0 + x1) * 0.5f, cz = (z0 + z1) * 0.5f;
@@ -58,45 +58,66 @@ namespace LR2.EditorTools
                 Wall("WallS", b, new Vector3(x0, 0.04f, z0), new Vector3(x1, 0.04f, z0), hgt, th, _m.wallPlaster, dSpec(w * 0.35f), wSpec(w * 0.75f));
                 Wall("WallW", b, new Vector3(x0, 0.04f, z0), new Vector3(x0, 0.04f, z1), hgt, th, _m.wallPlaster, dSpec(d * 0.55f));
                 Wall("WallE", b, new Vector3(x1, 0.04f, z0), new Vector3(x1, 0.04f, z1), hgt, th, _m.wallPlaster, dSpec(d * 0.45f), wSpec(d * 0.8f));
+                // Breakable glass fitted precisely inside the street-facing window frame (never blocks doorways)
+                float gx = x0 + (glassOnSouthWall ? w * 0.75f : w * 0.3f);
+                float gz = glassOnSouthWall ? z0 : z1;
+                Box("Glass_" + name, b, new Vector3(gx, 1.71f, gz), new Vector3(1.8f, 1.45f, 0.04f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
                 if (brokenRoof)
                 {
-                    Box("RoofWest", b, new Vector3(x0 + w * 0.26f, hgt + 0.14f, cz), new Vector3(w * 0.52f, 0.2f, d + 0.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
-                    Box("RoofEast", b, new Vector3(x1 - w * 0.16f, hgt + 0.14f, cz), new Vector3(w * 0.32f, 0.2f, d + 0.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                    var rw = Box("RoofWest", b, new Vector3(x0 + w * 0.26f, hgt + 0.14f, cz), new Vector3(w * 0.52f, 0.22f, d + 0.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                    var re = Box("RoofEast", b, new Vector3(x1 - w * 0.16f, hgt + 0.14f, cz), new Vector3(w * 0.32f, 0.22f, d + 0.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                    ApplyMeshKeepBoxCollider(rw, GetWarpedWallMesh(name.GetHashCode() + 1, false, 0.1f, 0.025f));
+                    ApplyMeshKeepBoxCollider(re, GetWarpedWallMesh(name.GetHashCode() + 2, false, 0.1f, 0.025f));
+                    // Bent steel rebar protruding along the blasted roof breach
+                    AddWarTornWallDetails(b, new Vector3(x0 + w * 0.52f, hgt + 0.15f, cz), d * 0.8f, hgt + 0.3f, 90f, _m.concrete, name.GetHashCode() + 7, true, false);
                 }
                 else
                 {
                     Box("Roof", b, new Vector3(cx, hgt + 0.14f, cz), new Vector3(w + 0.4f, 0.2f, d + 0.4f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
                 }
-                // Interior destructible cover props + glass + warm interior emergency bulb
+                // Uneven jagged rooftop parapets + exterior corner rubble (gives ruined city silhouette without altering nav)
+                int rs = Mathf.Abs(name.GetHashCode());
+                void Parapet(string pn, Vector3 pc, float plen, float yaw)
+                {
+                    var pgo = Box(pn, b, pc, new Vector3(plen, 0.95f, 0.32f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete, yaw);
+                    ApplyMeshKeepBoxCollider(pgo, GetWarpedWallMesh(rs + pn.GetHashCode(), true, 0.36f, 0.045f));
+                    AddWarTornWallDetails(b, pc, plen * 0.9f, pc.y + 0.4f, yaw, _m.concrete, rs + pn.GetHashCode(), true, false);
+                }
+                Parapet("ParapetN", new Vector3(cx, hgt + 0.62f, z1 - 0.1f), w * 0.96f, 0f);
+                Parapet("ParapetS", new Vector3(cx, hgt + 0.62f, z0 + 0.1f), w * 0.96f, 0f);
+                Parapet("ParapetW", new Vector3(x0 + 0.1f, hgt + 0.58f, cz), d * 0.92f, 90f);
+                Parapet("ParapetE", new Vector3(x1 - 0.1f, hgt + 0.58f, cz), d * 0.92f, 90f);
+                // Interior destructible cover props + warm interior emergency bulb
                 Box("Desk", b, new Vector3(cx - 1.5f, 0.54f, cz + 1.2f), new Vector3(2.0f, 0.8f, 0.85f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
                 Box("Crate", b, new Vector3(cx + 1.8f, 0.59f, cz - 1.4f), new Vector3(0.95f, 0.9f, 0.95f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
                 Box("Lockers", b, new Vector3(cx - 2.2f, 1.14f, cz - 2.0f), new Vector3(0.6f, 2.0f, 1.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3100f, 2400f, 13f, 0f, false);
             }
-            CornerRuins("TransitDepot_NW", -24f, -11f, 11f, 23f, true);
-            CornerRuins("Pharmacy_NE", 11f, 24f, 11f, 23f, false);
-            CornerRuins("Apartment_SW", -24f, -11f, -23f, -11f, false);
-            CornerRuins("Garage_SE", 11f, 24f, -23f, -11f, true);
-
-            // Breakable street-level windows on building facades facing mid intersection
-            Box("Glass_NW", _structures, new Vector3(-14.25f, 1.71f, 11f), new Vector3(1.8f, 1.35f, 0.04f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
-            Box("Glass_NE", _structures, new Vector3(14.25f, 1.71f, 11f), new Vector3(1.8f, 1.35f, 0.04f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
-            Box("Glass_SW", _structures, new Vector3(-14.25f, 1.71f, -11f), new Vector3(1.8f, 1.35f, 0.04f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
-            Box("Glass_SE", _structures, new Vector3(14.25f, 1.71f, -11f), new Vector3(1.8f, 1.35f, 0.04f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
+            CornerRuins("TransitDepot_NW", -24f, -11f, 11f, 23f, true, true);
+            CornerRuins("Pharmacy_NE", 11f, 24f, 11f, 23f, false, true);
+            CornerRuins("Apartment_SW", -24f, -11f, -23f, -11f, false, false);
+            CornerRuins("Garage_SE", 11f, 24f, -23f, -11f, true, false);
 
             // Central checkpoint ruined bus/container + crossroad cover
             Container(_structures, "CheckpointContA", new Vector3(-2.5f, 0f, 2.5f), 22f, 2);
             Container(_structures, "CheckpointContB", new Vector3(3.2f, 0f, -3.5f), -68f, 0);
 
-            // Perimeter walls + Clip + War-torn city skyline
+            // Perimeter walls (broken masonry silhouettes with protruding rebar & base rubble) + Clip + War-torn city skyline
             var bnd = Child(_structures, "Boundary");
-            Box("WallN", bnd, new Vector3(0f, 2.2f, 28.5f), new Vector3(58f, 4.4f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallS", bnd, new Vector3(0f, 2.2f, -28.5f), new Vector3(58f, 4.4f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallW", bnd, new Vector3(-28.5f, 2.2f, 0f), new Vector3(0.5f, 4.4f, 58f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallE", bnd, new Vector3(28.5f, 2.2f, 0f), new Vector3(0.5f, 4.4f, 58f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            void DeadBoundary(string n, Vector3 center, float len, float yaw, int seed)
+            {
+                var bw = Box(n, bnd, center, new Vector3(len, 4.9f, 0.55f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete, yaw);
+                ApplyMeshKeepBoxCollider(bw, GetWarpedWallMesh(seed, true, 0.24f, 0.055f));
+                AddWarTornWallDetails(bnd, center, len, 4.5f, yaw, _m.wallPlaster, seed, true, true);
+            }
+            DeadBoundary("WallN", new Vector3(0f, 2.4f, 28.5f), 57.5f, 0f, 101);
+            DeadBoundary("WallS", new Vector3(0f, 2.4f, -28.5f), 57.5f, 0f, 102);
+            DeadBoundary("WallW", new Vector3(-28.5f, 2.4f, 0f), 56.5f, 90f, 103);
+            DeadBoundary("WallE", new Vector3(28.5f, 2.4f, 0f), 56.5f, 90f, 104);
             AddPlayerClipBox(pMin, pMax, 10f);
 
-            // Urban skyline ruins beyond walls (solid block silhouettes + cranes/silos, no open modular wall strips)
+            // Shattered, stepped urban skyline ruins (warped/broken concrete towers + tilted collapsed upper slabs)
+            int ti = 0;
             foreach (var (tn, tp, ts) in new[]
             {
                 ("SkyTower_W1", new Vector3(-40f, 6.5f, -16f), new Vector3(10f, 13f, 14f)),
@@ -109,8 +130,17 @@ namespace LR2.EditorTools
                 ("SkyTower_S2", new Vector3(16f, 8.0f, -41f),  new Vector3(14f, 16f, 10f)),
             })
             {
-                var st = Box(tn, _background, tp, ts, _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                ti++;
+                float yawT = (ts.z > ts.x ? 90f : 0f) + R(-3.5f, 3.5f);
+                var st = Box(tn, _background, tp, new Vector3(Mathf.Max(ts.x, ts.z), ts.y, Mathf.Min(ts.x, ts.z)), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, yawT);
+                st.transform.localRotation = Quaternion.Euler(R(-1.8f, 1.8f), yawT, R(-2.2f, 2.2f));
+                ApplyMeshKeepBoxCollider(st, GetWarpedWallMesh(200 + ti, true, 0.28f, 0.06f));
                 Object.DestroyImmediate(st.GetComponent<Collider>());
+                var wing = Box(tn + "_Pent", _background, tp + new Vector3(R(-1.5f, 1.5f), ts.y * 0.28f, R(-1.5f, 1.5f)),
+                    new Vector3(Mathf.Max(ts.x, ts.z) * 0.52f, ts.y * 0.28f, Mathf.Min(ts.x, ts.z) * 0.56f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete, yawT);
+                wing.transform.localRotation = Quaternion.Euler(R(-3f, 3f), yawT + R(-8f, 8f), R(-3f, 3f));
+                ApplyMeshKeepBoxCollider(wing, GetWarpedWallMesh(250 + ti, true, 0.34f, 0.07f));
+                Object.DestroyImmediate(wing.GetComponent<Collider>());
             }
             Prop("SM_Crane_01", _background, new Vector3(-35f, 0f, 36f), 35f, 1f, false);
             Prop("SM_Crane_02", _background, new Vector3(36f, 0f, -35f), -45f, 1f, false);
@@ -139,7 +169,7 @@ namespace LR2.EditorTools
             {
                 (new Vector3(-14f, 0f, 4f), 10f), (new Vector3(14f, 0f, -4f), 80f),
                 (new Vector3(3f, 0f, 16f), 0f), (new Vector3(-3f, 0f, -16f), 45f),
-                (new Vector3(-16f, 0.12f, 16f), 15f), (new Vector3(16f, 0.12f, -16f), -20f),
+                (new Vector3(-16.2f, 0.14f, 19.0f), 15f), (new Vector3(16f, 0.14f, -16f), -20f),
             })
             {
                 Prop("SM_Crate_01", _props, pos, yaw);
@@ -213,9 +243,9 @@ namespace LR2.EditorTools
             foreach (float oz in new[] { -14f, 14f })
                 AddLight(_lighting, $"Overhead_{(oz < 0 ? "S" : "N")}",
                     new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 3200f, 4500f, 22f, 0f, false);
-            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 20000f, sunTemp: 4300f,
-                fogMfp: 42f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.65f, contrast: 18f, saturation: -16f,
-                rainDefaultPreset: 2);
+            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 14500f, sunTemp: 4300f,
+                fogMfp: 85f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.15f, contrast: 18f, saturation: -16f,
+                rainDefaultPreset: 2, evMin: 7.0f, evMax: 12.5f);
             PlaceMapDecals(pMin, pMax, 140);
             AddMatchSystems(40f);
             MarkStatic(env);
@@ -250,38 +280,43 @@ namespace LR2.EditorTools
             Box("FloorE", g, new Vector3(18f, -0.25f, 0f), new Vector3(25f, 0.5f, 28f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
             Box("TrenchFloor", g, new Vector3(0f, -1.75f, 0f), new Vector3(12f, 0.5f, 30f), _m.asphalt, LR2Layers.Default, SurfaceType.Concrete);
 
-            // Retaining walls around trench leaving North, South, East, West wide access ramps
+            // Retaining walls around trench (tucked flush against slab edges, non-overlapping corners, no top Z-fighting)
             void Retain(string n, float cx, float cz, float sx, float sz) =>
-                Box(n, g, new Vector3(cx, -0.75f, cz), new Vector3(sx, 1.5f, sz), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Retain("RetW_N", -5.65f, 8.2f, 0.35f, 11.4f);
-            Retain("RetW_S", -5.65f, -8.2f, 0.35f, 11.4f);
-            Retain("RetE_N", 5.65f, 8.2f, 0.35f, 11.4f);
-            Retain("RetE_S", 5.65f, -8.2f, 0.35f, 11.4f);
-            Retain("RetN_L", -4.0f, 14.1f, 3.2f, 0.35f);
-            Retain("RetN_R", 4.0f, 14.1f, 3.2f, 0.35f);
-            Retain("RetS_L", -4.0f, -14.1f, 3.2f, 0.35f);
-            Retain("RetS_R", 4.0f, -14.1f, 3.2f, 0.35f);
+                Box(n, g, new Vector3(cx, -0.752f, cz), new Vector3(sx, 1.496f, sz), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            Retain("RetW_N", -5.325f, 7.9f, 0.35f, 12.1f);
+            Retain("RetW_S", -5.325f, -7.9f, 0.35f, 12.1f);
+            Retain("RetE_N", 5.325f, 7.9f, 0.35f, 12.1f);
+            Retain("RetE_S", 5.325f, -7.9f, 0.35f, 12.1f);
+            Retain("RetN_L", -3.72f, 13.825f, 2.84f, 0.35f);
+            Retain("RetN_R", 3.72f, 13.825f, 2.84f, 0.35f);
+            Retain("RetS_L", -3.72f, -13.825f, 2.84f, 0.35f);
+            Retain("RetS_R", 3.72f, -13.825f, 2.84f, 0.35f);
 
-            // 4 Graded walk-down ramps into the trench
-            Stairs("RampTrenchN", _structures, new Vector3(0f, -1.5f, 9.5f), new Vector3(0f, 0f, 14.2f), 4.6f, _m.steelGrate, false);
-            Stairs("RampTrenchS", _structures, new Vector3(0f, -1.5f, -9.5f), new Vector3(0f, 0f, -14.2f), 4.6f, _m.steelGrate, false);
-            Stairs("RampTrenchW", _structures, new Vector3(-2.5f, -1.5f, 0f), new Vector3(-5.8f, 0f, 0f), 3.6f, _m.steelGrate, false);
-            Stairs("RampTrenchE", _structures, new Vector3(2.5f, -1.5f, 0f), new Vector3(5.8f, 0f, 0f), 3.6f, _m.steelGrate, false);
+            // 4 Graded walk-down ramps into the trench (meeting slab edges cleanly)
+            Stairs("RampTrenchN", _structures, new Vector3(0f, -1.5f, 9.5f), new Vector3(0f, 0f, 14.0f), 4.6f, _m.steelGrate, false);
+            Stairs("RampTrenchS", _structures, new Vector3(0f, -1.5f, -9.5f), new Vector3(0f, 0f, -14.0f), 4.6f, _m.steelGrate, false);
+            Stairs("RampTrenchW", _structures, new Vector3(-2.5f, -1.5f, 0f), new Vector3(-5.5f, 0f, 0f), 3.6f, _m.steelGrate, false);
+            Stairs("RampTrenchE", _structures, new Vector3(2.5f, -1.5f, 0f), new Vector3(5.5f, 0f, 0f), 3.6f, _m.steelGrate, false);
 
-            // Overhead pipe bridges spanning trench
-            Box("PipeBridgeN", _structures, new Vector3(0f, 3.1f, 7.5f), new Vector3(13f, 0.45f, 1.4f), _m.rust, LR2Layers.Default, SurfaceType.Metal);
-            Box("PipeBridgeS", _structures, new Vector3(0f, 3.1f, -7.5f), new Vector3(13f, 0.45f, 1.4f), _m.rust, LR2Layers.Default, SurfaceType.Metal);
+            // Overhead pipe bridges spanning trench with grounded steel support stanchions on both sides
+            foreach (float bz in new[] { 7.5f, -7.5f })
+            {
+                string tag = bz > 0f ? "N" : "S";
+                Box("PipeBridge" + tag, _structures, new Vector3(0f, 3.1f, bz), new Vector3(13f, 0.45f, 1.4f), _m.rust, LR2Layers.Default, SurfaceType.Metal);
+                Box("PipeBridgeSupportW_" + tag, _structures, new Vector3(-6.2f, 1.44f, bz), new Vector3(0.42f, 2.88f, 0.55f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+                Box("PipeBridgeSupportE_" + tag, _structures, new Vector3(6.2f, 1.44f, bz), new Vector3(0.42f, 2.88f, 0.55f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+            }
 
-            // North Pump Hall & South Turbine Shed (wide bay doors, interior machinery cover)
+            // North Pump Hall & South Turbine Shed (grounded cleanly on y = 0 slabs, wide bay doors, interior machinery cover)
             void IndustrialHall(string name, float zCenter)
             {
                 var h = Child(_structures, name);
                 float z0 = zCenter - 4.5f, z1 = zCenter + 4.5f;
                 float x0 = -13f, x1 = 13f, hgt = 6.2f, t = 0.3f;
-                Wall("WallN", h, new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), hgt, t, _m.corrugated, new Vector4(6f, 3.2f, 0f, 3.4f), new Vector4(20f, 3.2f, 0f, 3.4f));
-                Wall("WallS", h, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0), hgt, t, _m.corrugated, new Vector4(6f, 3.2f, 0f, 3.4f), new Vector4(20f, 3.2f, 0f, 3.4f));
-                Wall("WallW", h, new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), hgt, t, _m.corrugated, new Vector4(4.5f, 2.8f, 0f, 3.2f));
-                Wall("WallE", h, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), hgt, t, _m.corrugated, new Vector4(4.5f, 2.8f, 0f, 3.2f));
+                WallWithFloor("WallN", h, new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), hgt, t, _m.corrugated, 0f, new Vector4(6f, 3.2f, 0f, 3.4f), new Vector4(20f, 3.2f, 0f, 3.4f));
+                WallWithFloor("WallS", h, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0), hgt, t, _m.corrugated, 0f, new Vector4(6f, 3.2f, 0f, 3.4f), new Vector4(20f, 3.2f, 0f, 3.4f));
+                WallWithFloor("WallW", h, new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), hgt, t, _m.corrugated, 0f, new Vector4(4.5f, 2.8f, 0f, 3.2f));
+                WallWithFloor("WallE", h, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), hgt, t, _m.corrugated, 0f, new Vector4(4.5f, 2.8f, 0f, 3.2f));
                 Box("Roof", h, new Vector3(0f, hgt + 0.1f, zCenter), new Vector3(26.6f, 0.2f, 9.6f), _m.roof, LR2Layers.Default, SurfaceType.Metal);
                 // Interior generators + destructible consoles
                 Box("GeneratorW", h, new Vector3(-6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
@@ -310,12 +345,18 @@ namespace LR2.EditorTools
             Container(wYard, "ContW3", new Vector3(-23f, 0f, 0f), 90f, 0);
             Container(wYard, "ContW2_Top", new Vector3(-16f, 2.59f, 6f), 0f, 2);
 
-            // Boundary + Skyline Silos/Cranes
+            // Boundary (warped/scarred industrial perimeter + steel buttresses) + Skyline Silos/Cranes
             var bnd = Child(_structures, "Boundary");
-            Box("WallN", bnd, new Vector3(0f, 2.5f, 28.5f), new Vector3(58f, 5f, 0.5f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
-            Box("WallS", bnd, new Vector3(0f, 2.5f, -28.5f), new Vector3(58f, 5f, 0.5f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
-            Box("WallW", bnd, new Vector3(-28.5f, 2.5f, 0f), new Vector3(0.5f, 5f, 58f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
-            Box("WallE", bnd, new Vector3(28.5f, 2.5f, 0f), new Vector3(0.5f, 5f, 58f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
+            void FoundryBoundary(string n, Vector3 center, float len, float yaw, int seed)
+            {
+                var bw = Box(n, bnd, center, new Vector3(len, 5.2f, 0.55f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal, yaw);
+                ApplyMeshKeepBoxCollider(bw, GetWarpedWallMesh(seed, true, 0.14f, 0.042f));
+                AddWarTornWallDetails(bnd, center, len, 4.9f, yaw, _m.concrete, seed, false, true);
+            }
+            FoundryBoundary("WallN", new Vector3(0f, 2.55f, 28.5f), 57.5f, 0f, 301);
+            FoundryBoundary("WallS", new Vector3(0f, 2.55f, -28.5f), 57.5f, 0f, 302);
+            FoundryBoundary("WallW", new Vector3(-28.5f, 2.55f, 0f), 56.5f, 90f, 303);
+            FoundryBoundary("WallE", new Vector3(28.5f, 2.55f, 0f), 56.5f, 90f, 304);
             AddPlayerClipBox(pMin, pMax, 11f);
 
             Prop("SM_Silo", _background, new Vector3(-37f, 0f, 15f), 0f, 1.2f, false);
@@ -342,24 +383,24 @@ namespace LR2.EditorTools
             Prop("SM_Barrel_02", _props, new Vector3(-20f, 0f, 12f), 20f);
             Prop("SM_Barrel_04", _props, new Vector3(20f, 0f, -12f), -30f);
 
-            // Spawns, Tactical points & Ammo crates
+            // Spawns, Tactical points & Ammo crates (in open hall aisles, clear of GeneratorW/E & ControlConsole)
             AddSpawn(new Vector3(-23f, 0.05f, -11f), 45f, TeamId.Alpha, true, false);
             AddSpawn(new Vector3(-20f, 0.05f, -22f), 30f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-8f, 0.05f, -20.5f), 0f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-7f, 0.05f, -18f), 0f, TeamId.Alpha, true, false);
             AddSpawn(new Vector3(-24f, 0.05f, 11f), 120f, TeamId.Alpha, true, false);
             AddSpawn(new Vector3(23f, 0.05f, 11f), -135f, TeamId.Bravo, true, false);
             AddSpawn(new Vector3(20f, 0.05f, 22f), -150f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(8f, 0.05f, 20.5f), 180f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(7f, 0.05f, 18f), 180f, TeamId.Bravo, true, false);
             AddSpawn(new Vector3(24f, 0.05f, -11f), -60f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(0f, 0.05f, 20.5f), 180f, TeamId.None, false, false);
-            AddSpawn(new Vector3(0f, 0.05f, -20.5f), 0f, TeamId.None, false, false);
+            AddSpawn(new Vector3(0f, 0.05f, 18f), 180f, TeamId.None, false, false);
+            AddSpawn(new Vector3(0f, 0.05f, -18f), 0f, TeamId.None, false, false);
             AddSpawn(new Vector3(19f, 3.08f, 0f), -90f, TeamId.None, false, false);
             AddSpawn(new Vector3(-16f, 0.05f, 0f), 90f, TeamId.None, false, false);
 
             AddTac(new Vector3(17.5f, 3.08f, 0f), TacticalPointType.Overlook, 0.9f, false);
             AddTac(new Vector3(0f, -1.45f, 0f), TacticalPointType.Choke, 0.8f, false);
-            AddTac(new Vector3(0f, 0.05f, 20.5f), TacticalPointType.Patrol, 0.7f, false);
-            AddTac(new Vector3(0f, 0.05f, -20.5f), TacticalPointType.Patrol, 0.7f, false);
+            AddTac(new Vector3(0f, 0.05f, 18f), TacticalPointType.Patrol, 0.7f, false);
+            AddTac(new Vector3(0f, 0.05f, -18f), TacticalPointType.Patrol, 0.7f, false);
             AddTac(new Vector3(-16f, 0.05f, 0f), TacticalPointType.Patrol, 0.65f, false);
 
             AddAmmoCrate(new Vector3(0f, -1.5f, -1.8f));
@@ -368,9 +409,9 @@ namespace LR2.EditorTools
             foreach (var (fx, fz) in new[] { (-18f, 18f), (18f, 18f), (-18f, -18f), (18f, -18f) })
                 AddLight(_lighting, $"YardFlood_{(fx < 0 ? "W" : "E")}_{(fz < 0 ? "S" : "N")}",
                     new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 3800f, 4500f, 22f, 0f, false);
-            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 28f, sunAz: 245f, sunLux: 14000f, sunTemp: 4100f,
-                fogMfp: 55f, fogColor: new Color(0.55f, 0.56f, 0.54f), exposureComp: 0.45f, contrast: 20f, saturation: -6f,
-                rainDefaultPreset: 0);
+            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 18000f, sunTemp: 4300f,
+                fogMfp: 85f, fogColor: new Color(0.55f, 0.56f, 0.54f), exposureComp: 0.1f, contrast: 18f, saturation: -6f,
+                rainDefaultPreset: 0, evMin: 7.2f, evMax: 12.8f);
             PlaceMapDecals(pMin, pMax, 130);
             AddMatchSystems(38f);
             MarkStatic(env);
@@ -410,18 +451,19 @@ namespace LR2.EditorTools
                 Object.DestroyImmediate(line.GetComponent<Collider>());
             }
 
-            // Perimeter walls + corner architectural towers for clean skyline framing
+            // Perimeter walls (flush corners, no Z-fighting) + corner architectural towers for clean skyline framing
             var bnd = Child(_structures, "Boundary");
             Box("WallN", bnd, new Vector3(0f, 2.25f, 30.25f), new Vector3(61f, 4.5f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
             Box("WallS", bnd, new Vector3(0f, 2.25f, -30.25f), new Vector3(61f, 4.5f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallW", bnd, new Vector3(-30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 61f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            Box("WallE", bnd, new Vector3(30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 61f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            Box("WallW", bnd, new Vector3(-30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 60f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
+            Box("WallE", bnd, new Vector3(30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 60f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
             foreach (var (tx, tz) in new[] { (-32f, 32f), (32f, 32f), (-32f, -32f), (32f, -32f) })
                 Box("CornerTower", _background, new Vector3(tx, 5f, tz), new Vector3(5f, 10f, 5f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
             AddPlayerClipBox(pMin, pMax, 10f);
 
             // ---- LANE 1 (Center): Symmetrical low crouch cover + tall LOS pillars
             var center = Child(_structures, "CenterLane");
+            int tb = 0;
             foreach (var (x, z, w, h, d) in new[]
             {
                 (0f, 0f, 3.2f, 1.08f, 0.85f),
@@ -431,7 +473,8 @@ namespace LR2.EditorTools
                 (4.5f, 15.5f, 2.8f, 2.3f, 0.95f), (-4.5f, -15.5f, 2.8f, 2.3f, 0.95f),
             })
             {
-                Box("TacticalBlock", center, new Vector3(x, h * 0.5f, z), new Vector3(w, h, d), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                var blk = Box("TacticalBlock", center, new Vector3(x, h * 0.5f, z), new Vector3(w, h, d), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(400 + tb++, false, 0.08f, 0.024f));
             }
 
             // ---- LANE 2 (West): 1.6m elevated overwatch platform + ramps + 0.85m mantle step box
@@ -444,8 +487,15 @@ namespace LR2.EditorTools
             Box("MantleTestBox", west, new Vector3(-12.5f, 0.425f, 0f), new Vector3(1.6f, 0.85f, 2.4f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
 
             // ---- LANE 3 (East): Destructible cover, breakable glass & explosive barrel test lane
-            Box("TestGlassPanelA", _structures, new Vector3(16f, 1.15f, 4f), new Vector3(3.2f, 2.2f, 0.06f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
-            Box("TestGlassPanelB", _structures, new Vector3(16f, 1.15f, -4f), new Vector3(3.2f, 2.2f, 0.06f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
+            void FramedTestGlass(string gName, string frameTag, float gz)
+            {
+                Box(gName, _structures, new Vector3(16f, 1.15f, gz), new Vector3(3.2f, 2.2f, 0.06f), _m.glass, LR2Layers.Default, SurfaceType.Glass);
+                Box("PaneFrame" + frameTag + "_Sill", _structures, new Vector3(16f, 0.05f, gz), new Vector3(3.36f, 0.1f, 0.14f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+                Box("PaneFrame" + frameTag + "_PostL", _structures, new Vector3(14.34f, 1.15f, gz), new Vector3(0.12f, 2.3f, 0.14f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+                Box("PaneFrame" + frameTag + "_PostR", _structures, new Vector3(17.66f, 1.15f, gz), new Vector3(0.12f, 2.3f, 0.14f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+            }
+            FramedTestGlass("TestGlassPanelA", "A", 4f);
+            FramedTestGlass("TestGlassPanelB", "B", -4f);
             Prop("SM_Jersey", _props, new Vector3(15.5f, 0f, 11f), 0f);
             Prop("SM_Jersey", _props, new Vector3(15.5f, 0f, -11f), 0f);
             Prop("SM_Crate_01", _props, new Vector3(18.5f, 0f, 7.5f), 0f);
@@ -473,10 +523,10 @@ namespace LR2.EditorTools
             AddAmmoCrate(new Vector3(-14f, 0.01f, -22f));
             AddAmmoCrate(new Vector3(14f, 0.01f, 22f));
 
-            // Crisp bright 6500K daylight (no fog clutter, ideal for bot & LLM visual debugging)
-            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 10000f, sunTemp: 6200f,
-                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: 0.15f, contrast: 14f, saturation: -2f,
-                rainDefaultPreset: -1);
+            // Crisp balanced 6200K daylight (prevents blown-out concrete highlights while keeping shadows readable)
+            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 26000f, sunTemp: 6200f,
+                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: -0.4f, contrast: 14f, saturation: -2f,
+                rainDefaultPreset: -1, evMin: 9.8f, evMax: 13.0f);
             AddMatchSystems(30f);
             MarkStatic(env);
 
@@ -552,7 +602,7 @@ namespace LR2.EditorTools
             SpawnFx("Smoke");
 
             var l = AddLight(fireHolder.transform, "FireGlow", Vector3.up * 0.35f, Quaternion.identity, LightType.Point, 2400f, 2600f, 9f, 0f, false);
-            l.gameObject.AddComponent<LightFlicker>();
+            l.gameObject.AddComponent<LightFlicker>().Configure(0.08f, 4.5f, 0f);
         }
 
         private static void SanitizeParticleSystems(GameObject go)
@@ -580,7 +630,8 @@ namespace LR2.EditorTools
         }
 
         private static void BuildCustomLighting(string profileName, float sunElev, float sunAz, float sunLux, float sunTemp,
-            float fogMfp, Color fogColor, float exposureComp, float contrast, float saturation, int rainDefaultPreset)
+            float fogMfp, Color fogColor, float exposureComp, float contrast, float saturation, int rainDefaultPreset,
+            float evMin = 6.5f, float evMax = 12.8f)
         {
             var sunGo = new GameObject("Sun");
             sunGo.transform.SetParent(_lighting, false);
@@ -612,19 +663,21 @@ namespace LR2.EditorTools
             fog.maximumHeight.Override(32f);
             fog.enableVolumetricFog.Override(rainDefaultPreset >= 0);
             fog.albedo.Override(fogColor);
-            fog.anisotropy.Override(0.7f);
+            fog.anisotropy.Override(0.28f);
             fog.depthExtent.Override(90f);
             var exposure = profile.Add<Exposure>(true);
             exposure.mode.Override(ExposureMode.AutomaticHistogram);
             exposure.compensation.Override(exposureComp);
-            exposure.limitMin.Override(4.0f);
-            exposure.limitMax.Override(12.8f);
-            exposure.adaptationMode.Override(AdaptationMode.Fixed);
+            exposure.limitMin.Override(evMin);
+            exposure.limitMax.Override(evMax);
+            exposure.adaptationMode.Override(AdaptationMode.Progressive);
+            exposure.adaptationSpeedDarkToLight.Override(2.6f);
+            exposure.adaptationSpeedLightToDark.Override(1.5f);
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var bloom = profile.Add<Bloom>(true);
-            bloom.intensity.Override(0.32f);
-            bloom.threshold.Override(1.0f);
+            bloom.intensity.Override(0.15f);
+            bloom.threshold.Override(1.1f);
             var color = profile.Add<ColorAdjustments>(true);
             color.contrast.Override(contrast);
             color.saturation.Override(saturation);
@@ -633,7 +686,7 @@ namespace LR2.EditorTools
             var ao = profile.Add<ScreenSpaceAmbientOcclusion>(true);
             ao.intensity.Override(0.65f);
             ao.radius.Override(1.4f);
-            profile.Add<ScreenSpaceReflection>(true).enabled.Override(true);
+            profile.Add<ScreenSpaceReflection>(true).enabled.Override(false); // disable half-res SSR flicker
             profile.Add<GlobalIllumination>(true).enable.Override(false);
             profile.Add<ContactShadows>(true).enable.Override(true);
             profile.Add<MicroShadowing>(true).enable.Override(true);
@@ -666,32 +719,7 @@ namespace LR2.EditorTools
         private static void PlaceMapDecals(Vector2 playMin, Vector2 playMax, int tries)
         {
             string[] names = { "M_CrackDecal", "M_CrackDecal_2", "M_LeakDecal", "M_RustDecal", "M_GraffittiDecal", "M_Decal_Puddle_A_MIC" };
-            var mats = new List<Material>();
-            foreach (var n in names)
-            {
-                var m = FindLeartes(n);
-                if (m != null) mats.Add(m);
-            }
-            if (mats.Count == 0) return;
-            for (int i = 0; i < tries; i++)
-            {
-                Vector3 o = new Vector3(R(playMin.x, playMax.x), 11f, R(playMin.y, playMax.y));
-                Vector3 dir = i % 3 == 0 ? Vector3.down : new Vector3(R(-1f, 1f), -0.15f, R(-1f, 1f)).normalized;
-                if (i % 3 != 0) o.y = R(0.6f, 3.4f);
-                if (!Physics.Raycast(o, dir, out var hit, 25f, LR2Layers.EnvironmentMask)) continue;
-                var mat = mats[i % mats.Count];
-                bool floorDecal = hit.normal.y > 0.7f;
-                if (mat.name.Contains("Puddle") && !floorDecal) continue;
-                var go = new GameObject("Decal_" + mat.name);
-                go.transform.SetParent(_decals, false);
-                go.transform.position = hit.point + hit.normal * 0.05f;
-                go.transform.rotation = Quaternion.LookRotation(-hit.normal, floorDecal ? Vector3.forward : Vector3.up) * Quaternion.Euler(0f, 0f, R(0f, 360f));
-                var dp = go.AddComponent<DecalProjector>();
-                dp.material = mat;
-                float s = floorDecal ? R(1.6f, 3.6f) : R(0.9f, 2.2f);
-                dp.size = new Vector3(s, s, 0.35f);
-                dp.drawDistance = 80f;
-            }
+            PlaceProjectedDecals(playMin, playMax, tries, names);
         }
     }
 }

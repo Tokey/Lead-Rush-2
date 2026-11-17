@@ -518,6 +518,14 @@ MonoBehaviour:
   displayNameOverride: 
   fieldOfView: 90
   reloadClip: {fileID: 11400000, guid: 41a6b312371363f40a4cce4e8fb96754, type: 2}
+  reloadRestPose:
+    valid: 1
+    gunPos: {x: 0.12719359, y: 1.4081045, z: 0.36449146}
+    handLPos: {x: 0.07506397, y: 1.3771156, z: 0.4977889}
+    handRPos: {x: 0.14120285, y: 1.3151577, z: 0.19575347}
+    gunRot: {x: -0.71115375, y: 0.0000000536909, z: -0.000000053077496, w: 0.70303655}
+    handLRot: {x: -0.11470148, y: 0.59966683, z: 0.71319556, w: -0.3443768}
+    handRRot: {x: -0.03964058, y: 0.7064157, z: 0.69502366, w: -0.12785794}
   reloadPlayRate: 0.85
   cameraReloadAnimation: {fileID: 0}
   grenadeClip: {fileID: 11400000, guid: 8c00be63e1ceb6e419dc9b20f7064687, type: 2}

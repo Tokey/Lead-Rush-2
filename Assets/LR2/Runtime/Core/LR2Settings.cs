@@ -15,7 +15,12 @@ namespace LR2.Core
 
         public static float MouseSensitivity { get => GetF("v2.MouseSensitivity", 1.0f); set => SetF("v2.MouseSensitivity", Mathf.Clamp(value, 0.05f, 10f)); }
         public static float AdsSensitivityMultiplier { get => GetF("v2.AdsSens", 0.75f); set => SetF("v2.AdsSens", Mathf.Clamp(value, 0.1f, 2f)); }
+        /// <summary>HORIZONTAL field of view in degrees (CoD/BF convention). Cameras need the vertical angle: use <see cref="VerticalFov"/>.</summary>
         public static float FieldOfView { get => GetF("FOV", 90f); set => SetF("FOV", Mathf.Clamp(value, 65f, 120f)); }
+
+        /// <summary>Converts a horizontal FOV to Unity's vertical <c>Camera.fieldOfView</c> for the given aspect (90 h = 58.7 v at 16:9).</summary>
+        public static float VerticalFov(float horizontalDegrees, float aspect) =>
+            Camera.HorizontalToVerticalFieldOfView(Mathf.Clamp(horizontalDegrees, 1f, 179f), aspect > 0.01f ? aspect : 16f / 9f);
         public static bool InvertY { get => GetB("InvertY", false); set => SetB("InvertY", value); }
         public static float MasterVolume { get => GetF("MasterVol", 0.9f); set => SetF("MasterVol", Mathf.Clamp01(value)); }
         public static float SfxVolume { get => GetF("SfxVol", 1f); set => SetF("SfxVol", Mathf.Clamp01(value)); }
@@ -31,8 +36,9 @@ namespace LR2.Core
         public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 3)); }
         /// <summary>Bodycam lens look (distortion, grain, aberration, grade).</summary>
         public static bool BodycamLook { get => GetB("v2.BodycamLook", false); set => SetB("v2.BodycamLook", value); }
-        /// <summary>Bodycam camera motion (head bob, inertia sway, handheld shake). Default 0 for snappy Kinemation FPS camera.</summary>
-        public static float BodycamMotion { get => GetF("v2.BodycamMotion", 0f); set => SetF("v2.BodycamMotion", Mathf.Clamp(value, 0f, 1.5f)); }
+        /// <summary>Bodycam camera motion (head bob, inertia sway, handheld shake). On by default (user asked for visible bodycam motion);
+        /// new v3 key so an old saved 0 from the v2 default doesn't keep it off.</summary>
+        public static float BodycamMotion { get => GetF("v3.BodycamMotion", 1f); set => SetF("v3.BodycamMotion", Mathf.Clamp(value, 0f, 1.5f)); }
         public static string PlayerName { get => PlayerPrefs.GetString(Prefix + "PlayerName", "Operator"); set { PlayerPrefs.SetString(Prefix + "PlayerName", value); Notify(); } }
 
         /// <summary>Pushes engine-level settings (quality, vsync, frame cap, master volume).</summary>
@@ -51,7 +57,7 @@ namespace LR2.Core
             foreach (var key in new[] { "MouseSensitivity", "v2.MouseSensitivity", "AdsSens", "v2.AdsSens", "FOV", "InvertY",
                          "MasterVol", "SfxVol", "MusicVol", "UiVol", "Quality", "VSync", "FpsLimit", "ShowFps",
                          "MotionBlur", "v2.MotionBlur", "FilmGrain", "HitmarkerSound", "BotDifficulty",
-                         "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion" })
+                         "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion", "v3.BodycamMotion" })
                 PlayerPrefs.DeleteKey(Prefix + key);
             Notify();
         }

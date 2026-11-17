@@ -141,7 +141,7 @@ namespace LR2.Characters
             var stance = _m.Stance;
             if (stance != _lastStance)
             {
-                Play(stance == SoldierStance.Crouching ? _lib.stanceDown : _lib.stanceUp, Chest, 0.8f);
+                Play(stance != SoldierStance.Standing ? _lib.stanceDown : _lib.stanceUp, Chest, 0.8f);
                 _lastStance = stance;
             }
             // sprint breathing, then recovery breaths afterwards

@@ -26,7 +26,7 @@ namespace LR2.Characters
         [Tooltip("Sprint automatically while moving forward (no key needed).")]
         [SerializeField] private bool autoSprint;
 
-        private InputAction _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _reload, _leanL, _leanR,
+        private InputAction _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR,
             _slot1, _slot2, _next, _scroll, _interact;
         private bool _aimToggled, _sprintToggled;
 
@@ -50,6 +50,8 @@ namespace LR2.Characters
             _crouch = new InputAction("Crouch", InputActionType.Button, "<Keyboard>/c");
             _crouch.AddBinding("<Keyboard>/leftCtrl");
             _crouch.AddBinding("<Gamepad>/buttonEast");
+            _prone = new InputAction("Prone", InputActionType.Button, "<Keyboard>/z");
+            _prone.AddBinding("<Gamepad>/dpad/down");
             _reload = new InputAction("Reload", InputActionType.Button, "<Keyboard>/r");
             _reload.AddBinding("<Gamepad>/buttonWest");
             _leanL = new InputAction("LeanLeft", InputActionType.Button, "<Keyboard>/q");
@@ -75,7 +77,7 @@ namespace LR2.Characters
 
         private InputAction[] All() => new[]
         {
-            _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _reload, _leanL, _leanR, _slot1, _slot2, _next,
+            _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR, _slot1, _slot2, _next,
             _scroll, _interact
         };
 
@@ -119,6 +121,7 @@ namespace LR2.Characters
 
             input.jump |= _jump.WasPressedThisFrame();
             input.crouch |= _crouch.WasPressedThisFrame();
+            input.prone |= _prone.WasPressedThisFrame();
             input.reload |= _reload.WasPressedThisFrame();
             input.interact |= _interact.WasPressedThisFrame();
             input.lean = (_leanR.IsPressed() ? 1f : 0f) - (_leanL.IsPressed() ? 1f : 0f);

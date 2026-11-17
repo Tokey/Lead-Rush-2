@@ -4189,14 +4189,17 @@ MonoBehaviour:
   strideWalk: 1.75
   strideSprint: 2.5
   strideCrouch: 1.25
+  strideProne: 0.8
   noiseWalk: 9
   noiseSprint: 18
   noiseCrouch: 3
+  noiseProne: 1.5
   fallDamageSpeed: 13
   fallDamagePerMs: 9
-  walkAnimReferenceSpeed: 4.6
-  sprintAnimReferenceSpeed: 6.2
-  crouchAnimReferenceSpeed: 2.6
+  walkAnimReferenceSpeed: 2.25
+  sprintAnimReferenceSpeed: 4.75
+  crouchAnimReferenceSpeed: 2.1
+  proneAnimReferenceSpeed: 0.8
 --- !u!114 &3784849288459981278
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4300,6 +4303,13 @@ MonoBehaviour:
   visual: {fileID: 2702458681039135841}
   handIK: 1
   handIKWeight: 1
+  alignHips: 1
+  firstPersonHeadLock: 1
+  eyeHeight: 0.085
+  eyeForward: 0.095
+  firstPersonBodyBack: 0.02
+  replantFeet: 1
+  logAlignment: 1
 --- !u!114 &8062619651618415964
 MonoBehaviour:
   m_ObjectHideFlags: 0
