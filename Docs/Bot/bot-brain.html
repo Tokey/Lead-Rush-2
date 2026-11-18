@@ -94,11 +94,28 @@ a { color: var(--bot) }
     <div class="commander"><span class="led" data-led="cmd"></span><b class="tag" style="color:var(--ink)">Commander hook</b><span class="mono">every 1.5 s</span><span class="note">An external brain (for example an LLM) can give orders here; aim and movement stay human-limited.</span><span class="count mono" id="c-cmd">0 polls</span></div>
   </header>
 
+  <section id="watch">
+    <div class="chapter-head"><div class="tag">Live demo</div><h2>Watch a bot play</h2>
+      <p>One bot (blue) against a scripted player (orange). It patrols, goes to check gunfire it hears, fills its detection meter, flicks onto you
+        and fires bursts, flanks if you stay in one spot for more than 6 s, and hunts your last known position when you break line of sight. The strip
+        underneath logs what it knew and did over the last 12 seconds. Everything uses the same rules as the chapters below.</p></div>
+    <div class="instrument" style="grid-template-columns:minmax(0,1fr)">
+      <canvas id="cv-watch" aria-label="Animated top-down view of a bot hunting the player"></canvas>
+      <canvas id="cv-strip" aria-label="Timeline of the bot's detection, goal and aim error"></canvas>
+      <div style="display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center">
+        <button id="w-play" type="button">Pause</button>
+        <button id="w-reset" type="button" class="ghost">Restart</button>
+        <span class="checks"><label><input id="w-camp" type="checkbox"> Player camps in one spot</label><label><input id="w-fast" type="checkbox"> 2× speed</label></span>
+        <span class="pill" id="w-goal">Patrol</span>
+      </div>
+    </div>
+  </section>
+
   <section id="see">
     <div class="chapter-head"><div class="tag">Chapter 1 · Perception</div><h2>Seeing you</h2>
       <p>The bot looks every 0.1 s. You are visible when you are inside its vision cone, within range and not behind a wall. Visibility fills a
         <b>detection meter</b>; at 1.0 the bot has spotted you. Closer, moving and recently-firing targets fill it faster, crouching slows it, and
-        within 6 m anything within <b>±100° of its gaze</b> counts (a 200° total acceptance sector), because you notice someone right next to you. <b>Drag the orange dot</b> to move.</p></div>
+        within 6 m anything within 100° of its gaze counts, because you notice someone right next to you. <b>Drag the orange dot</b> to move.</p></div>
     <div class="instrument">
       <canvas id="cv-see" aria-label="Top-down view of the bot's vision cone and the player"></canvas>
       <div class="controls">
@@ -572,5 +589,167 @@ a { color: var(--bot) }
   [() => win(false), () => win(true), () => win(false)].forEach(f => f());
   $('ad-lose').onclick(); $('ad-lose').onclick(); win(false);
   redrawers.push(drawAdapt);
+
+  // ---------------- live demo: a bot playing ----------------
+  {
+    const big = walls.map(r => ({ x: r.x - 0.55, y: r.y - 0.55, w: r.w + 1.1, h: r.h + 1.1 }));
+    const clear = (a, b) => !big.some(r => segRect(a.x, a.y, b.x, b.y, r));
+    const seeClear = (a, b) => !walls.some(r => segRect(a.x, a.y, b.x, b.y, r));
+    const nodes = [{ x: 5, y: 9 }, { x: 8, y: 3.5 }, { x: 8, y: 15 }, { x: 12.6, y: 10.2 }, { x: 16, y: 5 }, { x: 16, y: 14.5 }, { x: 22, y: 7.5 }, { x: 22, y: 15 }, { x: 27, y: 4 }, { x: 28.5, y: 14 }, { x: 29.5, y: 9 }];
+    walls.forEach(r => [[r.x - 1, r.y - 1], [r.x + r.w + 1, r.y - 1], [r.x - 1, r.y + r.h + 1], [r.x + r.w + 1, r.y + r.h + 1]]
+      .forEach(([x, y]) => { if (x > 0.6 && x < W - 0.6 && y > 0.6 && y < H - 0.6) nodes.push({ x, y, corner: true }); }));
+    const tactical = nodes.filter(n => !n.corner);
+    function route(from, to) {
+      const pts = [from, ...nodes, to], n = pts.length, d = Array(n).fill(Infinity), prev = Array(n).fill(-1), done = Array(n).fill(false);
+      d[0] = 0;
+      for (let k = 0; k < n; k++) {
+        let u = -1; for (let i = 0; i < n; i++) if (!done[i] && d[i] < Infinity && (u < 0 || d[i] < d[u])) u = i;
+        if (u < 0) break; done[u] = true; if (u === n - 1) break;
+        for (let v = 0; v < n; v++) if (!done[v] && clear(pts[u], pts[v])) { const nd = d[u] + Math.hypot(pts[u].x - pts[v].x, pts[u].y - pts[v].y); if (nd < d[v]) { d[v] = nd; prev[v] = u; } }
+      }
+      if (d[n - 1] === Infinity) return [{ x: to.x, y: to.y }];
+      const out = []; let v = n - 1; while (v > 0) { out.unshift({ x: pts[v].x, y: pts[v].y }); v = prev[v]; } return out;
+    }
+    const PR = [{ x: 25, y: 4.5 }, { x: 29.3, y: 9.5 }, { x: 24, y: 15.6 }, { x: 16.5, y: 15.2 }, { x: 21, y: 8.5 }];
+    const GOALC = { Patrol: '--ink-2', Investigate: '--good', Engage: '--accent', Flank: '--warn', Hunt: '--bot' };
+    let Bt, Pt, T, logs, tracers, playing = !reduce, wrnd;
+    function reset() {
+      wrnd = mulberry(42);
+      Bt = { x: 5, y: 9, yaw: 0, vel: 0, goal: 'Patrol', path: [], meter: 0, seenAt: -99, last: null, noise: null, noiseAt: -99, flankCd: 0, flick: null, nextShot: 0, burstLeft: 0, think: 0, look: 0, visits: new Map(), vis: false, err: 90 };
+      Pt = { x: 25, y: 4.5, wp: 0, wait: 0, lastShot: -99, anchor: { x: 25, y: 4.5, t: 0 }, moving: false };
+      T = 0; logs = []; tracers = [];
+    }
+    const ang = (a, b) => Math.atan2(b.y - a.y, b.x - a.x);
+    const wrap = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+    function setRoute(to, goal) { Bt.path = route({ x: Bt.x, y: Bt.y }, to); Bt.goal = goal; }
+    function stepWatch(dt) {
+      T += dt;
+      // scripted player
+      const camp = $('w-camp').checked;
+      Pt.moving = false;
+      if (!camp) {
+        if (Pt.wait > 0) Pt.wait -= dt;
+        else { const tg = PR[Pt.wp], dx = tg.x - Pt.x, dy = tg.y - Pt.y, dd = Math.hypot(dx, dy);
+          if (dd < 0.15) { Pt.wp = (Pt.wp + 1) % PR.length; Pt.wait = 1.4; } else { const s = Math.min(dd, 3.2 * dt); Pt.x += dx / dd * s; Pt.y += dy / dd * s; Pt.moving = true; } }
+      }
+      if (Math.hypot(Pt.x - Pt.anchor.x, Pt.y - Pt.anchor.y) > 3) Pt.anchor = { x: Pt.x, y: Pt.y, t: T };
+      const pd = Math.hypot(Pt.x - Bt.x, Pt.y - Bt.y), los = seeClear(Bt, Pt);
+      if (los && pd < 26 && T - Pt.lastShot > 1.3) { Pt.lastShot = T; if (pd < 30) { Bt.noise = { x: Pt.x + (wrnd() - 0.5) * pd * 0.16, y: Pt.y + (wrnd() - 0.5) * pd * 0.16 }; Bt.noiseAt = T; } }
+      // perception, 10 Hz
+      Bt.look -= dt;
+      if (Bt.look <= 0) {
+        Bt.look += 0.1;
+        let a = Math.abs(wrap(ang(Bt, Pt) - Bt.yaw)) * 180 / Math.PI;
+        const inCone = a <= 55 || (pd < 6 && a < 100);
+        Bt.vis = inCone && los && pd <= 70;
+        if (Bt.vis) {
+          let rate = 0.9 + 9 / Math.max(pd, 1.5); if (Pt.moving) rate *= 1.35; if (T - Pt.lastShot < 1) rate *= 2.2; if (a < 12) rate *= 1.4;
+          Bt.meter = Math.min(1.25, Bt.meter + rate * 0.1);
+        } else Bt.meter = Math.max(0, Bt.meter - 0.05);
+        if (Bt.vis && Bt.meter >= 1) { Bt.seenAt = T; Bt.last = { x: Pt.x, y: Pt.y }; }
+        logs.push({ t: T, meter: Bt.meter, goal: Bt.goal, err: Math.min(60, Math.abs(wrap(ang(Bt, Pt) - Bt.yaw)) * 180 / Math.PI) });
+        while (logs.length && logs[0].t < T - 12) logs.shift();
+      }
+      // brain, 4 Hz
+      Bt.think -= dt;
+      if (Bt.think <= 0) {
+        Bt.think += 0.25 * (0.85 + wrnd() * 0.3);
+        const spotted = Bt.vis && Bt.meter >= 1, campFor = T - Pt.anchor.t;
+        if (Bt.goal === 'Flank' && Bt.path.length && !spotted) { /* keep circling */ }
+        else if (spotted && campFor > 6 && T > Bt.flankCd) {
+          const toP = ang(Pt, Bt); let best = null, bs = -1;
+          tactical.forEach(n => { const dd = Math.hypot(n.x - Pt.x, n.y - Pt.y); if (dd < 4 || dd > 18) return; const off = Math.abs(Math.abs(wrap(ang(Pt, n) - toP)) - Math.PI / 2); const sc = 2 - off - Math.abs(dd - 10) * 0.05; if (sc > bs && !seeClear(n, Pt) === false) { bs = sc; best = n; } });
+          if (best) { setRoute(best, 'Flank'); Bt.flankCd = T + 18; } else { Bt.goal = 'Engage'; Bt.path = []; }
+        }
+        else if (spotted) { Bt.goal = 'Engage'; Bt.path = []; }
+        else if (Bt.last && T - Bt.seenAt <= 10) { if (Bt.goal !== 'Hunt' || !Bt.path.length) setRoute(Bt.last, 'Hunt'); }
+        else if (Bt.noise && T - Bt.noiseAt < 8) { if (Bt.goal !== 'Investigate') setRoute(Bt.noise, 'Investigate'); }
+        else if (Bt.goal !== 'Patrol' || !Bt.path.length) {
+          let best = tactical[0], bs = -1e9;
+          tactical.forEach(n => { const dd = Math.hypot(n.x - Bt.x, n.y - Bt.y), since = T - (Bt.visits.get(n) ?? -60); const sc = Math.min(since, 60) - Math.abs(dd - 12) * 0.6 + wrnd() * 4; if (dd > 3 && sc > bs) { bs = sc; best = n; } });
+          Bt.visits.set(best, T); setRoute(best, 'Patrol');
+        }
+        if (Bt.goal === 'Hunt' && !Bt.path.length && !Bt.vis) { Bt.last = null; Bt.goal = 'Patrol'; }
+        if (Bt.goal === 'Investigate' && !Bt.path.length) { Bt.noise = null; Bt.goal = 'Patrol'; }
+      }
+      // movement
+      if (Bt.path.length && Bt.goal !== 'Engage') {
+        const tg = Bt.path[0], dx = tg.x - Bt.x, dy = tg.y - Bt.y, dd = Math.hypot(dx, dy);
+        const sp = Bt.goal === 'Patrol' ? 3.0 : 4.6;
+        if (dd < 0.25) Bt.path.shift(); else { const s = Math.min(dd, sp * dt); Bt.x += dx / dd * s; Bt.y += dy / dd * s; }
+      }
+      // aim: flick (Fitts + minimum jerk) or damped spring, max 720 deg/s
+      let want;
+      if (Bt.goal === 'Engage') want = ang(Bt, Pt);
+      else if (Bt.goal === 'Hunt' && Bt.last) want = ang(Bt, Bt.last);
+      else if (Bt.goal === 'Investigate' && Bt.noise) want = ang(Bt, Bt.noise);
+      else if (Bt.path.length) want = ang(Bt, Bt.path[0]);
+      else want = Bt.yaw;
+      const errDeg = wrap(want - Bt.yaw) * 180 / Math.PI;
+      if (!Bt.flick && Math.abs(errDeg) > 10.5) {
+        const half = Math.atan2(0.34, Math.max(1.5, pd)) * 180 / Math.PI, id = Math.log2(1 + Math.abs(errDeg) / Math.max(0.4, half));
+        const mt = clamp((0.065 + 0.042 * id) * clamp(7.5 / 7, 0.62, 1.55), 0.085, 0.38), sc = (wrnd() - 0.5) * 2 * clamp(Math.abs(errDeg) * 0.05, 0.35, 6.5);
+        Bt.flick = { t0: T, mt, from: Bt.yaw, to: Bt.yaw + (errDeg + sc) * Math.PI / 180 };
+      }
+      let step;
+      if (Bt.flick) { const u = clamp((T - Bt.flick.t0) / Bt.flick.mt, 0, 1), s = u * u * u * (10 + u * (-15 + 6 * u)); const ny = Bt.flick.from + (Bt.flick.to - Bt.flick.from) * s; step = ny - Bt.yaw; Bt.vel = step / dt; if (u >= 1) Bt.flick = null; }
+      else { const w = 7; Bt.vel += (w * w * (errDeg * Math.PI / 180) - 2 * 0.8 * w * Bt.vel) * dt; step = Bt.vel * dt; }
+      Bt.yaw = wrap(Bt.yaw + clamp(step, -4 * Math.PI * dt, 4 * Math.PI * dt));
+      Bt.err = Math.abs(wrap(ang(Bt, Pt) - Bt.yaw)) * 180 / Math.PI;
+      // trigger: bursts when the aim is within 3 degrees
+      if (Bt.goal === 'Engage' && Bt.err < 3 && T >= Bt.nextShot) {
+        if (Bt.burstLeft <= 0) Bt.burstLeft = 3 + Math.floor(wrnd() * 4);
+        const miss = (wrnd() - 0.5) * 2 * Bt.err * Math.PI / 180, L = Math.min(pd + 2, 40);
+        tracers.push({ x: Bt.x, y: Bt.y, x2: Bt.x + Math.cos(Bt.yaw + miss) * L, y2: Bt.y + Math.sin(Bt.yaw + miss) * L, t: T });
+        Bt.burstLeft--; Bt.nextShot = T + (Bt.burstLeft > 0 ? 60 / 700 : 0.35 + wrnd() * 0.2);
+      }
+      tracers = tracers.filter(tr => T - tr.t < 0.09);
+    }
+    function drawWatch() {
+      const cv = $('cv-watch'), { ctx, w, h } = fit(cv, H / W), k = w / W;
+      const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent'), good = css('--good');
+      ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath();
+      for (let x = 0; x <= W; x += 2) { ctx.moveTo(x * k, 0); ctx.lineTo(x * k, h); } for (let y = 0; y <= H; y += 2) { ctx.moveTo(0, y * k); ctx.lineTo(w, y * k); } ctx.stroke();
+      ctx.fillStyle = ink2; walls.forEach(r => ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k));
+      ctx.fillStyle = ink2; ctx.globalAlpha = 0.35; tactical.forEach(n => { ctx.beginPath(); ctx.arc(n.x * k, n.y * k, 3, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
+      // vision cone
+      ctx.fillStyle = botC; ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.moveTo(Bt.x * k, Bt.y * k); ctx.arc(Bt.x * k, Bt.y * k, 14 * k, Bt.yaw - 55 * Math.PI / 180, Bt.yaw + 55 * Math.PI / 180); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      // planned route
+      if (Bt.path.length) { ctx.strokeStyle = css(GOALC[Bt.goal] || '--ink-2'); ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(Bt.x * k, Bt.y * k); Bt.path.forEach(p => ctx.lineTo(p.x * k, p.y * k)); ctx.stroke(); ctx.setLineDash([]); }
+      if (Bt.vis) { ctx.strokeStyle = good; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(Bt.x * k, Bt.y * k); ctx.lineTo(Pt.x * k, Pt.y * k); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (Bt.last && !Bt.vis) { ctx.strokeStyle = botC; ctx.lineWidth = 2; const lx = Bt.last.x * k, ly = Bt.last.y * k; ctx.beginPath(); ctx.moveTo(lx - 6, ly - 6); ctx.lineTo(lx + 6, ly + 6); ctx.moveTo(lx + 6, ly - 6); ctx.lineTo(lx - 6, ly + 6); ctx.stroke(); ctx.fillStyle = botC; ctx.font = '11px ' + css('--mono'); ctx.fillText('last seen', lx + 8, ly - 6); }
+      tracers.forEach(tr => { ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(tr.x * k, tr.y * k); ctx.lineTo(tr.x2 * k, tr.y2 * k); ctx.stroke(); });
+      if (T - Pt.lastShot < 0.6) { ctx.strokeStyle = acc; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.arc(Pt.x * k, Pt.y * k, 10 + (T - Pt.lastShot) * 40, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+      ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(Pt.x * k, Pt.y * k, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(Bt.x * k, Bt.y * k, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = botC; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(Bt.x * k, Bt.y * k); ctx.lineTo(Bt.x * k + Math.cos(Bt.yaw) * 20, Bt.y * k + Math.sin(Bt.yaw) * 20); ctx.stroke();
+      ctx.fillStyle = ink; ctx.font = '600 13px ' + css('--label'); ctx.fillText(Bt.goal.toUpperCase(), Bt.x * k + 10, Bt.y * k - 10);
+      // strip
+      const sv = fit($('cv-strip'), 0.28), c2 = sv.ctx, sw = sv.w, sh = sv.h, L = 92, X = t => L + (sw - L - 8) * (1 - (T - t) / 12);
+      c2.fillStyle = css('--panel'); c2.fillRect(0, 0, sw, sh);
+      const lanes = [['detection', 0.04, 0.32], ['goal', 0.40, 0.58], ['aim error', 0.66, 0.96]];
+      c2.font = '600 12px ' + css('--label'); lanes.forEach(([n, a, b]) => { c2.fillStyle = ink2; c2.fillText(n.toUpperCase(), 6, sh * (a + b) / 2 + 4); c2.strokeStyle = grid; c2.beginPath(); c2.moveTo(L, sh * b); c2.lineTo(sw - 8, sh * b); c2.stroke(); });
+      const yM = m => sh * (0.32 - 0.28 * m / 1.25), yE = e => sh * (0.96 - 0.30 * e / 60);
+      c2.setLineDash([3, 3]); c2.strokeStyle = ink2; c2.beginPath(); c2.moveTo(L, yM(1)); c2.lineTo(sw - 8, yM(1)); c2.stroke(); c2.setLineDash([]);
+      c2.strokeStyle = acc; c2.lineWidth = 2; c2.beginPath(); logs.forEach((g, i) => i ? c2.lineTo(X(g.t), yM(g.meter)) : c2.moveTo(X(g.t), yM(g.meter))); c2.stroke();
+      for (let i = 1; i < logs.length; i++) { c2.fillStyle = css(GOALC[logs[i].goal] || '--ink-2'); c2.fillRect(X(logs[i - 1].t), sh * 0.42, X(logs[i].t) - X(logs[i - 1].t) + 0.5, sh * 0.14); }
+      c2.strokeStyle = botC; c2.lineWidth = 2; c2.beginPath(); logs.forEach((g, i) => i ? c2.lineTo(X(g.t), yE(g.err)) : c2.moveTo(X(g.t), yE(g.err))); c2.stroke();
+      c2.fillStyle = ink2; c2.font = '11px ' + css('--mono'); c2.fillText('-12 s', L, sh - 2); c2.fillText('now', sw - 34, sh - 2);
+      const pill = $('w-goal'); pill.textContent = Bt.goal; pill.style.color = css(GOALC[Bt.goal] || '--ink-2');
+    }
+    reset();
+    if (reduce) { for (let i = 0; i < 60 * 6; i++) stepWatch(1 / 60); }
+    $('w-play').textContent = playing ? 'Pause' : 'Play';
+    $('w-play').onclick = () => { playing = !playing; $('w-play').textContent = playing ? 'Pause' : 'Play'; };
+    $('w-reset').onclick = () => { reset(); drawWatch(); };
+    redrawers.push(drawWatch); drawWatch();
+    let wLast = performance.now(), wAcc = 0;
+    (function watchLoop(t) {
+      const dt = Math.min(0.1, (t - wLast) / 1000); wLast = t;
+      if (playing) { wAcc += dt * ($('w-fast').checked ? 2 : 1); let n = 0; while (wAcc >= 1 / 60 && n < 12) { stepWatch(1 / 60); wAcc -= 1 / 60; n++; } drawWatch(); }
+      requestAnimationFrame(watchLoop);
+    })(performance.now());
+  }
 })();
 </script>

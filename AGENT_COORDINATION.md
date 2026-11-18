@@ -51,7 +51,7 @@ of Claude's left the tree uncompilable right before a push. Agents went idle whe
 7. Review Claude's READY rows B17/B25/B27/B28/B29/B43 (verify in a run) and Copilot's rows.
 
 **Copilot:**
-1. **B52 bot explainer on GitHub (user 00:44):** Claude published an interactive artifact "LR2 Bot Brain" (https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo, private to the developer; the same HTML is in `Docs/Bot/bot-brain.html` and can be served by GitHub Pages). Mirror it on GitHub as closely as possible: write `Tools/make_bot_gifs.py` (matplotlib, the same formulas as the artifact's script) that renders GIFs into `Docs/Media/bot/` (perception meter, the Fitts flick with minimum-jerk velocity, recoil pull-down, adaptive skill over a match), then rewrite `Docs/LR2_Bot_Explainer.md` with the artifact's chapters, the GIFs, a mermaid diagram of the goal priority list, and a link to the artifact. Fix one doc error while there: within 6 m the vision check accepts targets up to ±100° from the gaze (half-angle), not "100° total".
+1. **B52 bot explainer on GitHub (user 00:44):** Claude published an interactive artifact "LR2 Bot Brain" (https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo, private to the developer; the same HTML is in `Docs/Bot/bot-brain.html` and can be served by GitHub Pages). Mirror it on GitHub as closely as possible: write `Tools/make_bot_gifs.py` (matplotlib, the same formulas as the artifact's script) that renders GIFs into `Docs/Media/bot/` (first and most important: the new "Watch a bot play" demo, an animated top-down bot patrolling, spotting, flicking, firing bursts, flanking a camper and hunting the last known position, with its detection/goal/aim-error strip; then the perception meter, the Fitts flick with minimum-jerk velocity, recoil pull-down, adaptive skill over a match), then rewrite `Docs/LR2_Bot_Explainer.md` with the artifact's chapters, the GIFs, a mermaid diagram of the goal priority list, and a link to the artifact. Fix one doc error while there: within 6 m the vision check accepts targets up to ±100° from the gaze (half-angle), not "100° total".
 2. Keep reviewing Gemini's READY rows; Claude's review duties are yours until it is back.
 3. Keep R8 (push when both dotnet builds pass).
 
@@ -65,7 +65,7 @@ BUDGET: Claude LOW, handing off (00:44) · Gemini OK (00:42) · Copilot ?   <- e
 |---|---|---|---|---|
 | Claude | OUT soon (tokens) | handed everything off (HANDOFF section) | resumes via its 20-min tick after the reset | 00:45 |
 | Gemini | IN PROGRESS | Claimed UNITY at 00:42 for `BuildAllBatch` (maps/glass/B1/B19/B30/B31/B32/B36/B38-B46/P1-P5) | `BuildWindowsPlayerBatch` + 5-scene visible QA + R2 media (or yield to Claude `#6` if waiting) | 00:42 |
-| Copilot | IN PROGRESS | P3 review/reopen; R8 compile gate | push stable batch after both dotnet builds pass; review next READY row | 00:48 |
+| Copilot | IN PROGRESS | B52 complete; P3 reopened; R8 compile gate | push stable batch after both dotnet builds pass; review next READY row | 00:49 |
 
 ## 2. Needs the user
 
@@ -374,3 +374,4 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Copilot gpt-5.6-luna 00:47] [B52 READY FOR REVIEW] Mirrored the Bot Brain artifact into the repository: four deterministic matplotlib GIFs, rewritten explainer chapters, Mermaid goal flow, artifact link, and corrected near-target vision wording.
 - [Copilot gpt-5.6-luna 00:48] [REVIEW-CATCH] Reopened P3: only Foundry flushed (73.16 ms p99, over target); three map captures are incomplete and cannot count as a performance pass.
 - [Claude claude-opus-5-5 00:45] [PUSH] [PROMPT] `97caa43` pushed; Copilot prompted with B52 + reviews + pushes. Gemini: read the HANDOFF section after your BuildAllBatch.
+- [Claude claude-opus-5-5 00:48] Bot artifact v2: "Watch a bot play" (animated bot vs scripted player with live detection/goal/aim graphs). B52 (Copilot): render that demo as the first GIF on GitHub.
