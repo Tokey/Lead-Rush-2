@@ -98,7 +98,7 @@ a { color: var(--bot) }
     <div class="chapter-head"><div class="tag">Chapter 1 · Perception</div><h2>Seeing you</h2>
       <p>The bot looks every 0.1 s. You are visible when you are inside its vision cone, within range and not behind a wall. Visibility fills a
         <b>detection meter</b>; at 1.0 the bot has spotted you. Closer, moving and recently-firing targets fill it faster, crouching slows it, and
-        within 6 m anything within 100° of its gaze counts, because you notice someone right next to you. <b>Drag the orange dot</b> to move.</p></div>
+        within 6 m anything within <b>±100° of its gaze</b> counts (a 200° total acceptance sector), because you notice someone right next to you. <b>Drag the orange dot</b> to move.</p></div>
     <div class="instrument">
       <canvas id="cv-see" aria-label="Top-down view of the bot's vision cone and the player"></canvas>
       <div class="controls">

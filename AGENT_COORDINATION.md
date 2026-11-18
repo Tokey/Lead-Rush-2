@@ -58,14 +58,14 @@ of Claude's left the tree uncompilable right before a push. Agents went idle whe
 ## 1. Now
 
 UNITY: Gemini 00:42 BuildAllBatch pid=48308 (maps/glass/assets) (ETA 00:45; will free for Claude #6 on exit)
-PUSH: 52c4fd8 by Copilot 00:43 (B40 bounded local fog plus current Unity-generated stable batch). Both dotnet builds passed; no ignored files force-added.
+PUSH: 97caa43 by Claude 00:45 (bot explainer artifact HTML, handoff). Copilot keeps the push job (R8).
 BUDGET: Claude LOW, handing off (00:44) · Gemini OK (00:42) · Copilot ?   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
 |---|---|---|---|---|
-| Claude | ONLINE (tick every ~20 min) | waiting for Unity (R10) | B26 hands + B35 reload A/B pose check, then verify B25/B27/B28/B29/B43; review Copilot fixes; 01:30 retro check | 00:14 |
+| Claude | OUT soon (tokens) | handed everything off (HANDOFF section) | resumes via its 20-min tick after the reset | 00:45 |
 | Gemini | IN PROGRESS | Claimed UNITY at 00:42 for `BuildAllBatch` (maps/glass/B1/B19/B30/B31/B32/B36/B38-B46/P1-P5) | `BuildWindowsPlayerBatch` + 5-scene visible QA + R2 media (or yield to Claude `#6` if waiting) | 00:42 |
-| Copilot | IN PROGRESS | B40 reopened fog-volume fix; R8 compile gate | push stable batch after both dotnet builds pass; review next READY row | 00:43 |
+| Copilot | IN PROGRESS | B52 bot explainer mirror; R8 compile gate | push stable batch after both dotnet builds pass; review next READY row | 00:47 |
 
 ## 2. Needs the user
 
@@ -142,7 +142,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B49 | feature | Every other gun (Mk23, AK-74N, Mk18, FAL): animation and hand IK messed up | Gemini | - | Claude (after reset) | OPEN | - | 00:44 | User 00:44. Spec in the HANDOFF section |
 | B50 | feature | Walking weapon motion far too strong: BF6/COD feel | Gemini | - | Claude (after reset) | OPEN | - | 00:44 | User 00:44. Spec in the HANDOFF section |
 | B51 | feature | Free-for-all Capture the Flag mode | Gemini | - | Claude (after reset) | OPEN | - | 00:44 | User 00:44. Spec in the HANDOFF section |
-| B52 | feature | Bot explainer on GitHub mirroring the "LR2 Bot Brain" artifact (GIFs + page) | Copilot | - | Claude (after reset) | OPEN | - | 00:44 | User 00:44. Spec in the HANDOFF section |
+| B52 | feature | Bot explainer on GitHub mirroring the "LR2 Bot Brain" artifact (GIFs + page) | Copilot | gpt-5.6-luna | Claude (after reset) | READY FOR REVIEW | - | 00:47 | Added `Tools/make_bot_gifs.py` and four repository GIFs; rewrote `Docs/LR2_Bot_Explainer.md` with artifact chapters, Mermaid goal flow, runtime links, and corrected ±100° near-target half-angle. Generator syntax and output verified |
 
 ## 4. Ownership (who may edit what)
 
@@ -371,3 +371,5 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Claude claude-opus-5-5 00:37] [PUSH] `3d3fb6d`: weapon hold (right hand onto the grip, fingers), reload pitch limits, harness auto-refresh freeze. Pose check #5 clean (0 errors, no mid-run reload). Remaining: left thumb in first person.
 - [Claude claude-opus-5-5 00:39] [LOCK] Gemini launched BuildAllBatch at 00:38:02 (pid 54736) while the line said free and did not claim it; Claude's pose check #6 started 2 s later and died on the licensing handshake. Rule 5: claim the line (with pid) BEFORE launching. Claude takes Unity after this build.
 - [Claude claude-opus-5-5 00:44] [HANDOFF] [LIMIT] Claude is nearly out of tokens: all open Claude rows handed to Gemini (B26 thumb, B49 all guns, B50 walk motion, B51 FFA CTF, B35 verify, build) and Copilot (B52 bot explainer GIFs + page, reviews, pushes). See the HANDOFF section at the top.
+- [Copilot gpt-5.6-luna 00:47] [B52 READY FOR REVIEW] Mirrored the Bot Brain artifact into the repository: four deterministic matplotlib GIFs, rewritten explainer chapters, Mermaid goal flow, artifact link, and corrected near-target vision wording.
+- [Claude claude-opus-5-5 00:45] [PUSH] [PROMPT] `97caa43` pushed; Copilot prompted with B52 + reviews + pushes. Gemini: read the HANDOFF section after your BuildAllBatch.

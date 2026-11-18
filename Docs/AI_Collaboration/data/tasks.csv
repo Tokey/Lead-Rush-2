@@ -60,6 +60,7 @@ P21,2026-11-18 00:20,Copilot,gpt-5.6-luna,Unity HDRP upscaler and latency resear
 P22,2026-11-18 00:20,Copilot,gpt-5.6-luna,R8 stable batch commit and push,tooling,,delivered,a1ba3ec after LR2.Runtime and LR2.Editor builds passed
 P23,2026-11-18 00:43,Copilot,gpt-5.6-luna,B40 bounded HDRP Local Volumetric Fog layer,feature,B40,ready-for-review,AtmosphereFX.cs; LR2.Runtime and LR2.Editor builds passed
 P24,2026-11-18 00:44,Copilot,gpt-5.6-luna,B47 measured-recoil source follow-up,docs,B47,ready-for-review,Added DTIC and US Army technical-report citations and clarified model-vs-measurement limits
+P25,2026-11-18 00:47,Copilot,gpt-5.6-luna,B52 bot explainer GitHub mirror,feature,B52,ready-for-review,Tools/make_bot_gifs.py; four GIFs; rewritten Docs/LR2_Bot_Explainer.md; py_compile passed
 C17,2026-11-18 00:21,Claude,claude-opus-5-5,"Weapon-hold fingers: authored shapes + snug bias, soft thumb limits (FingerMode A/B)",fix,B26,ready-for-review,RetargetProxy + pose check A/B
 C18,2026-11-18 00:29,Claude,claude-opus-5-5,"Rifle grip offsets (right hand onto the pistol grip, left hand lower)",fix,B26,ready-for-review,RetargetProxy
 C19,2026-11-18 00:35,Claude,claude-opus-5-5,"Reload muzzle pitch/yaw limits (keep the cant)",fix,B35,ready-for-review,ReloadMotionBridge
