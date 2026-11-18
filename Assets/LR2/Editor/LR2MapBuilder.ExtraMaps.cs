@@ -262,6 +262,7 @@ namespace LR2.EditorTools
                 fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.15f, contrast: 14f, saturation: -14f,
                 rainDefaultPreset: 2, evMin: 4.8f, evMax: 11.4f,
                 hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", skyExposure: 10.2f);
+            PlaceEnvironmentRealism(new Color(0.58f, 0.62f, 0.65f, 1f), new Color(0.56f, 0.44f, 0.34f, 1f), 0.16f, 20f);
             PlaceMapDecals(pMin, pMax, 140);
             AddMatchSystems(40f);
             MarkStatic(env);
@@ -421,8 +422,8 @@ namespace LR2.EditorTools
             AddTac(new Vector3(0f, 0.05f, -18f), TacticalPointType.Patrol, 0.7f, false);
             AddTac(new Vector3(-16f, 0.05f, 0f), TacticalPointType.Patrol, 0.65f, false);
 
-            AddAmmoCrate(new Vector3(0f, -1.5f, -1.8f));
-            AddAmmoCrate(new Vector3(21.5f, 3.02f, 2.2f));
+            AddAmmoCrate(new Vector3(-10.5f, 0.01f, -5.5f));
+            AddAmmoCrate(new Vector3(10.5f, 0.01f, 5.5f));
 
             AddFlagAnchor(_gameplay, "Sunken Pipe Trench", new Vector3(0f, -1.48f, 0f));
             AddFlagAnchor(_gameplay, "North Refinery Bay", new Vector3(0f, 0.04f, 17.5f));
@@ -437,6 +438,8 @@ namespace LR2.EditorTools
             foreach (var (fx, fz) in new[] { (-18f, 18f), (18f, 18f), (-18f, -18f), (18f, -18f) })
                 AddLight(_lighting, $"YardFlood_{(fx < 0 ? "W" : "E")}_{(fz < 0 ? "S" : "N")}",
                     new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 4600f, 4400f, 24f, 0f, false);
+            foreach (var fbp in new[] { new Vector3(-8.5f, 0f, 11f), new Vector3(8.5f, 0f, -11f), new Vector3(-13.5f, 0f, -5.5f), new Vector3(11.5f, 0f, 6.5f) })
+                SpawnBurningBarrel(_lighting, _props, fbp);
             AddLight(_lighting, "TrenchFillN", new Vector3(0f, 1.8f, 6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
@@ -444,6 +447,7 @@ namespace LR2.EditorTools
                 fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: 0.08f, contrast: 16f, saturation: -6f,
                 rainDefaultPreset: 0, evMin: 4.8f, evMax: 11.4f,
                 hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.2f);
+            PlaceEnvironmentRealism(new Color(0.64f, 0.68f, 0.70f, 1f), new Color(0.65f, 0.52f, 0.35f, 1f), 0.14f, 19f);
             PlaceMapDecals(pMin, pMax, 130);
             AddMatchSystems(38f);
             MarkStatic(env);
@@ -552,8 +556,8 @@ namespace LR2.EditorTools
             AddTac(new Vector3(0f, 0.05f, 14f), TacticalPointType.Patrol, 0.6f, false);
             AddTac(new Vector3(0f, 0.05f, -14f), TacticalPointType.Patrol, 0.6f, false);
 
-            AddAmmoCrate(new Vector3(-14f, 0.01f, -22f));
-            AddAmmoCrate(new Vector3(14f, 0.01f, 22f));
+            AddAmmoCrate(new Vector3(-8.5f, 0.01f, 0f));
+            AddAmmoCrate(new Vector3(8.5f, 0.01f, 0f));
 
             AddFlagAnchor(_gameplay, "Range Centre Line", new Vector3(0f, 0.04f, 0f));
             AddFlagAnchor(_gameplay, "West Overwatch Deck", new Vector3(-18f, 1.62f, 0f));
@@ -566,10 +570,13 @@ namespace LR2.EditorTools
             // Crisp balanced 6200K daylight + shadow-side sky bounce fills (keeps shaded cover clear against dark concrete)
             foreach (var bp in new[] { new Vector3(-12f, 3.8f, 0f), new Vector3(12f, 3.8f, 0f), new Vector3(0f, 4.0f, 12f), new Vector3(0f, 4.0f, -12f) })
                 AddLight(_lighting, $"ShadowBounce_{(int)bp.x}_{(int)bp.z}", bp, Quaternion.identity, LightType.Point, 5800f, 3200f, 22f, 0f, false);
+            foreach (var tbp in new[] { new Vector3(-10.5f, 0f, 10.5f), new Vector3(10.5f, 0f, -10.5f) })
+                SpawnBurningBarrel(_lighting, _props, tbp);
             BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 28000f, sunTemp: 6200f,
                 fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: 0.15f, contrast: 12f, saturation: -2f,
                 rainDefaultPreset: -1, evMin: 5.2f, evMax: 11.4f,
                 hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.0f);
+            PlaceEnvironmentRealism(new Color(0.74f, 0.78f, 0.80f, 1f), new Color(0.55f, 0.52f, 0.45f, 1f), 0.10f, 24f);
             AddMatchSystems(30f);
             MarkStatic(env);
 
@@ -619,32 +626,38 @@ namespace LR2.EditorTools
             return root;
         }
 
+        private static void PlaceEnvironmentRealism(Color mistColor, Color dustColor, float mistOpacity, float radius)
+        {
+            if (_lighting == null) return;
+            var go = new GameObject("EnvironmentRealism");
+            go.transform.SetParent(_lighting, false);
+            var afx = go.AddComponent<AtmosphereFX>();
+            var so = new SerializedObject(afx);
+            so.FindProperty("mistColor").colorValue = mistColor;
+            so.FindProperty("dustColor").colorValue = dustColor;
+            so.FindProperty("mistOpacity").floatValue = mistOpacity;
+            so.FindProperty("radius").floatValue = radius;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void SpawnBurningBarrel(Transform lightsParent, Transform propsParent, Vector3 pos)
         {
             var barrel = Prop("SM_Barrel_04", propsParent, pos, R(0f, 360f));
             var fireHolder = new GameObject("BurningBarrelFX");
             fireHolder.transform.SetParent(barrel != null ? barrel.transform : lightsParent, false);
             fireHolder.transform.position = (barrel != null ? barrel.transform.position : pos) + Vector3.up * 0.85f;
+            var sc = fireHolder.AddComponent<SphereCollider>();
+            sc.isTrigger = true;
+            sc.radius = 1.65f;
+            var fh = fireHolder.AddComponent<FireHazard>();
+            var so = new SerializedObject(fh);
+            so.FindProperty("damagePerSecond").floatValue = 14f;
+            so.FindProperty("damageRadius").floatValue = 1.65f;
+            so.FindProperty("lightIntensity").floatValue = 4200f;
+            so.FindProperty("lightRange").floatValue = 14f;
+            so.ApplyModifiedPropertiesWithoutUndo();
 
-            void SpawnFx(string fxName)
-            {
-                foreach (var g in AssetDatabase.FindAssets(fxName + " t:Prefab", new[] { "Assets/LeartesStudios" }))
-                {
-                    var p = AssetDatabase.GUIDToAssetPath(g);
-                    if (System.IO.Path.GetFileNameWithoutExtension(p) != fxName) continue;
-                    var pf = AssetDatabase.LoadAssetAtPath<GameObject>(p);
-                    if (pf == null) continue;
-                    var inst = (GameObject)PrefabUtility.InstantiatePrefab(pf, fireHolder.transform);
-                    inst.transform.localPosition = Vector3.zero;
-                    inst.transform.localScale = Vector3.one * 0.42f;
-                    SanitizeParticleSystems(inst);
-                    break;
-                }
-            }
-            SpawnFx("Fire");
-            SpawnFx("Smoke");
-
-            var l = AddLight(fireHolder.transform, "FireGlow", Vector3.up * 0.35f, Quaternion.identity, LightType.Point, 2400f, 2600f, 9f, 0f, false);
+            var l = AddLight(fireHolder.transform, "FireGlow", Vector3.up * 0.35f, Quaternion.identity, LightType.Point, 2400f, 3600f, 14f, 0f, false);
             l.gameObject.AddComponent<LightFlicker>().Configure(0.08f, 4.5f, 0f);
         }
 

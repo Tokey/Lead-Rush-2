@@ -600,6 +600,20 @@ namespace LR2.UI
                 baseCol.a *= fade;
                 icon.color = baseCol;
             }
+            for (int ac = 0; ac < AmmoCrate.All.Count; ac++)
+            {
+                var crate = AmmoCrate.All[ac];
+                if (crate == null || !crate.gameObject.activeInHierarchy) continue;
+                Vector3 aOff = crate.transform.position - _soldier.transform.position;
+                Vector3 aLoc = inv * aOff;
+                Vector2 ap = new Vector2(aLoc.x, aLoc.z) * scale;
+                if (ap.magnitude > minimapRadius - 7f) continue;
+                var icon = GetIcon(used++);
+                icon.gameObject.SetActive(true);
+                icon.rectTransform.anchoredPosition = ap;
+                icon.rectTransform.localScale = Vector3.one * 0.85f;
+                icon.color = crate.IsReady ? Accent : new Color(0.55f, 0.55f, 0.55f, 0.45f);
+            }
             for (int i = used; i < _iconPool.Count; i++) _iconPool[i].gameObject.SetActive(false);
 
             var flag = FlagZoneController.Instance;

@@ -360,7 +360,6 @@ namespace LR2.EditorTools
             const float leftCol = -770f;
             const float rightCol = 70f;
             const float stepLeft = 51f;
-            const float step = 56f;
 
             var lHdr = Txt("HeaderLeft", t, "CONTROLS & CAMERA", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(leftCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)lHdr.transform).pivot = new Vector2(0f, 0.5f);
@@ -377,18 +376,20 @@ namespace LR2.EditorTools
             s.rayTracing = ToggleColRow(t, "RAY TRACING (DXR)", leftCol, y); y -= stepLeft;
             s.laserSight = ToggleColRow(t, "LASER SIGHT [L]", leftCol, y);
 
+            const float stepRight = 51f;
             var rHdr = Txt("HeaderRight", t, "AUDIO, DISPLAY & BOTS", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)rHdr.transform).pivot = new Vector2(0f, 0.5f);
-            y = -196f;
-            s.masterVolume = SliderColRow(t, "MASTER VOLUME", rightCol, y, out s.masterVolumeValue); y -= step;
-            s.sfxVolume = SliderColRow(t, "EFFECTS VOLUME", rightCol, y, out s.sfxVolumeValue); y -= step;
-            s.musicVolume = SliderColRow(t, "MUSIC VOLUME", rightCol, y, out s.musicVolumeValue); y -= step;
-            s.uiVolume = SliderColRow(t, "UI VOLUME", rightCol, y, out s.uiVolumeValue); y -= step;
-            s.hitmarkerSound = ToggleColRow(t, "HITMARKER SOUND", rightCol, y); y -= step;
-            SelectorColRow(t, "GRAPHICS QUALITY", rightCol, y, out s.qualityPrev, out s.qualityNext, out s.qualityValue); y -= step;
-            s.vsync = ToggleColRow(t, "V-SYNC", rightCol, y); y -= step;
-            SelectorColRow(t, "FRAME LIMIT", rightCol, y, out s.frameLimitPrev, out s.frameLimitNext, out s.frameLimitValue); y -= step;
-            s.showFps = ToggleColRow(t, "SHOW FPS", rightCol, y); y -= step;
+            y = -194f;
+            s.masterVolume = SliderColRow(t, "MASTER VOLUME", rightCol, y, out s.masterVolumeValue); y -= stepRight;
+            s.sfxVolume = SliderColRow(t, "EFFECTS VOLUME", rightCol, y, out s.sfxVolumeValue); y -= stepRight;
+            s.musicVolume = SliderColRow(t, "MUSIC VOLUME", rightCol, y, out s.musicVolumeValue); y -= stepRight;
+            s.uiVolume = SliderColRow(t, "UI VOLUME", rightCol, y, out s.uiVolumeValue); y -= stepRight;
+            s.hitmarkerSound = ToggleColRow(t, "HITMARKER SOUND", rightCol, y); y -= stepRight;
+            SelectorColRow(t, "GRAPHICS QUALITY", rightCol, y, out s.qualityPrev, out s.qualityNext, out s.qualityValue); y -= stepRight;
+            SelectorColRow(t, "ANTI-ALIASING", rightCol, y, out s.antiAliasingPrev, out s.antiAliasingNext, out s.antiAliasingValue); y -= stepRight;
+            s.vsync = ToggleColRow(t, "V-SYNC", rightCol, y); y -= stepRight;
+            SelectorColRow(t, "FRAME LIMIT", rightCol, y, out s.frameLimitPrev, out s.frameLimitNext, out s.frameLimitValue); y -= stepRight;
+            s.showFps = ToggleColRow(t, "SHOW FPS", rightCol, y); y -= stepRight;
             SelectorColRow(t, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue);
 
             s.resetDefaultsButton = Btn("Reset Defaults", t, new Vector2(-190f, -446f), new Vector2(310f, 54f));

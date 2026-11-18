@@ -231,6 +231,29 @@ namespace LR2.World
             return _softCircle;
         }
 
+        private static AudioClip _fallbackCrackle;
+        private static AudioClip BuildFallbackCrackleClip()
+        {
+            if (_fallbackCrackle != null) return _fallbackCrackle;
+            const int sr = 22050;
+            int n = sr * 2;
+            var data = new float[n];
+            var rng = new System.Random(4207);
+            float lp = 0f, pop = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float w = (float)(rng.NextDouble() * 2.0 - 1.0);
+                lp = Mathf.Lerp(lp, w, 0.08f);
+                if (rng.NextDouble() < 0.0045) pop = (float)(rng.NextDouble() * 0.9 + 0.3) * (rng.Next(0, 2) == 0 ? 1f : -1f);
+                pop *= 0.92f;
+                data[i] = Mathf.Clamp(lp * 0.28f + pop * 0.45f, -0.8f, 0.8f);
+            }
+            var clip = AudioClip.Create("LR2_FireCrackle", n, 1, sr, false);
+            clip.SetData(data, 0);
+            _fallbackCrackle = clip;
+            return _fallbackCrackle;
+        }
+
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = new Color(1f, 0.35f, 0.05f, 0.35f);

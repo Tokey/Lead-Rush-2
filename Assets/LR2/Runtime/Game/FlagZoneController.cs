@@ -54,7 +54,10 @@ namespace LR2.Game
         private Material _beamMat;
         private MeshRenderer _bannerRenderer;
         private ParticleSystem _captureBurst;
+        private ParticleSystem _ambientSparks;
         private Material _burstMat;
+        private Material _sparkMat;
+        private Light _zoneLight;
 
         private const float BaseCaptureSeconds = 7.5f;
         private const float StaleRotationSeconds = 55f;
@@ -83,6 +86,7 @@ namespace LR2.Game
             if (_bannerMat != null) Destroy(_bannerMat);
             if (_beamMat != null) Destroy(_beamMat);
             if (_burstMat != null) Destroy(_burstMat);
+            if (_sparkMat != null) Destroy(_sparkMat);
         }
 
         private void GatherAnchors()
@@ -334,40 +338,90 @@ namespace LR2.Game
             _bannerRenderer.sharedMaterial = _bannerMat;
             _flagBanner = flagGo.transform;
 
-            // Ground outer capture ring & inner core ring
-            var ringTex = BuildRingTex(128, 0.90f, 0.06f);
+            // Soft ground perimeter projection ring & inner proximity core ring (feathered alpha, no hard edges)
+            var outerTex = BuildRingTex(256, 0.88f, 0.045f, dashed: true);
             _ringMat = new Material(pShader);
-            _ringMat.SetTexture("_MainTex", ringTex);
-            _ringMat.SetColor("_Color", new Color(0.25f, 0.75f, 1.0f, 0.55f));
-            _ringMat.SetFloat("_Intensity", 1.8f);
+            _ringMat.SetTexture("_MainTex", outerTex);
+            _ringMat.SetColor("_Color", new Color(0.25f, 0.75f, 1.0f, 0.34f));
+            _ringMat.SetFloat("_Intensity", 1.35f);
             _ringMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             _ringMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
             _ringMat.renderQueue = 3000;
 
-            var outerQuad = CreateHorizontalQuad("OuterCaptureRing", _rigRoot, new Vector3(0f, 0.07f, 0f), 1f, _ringMat);
+            var outerQuad = CreateHorizontalQuad("OuterCaptureRing", _rigRoot, new Vector3(0f, 0.05f, 0f), 1f, _ringMat);
             _outerRingTf = outerQuad.transform;
 
+            var coreTex = BuildRingTex(256, 0.86f, 0.065f, dashed: false);
             _coreMat = new Material(_ringMat);
-            _coreMat.SetColor("_Color", new Color(1f, 0.72f, 0.18f, 0.75f));
-            _coreMat.SetFloat("_Intensity", 2.4f);
-            var coreQuad = CreateHorizontalQuad("CoreCaptureRing", _rigRoot, new Vector3(0f, 0.08f, 0f), 1f, _coreMat);
+            _coreMat.SetTexture("_MainTex", coreTex);
+            _coreMat.SetColor("_Color", new Color(1f, 0.72f, 0.18f, 0.48f));
+            _coreMat.SetFloat("_Intensity", 1.85f);
+            var coreQuad = CreateHorizontalQuad("CoreCaptureRing", _rigRoot, new Vector3(0f, 0.06f, 0f), 1f, _coreMat);
             _coreRingTf = coreQuad.transform;
 
-            // Vertical subtle optical sky beacon
-            var beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            beam.name = "FlagBeacon";
-            beam.transform.SetParent(_rigRoot, false);
-            beam.transform.localPosition = new Vector3(0f, 18f, 0f);
-            beam.transform.localScale = new Vector3(0.32f, 18f, 0.32f);
-            Destroy(beam.GetComponent<Collider>());
+            // Faint soft-gradient vertical light column (crossed billboards so no hard cylinder silhouette)
+            var beamTex = BuildSoftBeamTex(64, 128);
             _beamMat = new Material(pShader);
-            _beamMat.SetTexture("_MainTex", Texture2D.whiteTexture);
+            _beamMat.SetTexture("_MainTex", beamTex);
             _beamMat.SetColor("_Color", new Color(0.95f, 0.70f, 0.22f, 0.16f));
-            _beamMat.SetFloat("_Intensity", 1.6f);
+            _beamMat.SetFloat("_Intensity", 1.25f);
             _beamMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             _beamMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            _beamMat.SetFloat("_Cull", 0f);
             _beamMat.renderQueue = 3000;
-            beam.GetComponent<Renderer>().sharedMaterial = _beamMat;
+
+            for (int bi = 0; bi < 2; bi++)
+            {
+                var beam = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                beam.name = "FlagBeacon_" + bi;
+                beam.transform.SetParent(_rigRoot, false);
+                beam.transform.localPosition = new Vector3(0f, 7.5f, 0f);
+                beam.transform.localRotation = Quaternion.Euler(0f, bi * 90f, 0f);
+                beam.transform.localScale = new Vector3(1.55f, 15f, 1f);
+                Destroy(beam.GetComponent<Collider>());
+                beam.GetComponent<Renderer>().sharedMaterial = _beamMat;
+            }
+
+            // Warm/team-tinted ground point light + gentle rising glowing zone motes (B41)
+            var lightGo = new GameObject("FlagZoneLight");
+            lightGo.transform.SetParent(_rigRoot, false);
+            lightGo.transform.localPosition = new Vector3(0f, 2.2f, 0f);
+            _zoneLight = lightGo.AddComponent<Light>();
+            _zoneLight.type = LightType.Point;
+            _zoneLight.range = 10f;
+            _zoneLight.shadows = LightShadows.None;
+            _zoneLight.intensity = 1600f;
+            lightGo.AddComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+
+            var sparksGo = new GameObject("FlagZoneParticles");
+            sparksGo.transform.SetParent(_rigRoot, false);
+            sparksGo.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+            _ambientSparks = sparksGo.AddComponent<ParticleSystem>();
+            var sm = _ambientSparks.main;
+            sm.loop = true;
+            sm.playOnAwake = true;
+            sm.simulationSpace = ParticleSystemSimulationSpace.World;
+            sm.maxParticles = 72;
+            sm.startLifetime = new ParticleSystem.MinMaxCurve(1.8f, 3.2f);
+            sm.startSpeed = new ParticleSystem.MinMaxCurve(0.45f, 1.05f);
+            sm.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.09f);
+            sm.gravityModifier = -0.05f;
+            var sem = _ambientSparks.emission;
+            sem.rateOverTime = 18f;
+            var ssh = _ambientSparks.shape;
+            ssh.shapeType = ParticleSystemShapeType.Circle;
+            ssh.radius = _coreRadius * 0.9f;
+            var svel = _ambientSparks.velocityOverLifetime;
+            svel.enabled = true;
+            svel.y = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
+            _sparkMat = new Material(pShader);
+            _sparkMat.SetTexture("_MainTex", BuildSoftDiscTex(64));
+            _sparkMat.SetColor("_Color", new Color(1f, 0.78f, 0.25f, 0.75f));
+            _sparkMat.SetFloat("_Intensity", 2.2f);
+            _sparkMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            _sparkMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            sparksGo.GetComponent<ParticleSystemRenderer>().sharedMaterial = _sparkMat;
+            _ambientSparks.Play();
 
             // Capture celebration spark burst
             var bGo = new GameObject("FlagCaptureBurst");
@@ -419,9 +473,17 @@ namespace LR2.Game
                     ? Color.Lerp(new Color(0.95f, 0.72f, 0.22f), new Color(0.18f, 0.76f, 1f), prog)
                     : Color.Lerp(new Color(0.95f, 0.72f, 0.22f), new Color(0.96f, 0.24f, 0.22f), -prog);
 
+            float pulse = state == ZoneState.Contested ? 0.75f + 0.25f * Mathf.Sin(Time.time * 10f) : 1f;
             if (_bannerMat != null && _bannerMat.HasProperty("_BaseColor")) _bannerMat.SetColor("_BaseColor", col);
-            if (_ringMat != null) _ringMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.45f));
-            if (_beamMat != null) _beamMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.16f));
+            if (_ringMat != null) _ringMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.34f * pulse));
+            if (_coreMat != null) _coreMat.SetColor("_Color", new Color(col.r, col.g, col.b, (0.42f + 0.32f * Mathf.Abs(prog)) * pulse));
+            if (_beamMat != null) _beamMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.15f * pulse));
+            if (_sparkMat != null) _sparkMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.78f));
+            if (_zoneLight != null)
+            {
+                _zoneLight.color = col;
+                _zoneLight.intensity = 1500f * pulse;
+            }
         }
 
         private static GameObject CreateHorizontalQuad(string name, Transform parent, Vector3 localPos, float scale, Material mat)
@@ -437,7 +499,7 @@ namespace LR2.Game
             return go;
         }
 
-        private static Texture2D BuildRingTex(int size, float ringRadius, float thickness)
+        private static Texture2D BuildRingTex(int size, float ringRadius, float thickness, bool dashed = false)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             var px = new Color32[size * size];
@@ -447,11 +509,51 @@ namespace LR2.Game
                     float dx = (x - (size - 1) * 0.5f) / (size * 0.5f);
                     float dy = (y - (size - 1) * 0.5f) / (size * 0.5f);
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
-                    float ring = Mathf.Exp(-Mathf.Pow((r - ringRadius) / thickness, 2f));
-                    float fill = r < ringRadius ? 0.08f * (1f - r / ringRadius) : 0f;
-                    byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(ring + fill) * 255f);
+                    float ang = Mathf.Atan2(dy, dx);
+                    float dash = dashed ? Mathf.SmoothStep(0.15f, 0.65f, 0.5f + 0.5f * Mathf.Sin(ang * 24f)) : 1f;
+                    float ring = Mathf.Exp(-Mathf.Pow((r - ringRadius) / thickness, 2f)) * (dashed ? Mathf.Lerp(0.35f, 1f, dash) : 1f);
+                    float halo = Mathf.Exp(-Mathf.Pow((r - ringRadius) / (thickness * 3.2f), 2f)) * 0.35f;
+                    float fill = r < ringRadius ? 0.055f * Mathf.Pow(r / Mathf.Max(0.01f, ringRadius), 1.6f) : 0f;
+                    byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(ring + halo + fill) * 255f);
                     px[y * size + x] = new Color32(255, 255, 255, a);
                 }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        private static Texture2D BuildSoftBeamTex(int w, int h)
+        {
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                float v = y / (float)(h - 1);
+                float vFade = Mathf.Pow(1f - v, 2.2f) * Mathf.SmoothStep(0f, 0.08f, v);
+                for (int x = 0; x < w; x++)
+                {
+                    float u = Mathf.Abs(x / (float)(w - 1) * 2f - 1f);
+                    float hFade = Mathf.Pow(Mathf.Clamp01(1f - u), 2.4f);
+                    byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(vFade * hFade) * 255f);
+                    px[y * w + x] = new Color32(255, 255, 255, a);
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        private static Texture2D BuildSoftDiscTex(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (x + 0.5f) / size * 2f - 1f, v = (y + 0.5f) / size * 2f - 1f;
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                px[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * a * 255f));
+            }
             tex.SetPixels32(px);
             tex.Apply(false, true);
             return tex;

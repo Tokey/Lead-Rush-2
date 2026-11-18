@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+namespace LR2.Core
+{
+    /// <summary>
+    /// Shared controls menu backend. The gameplay component may keep its own readers,
+    /// while menus use this asset to edit, display and persist the same named actions.
+    /// </summary>
+    public static class LR2Bindings
+    {
+        private const string OverridesKey = "LR2.InputBindingOverrides";
+        private static InputActionAsset _asset;
+        private static InputActionMap _gameplay;
+
+        public static InputActionAsset Asset
+        {
+            get
+            {
+                EnsureCreated();
+                return _asset;
+            }
+        }
+
+        public static IReadOnlyList<InputAction> Actions
+        {
+            get
+            {
+                EnsureCreated();
+                return _gameplay.actions;
+            }
+        }
+
+        public static InputAction GetAction(string actionName)
+        {
+            EnsureCreated();
+            return _gameplay.FindAction(actionName, false);
+        }
+
+        public static string GetDisplayString(string actionName, int bindingIndex = 0)
+        {
+            var action = GetAction(actionName);
+            return action != null && bindingIndex >= 0 && bindingIndex < action.bindings.Count
+                ? action.GetBindingDisplayString(bindingIndex)
+                : string.Empty;
+        }
+
+        public static InputActionRebindingExtensions.RebindingOperation BeginRebind(
+            string actionName, int bindingIndex, Action<string> completed, Action cancelled = null)
+        {
+            var action = GetAction(actionName);
+            if (action == null) throw new ArgumentException("Unknown LR2 action: " + actionName, nameof(actionName));
+            if (bindingIndex < 0 || bindingIndex >= action.bindings.Count)
+                throw new ArgumentOutOfRangeException(nameof(bindingIndex));
+
+            action.Disable();
+            var operation = action.PerformInteractiveRebinding(bindingIndex)
+                .WithCancelingThrough("<Keyboard>/escape")
+                .OnCancel(_ =>
+                {
+                    action.Enable();
+                    cancelled?.Invoke();
+                })
+                .OnComplete(op =>
+                {
+                    action.Enable();
+                    Save();
+                    completed?.Invoke(action.GetBindingDisplayString(bindingIndex));
+                    op.Dispose();
+                });
+            operation.Start();
+            return operation;
+        }
+
+        public static void Save()
+        {
+            EnsureCreated();
+            PlayerPrefs.SetString(OverridesKey, _asset.SaveBindingOverridesAsJson());
+            PlayerPrefs.Save();
+        }
+
+        public static void ResetToDefaults()
+        {
+            EnsureCreated();
+            _asset.RemoveAllBindingOverrides();
+            PlayerPrefs.DeleteKey(OverridesKey);
+            PlayerPrefs.Save();
+        }
+
+        private static void EnsureCreated()
+        {
+            if (_asset != null) return;
+            _asset = ScriptableObject.CreateInstance<InputActionAsset>();
+            _asset.name = "LR2 Runtime Bindings";
+            _gameplay = new InputActionMap("Gameplay");
+            _asset.AddActionMap(_gameplay);
+            Add("Move", InputActionType.Value, "<Keyboard>/w", "<Gamepad>/leftStick");
+            Add("Look", InputActionType.Value, "<Mouse>/delta", "<Gamepad>/rightStick");
+            Add("Fire", InputActionType.Button, "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
+            Add("Aim", InputActionType.Button, "<Mouse>/rightButton", "<Gamepad>/leftTrigger");
+            Add("Sprint", InputActionType.Button, "<Keyboard>/leftShift", "<Gamepad>/leftStickPress");
+            Add("Jump", InputActionType.Button, "<Keyboard>/space", "<Gamepad>/buttonSouth");
+            Add("Crouch", InputActionType.Button, "<Keyboard>/c", "<Gamepad>/buttonEast");
+            Add("Prone", InputActionType.Button, "<Keyboard>/z", "<Gamepad>/dpad/down");
+            Add("Reload", InputActionType.Button, "<Keyboard>/r", "<Gamepad>/buttonWest");
+            Add("LeanLeft", InputActionType.Button, "<Keyboard>/q");
+            Add("LeanRight", InputActionType.Button, "<Keyboard>/e");
+            Add("Interact", InputActionType.Button, "<Keyboard>/f");
+            Add("Laser", InputActionType.Button, "<Keyboard>/l");
+            Add("Slot1", InputActionType.Button, "<Keyboard>/1");
+            Add("Slot2", InputActionType.Button, "<Keyboard>/2");
+            Add("NextWeapon", InputActionType.Button, "<Gamepad>/buttonNorth");
+            Add("Scroll", InputActionType.Value, "<Mouse>/scroll/y");
+
+            var json = PlayerPrefs.GetString(OverridesKey, string.Empty);
+            if (!string.IsNullOrEmpty(json)) _asset.LoadBindingOverridesFromJson(json);
+        }
+
+        private static void Add(string name, InputActionType type, params string[] bindings)
+        {
+            var action = _gameplay.AddAction(name, type);
+            foreach (var binding in bindings) action.AddBinding(binding);
+        }
+    }
+}

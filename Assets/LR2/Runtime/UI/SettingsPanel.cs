@@ -35,6 +35,8 @@ namespace LR2.UI
         public Toggle rayTracing;
         public Button qualityPrev, qualityNext;
         public TMP_Text qualityValue;
+        public Button antiAliasingPrev, antiAliasingNext;
+        public TMP_Text antiAliasingValue;
         public Button frameLimitPrev, frameLimitNext;
         public TMP_Text frameLimitValue;
 
@@ -58,6 +60,7 @@ namespace LR2.UI
         public TMP_Text uiVolumeValue;
 
         private static readonly int[] FrameLimits = { 0, 60, 120, 144, 165, 240 };
+        private static readonly string[] AaLabels = { "OFF", "FXAA", "SMAA", "TAA" };
         private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private bool _loading;
 
@@ -117,6 +120,8 @@ namespace LR2.UI
             Hook(rayTracing, v => { LR2Settings.RayTracing = v && SystemInfo.supportsRayTracing; LR2Settings.Apply(); });
             HookStep(qualityPrev, qualityNext, () => Mathf.Max(0, LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel()),
                 () => QualitySettings.names.Length, i => { LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
+            HookStep(antiAliasingPrev, antiAliasingNext, () => Mathf.Clamp(LR2Settings.AntiAliasing, 0, AaLabels.Length - 1),
+                () => AaLabels.Length, i => { LR2Settings.AntiAliasing = i; LR2Settings.Apply(); });
             HookStep(frameLimitPrev, frameLimitNext, () => Mathf.Max(0, System.Array.IndexOf(FrameLimits, LR2Settings.FrameRateLimit)),
                 () => FrameLimits.Length, i => { LR2Settings.FrameRateLimit = FrameLimits[i]; LR2Settings.Apply(); });
             HookStep(botDifficultyPrev, botDifficultyNext, () => Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1),
@@ -183,6 +188,8 @@ namespace LR2.UI
                 var qNames = QualitySettings.names;
                 qualityValue.text = q >= 0 && q < qNames.Length ? qNames[q].ToUpperInvariant() : "DEFAULT";
             }
+            if (antiAliasingValue != null)
+                antiAliasingValue.text = AaLabels[Mathf.Clamp(LR2Settings.AntiAliasing, 0, AaLabels.Length - 1)];
             if (frameLimitValue != null)
             {
                 int f = LR2Settings.FrameRateLimit;

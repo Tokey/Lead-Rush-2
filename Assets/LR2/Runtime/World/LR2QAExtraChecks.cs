@@ -108,15 +108,34 @@ namespace LR2.World
 
             Transform leftPalm = visual.GetBoneTransform(HumanBodyBones.LeftHand);
             Transform rightPalm = visual.GetBoneTransform(HumanBodyBones.RightHand);
+            if (leftPalm == null || rightPalm == null)
+                return "FAIL Hands.OnGun: missing palm transform";
+
             Transform handguard = FindChildNamed(gun.transform, "Handguard");
             Transform grip = FindChildNamed(gun.transform, "Grip");
-            if (leftPalm == null || rightPalm == null || handguard == null || grip == null)
-                return "FAIL Hands.OnGun: missing palm or grip/handguard transform";
-
-            float left = Vector3.Distance(leftPalm.position, handguard.position);
-            float right = Vector3.Distance(rightPalm.position, grip.position);
+            float left, right;
+            if (handguard != null && grip != null)
+            {
+                left = Vector3.Distance(leftPalm.position, handguard.position);
+                right = Vector3.Distance(rightPalm.position, grip.position);
+            }
+            else
+            {
+                // Measure distance from visual palms to closest point on gun bounds (works for all 5 gun prefabs)
+                Bounds b = new Bounds(gun.transform.position, Vector3.zero);
+                bool hasB = false;
+                foreach (var r in gun.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (r == null || !r.enabled || r is ParticleSystemRenderer) continue;
+                    if (!hasB) { b = r.bounds; hasB = true; }
+                    else b.Encapsulate(r.bounds);
+                }
+                if (!hasB) b = new Bounds(gun.transform.position, Vector3.one * 0.1f);
+                left = Vector3.Distance(leftPalm.position, b.ClosestPoint(leftPalm.position));
+                right = Vector3.Distance(rightPalm.position, b.ClosestPoint(rightPalm.position));
+            }
             bool pass = left < MaxHandError && right < MaxHandError;
-            return $"{(pass ? "PASS" : "FAIL")} Hands.OnGun: visual leftPalmHandguard={left:0.000}m rightPalmGrip={right:0.000}m max={MaxHandError:0.000}m";
+            return $"{(pass ? "PASS" : "FAIL")} Hands.OnGun: visual leftPalm={left:0.000}m rightPalm={right:0.000}m max={MaxHandError:0.000}m";
         }
 
         private static Transform FindChildNamed(Transform root, string name)

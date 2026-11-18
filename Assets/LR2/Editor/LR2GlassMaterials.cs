@@ -128,10 +128,10 @@ namespace LR2.EditorTools
             material.SetFloat("_Ior", 1.52f);
             material.SetFloat("_Thickness", 0.008f);
             material.SetColor("_TransmittanceColor", new Color(0.72f, 0.90f, 0.84f, 1f));
+            material.SetTexture("_NormalMap", cracks);
+            material.SetFloat("_NormalScale", cracked ? 0.65f : (grimeAmount > 0.3f ? 0.24f : 0.10f));
             if (cracked)
             {
-                material.SetTexture("_NormalMap", cracks);
-                material.SetFloat("_NormalScale", 0.65f);
                 material.SetFloat("_SmoothnessRemapMin", 0.25f);
             }
             HDMaterial.ValidateMaterial(material);

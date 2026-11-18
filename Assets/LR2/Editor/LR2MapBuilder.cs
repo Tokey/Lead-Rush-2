@@ -106,6 +106,9 @@ namespace LR2.EditorTools
         // ================================================================================================= materials
         private static Mats MakeMaterials()
         {
+            LR2GlassMaterials.Build();
+            var dirtyGlass = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Environment/M_LR2_Glass_Dirty.mat")
+                ?? MakeRealisticGlassMaterial();
             // Photoscanned Leartes texture sets (base colour + normal + ORM/ARD converted to HDRP mask maps), triplanar.
             var m = new Mats
             {
@@ -121,7 +124,7 @@ namespace LR2.EditorTools
                 curb = SaveMaterial(NewLit(new Color(0.45f, 0.42f, 0.18f), 0.2f), MatDir + "/M_LR2_SafetyYellow.mat"),
                 darkMetal = PhotoMat("M_LR2_DarkMetal", "T_Steel_BC", "T_Steel_N", "T_Steel_ORM", false, 0.9f, new Color(0.22f, 0.23f, 0.24f)),
                 steelGrate = PhotoMat("M_LR2_Grate", "T_Metalplane_BC", "T_Metalplane_N", "T_Metalplane_ORM", false, 0.8f, new Color(0.6f, 0.6f, 0.6f)),
-                glass = MakeRealisticGlassMaterial(),
+                glass = dirtyGlass,
                 water = FindLeartes("M_Ocean") ?? SaveMaterial(NewLit(new Color(0.03f, 0.07f, 0.08f), 0.96f), MatDir + "/M_LR2_Water.mat"),
             };
             Color[] containerColors =
@@ -1435,8 +1438,9 @@ namespace LR2.EditorTools
             AddLight(_lighting, "EmergencyHouse", new Vector3(0f, 2.9f, 2f), Quaternion.identity, LightType.Point, 3600f, 3400f, 14f, 0f, false);
             AddLight(_lighting, "EmergencyWorkshopDown", new Vector3(-21f, 2.9f, -2f), Quaternion.identity, LightType.Point, 3600f, 3600f, 15f, 0f, false);
             AddLight(_lighting, "EmergencyWorkshopUp", new Vector3(-21f, 6.2f, -2f), Quaternion.identity, LightType.Point, 3600f, 2800f, 13f, 0f, false);
-            AddLight(_lighting, "EmergencyWarehouseW", new Vector3(-7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 4400f, 18f, 0f, false);
-            AddLight(_lighting, "EmergencyWarehouseE", new Vector3(7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 4400f, 18f, 0f, false);
+            AddLight(_lighting, "EmergencyWarehouseW", new Vector3(-7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 5200f, 20f, 0f, false);
+            AddLight(_lighting, "EmergencyWarehouseCenter", new Vector3(0f, 5.6f, -17f), Quaternion.identity, LightType.Point, 4200f, 6400f, 22f, 0f, false);
+            AddLight(_lighting, "EmergencyWarehouseE", new Vector3(7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 5200f, 20f, 0f, false);
             AddLight(_lighting, "HouseBounceW", new Vector3(-4.9f, 2.8f, 2f), Quaternion.identity, LightType.Point, 5000f, 2400f, 13f, 0f, false);
             AddLight(_lighting, "HouseBounceE", new Vector3(4.9f, 2.8f, 2f), Quaternion.identity, LightType.Point, 5000f, 2400f, 13f, 0f, false);
             AddLight(_lighting, "WorkshopDoorBounce", new Vector3(-16.5f, 3.0f, -2f), Quaternion.identity, LightType.Point, 5200f, 2600f, 14f, 0f, false);
@@ -1445,6 +1449,13 @@ namespace LR2.EditorTools
             AddLight(_lighting, "LoadingDockBounce", new Vector3(0f, 4.0f, -5.5f), Quaternion.identity, LightType.Point, 5400f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "ContainerYardFillNE", new Vector3(16.5f, 4.4f, 6.5f), Quaternion.identity, LightType.Point, 5400f, 2800f, 16f, 0f, false);
             AddLight(_lighting, "ContainerYardFillNW", new Vector3(-15f, 4.4f, 12f), Quaternion.identity, LightType.Point, 5400f, 2600f, 16f, 0f, false);
+            AddLight(_lighting, "SaltworksPlazaFillN", new Vector3(0f, 4.5f, 12f), Quaternion.identity, LightType.Point, 5000f, 3800f, 20f, 0f, false);
+            AddLight(_lighting, "SaltworksPlazaFillW", new Vector3(-12.5f, 4.5f, 6f), Quaternion.identity, LightType.Point, 4800f, 3600f, 20f, 0f, false);
+            AddLight(_lighting, "SaltworksPlazaFillE", new Vector3(12.5f, 4.5f, 0f), Quaternion.identity, LightType.Point, 4800f, 3600f, 20f, 0f, false);
+
+            foreach (var bp in new[] { new Vector3(-11.5f, 0f, 7.5f), new Vector3(11.5f, 0f, -4.5f), new Vector3(-4.5f, 0f, 17f), new Vector3(7.5f, 0f, 10.5f) })
+                SpawnBurningBarrel(_lighting, _props, G(bp));
+            PlaceEnvironmentRealism(new Color(0.76f, 0.82f, 0.86f, 1f), new Color(0.54f, 0.50f, 0.44f, 1f), 0.14f, 22f);
 
             if (!_cfg.practicalLights) return; // abandoned for a century: no power anywhere
             // Practical lights: sodium lamp poles + warehouse/house interiors
@@ -1658,11 +1669,11 @@ namespace LR2.EditorTools
             // Props from the Leartes kit (cover + set dressing)
             DressYard();
 
-            // Ammo crates
+            // Two mirrored strategic mid-map ammo stations on contested routes (B39)
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LR2/Prefabs/Props/LR2_AmmoCrate.prefab");
             if (crate != null)
             {
-                foreach (var p in new[] { new Vector3(-1.5f, 0f, -8.6f), new Vector3(-3f, 0f, 12.5f) })
+                foreach (var p in new[] { new Vector3(-9.5f, 0f, -1.5f), new Vector3(9.5f, 0f, 3.5f) })
                 {
                     var c = (GameObject)PrefabUtility.InstantiatePrefab(crate, _gameplay);
                     c.transform.position = G(p);
@@ -2105,10 +2116,16 @@ namespace LR2.EditorTools
                 var dp = go.GetComponent<DestructibleProp>();
                 if (dp == null) dp = go.AddComponent<DestructibleProp>();
                 string lower = go.name.ToLowerInvariant();
-                if (lower.Contains("glass") || lower.Contains("window"))
+                if (lower.Contains("glass") || (lower.Contains("window") && !lower.Contains("cover")))
                 {
                     dp.maxHealth = 25f;
                     dp.surface = SurfaceType.Glass;
+                    var glassCracked = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Environment/M_LR2_Glass_Cracked.mat");
+                    var glassDirty = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Environment/M_LR2_Glass_Dirty.mat");
+                    var targetGlass = (count % 2 == 0 && glassCracked != null) ? glassCracked : (glassDirty != null ? glassDirty : _m?.glass);
+                    if (targetGlass != null)
+                        foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                            r.sharedMaterial = targetGlass;
                     EnhanceGlassWindowFrame(go);
                 }
                 else if (lower.Contains("barrel_01") || lower.Contains("gascyl") || lower.Contains("fuel"))
@@ -2367,7 +2384,7 @@ namespace LR2.EditorTools
                 {
                     bool underSwat = swatVis != null && r.transform.IsChildOf(swatVis);
                     bool underWeapon = r.transform.GetComponentInParent<Weapons.LR2Item>(true) != null;
-                    if (!underSwat && !underWeapon) r.enabled = false;
+                    if (!underSwat && (!underWeapon || r is SkinnedMeshRenderer)) r.enabled = false;
                     else r.enabled = true;
                 }
                 foreach (var smr in hero.GetComponentsInChildren<SkinnedMeshRenderer>(true))

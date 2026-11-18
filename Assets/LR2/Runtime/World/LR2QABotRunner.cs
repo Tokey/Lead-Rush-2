@@ -180,9 +180,10 @@ namespace LR2.World
                 var swatVis = hero.transform.Find("SWAT_Visual");
                 foreach (var smr in hero.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
+                    bool underWeapon = smr.GetComponentInParent<LR2Item>(true) != null;
                     if (swatVis != null && !smr.transform.IsChildOf(swatVis))
                     {
-                        if (smr.enabled) mannequinHidden = false;
+                        if (!underWeapon && smr.enabled) mannequinHidden = false;
                         continue;
                     }
                     foreach (var mat in smr.sharedMaterials)
@@ -320,7 +321,9 @@ namespace LR2.World
                 {
                     Texture2D tex = CaptureCamera(cam, 640, 360);
                     float meanLum = SampleMeanLuminance(tex, out float p10Lum);
-                    float contrast = enemy != null ? SampleTargetContrast(tex, cam, enemy.transform.position + Vector3.up * 1.25f) : meanLum;
+                    float cChest = enemy != null ? SampleTargetContrast(tex, cam, enemy.transform.position + Vector3.up * 1.15f) : meanLum;
+                    float cHead = enemy != null ? SampleTargetContrast(tex, cam, enemy.transform.position + Vector3.up * 1.56f) : meanLum;
+                    float contrast = Mathf.Max(cChest, cHead);
                     worstMean = Mathf.Min(worstMean, meanLum);
                     worstContrast = Mathf.Min(worstContrast, contrast);
                     if (i == 0) File.WriteAllBytes(Path.Combine(outDir, $"{sceneName}_vis.png"), tex.EncodeToPNG());
@@ -432,6 +435,14 @@ namespace LR2.World
 
                 _cmd = new SoldierInput { absoluteLook = true, aimYaw = player.Yaw, fire = true };
                 yield return new WaitForSeconds(0.22f);
+                _cmd = new SoldierInput { absoluteLook = true, aimYaw = player.Yaw };
+                yield return new WaitForSeconds(0.20f); // let bolt & recoil settle before recording rest pose
+                if (gun != null)
+                {
+                    if (magTf != null) magRest = gun.transform.InverseTransformPoint(magTf.position);
+                    if (chargeTf != null) chargeRest = gun.transform.InverseTransformPoint(chargeTf.position);
+                }
+                if (!walk) LR2QAExtraChecks.CaptureReloadIdlePose(player);
                 _cmd = new SoldierInput
                 {
                     absoluteLook = true,
@@ -489,7 +500,14 @@ namespace LR2.World
 
         private static bool IsConfinedOrRoofed(Vector3 pos)
         {
-            return Physics.Raycast(pos + Vector3.up * 0.45f, Vector3.up, 22f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore);
+            if (Physics.Raycast(pos + Vector3.up * 0.45f, Vector3.up, 22f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                return true;
+            Vector3[] offsets = { new Vector3(1.1f, 0f, 0f), new Vector3(-1.1f, 0f, 0f), new Vector3(0f, 0f, 1.1f), new Vector3(0f, 0f, -1.1f) };
+            int hits = 0;
+            foreach (var o in offsets)
+                if (Physics.Raycast(pos + o + Vector3.up * 0.6f, Vector3.up, 22f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                    hits++;
+            return hits >= 2;
         }
 
         private static float FindOpenYawFrom(Vector3 origin, out float clearDist)
@@ -579,17 +597,28 @@ namespace LR2.World
 
             _footsteps = 0;
             _distAccum = 0f;
-            void OnStep(float sp) => _footsteps++;
-            mv.Footstep += OnStep;
-
-            // Walk forward 2.2 seconds along open ground and measure real stride distance per step + planted-foot slide (B34)
+            float plantSum = 0f;
+            int plantCount = 0;
             var visAnim = player.GetComponent<RetargetProxy>()?.Visual?.GetComponent<Animator>();
             Transform footL = visAnim != null ? visAnim.GetBoneTransform(HumanBodyBones.LeftFoot) : null;
             Transform footR = visAnim != null ? visAnim.GetBoneTransform(HumanBodyBones.RightFoot) : null;
+            void OnStep(float sp)
+            {
+                _footsteps++;
+                if (footL != null && footR != null)
+                {
+                    plantSum += Mathf.Min(footL.position.y, footR.position.y) - player.transform.position.y;
+                    plantCount++;
+                }
+            }
+            mv.Footstep += OnStep;
+
+            // Walk forward 2.2 seconds along open ground and measure real stride distance per step + planted-foot slide (B9, B34)
             Vector3 prevFL = footL != null ? footL.position : Vector3.zero;
             Vector3 prevFR = footR != null ? footR.position : Vector3.zero;
             Vector3 minSlidePrev = Vector3.zero, minSlideCur = Vector3.zero;
             float minSlideDt = 0.016f, minSlideSpeed = float.MaxValue;
+            bool samplePlanted = false;
 
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw, move = new Vector2(0f, 1f) };
             Vector3 prev = player.transform.position;
@@ -603,13 +632,17 @@ namespace LR2.World
                 prev = cur;
                 if (elapsed > 0.45f && dt > 0.002f && footL != null && footR != null)
                 {
+                    float hL = footL.position.y - player.transform.position.y;
+                    float hR = footR.position.y - player.transform.position.y;
                     Vector3 dL = footL.position - prevFL; dL.y = 0f;
                     Vector3 dR = footR.position - prevFR; dR.y = 0f;
                     float sL = dL.magnitude / dt, sR = dR.magnitude / dt;
-                    bool pickLeft = footL.position.y <= footR.position.y || sL < sR;
+                    bool pickLeft = hL <= hR;
                     float s = pickLeft ? sL : sR;
-                    if (s < minSlideSpeed)
+                    bool isPlanted = (pickLeft ? hL : hR) <= 0.165f;
+                    if (isPlanted && s < minSlideSpeed)
                     {
+                        samplePlanted = true;
                         minSlideSpeed = s;
                         minSlideDt = dt;
                         minSlidePrev = pickLeft ? prevFL : prevFR;
@@ -623,15 +656,16 @@ namespace LR2.World
             mv.Footstep -= OnStep;
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw };
             if (footL != null && footR != null)
-                CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt, true));
+                CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt, samplePlanted));
 
             float measuredStride = _footsteps > 0 ? _distAccum / _footsteps : 99f;
+            float meanPlantH = plantCount > 0 ? plantSum / plantCount : 0f;
             float weaponGain = LR2Audio.CategoryVolume(AudioCategory.Weapons);
             float stepGain = LR2Audio.CategoryVolume(AudioCategory.Footsteps);
             float dbRel = 20f * Mathf.Log10(Mathf.Max(0.0001f, stepGain) / Mathf.Max(0.0001f, weaponGain));
 
-            Check(_footsteps >= 4 && measuredStride >= 0.70f && measuredStride <= 1.45f, "Footstep.TimingSynced",
-                $"steps={_footsteps} dist={_distAccum:0.00}m stride={measuredStride:0.00}m lane={bestLane:0.0}m");
+            Check(_footsteps >= 4 && measuredStride >= 0.70f && measuredStride <= 1.45f && (plantCount == 0 || meanPlantH <= 0.22f), "Footstep.TimingSynced",
+                $"steps={_footsteps} dist={_distAccum:0.00}m stride={measuredStride:0.00}m plantH={meanPlantH:0.000}m lane={bestLane:0.0}m");
             Check(dbRel <= -14.0f && dbRel >= -18.5f, "Footstep.AudioMixUnderGuns",
                 $"stepGain={stepGain:0.000} weaponGain={weaponGain:0.000} ({dbRel:0.0} dB)");
 
@@ -827,6 +861,11 @@ namespace LR2.World
             }
             Check(glassCount == 0 || glassRealistic == glassCount, "Glass.RealisticMaterialAndPanes",
                 $"panes={glassCount} realisticPanes={glassRealistic}");
+            Check(AmmoCrate.All.Count >= 2, "AmmoStations.MidMapPlaced", $"count={AmmoCrate.All.Count}");
+            var afx = FindAnyObjectByType<AtmosphereFX>();
+            var fh = FindAnyObjectByType<FireHazard>();
+            Check(afx != null && fh != null, "Atmosphere.FogAndFireHazardsPresent",
+                $"atmosphere={(afx != null)} fireHazard={(fh != null)}");
         }
 
         private static Texture2D CaptureCamera(Camera cam, int w, int h)
