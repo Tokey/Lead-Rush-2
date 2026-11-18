@@ -58,6 +58,7 @@ P19,2026-11-18 00:20,Copilot,gpt-5.6-luna,Four-map lane and spawn-flow research 
 P20,2026-11-18 00:20,Copilot,gpt-5.6-luna,Calibre recoil and fair-pattern research specification,tune,B47,ready-for-review,specs/B47.md with per-gun WeaponDefinition targets
 P21,2026-11-18 00:20,Copilot,gpt-5.6-luna,Unity HDRP upscaler and latency research specification,feature,B48,ready-for-review,specs/B48.md with support matrix and sources
 P22,2026-11-18 00:20,Copilot,gpt-5.6-luna,R8 stable batch commit and push,tooling,,delivered,a1ba3ec after LR2.Runtime and LR2.Editor builds passed
+P23,2026-11-18 00:43,Copilot,gpt-5.6-luna,B40 bounded HDRP Local Volumetric Fog layer,feature,B40,ready-for-review,AtmosphereFX.cs; LR2.Runtime and LR2.Editor builds passed
 C17,2026-11-18 00:21,Claude,claude-opus-5-5,"Weapon-hold fingers: authored shapes + snug bias, soft thumb limits (FingerMode A/B)",fix,B26,ready-for-review,RetargetProxy + pose check A/B
 C18,2026-11-18 00:29,Claude,claude-opus-5-5,"Rifle grip offsets (right hand onto the pistol grip, left hand lower)",fix,B26,ready-for-review,RetargetProxy
 C19,2026-11-18 00:35,Claude,claude-opus-5-5,"Reload muzzle pitch/yaw limits (keep the cant)",fix,B35,ready-for-review,ReloadMotionBridge

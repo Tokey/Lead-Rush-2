@@ -111,6 +111,14 @@ namespace LR2.Characters
 
             LogDriverWeaponBones("idle");
             yield return Capture("fp_01_idle", "idle");
+            // B26 left-thumb A/B: tucked thumb vs the C-clamp default
+            RetargetProxy.LeftThumbBaseOverride = new Vector2(-1.25f, -0.85f);
+            RetargetProxy.LeftThumbTipOverride = new Vector2(-0.6f, -0.15f);
+            yield return Wait(0.2f);
+            yield return Capture("fp_01b_idle_thumb_tucked", "idle, left thumb tucked");
+            RetargetProxy.LeftThumbBaseOverride = null;
+            RetargetProxy.LeftThumbTipOverride = null;
+            yield return Wait(0.2f);
             yield return Capture("tp_01_front", null, View.Front, true);
             yield return Capture("tp_02_side", null, View.Side, true);
             yield return Capture("tp_03_overshoulder", null, View.OverShoulder, false);
@@ -139,6 +147,14 @@ namespace LR2.Characters
             _cmd.aim = true;
             yield return Wait(1.0f);
             yield return Capture("fp_04_ads", "ADS rifle");
+            // B26 left-thumb A/B: tucked thumb vs the C-clamp default
+            RetargetProxy.LeftThumbBaseOverride = new Vector2(-1.25f, -0.85f);
+            RetargetProxy.LeftThumbTipOverride = new Vector2(-0.6f, -0.15f);
+            yield return Wait(0.2f);
+            yield return Capture("fp_04b_ads_thumb_tucked", "ADS, left thumb tucked");
+            RetargetProxy.LeftThumbBaseOverride = null;
+            RetargetProxy.LeftThumbTipOverride = null;
+            yield return Wait(0.2f);
             yield return Capture("tp_05_ads_side", null, View.Side, true);
             LogFingers("ADS rifle");
             yield return Capture("tp_05b_ads_hands_right", null, View.HandsRight, true);

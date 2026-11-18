@@ -337,6 +337,9 @@ namespace LR2.Characters
         /// wrap (about -2.5) up to about -0.3, which flattened the grip. Static so the pose check can capture both.
         /// </summary>
         public static int FingerMode = 1;
+        /// <summary>Optional left-thumb ranges (base joint, outer joints) for rifles; null = the C-clamp default. The pose check uses
+        /// it to compare a tucked thumb against the default, which stood up beside the handguard in first person (run #5).</summary>
+        public static Vector2? LeftThumbBaseOverride, LeftThumbTipOverride;
         [Header("Grip fingers (FingerMode 1)")]
         [Tooltip("Extra curl added to the right-hand grip fingers (middle, ring, little). Negative muscle = curled.")]
         [Range(-0.6f, 0f)] public float rightGripCurl = -0.18f;
@@ -376,8 +379,8 @@ namespace LR2.Characters
             Add(_lFingerIdx, leftGripCurl * (1f - reloadHand));
             Soft(_lProxIdx, new Vector2(-0.92f, lProxMax));
             Soft(_lFingerIdx, new Vector2(-0.94f, lDistMax));
-            Soft(_lThumbProxIdx, new Vector2(-0.35f, pistol ? -0.05f : Mathf.Lerp(0.05f, 0.14f, reloadHand)));
-            Soft(_lThumbDistIdx, new Vector2(-0.45f, pistol ? -0.14f : Mathf.Lerp(-0.04f, 0.08f, reloadHand)));
+            Soft(_lThumbProxIdx, !pistol && LeftThumbBaseOverride.HasValue ? LeftThumbBaseOverride.Value : new Vector2(-0.35f, pistol ? -0.05f : Mathf.Lerp(0.05f, 0.14f, reloadHand)));
+            Soft(_lThumbDistIdx, !pistol && LeftThumbTipOverride.HasValue ? LeftThumbTipOverride.Value : new Vector2(-0.45f, pistol ? -0.14f : Mathf.Lerp(-0.04f, 0.08f, reloadHand)));
             Soft(_spreadIdx, new Vector2(-0.25f, IsHoldingPistol ? 0.06f : 0.14f)); // keep the compact spread (that part of the old clamp was fine)
         }
 

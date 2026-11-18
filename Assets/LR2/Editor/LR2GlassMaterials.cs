@@ -53,7 +53,7 @@ namespace LR2.EditorTools
             }
 
             tex.SetPixels(pixels);
-            tex.Apply(false, true);
+            tex.Apply(false, false);
             File.WriteAllBytes(path, tex.EncodeToPNG());
             Object.DestroyImmediate(tex);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
@@ -91,7 +91,7 @@ namespace LR2.EditorTools
                 pixels[y * TextureSize + x] = new Color(nx, ny, 1f, 1f);
             }
             tex.SetPixels(pixels);
-            tex.Apply(false, true);
+            tex.Apply(false, false);
             File.WriteAllBytes(path, tex.EncodeToPNG());
             Object.DestroyImmediate(tex);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);

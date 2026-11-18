@@ -4,9 +4,9 @@ using UnityEngine.Rendering.HighDefinition;
 namespace LR2.World
 {
     /// <summary>
-    /// Lightweight, map-placeable ground atmosphere. The low layer is particle-based so it remains
-    /// readable at gameplay distance; force-field particles give soldiers a visible wake without
-    /// changing the global HDRP fog budget.
+    /// Lightweight, map-placeable ground atmosphere. The low layer uses a bounded HDRP fog volume
+    /// plus particles so it remains readable at gameplay distance; force-field particles give
+    /// soldiers a visible wake without changing the global fog budget.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class AtmosphereFX : MonoBehaviour
@@ -26,15 +26,37 @@ namespace LR2.World
         private ParticleSystem _mist;
         private ParticleSystem _dust;
         private ParticleSystemForceField _forceField;
+        private LocalVolumetricFog _localFog;
 
         private void Awake()
         {
+            _localFog = CreateLocalFog();
             _mist = CreateLayer("Ground Mist", mistColor, mistOpacity, mistRate, layerHeight, 0.5f);
             _dust = CreateLayer("Dust Ash Embers", dustColor, dustOpacity, dustRate, Mathf.Max(1f, layerHeight + 1.2f), 1.4f);
             var forceObject = new GameObject("Soldier Reactive Air");
             forceObject.transform.SetParent(transform, false);
             _forceField = forceObject.AddComponent<ParticleSystemForceField>();
             _forceField.enabled = true;
+        }
+
+        private LocalVolumetricFog CreateLocalFog()
+        {
+            var go = new GameObject("Ground Local Fog");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = Vector3.up * Mathf.Clamp(layerHeight * 0.5f, 0.15f, 0.4f);
+            var fog = go.AddComponent<LocalVolumetricFog>();
+            var parameters = new LocalVolumetricFogArtistParameters(mistColor, 70f, 0f)
+            {
+                size = new Vector3(radius * 2f, Mathf.Clamp(layerHeight, 0.3f, 0.8f), radius * 2f),
+                positiveFade = Vector3.one * 0.35f,
+                negativeFade = Vector3.one * 0.35f,
+                distanceFadeStart = 25f,
+                distanceFadeEnd = 40f,
+                blendingMode = LocalVolumetricFogBlendingMode.Additive,
+                falloffMode = LocalVolumetricFogFalloffMode.Linear
+            };
+            fog.parameters = parameters;
+            return fog;
         }
 
         private ParticleSystem CreateLayer(string name, Color color, float opacity, float rate, float height, float lifetime)
@@ -105,6 +127,7 @@ namespace LR2.World
             if (_mist != null) Destroy(_mist.gameObject);
             if (_dust != null) Destroy(_dust.gameObject);
             if (_forceField != null) Destroy(_forceField.gameObject);
+            if (_localFog != null) Destroy(_localFog.gameObject);
         }
     }
 }

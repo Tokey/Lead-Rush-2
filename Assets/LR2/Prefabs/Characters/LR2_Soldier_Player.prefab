@@ -2132,6 +2132,13 @@ MonoBehaviour:
   firstPersonBodyBack: 0.02
   replantFeet: 1
   logAlignment: 1
+  rightGripCurl: -0.18
+  triggerCurl: -0.05
+  leftGripCurl: -0.12
+  thumbBaseRange: {x: -1.6, y: 0.3}
+  thumbTipRange: {x: -1, y: 0.6}
+  rightGripOffset: {x: 0, y: -0.01, z: -0.075}
+  leftGripOffset: {x: 0, y: -0.03, z: 0}
 --- !u!114 &2210738732602222748
 MonoBehaviour:
   m_ObjectHideFlags: 0
