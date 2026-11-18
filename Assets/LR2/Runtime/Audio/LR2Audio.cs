@@ -42,7 +42,7 @@ namespace LR2.Audio
                 case AudioCategory.Weapons: return LR2Settings.SfxVolume;
                 case AudioCategory.Voice: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.2f);
                 case AudioCategory.Ambience: return LR2Settings.SfxVolume * 0.68f * (1f - DuckFactor * 0.85f);
-                case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.24f * (1f - DuckFactor * 0.55f);
+                case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.16f * (1f - DuckFactor * 0.55f);
                 case AudioCategory.Sfx: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.45f);
                 default: return LR2Settings.SfxVolume;
             }

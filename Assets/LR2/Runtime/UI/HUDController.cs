@@ -323,7 +323,7 @@ namespace LR2.UI
             if (reserveText != null) reserveText.text = gun.ReserveAmmo.ToString();
             if (fireModeText != null) fireModeText.text = gun.FireMode.ToString().ToUpperInvariant();
             if (reloadBarRoot != null) reloadBarRoot.gameObject.SetActive(gun.IsReloading);
-            if (reloadBarFill != null && gun.IsReloading) reloadBarFill.fillAmount = gun.ReloadProgress;
+            if (reloadBarFill != null && gun.IsReloading) reloadBarFill.fillAmount = gun.ReloadDisplayProgress;
             if (reloadPrompt != null)
             {
                 string prompt = "";

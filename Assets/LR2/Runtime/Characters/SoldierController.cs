@@ -590,22 +590,6 @@ namespace LR2.Characters
             float scale = Mathf.Clamp(info.amount / 25f, 0.3f, 2f) * flinchStrength * (_isAiming ? 0.7f : 1f);
             _flinch += new Vector2(UnityEngine.Random.Range(-1f, 1f), -UnityEngine.Random.Range(0.4f, 1f)) * scale;
 
-            var s = LR2CommonSounds.Instance;
-            if (s == null || Time.time < _nextHurtVoiceAt) return;
-            _nextHurtVoiceAt = Time.time + 0.92f;
-            // Suppressed strained agony: quiet exhales for grazing shots, clenched low-pitched grunts for heavy torso/head hits
-            bool heavy = info.amount >= 28f;
-            Vector3 headPos = transform.position + Vector3.up * 1.55f;
-            if (IsLocalPlayer)
-            {
-                var set = heavy && s.playerHurt.IsValid ? s.playerHurt : (s.lowHealthLoop.IsValid ? s.lowHealthLoop : s.playerHurt);
-                if (set.IsValid) LR2Audio.PlayClip(set.Pick(), Vector3.zero, heavy ? 0.34f : 0.28f, UnityEngine.Random.Range(0.84f, 0.93f), 1f, 500f, 0f, AudioCategory.Voice, 95, 0.03f);
-            }
-            else if (heavy || UnityEngine.Random.value < 0.45f)
-            {
-                var set = heavy && s.painGrunt.IsValid ? s.painGrunt : (s.lowHealthLoop.IsValid ? s.lowHealthLoop : s.painGrunt);
-                if (set.IsValid) LR2Audio.PlayClip(set.Pick(), headPos, heavy ? 0.38f : 0.30f, UnityEngine.Random.Range(0.83f, 0.92f), set.minDistance, set.maxDistance, 1f, AudioCategory.Voice, 120, 0.03f);
-            }
         }
 
         private void OnDied(DamageInfo info)
@@ -624,12 +608,7 @@ namespace LR2.Characters
             _controller.enabled = false;
 
             var s = LR2CommonSounds.Instance;
-            if (s != null)
-            {
-                LR2Audio.PlayAt(s.deathGrunt, transform.position + Vector3.up * 1.4f);
-                LR2Audio.PlayAt(s.bodyFall, transform.position, 1f, 0.45f);
-                if (IsLocalPlayer) LR2Audio.Play2D(s.playerDeath);
-            }
+            if (s != null) LR2Audio.PlayAt(s.bodyFall, transform.position, 1f, 0.45f);
 
             if (CameraController != null) CameraController.enabled = false;
             if (IsLocalPlayer)

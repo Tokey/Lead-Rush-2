@@ -36,6 +36,12 @@ namespace LR2.Characters
         public static float MaxGunAngle = 38f;
         /// <summary>Largest gun translation (m) the reload may add on top of the procedural pose.</summary>
         public static float MaxGunOffset = 0.18f;
+        /// <summary>
+        /// B35: Kinemation already moves the driver's weapon bone with the clip, weighted by the clip's WeaponBoneWeight curve, and the
+        /// visible gun inherits that. 1 = the bridge only adds the share Kinemation has not applied (1 - WeaponBoneWeight); 0 = old
+        /// behaviour (full clip motion on top, which stood the rifle up mid-reload).
+        /// </summary>
+        public static float WeaponBoneOverlap = 0f; // 0 until the B35 A/B pose check confirms 1 (both variants are captured there)
 
         private static readonly Dictionary<AnimationClip, Rest> RestCache = new Dictionary<AnimationClip, Rest>();
 
@@ -44,6 +50,7 @@ namespace LR2.Characters
         private float _gunWeight;
         private bool _calibrated;
         private Quaternion _clipToVisible = Quaternion.identity;   // O: visibleLocal = clipLocal * O at reload start
+        private Quaternion _gunRotS0 = Quaternion.identity;        // base gun rotation in skeleton space at reload start (QA)
         private Quaternion _rotOffL = Quaternion.identity, _rotOffR = Quaternion.identity;
         private Vector3 _posOffL, _posOffR;
         private AnimationClip _clip;
@@ -55,6 +62,10 @@ namespace LR2.Characters
         public float LastGunAngle { get; private set; }
         /// <summary>Translation (m) the reload added to the visible gun this frame (QA).</summary>
         public float LastGunOffset { get; private set; }
+        /// <summary>Clip WeaponBoneWeight curve this frame (how much Kinemation itself moves the weapon bone).</summary>
+        public float LastWeaponBoneWeight { get; private set; }
+        /// <summary>How far (degrees) the BASE gun pose turned since reload start, before the bridge adds anything (QA).</summary>
+        public float LastBaseAngle { get; private set; }
 
         public ReloadMotionBridge(Transform driverRoot, IPlayablesController playables)
         {
@@ -143,6 +154,7 @@ namespace LR2.Characters
                 // O maps the clip gun's local frame onto the visible gun's local frame (both "at rest" right now).
                 Quaternion gRotS = Quaternion.Inverse(_skeleton.rotation) * gRot;
                 _clipToVisible = invRest * gRotS;
+                _gunRotS0 = gRotS;
                 Quaternion invO0 = Quaternion.Inverse(_clipToVisible);
                 // hand convention offsets: where the clip's rest hands land on the visible gun vs where the real hands are
                 Vector3 hl0 = gPos + gRot * (invO0 * (invRest * (rest.handLPos - rest.gunPos)));
@@ -162,6 +174,14 @@ namespace LR2.Characters
                 _calibrated = true;
             }
             Quaternion O = _clipToVisible, invO = Quaternion.Inverse(O);
+            LastBaseAngle = Quaternion.Angle(_gunRotS0, Quaternion.Inverse(_skeleton.rotation) * gRot);
+            float wbw = 0f;
+            if (_playables != null)
+            {
+                try { wbw = Mathf.Clamp01(_playables.GetCurveValue("WeaponBoneWeight")); } catch (System.Exception) { wbw = 0f; }
+            }
+            LastWeaponBoneWeight = wbw;
+            float motion = _gunWeight * (1f - wbw * Mathf.Clamp01(WeaponBoneOverlap));
 
             // Clip gun delta in its own rest frame, re-expressed in the visible gun's frame.
             Quaternion cRot = _gun.localRotation;
@@ -176,9 +196,9 @@ namespace LR2.Characters
             Vector3 dPosV = Vector3.ClampMagnitude(invO * (invRest * (cPos - rest.gunPos)), MaxGunOffset);
             dPosV = new Vector3(Mathf.Clamp(dPosV.x, -0.09f, 0.06f), Mathf.Clamp(dPosV.y, -0.05f, 0.09f), Mathf.Clamp(dPosV.z, -0.015f, 0.14f));
 
-            Quaternion dRotW = Quaternion.Slerp(Quaternion.identity, dRotV, _gunWeight);
+            Quaternion dRotW = Quaternion.Slerp(Quaternion.identity, dRotV, motion);
             Quaternion newRot = gRot * dRotW;
-            Vector3 newPos = gPos + gRot * (dPosV * _gunWeight);
+            Vector3 newPos = gPos + gRot * (dPosV * motion);
             LastGunAngle = Quaternion.Angle(gRot, newRot);
             LastGunOffset = Vector3.Distance(gPos, newPos);
 

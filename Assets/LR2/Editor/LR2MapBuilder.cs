@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using LR2.AI;
 using LR2.Audio;
+using LR2.Characters;
 using LR2.Combat;
 using LR2.Core;
 using LR2.Game;
@@ -120,7 +121,7 @@ namespace LR2.EditorTools
                 curb = SaveMaterial(NewLit(new Color(0.45f, 0.42f, 0.18f), 0.2f), MatDir + "/M_LR2_SafetyYellow.mat"),
                 darkMetal = PhotoMat("M_LR2_DarkMetal", "T_Steel_BC", "T_Steel_N", "T_Steel_ORM", false, 0.9f, new Color(0.22f, 0.23f, 0.24f)),
                 steelGrate = PhotoMat("M_LR2_Grate", "T_Metalplane_BC", "T_Metalplane_N", "T_Metalplane_ORM", false, 0.8f, new Color(0.6f, 0.6f, 0.6f)),
-                glass = FindLeartes("M_Glass") ?? SaveMaterial(NewLit(new Color(0.2f, 0.25f, 0.27f), 0.95f), MatDir + "/M_LR2_Glass.mat"),
+                glass = MakeRealisticGlassMaterial(),
                 water = FindLeartes("M_Ocean") ?? SaveMaterial(NewLit(new Color(0.03f, 0.07f, 0.08f), 0.96f), MatDir + "/M_LR2_Water.mat"),
             };
             Color[] containerColors =
@@ -257,6 +258,174 @@ namespace LR2.EditorTools
             }
             else m = NewLit(fallback, smoothness);
             return SaveMaterial(m, $"{MatDir}/{outName}.mat");
+        }
+
+        /// <summary>Generates a realistic HDRP transparent glass material with soda-lime teal-green edge tint, grime, stress cracks, normals, and refraction (B30).</summary>
+        private static Material MakeRealisticGlassMaterial()
+        {
+            string texDir = $"{MatDir}/Masks";
+            EnsureFolder(texDir);
+            const int S = 256;
+            string bcPath = $"{texDir}/T_LR2_Glass_BC.png";
+            string nmPath = $"{texDir}/T_LR2_Glass_N.png";
+            string mkPath = $"{texDir}/T_LR2_Glass_Mask.png";
+
+            static Texture2D SaveTex(Texture2D tex, string path, bool srgb)
+            {
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+                if (imp != null)
+                {
+                    imp.sRGBTexture = srgb;
+                    imp.textureType = !srgb && path.EndsWith("_N.png") ? TextureImporterType.NormalMap : TextureImporterType.Default;
+                    imp.wrapMode = TextureWrapMode.Clamp;
+                    imp.mipmapEnabled = true;
+                    imp.SaveAndReimport();
+                }
+                return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+
+            static float SegDist(Vector2 p, Vector2 a, Vector2 b)
+            {
+                Vector2 pa = p - a, ba = b - a;
+                float h = Mathf.Clamp01(Vector2.Dot(pa, ba) / Mathf.Max(1e-6f, Vector2.Dot(ba, ba)));
+                return (pa - ba * h).magnitude;
+            }
+
+            var bc = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            var nm = new Texture2D(S, S, TextureFormat.RGBA32, false, true);
+            var mk = new Texture2D(S, S, TextureFormat.RGBA32, false, true);
+            var bcPx = new Color[S * S];
+            var nmPx = new Color[S * S];
+            var mkPx = new Color[S * S];
+
+            (Vector2 a, Vector2 b)[] cracks =
+            {
+                (new Vector2(0.02f, 0.03f), new Vector2(0.24f, 0.16f)),
+                (new Vector2(0.24f, 0.16f), new Vector2(0.35f, 0.09f)),
+                (new Vector2(0.03f, 0.21f), new Vector2(0.18f, 0.14f)),
+                (new Vector2(0.98f, 0.94f), new Vector2(0.76f, 0.81f)),
+                (new Vector2(0.76f, 0.81f), new Vector2(0.67f, 0.89f)),
+            };
+
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float u = x / (float)(S - 1);
+                float v = y / (float)(S - 1);
+                float edge = Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v));
+                float rimDust = Mathf.Clamp01(1f - edge / 0.14f);
+                float noise = Mathf.PerlinNoise(u * 9.5f + 2.1f, v * 9.5f + 4.7f);
+                float streak = Mathf.PerlinNoise(u * 26f + 1.3f, v * 3.8f + 0.5f);
+                float grime = Mathf.Clamp01(rimDust * 0.65f * (0.45f + 0.85f * noise) + Mathf.Max(0f, streak - 0.62f) * 0.6f);
+
+                float minCrack = 1f;
+                Vector2 p = new Vector2(u, v);
+                for (int c = 0; c < cracks.Length; c++)
+                    minCrack = Mathf.Min(minCrack, SegDist(p, cracks[c].a, cracks[c].b));
+                float crackLine = Mathf.Clamp01(1f - minCrack / 0.009f);
+
+                // Soda-lime green-cyan tint near edges, faint clear optical core, bright fractured crack lines
+                Color tint = Color.Lerp(new Color(0.58f, 0.78f, 0.75f, 1f), new Color(0.28f, 0.45f, 0.42f, 1f), rimDust * 0.72f);
+                tint = Color.Lerp(tint, new Color(0.32f, 0.34f, 0.31f, 1f), grime * 0.55f);
+                tint = Color.Lerp(tint, new Color(0.88f, 0.94f, 0.93f, 1f), crackLine * 0.75f);
+                float alpha = Mathf.Clamp01(0.22f + rimDust * 0.24f + grime * 0.22f + crackLine * 0.42f);
+                tint.a = alpha;
+                bcPx[y * S + x] = tint;
+
+                float nx = (Mathf.PerlinNoise(u * 14f + 0.02f, v * 14f) - Mathf.PerlinNoise(u * 14f - 0.02f, v * 14f)) * 0.45f;
+                float ny = (Mathf.PerlinNoise(u * 14f, v * 14f + 0.02f) - Mathf.PerlinNoise(u * 14f, v * 14f - 0.02f)) * 0.45f;
+                if (crackLine > 0.05f) { nx += (noise - 0.5f) * 0.85f * crackLine; ny += (streak - 0.5f) * 0.85f * crackLine; }
+                Vector3 nrm = new Vector3(nx, ny, 1f).normalized;
+                nmPx[y * S + x] = new Color(nrm.x * 0.5f + 0.5f, nrm.y * 0.5f + 0.5f, nrm.z * 0.5f + 0.5f, 1f);
+
+                float metallic = Mathf.Lerp(0.06f, 0.0f, grime);
+                float ao = Mathf.Clamp01(1f - rimDust * 0.32f - grime * 0.22f);
+                float smooth = Mathf.Clamp01(Mathf.Lerp(0.95f, 0.36f, Mathf.Max(grime * 0.85f, crackLine)));
+                mkPx[y * S + x] = new Color(metallic, ao, 0.5f, smooth);
+            }
+
+            bc.SetPixels(bcPx); bc.Apply();
+            nm.SetPixels(nmPx); nm.Apply();
+            mk.SetPixels(mkPx); mk.Apply();
+            var bcTex = SaveTex(bc, bcPath, true);
+            var nmTex = SaveTex(nm, nmPath, false);
+            var mkTex = SaveTex(mk, mkPath, false);
+
+            if (_hdrpLit == null) _hdrpLit = Shader.Find("HDRP/Lit");
+            var m = new Material(_hdrpLit) { name = "M_LR2_Glass" };
+            m.SetColor("_BaseColor", new Color(0.86f, 0.96f, 0.94f, 0.32f));
+            m.SetTexture("_BaseColorMap", bcTex);
+            m.SetTexture("_NormalMap", nmTex);
+            m.SetFloat("_NormalScale", 0.72f);
+            m.SetTexture("_MaskMap", mkTex);
+            m.SetFloat("_SurfaceType", 1f); // Transparent
+            m.SetFloat("_BlendMode", 0f);   // Alpha
+            m.SetFloat("_EnableBlendModePreserveSpecularLighting", 1f);
+            m.SetFloat("_DoubleSidedEnable", 1f);
+            m.SetFloat("_CullMode", 0f);
+            m.SetFloat("_AlphaCutoffEnable", 0f);
+            m.SetFloat("_UVBase", 0f);
+            m.SetFloat("_Metallic", 0.05f);
+            m.SetFloat("_Smoothness", 0.95f);
+            m.SetFloat("_SmoothnessRemapMin", 0.32f);
+            m.SetFloat("_SmoothnessRemapMax", 0.96f);
+            m.SetFloat("_RefractionModel", 1f); // Box / planar glass refraction
+            m.SetFloat("_Ior", 1.52f);
+            m.SetFloat("_Thickness", 0.018f);
+            m.SetColor("_TransmittanceColor", new Color(0.68f, 0.88f, 0.84f, 1f));
+            m.SetFloat("_ATDistance", 0.14f);
+            HDMaterial.ValidateMaterial(m);
+            return SaveMaterial(m, $"{MatDir}/M_LR2_Glass.mat");
+        }
+
+        /// <summary>Adds a persistent dark-steel perimeter frame + cross mullion bars around glass panes so intact/shattered windows read cleanly (B30).</summary>
+        private static void EnhanceGlassWindowFrame(GameObject pane)
+        {
+            if (pane == null || _m == null || pane.name.Contains("_FramedDone")) return;
+            var col = pane.GetComponent<BoxCollider>();
+            Vector3 s = Vector3.Scale(col != null ? col.size : Vector3.one, new Vector3(
+                Mathf.Abs(pane.transform.lossyScale.x),
+                Mathf.Abs(pane.transform.lossyScale.y),
+                Mathf.Abs(pane.transform.lossyScale.z)));
+            if (s.y < 0.5f || Mathf.Max(s.x, s.z) < 0.6f) return;
+
+            Transform host = pane.transform.parent != null ? pane.transform.parent : pane.transform;
+            var frm = new GameObject("GlassFrame_" + pane.name).transform;
+            frm.SetParent(host, false);
+            frm.position = pane.transform.position;
+            frm.rotation = pane.transform.rotation;
+
+            bool wideX = s.x >= s.z;
+            float width = wideX ? s.x : s.z;
+            float height = s.y;
+            float thick = Mathf.Clamp(Mathf.Min(s.x, s.z), 0.04f, 0.08f) + 0.04f;
+            float rim = 0.045f;
+
+            void Strip(string sn, Vector3 lp, Vector3 ls)
+            {
+                var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                bar.name = sn;
+                bar.transform.SetParent(frm, false);
+                bar.transform.localPosition = lp;
+                bar.transform.localScale = ls;
+                bar.GetComponent<Renderer>().sharedMaterial = _m.darkMetal;
+                Object.DestroyImmediate(bar.GetComponent<Collider>());
+                bar.layer = LR2Layers.Debris;
+            }
+
+            Vector3 barH = wideX ? new Vector3(width + rim, rim, thick) : new Vector3(thick, rim, width + rim);
+            Vector3 barV = wideX ? new Vector3(rim, height, thick) : new Vector3(thick, height, rim);
+            float halfW = width * 0.5f - rim * 0.2f;
+            float halfH = height * 0.5f - rim * 0.2f;
+            Strip("Top", new Vector3(0f, halfH, 0f), barH);
+            Strip("Bottom", new Vector3(0f, -halfH, 0f), barH);
+            Strip("Left", wideX ? new Vector3(-halfW, 0f, 0f) : new Vector3(0f, 0f, -halfW), barV);
+            Strip("Right", wideX ? new Vector3(halfW, 0f, 0f) : new Vector3(0f, 0f, halfW), barV);
+            if (width > 1.3f)
+                Strip("MullionV", Vector3.zero, wideX ? new Vector3(0.032f, height - rim, thick * 0.9f) : new Vector3(thick * 0.9f, height - rim, 0.032f));
         }
 
         // ================================================================================================= helpers
@@ -1169,7 +1338,7 @@ namespace LR2.EditorTools
             var profile = NewProfile(LightDir + "/LR2_Saltworks_Profile.asset");
             var ve = profile.Add<VisualEnvironment>(true);
             ve.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
-            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 12.2f, rotationDeg: 38f);
+            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 10.2f, rotationDeg: 38f);
             // Global indirect/sky visibility floor so dark shadows & sheltered walls keep clear enemy silhouettes
             var ilcGlobal = profile.Add<IndirectLightingController>(true);
             ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.65f);
@@ -1186,9 +1355,9 @@ namespace LR2.EditorTools
             fog.maxFogDistance.Override(3000f);
             var exposure = profile.Add<Exposure>(true);
             exposure.mode.Override(ExposureMode.AutomaticHistogram);
-            exposure.compensation.Override(Mathf.Max(_cfg.exposureCompensation, -0.10f));
-            exposure.limitMin.Override(Mathf.Min(_cfg.exposureLimitMin, 4.0f));
-            exposure.limitMax.Override(_cfg.exposureLimitMax);
+            exposure.compensation.Override(Mathf.Max(_cfg.exposureCompensation, 0.10f));
+            exposure.limitMin.Override(Mathf.Min(_cfg.exposureLimitMin, 4.6f));
+            exposure.limitMax.Override(Mathf.Min(_cfg.exposureLimitMax, 11.4f));
             exposure.adaptationMode.Override(AdaptationMode.Progressive);
             exposure.adaptationSpeedDarkToLight.Override(2.8f);
             exposure.adaptationSpeedLightToDark.Override(1.8f);
@@ -1940,6 +2109,7 @@ namespace LR2.EditorTools
                 {
                     dp.maxHealth = 25f;
                     dp.surface = SurfaceType.Glass;
+                    EnhanceGlassWindowFrame(go);
                 }
                 else if (lower.Contains("barrel_01") || lower.Contains("gascyl") || lower.Contains("fuel"))
                 {
@@ -2178,7 +2348,50 @@ namespace LR2.EditorTools
                 var agent = hero.GetComponent<NavMeshAgent>();
                 if (agent != null) Object.DestroyImmediate(agent);
                 var c = hero.GetComponent<Combatant>();
-                if (c != null) c.DisplayName = "OPERATOR";
+                if (c != null)
+                {
+                    c.DisplayName = "OPERATOR";
+                    c.IsLocalPlayer = false;
+                }
+                var woodland = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Woodland.mat");
+                var desert = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Desert.mat");
+                var skullMask = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_FaceMask_GhostSkull.mat");
+                var sv = hero.GetComponent<SoldierVisuals>();
+                if (sv != null)
+                {
+                    sv.SetGear(woodland, desert, skullMask);
+                    sv.ApplyMaterialsNow(false);
+                }
+                var swatVis = hero.transform.Find("SWAT_Visual");
+                foreach (var r in hero.GetComponentsInChildren<Renderer>(true))
+                {
+                    bool underSwat = swatVis != null && r.transform.IsChildOf(swatVis);
+                    bool underWeapon = r.transform.GetComponentInParent<Weapons.LR2Item>(true) != null;
+                    if (!underSwat && !underWeapon) r.enabled = false;
+                    else r.enabled = true;
+                }
+                foreach (var smr in hero.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (swatVis != null && !smr.transform.IsChildOf(swatVis)) continue;
+                    var mats = smr.sharedMaterials;
+                    bool changed = false;
+                    for (int mi = 0; mi < mats.Length; mi++)
+                    {
+                        if (mats[mi] == null) continue;
+                        string mn = mats[mi].name.ToLowerInvariant();
+                        if ((mn.Contains("head") || mn.Contains("facemask") || mn.Contains("skull") || mn.Contains("balaclava")) && skullMask != null)
+                        {
+                            mats[mi] = skullMask;
+                            changed = true;
+                        }
+                        else if ((mn.Contains("body") || mn.Contains("uniform")) && desert != null)
+                        {
+                            mats[mi] = desert;
+                            changed = true;
+                        }
+                    }
+                    if (changed) smr.sharedMaterials = mats;
+                }
             }
 
             var camGo = new GameObject("MenuCamera");

@@ -572,15 +572,18 @@ namespace LR2.Weapons
             return true;
         }
 
+        /// <summary>Aggressive reload feel: camera jolts on the local player's reload cues (B27/B29).</summary>
+        private void LocalReloadJolt(int cue) { if (Owner != null && Owner.IsLocalPlayer) CameraShake.ReloadCue(cue); }
+
         private void UpdateReload()
         {
             float t = ReloadProgress;
             var a = definition != null ? definition.audio : null;
             if (a != null)
             {
-                if (!_magOutPlayed && t >= a.magOutAt) { _magOutPlayed = true; LR2Audio.PlayAt(a.magOut, transform.position); }
-                if (!_magInPlayed && t >= a.magInAt) { _magInPlayed = true; LR2Audio.PlayAt(a.magIn, transform.position); }
-                if (!_boltPlayed && _reloadEmpty && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); }
+                if (!_magOutPlayed && t >= a.magOutAt) { _magOutPlayed = true; LR2Audio.PlayAt(a.magOut, transform.position); LocalReloadJolt(0); }
+                if (!_magInPlayed && t >= a.magInAt) { _magInPlayed = true; LR2Audio.PlayAt(a.magIn, transform.position); LocalReloadJolt(1); }
+                if (!_boltPlayed && _reloadEmpty && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); LocalReloadJolt(2); }
             }
             if (t < _reloadEndAt) return;
 

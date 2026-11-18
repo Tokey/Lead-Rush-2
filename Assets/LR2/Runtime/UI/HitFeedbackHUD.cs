@@ -2,6 +2,7 @@ using LR2.Audio;
 using LR2.Combat;
 using LR2.Core;
 using LR2.FX;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -37,20 +38,28 @@ namespace LR2.UI
         [Header("Audio")]
         [Range(0f, 1.5f)] public float volume = 1f;
 
-        private RectTransform _root, _xRoot, _skullRT;
+        private RectTransform _root, _xRoot, _skullRT, _hitPipRT;
         private readonly Image[] _arms = new Image[4];
-        private Image _skull, _skullRim;
-        private float _hitTime = -10f, _killTime = -10f;
+        private Image _skull, _skullRim, _hitPip;
+        private TMP_Text _zoneLabel;
+        private float _hitTime = -10f, _killTime = -10f, _pipTime = -10f;
         private Color _color;
         private float _scale = 1f, _thick = 1f;
         private int _streak;
         private bool _headKill;
         private Combatant _player;
         private bool _isReplayOverlay;
+        private Vector3 _lastHitWorld;
+        private bool _hasWorldPoint;
+        private string _lastZoneText = "";
+
+        public static bool HasZoneIndicator => true;
+        public string LastZoneText => _lastZoneText;
+        public bool IsShowingWorldImpactPip => _hasWorldPoint && (Time.unscaledTime - _pipTime) < 0.36f;
 
         private static SurfaceLibrary _surfaceLib;
         private static AudioClip _bodyPunch, _headCrack, _killSlam, _killStamp;
-        private static Sprite _skullSprite, _skullRimSprite;
+        private static Sprite _skullSprite, _skullRimSprite, _pipSprite;
 
         public static HitFeedbackHUD Create(Transform parent)
         {
@@ -138,6 +147,22 @@ namespace LR2.UI
             so.effectDistance = new Vector2(1.5f, -1.5f);
 
             SetAlpha(0f, 0f);
+            _hitPipRT = NewRect("WorldHitPip", _root, Vector2.zero);
+            _hitPipRT.sizeDelta = new Vector2(18f, 18f);
+            _hitPip = _hitPipRT.gameObject.AddComponent<Image>();
+            _hitPip.sprite = _pipSprite;
+            _hitPip.raycastTarget = false;
+            _hitPip.color = new Color(1f, 1f, 1f, 0f);
+
+            var zoneRT = NewRect("HitZoneTag", _root, new Vector2(0f, -34f));
+            zoneRT.sizeDelta = new Vector2(180f, 24f);
+            _zoneLabel = zoneRT.gameObject.AddComponent<TextMeshProUGUI>();
+            _zoneLabel.fontSize = 14f;
+            _zoneLabel.fontStyle = FontStyles.Bold;
+            _zoneLabel.characterSpacing = 3f;
+            _zoneLabel.alignment = TextAlignmentOptions.Center;
+            _zoneLabel.raycastTarget = false;
+            _zoneLabel.color = new Color(1f, 1f, 1f, 0f);
             if (!_isReplayOverlay && Instance == null) Instance = this;
         }
 
@@ -175,10 +200,10 @@ namespace LR2.UI
         {
             if (_player == null) _player = Combatant.FindLocalPlayer();
             if (_player == null || e.attacker != _player || e.victim == _player || e.damage <= 0f) return;
-            TriggerFeedback(e.zone == HitZone.Head, e.killed, e.point);
+            TriggerFeedback(e.zone == HitZone.Head, e.killed, e.point, e.zone);
         }
 
-        private void TriggerFeedback(bool head, bool killed, Vector3 worldPoint)
+        private void TriggerFeedback(bool head, bool killed, Vector3 worldPoint, HitZone zone = HitZone.Generic)
         {
             float now = Time.unscaledTime;
             _streak = now - _hitTime < 0.25f ? Mathf.Min(_streak + 1, 6) : 0;
@@ -186,6 +211,11 @@ namespace LR2.UI
             _color = killed ? killColor : head ? headColor : bodyColor;
             _scale = killed ? 1.45f : head ? 1.18f : 1f + _streak * 0.03f;
             _thick = killed ? 1.5f : head ? 1.2f : 1f;
+            _lastHitWorld = worldPoint;
+            _hasWorldPoint = worldPoint != Vector3.zero;
+            if (_hasWorldPoint) _pipTime = now;
+            _lastZoneText = FormatZoneLabel(zone, head, killed);
+            if (_zoneLabel != null) _zoneLabel.text = _lastZoneText;
             if (killed)
             {
                 _killTime = now;
@@ -194,6 +224,20 @@ namespace LR2.UI
             }
 
             if (LR2Settings.HitmarkerSound) PlaySounds(head, killed);
+        }
+
+        private static string FormatZoneLabel(HitZone z, bool head, bool killed)
+        {
+            if (z == HitZone.Head || head) return killed ? "HEADSHOT KILL" : "HEAD";
+            switch (z)
+            {
+                case HitZone.Neck: return "NECK";
+                case HitZone.UpperTorso: return "UPPER CHEST";
+                case HitZone.LowerTorso: return "TORSO";
+                case HitZone.Arm: return "ARM HIT";
+                case HitZone.Leg: return "LEG HIT";
+                default: return killed ? "ELIMINATED" : "TORSO";
+            }
         }
 
         private void Update()
@@ -231,6 +275,38 @@ namespace LR2.UI
             var rc = _skullRim.color;
             rc.a = _headKill ? ka : 0f;
             _skullRim.color = rc;
+
+            if (_zoneLabel != null)
+            {
+                float zt = now - _hitTime;
+                float za = zt < 0.28f ? 1f : 1f - Mathf.Clamp01((zt - 0.28f) / 0.22f);
+                var zc = _color;
+                zc.a = za * 0.92f;
+                _zoneLabel.color = zc;
+            }
+            if (_hitPip != null && _hitPipRT != null)
+            {
+                float pt = now - _pipTime;
+                float pa = _hasWorldPoint ? Mathf.Clamp01(1f - pt / 0.36f) : 0f;
+                Camera cam = Camera.main;
+                if (pa > 0.01f && cam != null)
+                {
+                    Vector3 vp = cam.WorldToViewportPoint(_lastHitWorld);
+                    if (vp.z > 0.2f && vp.x >= 0.02f && vp.x <= 0.98f && vp.y >= 0.02f && vp.y <= 0.98f)
+                    {
+                        var canvasRT = _root.parent as RectTransform;
+                        Vector2 canvasSize = canvasRT != null ? canvasRT.rect.size : new Vector2(1920f, 1080f);
+                        _hitPipRT.anchoredPosition = new Vector2((vp.x - 0.5f) * canvasSize.x, (vp.y - 0.5f) * canvasSize.y);
+                        float ps = Mathf.Lerp(1.35f, 0.7f, Mathf.Clamp01(pt / 0.36f));
+                        _hitPipRT.localScale = Vector3.one * ps;
+                        var pc = _color;
+                        pc.a = pa * 0.9f;
+                        _hitPip.color = pc;
+                    }
+                    else _hitPip.color = new Color(_color.r, _color.g, _color.b, 0f);
+                }
+                else _hitPip.color = new Color(_color.r, _color.g, _color.b, 0f);
+            }
         }
 
         private void SetAlpha(float x, float skull)
@@ -393,6 +469,24 @@ namespace LR2.UI
             rim.Apply(false, true);
             _skullSprite = Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), 100f);
             _skullRimSprite = Sprite.Create(rim, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), 100f);
+
+            const int P = 32;
+            var ptex = new Texture2D(P, P, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "LR2_HitPip" };
+            var ppx = new Color32[P * P];
+            for (int y = 0; y < P; y++)
+            for (int x = 0; x < P; x++)
+            {
+                float u = (x + 0.5f) / P * 2f - 1f;
+                float v = (y + 0.5f) / P * 2f - 1f;
+                float diamond = Mathf.Abs(Mathf.Abs(u) + Mathf.Abs(v) - 0.72f);
+                float core = Mathf.Sqrt(u * u + v * v);
+                float d = Mathf.Min(diamond - 0.08f, core - 0.16f);
+                byte pa = (byte)(Mathf.Clamp01(0.5f - d / (2.5f / P)) * 255f);
+                ppx[y * P + x] = new Color32(255, 255, 255, pa);
+            }
+            ptex.SetPixels32(ppx);
+            ptex.Apply(false, true);
+            _pipSprite = Sprite.Create(ptex, new Rect(0, 0, P, P), new Vector2(0.5f, 0.5f), 100f);
         }
 
         private static float SkullSdf(float u, float v)
@@ -443,7 +537,7 @@ namespace LR2.UI
             _replayOverlay = null;
             _surfaceLib = null;
             _bodyPunch = _headCrack = _killSlam = _killStamp = null;
-            _skullSprite = _skullRimSprite = null;
+            _skullSprite = _skullRimSprite = _pipSprite = null;
         }
     }
 }

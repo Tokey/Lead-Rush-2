@@ -29,6 +29,8 @@ namespace LR2.Core
         public static float VerticalFov(float horizontalDegrees, float aspect) =>
             Camera.HorizontalToVerticalFieldOfView(Mathf.Clamp(horizontalDegrees, 1f, 179f), FovReferenceAspect);
         public static bool InvertY { get => GetB("InvertY", false); set => SetB("InvertY", value); }
+        /// <summary>Camera shake intensity 0..1 (shots, hits taken, near misses, reload jolts, landings). Default 1.</summary>
+        public static float CameraShake { get => GetF("v3.CameraShake", 1f); set => SetF("v3.CameraShake", Mathf.Clamp01(value)); }
         public static float MasterVolume { get => GetF("MasterVol", 0.9f); set => SetF("MasterVol", Mathf.Clamp01(value)); }
         public static float SfxVolume { get => GetF("SfxVol", 1f); set => SetF("SfxVol", Mathf.Clamp01(value)); }
         public static float MusicVolume { get => GetF("MusicVol", 0.55f); set => SetF("MusicVol", Mathf.Clamp01(value)); }
@@ -41,6 +43,7 @@ namespace LR2.Core
         public static bool FilmGrain { get => GetB("FilmGrain", true); set => SetB("FilmGrain", value); }
         public static bool RayTracing { get => GetB("RayTracing", false); set => SetB("RayTracing", value); }
         public static bool HitmarkerSound { get => GetB("HitmarkerSound", true); set => SetB("HitmarkerSound", value); }
+        public static bool LaserEnabled { get => GetB("v3.LaserEnabled", false); set => SetB("v3.LaserEnabled", value); }
         public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 4)); }
         /// <summary>Bodycam lens look (distortion, grain, aberration, grade).</summary>
         public static bool BodycamLook { get => GetB("v2.BodycamLook", false); set => SetB("v2.BodycamLook", value); }
@@ -64,7 +67,7 @@ namespace LR2.Core
         {
             foreach (var key in new[] { "MouseSensitivity", "v2.MouseSensitivity", "AdsSens", "v2.AdsSens", "FOV", "InvertY",
                          "MasterVol", "SfxVol", "MusicVol", "UiVol", "Quality", "VSync", "FpsLimit", "ShowFps",
-                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "BotDifficulty",
+                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "v3.LaserEnabled", "BotDifficulty",
                          "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion", "v3.BodycamMotion" })
                 PlayerPrefs.DeleteKey(Prefix + key);
             Notify();

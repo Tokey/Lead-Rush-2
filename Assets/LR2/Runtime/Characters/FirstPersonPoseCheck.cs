@@ -156,20 +156,83 @@ namespace LR2.Characters
                 while (Time.time < end) { SampleReloadParts(); yield return null; }
             }
 
+            // Captures follow the reload's own progress (B27 made reloads 1.5x faster; B28 tactical reloads end after mag-in).
+            IEnumerator WaitReloadProgress(LR2.Weapons.LR2Firearm f, float p, float timeout)
+            {
+                float end = Time.time + timeout;
+                while (Time.time < end && f != null && f.IsReloading && f.ReloadDisplayProgress < p) { SampleReloadParts(); yield return null; }
+            }
+            IEnumerator WaitReloadDone(LR2.Weapons.LR2Firearm f, float timeout)
+            {
+                float end = Time.time + timeout;
+                while (Time.time < end && f != null && f.IsReloading) { SampleReloadParts(); yield return null; }
+            }
+            var fa = _soldier.ActiveFirearm;
+            void LogReloadAngles(string label)
+            {
+                var br = _proxy != null ? _proxy.Bridge : null;
+                var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+                var cam = _soldier.ViewCamera;
+                float gunVsCam = item != null && cam != null ? Vector3.Angle(item.forward, cam.transform.forward) : -1f;
+                float upVsCam = item != null && cam != null ? Vector3.Angle(item.up, cam.transform.up) : -1f;
+                Note($"RELOAD-ANGLES [{label}] overlap={ReloadMotionBridge.WeaponBoneOverlap:0} wbw={(br != null ? br.LastWeaponBoneWeight : -1f):0.00} " +
+                     $"baseAngle={(br != null ? br.LastBaseAngle : -1f):0.0} bridgeAngle={(br != null ? br.LastGunAngle : -1f):0.0} gunFwdVsCam={gunVsCam:0.0} gunUpVsCam={upVsCam:0.0}");
+            }
+            LogReloadAngles("idle reference");
+
+            // (0) B35 A/B: OLD behaviour (bridge adds the full clip motion on top of Kinemation's own weapon-bone motion).
+            ReloadMotionBridge.WeaponBoneOverlap = 0f;
             _cmd.reload = true;
-            yield return WaitAndSample(0.3f);
-            DiagnoseReload("+0.3s");
-            yield return WaitAndSample(0.55f); // ~0.85s real (~0.72s clip time): left hand grasps & detaches AK-12 mag visibly in view
-            yield return Capture("fp_05_reload_a", "reload mag out (+0.85s)");
+            yield return WaitAndSample(0.05f);
+            yield return WaitReloadProgress(fa, 0.4f, 4f);
+            LogReloadAngles("OLD tactical ~40%");
+            yield return Capture("tp_06a_reload_front_OLD", null, View.Front, true);
+            yield return WaitReloadDone(fa, 5f);
+            ReloadMotionBridge.WeaponBoneOverlap = 1f;
+            _cmd.fire = true;
+            yield return Wait(0.2f);
+            _cmd.fire = false;
+            yield return Wait(0.4f);
+            maxMagDisp = maxChargeDisp = 0f;
+
+            // (1) TACTICAL reload (rounds left): mag must move, charging handle must NOT cycle, gun ends at magazine + 1.
+            _cmd.reload = true;
+            yield return WaitAndSample(0.05f);
+            bool tacStarted = fa != null && fa.IsTacticalReload;
+            float tacT0 = Time.time;
+            DiagnoseReload("tactical start");
+            yield return WaitReloadProgress(fa, 0.4f, 4f);
+            LogReloadAngles("NEW tactical ~40%");
+            yield return Capture("fp_05_reload_a", "tactical reload, mag out (~40 %)");
             yield return Capture("tp_06_reload_front", null, View.Front, true);
-            LogDriverWeaponBones("reload +0.85s");
-            yield return WaitAndSample(2.65f); // ~3.55s real (~3.02s clip time): AK-12 charging handle pulled back
-            yield return Capture("fp_06_reload_b", "reload charge rack (+3.55s)");
-            DiagnoseReload("+3.55s");
-            yield return WaitAndSample(1.15f);
-            Note($"RELOAD-PARTS-AK12 magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect mag>=0.05m, charge>=0.03m)");
-            if (magTf != null && maxMagDisp < 0.05f) Note("ERROR [PoseCheck] Mag did not detach during AK-12 reload!");
-            if (chargeTf != null && maxChargeDisp < 0.02f) Note("ERROR [PoseCheck] Charging handle (Charge) did not cycle during AK-12 reload!");
+            LogDriverWeaponBones("tactical reload ~40%");
+            yield return WaitReloadDone(fa, 5f);
+            float tacDur = Time.time - tacT0;
+            Note($"RELOAD-TACTICAL started={tacStarted} duration={tacDur:0.00}s ammo={(fa != null ? fa.AmmoInMagazine : -1)}/{(fa != null ? fa.MagazineSize : -1)} " +
+                 $"magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect tactical, ammo = mag+1, mag>=0.05m, charge<0.02m)");
+            if (magTf != null && maxMagDisp < 0.05f) Note("ERROR [PoseCheck] Mag did not detach during the tactical reload!");
+            if (fa != null && !tacStarted) Note("ERROR [PoseCheck] Reload with rounds left was not tactical!");
+            if (fa != null && fa.AmmoInMagazine != fa.MagazineSize + 1) Note("ERROR [PoseCheck] Tactical reload did not end at magazine + 1!");
+
+            // (2) EMPTY reload: empty the magazine, then the full clip must play and the charging handle must cycle.
+            maxMagDisp = maxChargeDisp = 0f;
+            float emptyEnd = Time.time + 8f;
+            _cmd.fire = true;
+            while (Time.time < emptyEnd && fa != null && fa.AmmoInMagazine > 0) yield return null;
+            _cmd.fire = false;
+            yield return Wait(0.25f);
+            if (fa != null && !fa.IsReloading) _cmd.reload = true;
+            yield return WaitAndSample(0.05f);
+            float emptyT0 = Time.time;
+            yield return WaitReloadProgress(fa, 0.85f, 6f);
+            LogReloadAngles("empty ~85%");
+            yield return Capture("fp_06_reload_b", "empty reload, charge rack (~85 %)");
+            DiagnoseReload("empty ~85%");
+            yield return WaitReloadDone(fa, 5f);
+            Note($"RELOAD-EMPTY duration={Time.time - emptyT0:0.00}s ammo={(fa != null ? fa.AmmoInMagazine : -1)}/{(fa != null ? fa.MagazineSize : -1)} " +
+                 $"magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect ammo = mag, mag>=0.05m, charge>=0.02m)");
+            if (magTf != null && maxMagDisp < 0.05f) Note("ERROR [PoseCheck] Mag did not detach during the empty reload!");
+            if (chargeTf != null && maxChargeDisp < 0.02f) Note("ERROR [PoseCheck] Charging handle (Charge) did not cycle during the empty reload!");
 
             // weapon swap to the sidearm and back
             _cmd.weaponSlot = 1;
@@ -193,6 +256,23 @@ namespace LR2.Characters
             yield return MeasureGait("walk", 1.6f);
             yield return Capture("fp_11_walk", "walk");
             yield return Capture("tp_08_walk_side", null, View.Side, true);
+
+            // (3) B16: tactical reload WHILE walking (the rifle used to swing ~90 degrees).
+            {
+                var wfa = _soldier.ActiveFirearm;
+                _cmd.fire = true;
+                yield return Wait(0.15f);
+                _cmd.fire = false;
+                yield return Wait(0.25f);
+                _cmd.reload = true;
+                yield return Wait(0.05f);
+                yield return WaitReloadProgress(wfa, 0.45f, 4f);
+                LogReloadAngles("walking tactical ~45%");
+                yield return Capture("fp_11b_walk_reload", "tactical reload while walking (~45 %)");
+                yield return Capture("tp_08b_walk_reload_side", null, View.Side, true);
+                yield return WaitReloadDone(wfa, 5f);
+                Note($"RELOAD-WALK ammo={(wfa != null ? wfa.AmmoInMagazine : -1)}/{(wfa != null ? wfa.MagazineSize : -1)}");
+            }
             _cmd.sprint = true;
             yield return Wait(1.0f);
             yield return MeasureGait("sprint", 1.6f);

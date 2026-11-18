@@ -29,8 +29,11 @@ namespace LR2.World
         [SerializeField, Min(0f)] private float startDelay = 0.65f;
         [SerializeField, Min(0.5f)] private float duration = 3.2f;
         [SerializeField, Min(0.5f)] private float preKillWindow = 2.0f;
-        [SerializeField, Min(0f)] private float postKillWindow = 0.72f;
+        [SerializeField, Min(0f)] private float postKillWindow = 0.95f;
         [SerializeField] private float fieldOfView = 72f;
+
+        public float PreKillWindow => preKillWindow;
+        public float PostKillWindow => postKillWindow;
 
         private struct Snapshot
         {

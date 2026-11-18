@@ -21,25 +21,22 @@ namespace LR2.Characters
 
         private SoldierController _s;
         private SoldierMovement _m;
-        private Health _h;
         private FoleyLibrary _lib;
         private LR2Firearm _gun;
         private SoldierStance _lastStance;
-        private float _sprintTime, _breathAt, _recoverUntil, _nextPain;
+        private float _sprintTime, _breathAt, _recoverUntil;
         private bool _inhale = true;
 
         private void Start()
         {
             _s = GetComponent<SoldierController>();
             _m = _s != null ? _s.Movement : null;
-            _h = _s != null ? _s.Health : null;
             _lib = FoleyLibrary.Instance;
             if (_lib == null || _m == null) { enabled = false; return; }
             _m.Footstep += OnStep;
             _m.Jumped += OnJump;
             _m.Landed += OnLand;
             _m.MantleStarted += OnMantle;
-            if (_h != null) _h.Damaged += OnDamaged;
             GameEvents.ShotFired += OnShot;
             _lastStance = _m.Stance;
         }
@@ -53,7 +50,6 @@ namespace LR2.Characters
                 _m.Landed -= OnLand;
                 _m.MantleStarted -= OnMantle;
             }
-            if (_h != null) _h.Damaged -= OnDamaged;
             GameEvents.ShotFired -= OnShot;
             if (_gun != null) _gun.ReloadStarted -= OnReload;
         }
@@ -99,14 +95,6 @@ namespace LR2.Characters
         {
             Play(_lib.breathMantle, Head, 1f);
             Play(_lib.mantle, Chest, 1f);
-        }
-
-        private void OnDamaged(DamageInfo d)
-        {
-            // Vocal suppressed pain response is handled exclusively by SoldierController.OnDamaged (prevents double yelps)
-            if (Time.time < _nextPain || _h == null || !_h.IsAlive) return;
-            _nextPain = Time.time + 0.85f;
-            Play(_lib.clothWalk, Chest, 0.35f, 0.02f);
         }
 
         private void OnShot(ShotEvent e)

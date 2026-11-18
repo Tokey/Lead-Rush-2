@@ -142,7 +142,7 @@ namespace LR2.World
                 if (_exposureOverride != null) _baseExposure = _exposureOverride.compensation.value;
                 if (_hdriSky != null)
                 {
-                    _baseHdriExposure = _hdriSky.exposure.value > 5f ? _hdriSky.exposure.value : 12.0f;
+                    _baseHdriExposure = _hdriSky.exposure.value > 5f ? _hdriSky.exposure.value : 10.2f;
                     _baseHdriMult = _hdriSky.multiplier.value;
                 }
             }
@@ -242,7 +242,7 @@ namespace LR2.World
             }
             if (_hdriSky != null)
             {
-                _hdriSky.exposure.Override(Mathf.Max(11.2f, _baseHdriExposure - 0.75f * stormDark) + _flash * 2.2f);
+                _hdriSky.exposure.Override(Mathf.Max(9.2f, _baseHdriExposure - 0.85f * stormDark) + _flash * 2.2f);
                 _hdriSky.multiplier.Override(_baseHdriMult * (Mathf.Lerp(1f, 0.72f, stormDark) + _flash * 1.45f));
             }
             else if (_physSky != null)

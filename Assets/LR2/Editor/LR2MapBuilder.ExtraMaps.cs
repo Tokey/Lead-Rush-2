@@ -258,9 +258,10 @@ namespace LR2.EditorTools
             foreach (float oz in new[] { -14f, 14f })
                 AddLight(_lighting, $"Overhead_{(oz < 0 ? "S" : "N")}",
                     new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 4700f, 4400f, 24f, 0f, false);
-            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 16500f, sunTemp: 4300f,
-                fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.05f, contrast: 14f, saturation: -14f,
-                rainDefaultPreset: 2, evMin: 3.8f, evMax: 12.2f);
+            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 20000f, sunTemp: 4300f,
+                fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.15f, contrast: 14f, saturation: -14f,
+                rainDefaultPreset: 2, evMin: 4.8f, evMax: 11.4f,
+                hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", skyExposure: 10.2f);
             PlaceMapDecals(pMin, pMax, 140);
             AddMatchSystems(40f);
             MarkStatic(env);
@@ -439,10 +440,10 @@ namespace LR2.EditorTools
             AddLight(_lighting, "TrenchFillN", new Vector3(0f, 1.8f, 6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
-            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 15800f, sunTemp: 4300f,
-                fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: -0.25f, contrast: 16f, saturation: -6f,
-                rainDefaultPreset: 0, evMin: 4.0f, evMax: 13.8f,
-                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 12.2f);
+            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 24000f, sunTemp: 4300f,
+                fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: 0.08f, contrast: 16f, saturation: -6f,
+                rainDefaultPreset: 0, evMin: 4.8f, evMax: 11.4f,
+                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.2f);
             PlaceMapDecals(pMin, pMax, 130);
             AddMatchSystems(38f);
             MarkStatic(env);
@@ -565,10 +566,10 @@ namespace LR2.EditorTools
             // Crisp balanced 6200K daylight + shadow-side sky bounce fills (keeps shaded cover clear against dark concrete)
             foreach (var bp in new[] { new Vector3(-12f, 3.8f, 0f), new Vector3(12f, 3.8f, 0f), new Vector3(0f, 4.0f, 12f), new Vector3(0f, 4.0f, -12f) })
                 AddLight(_lighting, $"ShadowBounce_{(int)bp.x}_{(int)bp.z}", bp, Quaternion.identity, LightType.Point, 5800f, 3200f, 22f, 0f, false);
-            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 16500f, sunTemp: 6200f,
-                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: -1.05f, contrast: 12f, saturation: -2f,
-                rainDefaultPreset: -1, evMin: 7.0f, evMax: 12.8f,
-                hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_02.HDR", skyExposure: 12.2f);
+            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 28000f, sunTemp: 6200f,
+                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: 0.15f, contrast: 12f, saturation: -2f,
+                rainDefaultPreset: -1, evMin: 5.2f, evMax: 11.4f,
+                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.0f);
             AddMatchSystems(30f);
             MarkStatic(env);
 

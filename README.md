@@ -4,7 +4,11 @@ Tactical first-person shooter built in **Unity 6 (`6000.5.0f1`) HDRP** ([github.
 
 LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation with multi-layered HDRP lighting, utility-driven AI bots and seeker drones, custom per-mode match rules, persistent camera/audio settings, and first-person killcam replays across four combat maps.
 
-![LeadRush 2 Main Menu](Docs/Media/menu_main.png)
+![LeadRush 2: masked enemy operator](Docs/Media/enemy_skullmask_ads.png)
+
+> **Built by AI agents.** One developer directs; Claude Code, an Antigravity agent and GitHub Copilot write the code, test the game
+> and review each other through a shared board. The full story, with every prompt, the agents' messages and a quality chart:
+> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)**.
 
 ---
 
@@ -18,9 +22,9 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 |---|---|
 | ![Foundry First-Person](Docs/Media/gameplay_foundry.png) | ![Custom Mode Rules UI](Docs/Media/mode_rules.png) |
 
-| Enemy Encounter (Skull Mask & Full-Body Retarget) | Settings Steppers (No Dropdowns) |
+| Main Menu | Settings Steppers (No Dropdowns) |
 |---|---|
-| ![Enemy Bot Close-Up](Docs/Media/enemy_skullmask_ads.png) | ![Settings Panel Steppers](Docs/Media/settings_steppers.png) |
+| ![LeadRush 2 Main Menu](Docs/Media/menu_main.png) | ![Settings Panel Steppers](Docs/Media/settings_steppers.png) |
 
 ---
 
@@ -102,6 +106,7 @@ Assets/LR2/
 │   └── World/      # KillcamDirector, WeatherSystem, LightFlicker, FoliageSway, PlaytestRobot
 └── Scenes/         # LR2_MainMenu + Saltworks, Deadsector, Foundry, TestRange + baked NavMeshes
 Docs/
-├── Media/          # README screenshots
+├── AI_Collaboration/  # How the AI agents build the game: story, prompts, protocol, research log
+├── Media/             # README screenshots
 └── LR2_Bot_Explainer.md
 ```

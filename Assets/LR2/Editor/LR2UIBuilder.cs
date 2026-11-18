@@ -353,26 +353,29 @@ namespace LR2.EditorTools
 
             Txt("Title", t, "SETTINGS", 58f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(900f, 72f), true);
             Img("TitleRule", t, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -104f), new Vector2(220f, 2f));
-            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -404f), new Vector2(700f, 588f), accent);
+            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -432f), new Vector2(700f, 646f), accent);
             CardBacking(t, "RightColCard", new Vector2(0.5f, 1f), new Vector2(392f, -432f), new Vector2(700f, 646f), accent);
 
             var s = group.gameObject.AddComponent<SettingsPanel>();
             const float leftCol = -770f;
             const float rightCol = 70f;
+            const float stepLeft = 51f;
             const float step = 56f;
 
             var lHdr = Txt("HeaderLeft", t, "CONTROLS & CAMERA", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(leftCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)lHdr.transform).pivot = new Vector2(0f, 0.5f);
-            float y = -196f;
-            s.sensitivity = SliderColRow(t, "MOUSE SENSITIVITY", leftCol, y, out s.sensitivityValue); y -= step;
-            s.adsSensitivity = SliderColRow(t, "ADS SENSITIVITY", leftCol, y, out s.adsSensitivityValue); y -= step;
-            s.invertY = ToggleColRow(t, "INVERT Y", leftCol, y); y -= step;
-            s.fieldOfView = SliderColRow(t, "FOV (HORIZONTAL)", leftCol, y, out s.fovValue); y -= step;
-            s.bodycamLook = ToggleColRow(t, "BODYCAM LENS LOOK", leftCol, y); y -= step;
-            s.bodycamMotion = SliderColRow(t, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= step;
-            s.motionBlur = ToggleColRow(t, "MOTION BLUR", leftCol, y); y -= step;
-            s.filmGrain = ToggleColRow(t, "FILM GRAIN", leftCol, y); y -= step;
-            s.rayTracing = ToggleColRow(t, "RAY TRACING (DXR)", leftCol, y);
+            float y = -194f;
+            s.sensitivity = SliderColRow(t, "MOUSE SENSITIVITY", leftCol, y, out s.sensitivityValue); y -= stepLeft;
+            s.adsSensitivity = SliderColRow(t, "ADS SENSITIVITY", leftCol, y, out s.adsSensitivityValue); y -= stepLeft;
+            s.invertY = ToggleColRow(t, "INVERT Y", leftCol, y); y -= stepLeft;
+            s.fieldOfView = SliderColRow(t, "FOV (HORIZONTAL)", leftCol, y, out s.fovValue); y -= stepLeft;
+            s.cameraShake = SliderColRow(t, "CAMERA SHAKE", leftCol, y, out s.cameraShakeValue); y -= stepLeft;
+            s.bodycamLook = ToggleColRow(t, "BODYCAM LENS LOOK", leftCol, y); y -= stepLeft;
+            s.bodycamMotion = SliderColRow(t, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= stepLeft;
+            s.motionBlur = ToggleColRow(t, "MOTION BLUR", leftCol, y); y -= stepLeft;
+            s.filmGrain = ToggleColRow(t, "FILM GRAIN", leftCol, y); y -= stepLeft;
+            s.rayTracing = ToggleColRow(t, "RAY TRACING (DXR)", leftCol, y); y -= stepLeft;
+            s.laserSight = ToggleColRow(t, "LASER SIGHT [L]", leftCol, y);
 
             var rHdr = Txt("HeaderRight", t, "AUDIO, DISPLAY & BOTS", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)rHdr.transform).pivot = new Vector2(0f, 0.5f);

@@ -16,6 +16,7 @@ namespace LR2.UI
 
         [Header("View")]
         public Slider fieldOfView;
+        public Slider cameraShake;
         public Toggle bodycamLook;
         public Slider bodycamMotion;
         public Toggle motionBlur;
@@ -40,6 +41,7 @@ namespace LR2.UI
         [Header("Gameplay")]
         public Button botDifficultyPrev, botDifficultyNext;
         public TMP_Text botDifficultyValue;
+        public Toggle laserSight;
 
         [Header("Actions (optional)")]
         public Button resetDefaultsButton;
@@ -48,6 +50,7 @@ namespace LR2.UI
         public TMP_Text sensitivityValue;
         public TMP_Text adsSensitivityValue;
         public TMP_Text fovValue;
+        public TMP_Text cameraShakeValue;
         public TMP_Text bodycamMotionValue;
         public TMP_Text masterVolumeValue;
         public TMP_Text sfxVolumeValue;
@@ -68,6 +71,7 @@ namespace LR2.UI
             Set(sensitivity, 0.1f, 5f, LR2Settings.MouseSensitivity);
             Set(adsSensitivity, 0.3f, 1.5f, LR2Settings.AdsSensitivityMultiplier);
             Set(fieldOfView, 65f, 120f, LR2Settings.FieldOfView, true);
+            Set(cameraShake, 0f, 1f, LR2Settings.CameraShake);
             Set(bodycamMotion, 0f, 1.5f, LR2Settings.BodycamMotion);
             Set(masterVolume, 0f, 1f, LR2Settings.MasterVolume);
             Set(sfxVolume, 0f, 1f, LR2Settings.SfxVolume);
@@ -80,6 +84,7 @@ namespace LR2.UI
             if (hitmarkerSound != null) hitmarkerSound.isOn = LR2Settings.HitmarkerSound;
             if (vsync != null) vsync.isOn = LR2Settings.VSync;
             if (showFps != null) showFps.isOn = LR2Settings.ShowFps;
+            if (laserSight != null) laserSight.isOn = LR2Settings.LaserEnabled;
             if (rayTracing != null)
             {
                 bool supported = SystemInfo.supportsRayTracing;
@@ -95,6 +100,7 @@ namespace LR2.UI
             Hook(sensitivity, v => LR2Settings.MouseSensitivity = v);
             Hook(adsSensitivity, v => LR2Settings.AdsSensitivityMultiplier = v);
             Hook(fieldOfView, v => LR2Settings.FieldOfView = v);
+            Hook(cameraShake, v => LR2Settings.CameraShake = v);
             Hook(bodycamMotion, v => LR2Settings.BodycamMotion = v);
             Hook(masterVolume, v => { LR2Settings.MasterVolume = v; AudioListener.volume = v; });
             Hook(sfxVolume, v => LR2Settings.SfxVolume = v);
@@ -107,6 +113,7 @@ namespace LR2.UI
             Hook(hitmarkerSound, v => LR2Settings.HitmarkerSound = v);
             Hook(vsync, v => { LR2Settings.VSync = v; LR2Settings.Apply(); });
             Hook(showFps, v => LR2Settings.ShowFps = v);
+            Hook(laserSight, v => LR2Settings.LaserEnabled = v);
             Hook(rayTracing, v => { LR2Settings.RayTracing = v && SystemInfo.supportsRayTracing; LR2Settings.Apply(); });
             HookStep(qualityPrev, qualityNext, () => Mathf.Max(0, LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel()),
                 () => QualitySettings.names.Length, i => { LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
@@ -164,6 +171,7 @@ namespace LR2.UI
             if (sensitivityValue != null) sensitivityValue.text = LR2Settings.MouseSensitivity.ToString("0.00");
             if (adsSensitivityValue != null) adsSensitivityValue.text = LR2Settings.AdsSensitivityMultiplier.ToString("0.00x");
             if (fovValue != null) fovValue.text = Mathf.RoundToInt(LR2Settings.FieldOfView).ToString();
+            if (cameraShakeValue != null) cameraShakeValue.text = Mathf.RoundToInt(LR2Settings.CameraShake * 100f) + "%";
             if (bodycamMotionValue != null) bodycamMotionValue.text = Mathf.RoundToInt(LR2Settings.BodycamMotion * 100f) + "%";
             if (masterVolumeValue != null) masterVolumeValue.text = Mathf.RoundToInt(LR2Settings.MasterVolume * 100f) + "%";
             if (sfxVolumeValue != null) sfxVolumeValue.text = Mathf.RoundToInt(LR2Settings.SfxVolume * 100f) + "%";

@@ -219,6 +219,9 @@ namespace LR2.Characters
             _soldier != null && _soldier.IsLocalPlayer && _soldier.ViewCamera != null && _soldier.ViewCamera.isActiveAndEnabled;
 
         /// <summary>Forces an immediate pose synchronization (used during startup preload so frame 0 renders cleanly).</summary>
+        /// <summary>Reload bridge of this soldier (QA reads its angles).</summary>
+        public ReloadMotionBridge Bridge => _bridge;
+
         public void SyncPoseNow()
         {
             if (_driverHandler == null || !enabled) return;

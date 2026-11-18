@@ -34,7 +34,7 @@ GameEvents (Noise, NearMiss, Health.Damaged, TeamSighting)
 `BotPerception` simulates human-like situational awareness with staggered updates (`VisionInterval = 0.1 s`, randomized start offset per bot):
 
 - **Vision cone & partial stealth**:
-  - Checks hostile `Combatant`s within `BotDifficulty.visionRange` (`75 m` across current presets) and `fieldOfView` (`110°` half-angle `55°`, widened to `100°` half-angle when closer than `6 m`).
+  - Checks hostile `Combatant`s within the active `BotDifficulty.visionRange` (the runtime fallback is `70 m`) and `fieldOfView` (the runtime fallback is `110°` total, halved for the cone and widened to `100°` total at distances below `6 m`).
   - Line-of-sight tests both `HeadPosition` and `ChestPosition` against `LR2Layers.VisionMask`.
   - Visibility builds a continuous `detection` meter (`0..1.25`, spotted at `>= 1.0`): faster at closer range (`0.9 + 9 / dist`), boosted for sprinting/moving targets (`1.35x`), recent loud shots within `1 s` (`2.2x`), tight center-view angles `< 12°` (`1.4x`), and penalized for crouched targets (`0.7x`). When sight is lost, detection decays at `0.5/s` and threats expire after `MemorySeconds = 12 s`.
 - **Hearing (`GameEvents.Noise`)**:
@@ -71,7 +71,7 @@ Evaluated every `~0.25 s` (`thinkInterval` jittered `0.85x..1.15x`), `TacticalBo
   - If off-mesh, samples within `6 m` to step/warp back onto the NavMesh.
   - `UpdateStuck` tracks horizontal speed `< 0.4 m/s` while movement input is active: triggers a jump/mantle (`input.jump = true`) at `1.1–1.2 s` and clears/repaths at `2.4 s`.
 - **Aim Spring & Human Error**:
-  - Uses a critically/under-damped second-order spring (`aimSpeed`, `zeta = 0.82` in combat for realistic micro-overshoot) driven from `Soldier.Yaw` / `Soldier.Pitch`, so weapon recoil and flinch visibly affect bot aim and must be tracked back onto the target.
+  - Uses a critically/under-damped second-order spring (`aimSpeed`, `zeta = 0.80` while engaging and `1.0` otherwise) driven from `Soldier.Yaw` / `Soldier.Pitch`, so weapon recoil and flinch visibly affect bot aim and must be tracked back onto the target.
   - Adds Perlin aim wander shrinking over time (`initialAimError -> settledAimError` at `errorDecay/s`, inflated by target lateral speed, own movement speed `> 2 m/s`, and `recentlyDamaged`) plus a finite target-acquisition reaction delay (`reactionTime`).
 - **Weapon Handling & Movement Stance**:
   - **Fire discipline**: Full auto under `13 m` once aim error `< fireTolerance` (scaled with target angular width); controlled bursts (`burstSize`, `burstPause`) beyond `13 m`.
@@ -81,16 +81,27 @@ Evaluated every `~0.25 s` (`thinkInterval` jittered `0.85x..1.15x`), `TacticalBo
 
 ---
 
-## 5. Difficulty Presets (`Assets/LR2/Data/AI/BotDifficulty_*.asset`)
+## 5. Difficulty Presets (`Assets/LR2/Runtime/AI/BotDifficulty.cs`)
 
-All 4 presets currently share `fieldOfView: 110°`, `visionRange: 75 m`, `detectionSpeed: 1`, `hearingMultiplier: 1`, `retreatHealth: 0.38`, `useCoverChance: 0.6`, `strafeInterval: 0.45..1.2 s`, and `burstPause: 0.18..0.4 s`. They differentiate feel and lethality as follows:
+Recruit through Veteran are authored `BotDifficulty` assets. Their exact values are
+data, not constants in the runtime, so the runtime does not claim that all presets share
+one FOV, range, reaction interval, or burst table. The active profile reads reaction
+time, perception, aim error, fire tolerance, aggression, cover, movement, and burst
+settings from the selected asset.
 
-| Preset | Reaction (s) | Aim Speed | Init / Settled Error (°) | Error Decay (°/s) | Headshot % | Fire Tol (°) | Aggression | Strafe % | Slide % | Flank % | Burst Size |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| **Recruit** | 0.55–0.80 | 4.2 | 7.0 / 1.60 | 1.3 | 5% | 4.5 | 0.35 | 12% | 0% | 8% | 2–4 |
-| **Regular** | 0.34–0.52 | 6.0 | 4.8 / 0.90 | 1.9 | 13% | 3.5 | 0.55 | 40% | 6% | 22% | 3–6 |
-| **Hardened** | 0.24–0.38 | 7.8 | 3.4 / 0.55 | 2.6 | 22% | 3.0 | 0.70 | 62% | 15% | 35% | 4–7 |
-| **Veteran** | 0.17–0.27 | 10.0 | 2.4 / 0.32 | 3.4 | 32% | 2.4 | 0.82 | 85% | 30% | 50% | 5–9 |
+Adaptive mode is the exception: `AdaptiveDifficultyTracker.FillAdaptiveProfile` creates
+a bounded runtime profile. Its current code maps effective skill to:
+
+- reaction time `0.52..0.16 s` minimum and `0.76..0.26 s` maximum;
+- FOV `95..132°`, aim speed `4.4..10.2`, initial error `6.2..2.2°`, settled error
+  `1.35..0.28°`;
+- detection speed `0.80..1.38`, hearing multiplier `0.85..1.35`, and headshot chance
+  clamped to `0.05..0.34`;
+- burst size `2..4` minimum and `5..8` maximum, with pause ranges interpolated from
+  `0.28..0.12 s` and `0.55..0.24 s`.
+
+The adaptive profile is refreshed every `0.75 s` and leaves authored preset assets
+unchanged.
 
 ---
 

@@ -27,7 +27,7 @@ namespace LR2.Characters
         [SerializeField] private bool autoSprint;
 
         private InputAction _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR,
-            _slot1, _slot2, _next, _scroll, _interact;
+            _slot1, _slot2, _next, _scroll, _interact, _laser;
         private bool _aimToggled, _sprintToggled;
 
         private void OnEnable()
@@ -61,6 +61,7 @@ namespace LR2.Characters
             _next = new InputAction("NextWeapon", InputActionType.Button, "<Gamepad>/buttonNorth");
             _scroll = new InputAction("Scroll", InputActionType.Value, "<Mouse>/scroll/y");
             _interact = new InputAction("Interact", InputActionType.Button, "<Keyboard>/f");
+            _laser = new InputAction("Laser", InputActionType.Button, "<Keyboard>/l");
 
             foreach (var a in All()) a.Enable();
         }
@@ -78,7 +79,7 @@ namespace LR2.Characters
         private InputAction[] All() => new[]
         {
             _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR, _slot1, _slot2, _next,
-            _scroll, _interact
+            _scroll, _interact, _laser
         };
 
         public void GetInput(SoldierController soldier, ref SoldierInput input)
@@ -124,6 +125,7 @@ namespace LR2.Characters
             input.prone |= _prone.WasPressedThisFrame();
             input.reload |= _reload.WasPressedThisFrame();
             input.interact |= _interact.WasPressedThisFrame();
+            if (_laser.WasPressedThisFrame()) LR2Settings.LaserEnabled = !LR2Settings.LaserEnabled;
             input.lean = (_leanR.IsPressed() ? 1f : 0f) - (_leanL.IsPressed() ? 1f : 0f);
 
             if (_slot1.WasPressedThisFrame()) input.weaponSlot = 0;

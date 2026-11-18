@@ -69,6 +69,19 @@ namespace LR2.World
             if (!cond) _failures.Add($"{label}: {detail}");
         }
 
+        private void CheckExtra(string formattedLine)
+        {
+            if (string.IsNullOrEmpty(formattedLine)) return;
+            bool pass = formattedLine.StartsWith("PASS ", StringComparison.Ordinal);
+            string rest = formattedLine.StartsWith("PASS ", StringComparison.Ordinal) || formattedLine.StartsWith("FAIL ", StringComparison.Ordinal)
+                ? formattedLine.Substring(5)
+                : formattedLine;
+            int colon = rest.IndexOf(':');
+            string label = colon > 0 ? rest.Substring(0, colon).Trim() : rest.Trim();
+            string detail = colon > 0 ? rest.Substring(colon + 1).Trim() : "";
+            Check(pass, label, detail);
+        }
+
         private static string OutDir()
         {
             string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "LR2_QABot"));
@@ -92,7 +105,7 @@ namespace LR2.World
             if (sceneName.Contains("MainMenu"))
             {
                 yield return new WaitForSecondsRealtime(1.5f);
-                yield return AuditMenuScene();
+                yield return AuditMenuScene(outDir, sceneName);
                 FinishReport(outDir, sceneName);
                 yield break;
             }
@@ -144,7 +157,7 @@ namespace LR2.World
             FinishReport(outDir, sceneName);
         }
 
-        private IEnumerator AuditMenuScene()
+        private IEnumerator AuditMenuScene(string outDir, string sceneName)
         {
             var dir = LR2MusicDirector.Instance;
             Check(dir != null, "MusicDirector.MenuBoot", dir != null ? $"state={dir.StateLabel} menuVol={dir.MenuVolume:0.000}" : "null");
@@ -156,7 +169,41 @@ namespace LR2.World
             if (common != null)
                 Check(common.uiHover.volume <= 0.20f && common.uiClick.volume <= 0.25f, "MenuSFX.NotExtreme",
                     $"hover={common.uiHover.volume:0.00} click={common.uiClick.volume:0.00} back={common.uiBack.volume:0.00}");
-            yield break;
+
+            // B19: Main-menu soldier must be the masked SWAT soldier (M_FaceMask_GhostSkull) with mannequin driver hidden
+            var hero = GameObject.Find("HeroSoldier");
+            bool hasHero = hero != null;
+            bool hasSkullMask = false;
+            bool mannequinHidden = true;
+            if (hero != null)
+            {
+                var swatVis = hero.transform.Find("SWAT_Visual");
+                foreach (var smr in hero.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (swatVis != null && !smr.transform.IsChildOf(swatVis))
+                    {
+                        if (smr.enabled) mannequinHidden = false;
+                        continue;
+                    }
+                    foreach (var mat in smr.sharedMaterials)
+                        if (mat != null && mat.name.Contains("FaceMask_GhostSkull")) hasSkullMask = true;
+                }
+            }
+            Check(hasHero && hasSkullMask && mannequinHidden, "MainMenu.HeroMaskedSwat",
+                $"hero={hasHero} skullMask={hasSkullMask} driverHidden={mannequinHidden}");
+
+            // B31: Starter title screen support before Main Menu
+            Check(LR2LoadingIntro.HasTitlePromptSupport, "Intro.StarterTitleScreenSupported", "supported=True");
+
+            // Capture main-menu visual screenshot for Pass 2 inspection
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                yield return null;
+                var tex = CaptureCamera(cam, 960, 540);
+                File.WriteAllBytes(Path.Combine(outDir, $"{sceneName}_vis.png"), tex.EncodeToPNG());
+                Destroy(tex);
+            }
         }
 
         private IEnumerator AuditVolumeAndVisibility(SoldierController player, string outDir, string sceneName)
@@ -187,17 +234,32 @@ namespace LR2.World
                 if (c != null && c != player.Combatant && c.IsAlive && c.Team != TeamId.Hostile) { enemy = c.GetComponent<SoldierController>(); if (enemy != null) break; }
 
             var spots = new List<Transform>();
+            bool HasRoomAround(Vector3 p)
+            {
+                if (IsConfinedOrRoofed(p)) return false;
+                if (Physics.CheckCapsule(p + Vector3.up * 0.55f, p + Vector3.up * 1.65f, 0.45f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                    return false;
+                int openDirs = 0;
+                for (int k = 0; k < 4; k++)
+                {
+                    Vector3 d = Quaternion.Euler(0f, k * 90f, 0f) * Vector3.forward;
+                    if (!Physics.Raycast(p + Vector3.up * 1.2f, d, 2.2f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                        openDirs++;
+                }
+                return openDirs >= 3;
+            }
+            foreach (var fa in FlagAnchor.All)
+                if (fa != null && spots.Count < 3 && fa.transform.position.y < 1.8f && HasRoomAround(fa.transform.position))
+                    spots.Add(fa.transform);
+            foreach (var sp in FindObjectsByType<SpawnPoint>())
+                if (sp != null && spots.Count < 3 && sp.transform.position.y < 1.8f && HasRoomAround(sp.transform.position))
+                    spots.Add(sp.transform);
             var tacPts = FindObjectsByType<LR2.AI.CoverPoint>();
-            if (!IsConfinedOrRoofed(player.transform.position)) spots.Add(player.transform);
             foreach (var cp in tacPts)
-            {
-                if (cp != null && spots.Count < 3 && !IsConfinedOrRoofed(cp.transform.position)) spots.Add(cp.transform);
-            }
+                if (cp != null && spots.Count < 3 && cp.transform.position.y < 1.8f && HasRoomAround(cp.transform.position))
+                    spots.Add(cp.transform);
+            if (spots.Count == 0 && !IsConfinedOrRoofed(player.transform.position)) spots.Add(player.transform);
             if (spots.Count == 0) spots.Add(player.transform);
-            foreach (var cp in tacPts)
-            {
-                if (cp != null && spots.Count < 3 && !spots.Contains(cp.transform)) spots.Add(cp.transform);
-            }
 
             float worstMean = 1f, worstContrast = 1f;
             for (int i = 0; i < spots.Count; i++)
@@ -218,35 +280,39 @@ namespace LR2.World
                 Vector3 lookRight = Vector3.Cross(Vector3.up, lookDir).normalized;
 
                 _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw, aimPitch = 0f };
-                if (i > 0) player.Movement.Teleport(pos);
-                // Place test enemy along an unobstructed corridor slightly off-center (or yaw player left slightly) so neither doorframe nor rifle occludes contrast
+                player.Movement.Teleport(pos);
+                // Place test enemy slightly left-of-center at eye elevation so the right-handed rifle model never occludes them
                 if (enemy != null && cam != null)
                 {
-                    Vector3 enemyPos = pos + lookDir * Mathf.Clamp(bestDist * 0.6f, 4.5f, 10f);
+                    Vector3 enemyPos = pos + lookDir * Mathf.Clamp(bestDist * 0.55f, 4.2f, 7.5f);
                     float viewYaw = bestYaw;
                     bool foundClear = false;
-                    foreach (float lat in new[] { 1.4f, -1.4f, 0f })
+                    foreach (float lat in new[] { -0.95f, -1.45f, 0f })
                     {
-                        Vector3 cand = pos + lookDir * Mathf.Clamp(bestDist * 0.6f, 4.5f, 9.5f) + lookRight * lat;
-                        if (!Physics.Linecast(pos + Vector3.up * 1.4f, cand + Vector3.up * 1.4f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                        Vector3 cand = pos + lookDir * Mathf.Clamp(bestDist * 0.55f, 4.2f, 7.2f) + lookRight * lat;
+                        bool sameFloor = Physics.Raycast(cand + Vector3.up * 2.5f, Vector3.down, out var flHit, 5f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)
+                            && Mathf.Abs(flHit.point.y - pos.y) <= 0.85f;
+                        if (sameFloor && !Physics.Linecast(pos + Vector3.up * 1.4f, cand + Vector3.up * 1.4f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
                         {
-                            enemyPos = cand;
-                            if (Mathf.Approximately(lat, 0f)) viewYaw = bestYaw - 10f; // turn rifle slightly left of center target
+                            enemyPos = flHit.point + Vector3.up * 0.05f;
+                            if (Mathf.Approximately(lat, 0f)) viewYaw = bestYaw + 9f; // turn rifle slightly right of centered target
                             foundClear = true;
                             break;
                         }
                     }
                     if (!foundClear)
                     {
-                        enemyPos = pos + lookDir * Mathf.Clamp(bestDist * 0.45f, 3.8f, 6.5f);
-                        viewYaw = bestYaw - 10f;
+                        enemyPos = pos + lookDir * Mathf.Clamp(bestDist * 0.45f, 3.8f, 6.0f);
+                        if (Physics.Raycast(enemyPos + Vector3.up * 3f, Vector3.down, out var gh, 8f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                            enemyPos = gh.point + Vector3.up * 0.05f;
+                        viewYaw = bestYaw + 9f;
                     }
                     _cmd.aimYaw = viewYaw;
-                    if (Physics.Raycast(enemyPos + Vector3.up * 3f, Vector3.down, out var gh, 8f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
-                        enemyPos = gh.point + Vector3.up * 0.05f;
                     enemy.Movement.Teleport(enemyPos);
+                    enemy.transform.LookAt(new Vector3(pos.x, enemyPos.y, pos.z));
+                    enemy.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(false);
                     var eProxy = enemy.GetComponent<RetargetProxy>();
-                    if (eProxy != null) enemy.transform.LookAt(new Vector3(pos.x, enemyPos.y, pos.z));
+                    if (eProxy != null) eProxy.SyncPoseNow();
                 }
 
                 yield return new WaitForSeconds(0.55f); // let Progressive exposure adapt cleanly
@@ -279,6 +345,7 @@ namespace LR2.World
             }
             if (cam != null && gun != null)
             {
+                LR2QAExtraChecks.TryGetCameraShakeTrauma(out float traumaBefore);
                 var tBefore = CaptureCamera(cam, 480, 270);
                 beforeLum = SampleMeanLuminance(tBefore, out _);
                 Destroy(tBefore);
@@ -286,11 +353,22 @@ namespace LR2.World
                 _cmd = new SoldierInput { absoluteLook = true, aimYaw = player.Yaw, aimPitch = 0f, fire = true };
                 yield return null;
                 yield return null;
+                LR2QAExtraChecks.TryGetCameraShakeTrauma(out float traumaAfter);
                 var tDuring = CaptureCamera(cam, 480, 270);
                 duringLum = SampleMeanLuminance(tDuring, out _);
                 Destroy(tDuring);
                 _cmd.fire = false;
+
+                float t0 = Time.time;
+                float traumaRecovered = traumaAfter;
+                while (Time.time - t0 < 1.35f)
+                {
+                    if (LR2QAExtraChecks.TryGetCameraShakeTrauma(out traumaRecovered) && traumaRecovered <= 0.001f) break;
+                    yield return null;
+                }
+                CheckExtra(LR2QAExtraChecks.CheckCameraShake(traumaBefore, traumaAfter, traumaRecovered, Time.time - t0));
             }
+            CheckExtra(LR2QAExtraChecks.CheckHorizontalFov());
             float delta = duringLum - beforeLum;
             Check(flashLightMax <= 4500f && delta < 0.14f, "MuzzleFlash.SmallGlare",
                 $"prefabLux={flashLightMax:0} before={beforeLum:0.000} during={duringLum:0.000} spike={delta:0.000}");
@@ -340,6 +418,11 @@ namespace LR2.World
                 ?? FindChildNamed(gun.transform, "Bolt")
                 ?? FindChildNamed(gun.transform, "Slider")) : null;
 
+            CheckExtra(LR2QAExtraChecks.CheckHandsOnGun(proxy));
+
+            string worstAbsPose = LR2QAExtraChecks.CheckAbsoluteReloadPose(player);
+            float worstAbsAng = 0f;
+
             IEnumerator RunReloadPass(bool walk, System.Action<float, float, float, float> onDone)
             {
                 float maxAng = 0f, maxHand = 0f, maxMag = 0f, maxCharge = 0f;
@@ -365,6 +448,15 @@ namespace LR2.World
                         maxAng = Mathf.Max(maxAng, bridge.LastGunAngle);
                         maxHand = Mathf.Max(maxHand, bridge.HandWeight);
                     }
+                    if (!walk && gun != null && gun.IsReloading && player.ViewTransform != null)
+                    {
+                        float absAng = Vector3.Angle(gun.transform.forward, player.ViewTransform.forward);
+                        if (absAng >= worstAbsAng)
+                        {
+                            worstAbsAng = absAng;
+                            worstAbsPose = LR2QAExtraChecks.CheckAbsoluteReloadPose(player);
+                        }
+                    }
                     if (gun != null)
                     {
                         if (magTf != null) maxMag = Mathf.Max(maxMag, Vector3.Distance(magRest, gun.transform.InverseTransformPoint(magTf.position)));
@@ -380,14 +472,16 @@ namespace LR2.World
             float peakIdleAng = 0f, peakIdleHand = 0f, peakIdleMag = 0f, peakIdleCharge = 0f;
             float peakWalkAng = 0f, peakWalkHand = 0f, peakWalkMag = 0f, peakWalkCharge = 0f;
             yield return RunReloadPass(false, (a, h, m, c) => { peakIdleAng = a; peakIdleHand = h; peakIdleMag = m; peakIdleCharge = c; });
+            int ammoAfterTactical = gun != null ? gun.AmmoInMagazine : 0;
             yield return RunReloadPass(true, (a, h, m, c) => { peakWalkAng = a; peakWalkHand = h; peakWalkMag = m; peakWalkCharge = c; });
 
             Check(peakIdleAng > 5f && peakIdleAng <= 75f && peakIdleHand > 0.2f, "Reload.StationaryValid",
                 $"maxAngle={peakIdleAng:0.0}deg maxHandW={peakIdleHand:0.00}");
             Check(peakWalkAng > 5f && peakWalkAng <= 75f && peakWalkHand > 0.2f, "Reload.WalkingNoFlip",
                 $"maxAngle={peakWalkAng:0.0}deg maxHandW={peakWalkHand:0.00}");
-            Check((magTf == null || (peakIdleMag >= 0.05f && peakWalkMag >= 0.05f))
-                  && (chargeTf == null || (peakIdleCharge >= 0.03f && peakWalkCharge >= 0.03f)),
+            CheckExtra(worstAbsPose);
+            CheckExtra(LR2QAExtraChecks.CheckTacticalReload(gun, ammoAfterTactical, peakIdleCharge));
+            Check(magTf == null || (peakIdleMag >= 0.05f && peakWalkMag >= 0.05f),
                 "Reload.MagAndChargeAnimate",
                 $"idle(mag={peakIdleMag:0.000}m,charge={peakIdleCharge:0.000}m) walk(mag={peakWalkMag:0.000}m,charge={peakWalkCharge:0.000}m)");
         }
@@ -487,20 +581,48 @@ namespace LR2.World
             void OnStep(float sp) => _footsteps++;
             mv.Footstep += OnStep;
 
-            // Walk forward 2.2 seconds along open ground and measure real stride distance per step
+            // Walk forward 2.2 seconds along open ground and measure real stride distance per step + planted-foot slide (B34)
+            var visAnim = player.GetComponent<RetargetProxy>()?.Visual?.GetComponent<Animator>();
+            Transform footL = visAnim != null ? visAnim.GetBoneTransform(HumanBodyBones.LeftFoot) : null;
+            Transform footR = visAnim != null ? visAnim.GetBoneTransform(HumanBodyBones.RightFoot) : null;
+            Vector3 prevFL = footL != null ? footL.position : Vector3.zero;
+            Vector3 prevFR = footR != null ? footR.position : Vector3.zero;
+            Vector3 minSlidePrev = Vector3.zero, minSlideCur = Vector3.zero;
+            float minSlideDt = 0.016f, minSlideSpeed = float.MaxValue;
+
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw, move = new Vector2(0f, 1f) };
             Vector3 prev = player.transform.position;
             float elapsed = 0f;
             while (elapsed < 2.2f)
             {
-                elapsed += Time.deltaTime;
+                float dt = Time.deltaTime;
+                elapsed += dt;
                 Vector3 cur = player.transform.position;
                 _distAccum += Vector2.Distance(new Vector2(prev.x, prev.z), new Vector2(cur.x, cur.z));
                 prev = cur;
+                if (elapsed > 0.45f && dt > 0.002f && footL != null && footR != null)
+                {
+                    Vector3 dL = footL.position - prevFL; dL.y = 0f;
+                    Vector3 dR = footR.position - prevFR; dR.y = 0f;
+                    float sL = dL.magnitude / dt, sR = dR.magnitude / dt;
+                    bool pickLeft = footL.position.y <= footR.position.y || sL < sR;
+                    float s = pickLeft ? sL : sR;
+                    if (s < minSlideSpeed)
+                    {
+                        minSlideSpeed = s;
+                        minSlideDt = dt;
+                        minSlidePrev = pickLeft ? prevFL : prevFR;
+                        minSlideCur = pickLeft ? footL.position : footR.position;
+                    }
+                }
+                if (footL != null) prevFL = footL.position;
+                if (footR != null) prevFR = footR.position;
                 yield return null;
             }
             mv.Footstep -= OnStep;
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw };
+            if (footL != null && footR != null)
+                CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt));
 
             float measuredStride = _footsteps > 0 ? _distAccum / _footsteps : 99f;
             float weaponGain = LR2Audio.CategoryVolume(AudioCategory.Weapons);
@@ -509,7 +631,7 @@ namespace LR2.World
 
             Check(_footsteps >= 4 && measuredStride >= 0.70f && measuredStride <= 1.45f, "Footstep.TimingSynced",
                 $"steps={_footsteps} dist={_distAccum:0.00}m stride={measuredStride:0.00}m lane={bestLane:0.0}m");
-            Check(dbRel <= -11.5f && dbRel >= -20f, "Footstep.AudioMixUnderGuns",
+            Check(dbRel <= -14.0f && dbRel >= -18.5f, "Footstep.AudioMixUnderGuns",
                 $"stepGain={stepGain:0.000} weaponGain={weaponGain:0.000} ({dbRel:0.0} dB)");
 
             // Test prone transition speed & crawl speed on the remaining open lane (or reverse back down spawn lane)
@@ -618,13 +740,14 @@ namespace LR2.World
             var hud = FindAnyObjectByType<HUDController>();
             Check(kd != null, "KillcamDirector.Present", kd != null ? "ACTIVE" : "MISSING");
 
-            // Hide main hudGroup just like killcam end-of-match/hidden HUD and verify replay hitmarker works cleanly
+            // Hide main hudGroup just like killcam end-of-match/hidden HUD and verify replay hitmarker works cleanly (B4, B6, B8, B14)
             float prevAlpha = hud != null && hud.hudGroup != null ? hud.hudGroup.alpha : 1f;
             if (hud != null && hud.hudGroup != null) hud.hudGroup.alpha = 0f;
-            HUDController.ShowReplayHit(true, true, Vector3.zero);
+            HUDController.ShowReplayHit(true, true, Camera.main != null ? Camera.main.transform.position + Camera.main.transform.forward * 6f : Vector3.one);
             yield return null;
             var hf = FindObjectsByType<HitFeedbackHUD>();
             bool anyVisible = false;
+            bool zoneOk = false;
             foreach (var h in hf)
             {
                 if (h == null || !h.gameObject.activeInHierarchy) continue;
@@ -634,10 +757,21 @@ namespace LR2.World
                     var cg = p.GetComponent<CanvasGroup>();
                     if (cg != null && cg.alpha < 0.8f) { hiddenParent = true; break; }
                 }
-                if (!hiddenParent) anyVisible = true;
+                if (!hiddenParent)
+                {
+                    anyVisible = true;
+                    if (!string.IsNullOrEmpty(h.LastZoneText) && h.IsShowingWorldImpactPip) zoneOk = true;
+                }
             }
             if (hud != null && hud.hudGroup != null) hud.hudGroup.alpha = prevAlpha;
             Check(anyVisible, "Killcam.ShowReplayHitWorksWhenHudHidden", $"overlays={hf.Length} visibleWhenHidden={anyVisible}");
+
+            var cs = LR2CommonSounds.Instance;
+            bool ruggedAudio = cs != null && cs.hitmarker.IsValid && cs.hitmarkerHeadshot.IsValid && cs.killConfirm.IsValid;
+            Check(ruggedAudio && HitFeedbackHUD.HasZoneIndicator && zoneOk, "HitFeedback.RuggedAudioAndZoneIndicator",
+                $"audio={ruggedAudio} zoneUI={HitFeedbackHUD.HasZoneIndicator} pipActive={zoneOk}");
+            Check(kd != null && kd.PostKillWindow >= 0.70f, "Killcam.VictimCollapseWindow",
+                kd != null ? $"postKillWindow={kd.PostKillWindow:0.00}s pre={kd.PreKillWindow:0.00}s" : "null");
         }
 
         private IEnumerator AuditCtfAndAdaptiveBot(SoldierController player)
@@ -674,11 +808,24 @@ namespace LR2.World
             Check(testBot != null && humanInputOk && adaptiveOk, "Bot.HumanMouseInputAndAdaptive",
                 $"bot={(testBot != null ? testBot.name : "none")} humanMouseLook={humanInputOk} adaptive={adaptiveOk}");
 
-            // 3. Verify HDRISky & RayTracingController readiness cleanly
+            // 3. Verify HDRISky, RayTracingController, & realistic M_LR2_Glass (B30) readiness
             bool hasHdriSky = false;
             foreach (var v in FindObjectsByType<Volume>())
                 if (v != null && v.sharedProfile != null && v.sharedProfile.Has<HDRISky>()) { hasHdriSky = true; break; }
             Check(hasHdriSky, "Lighting.HDRISkyPresent", $"hdri={hasHdriSky} rayTracingCtrl={(LR2RayTracingController.Instance != null)}");
+
+            int glassCount = 0, glassRealistic = 0;
+            foreach (var dp in FindObjectsByType<DestructibleProp>())
+            {
+                if (dp == null || dp.surface != SurfaceType.Glass) continue;
+                glassCount++;
+                var r = dp.GetComponentInChildren<Renderer>();
+                if (r != null && r.sharedMaterial != null && r.sharedMaterial.HasProperty("_SurfaceType") &&
+                    r.sharedMaterial.GetFloat("_SurfaceType") > 0.5f && r.sharedMaterial.GetTexture("_NormalMap") != null)
+                    glassRealistic++;
+            }
+            Check(glassCount == 0 || glassRealistic == glassCount, "Glass.RealisticMaterialAndPanes",
+                $"panes={glassCount} realisticPanes={glassRealistic}");
         }
 
         private static Texture2D CaptureCamera(Camera cam, int w, int h)

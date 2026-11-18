@@ -29,6 +29,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _DISABLE_SSR_TRANSPARENT
+  - _MATERIAL_FEATURE_CLEAR_COAT
   - _NORMALMAP_TANGENT_SPACE
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -260,7 +261,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.7001078, g: 0.2800431, b: 0.070010744, a: 1}
-    - _Color: {r: 1, g: 0.39999998, b: 0.09999997, a: 1}
+    - _Color: {r: 0.7001078, g: 0.28004307, b: 0.070010714, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}

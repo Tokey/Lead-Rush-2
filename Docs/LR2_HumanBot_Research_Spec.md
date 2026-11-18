@@ -62,7 +62,7 @@ Slow fine tracking carries near-zero tremor; large violent turns induce proporti
 ## 3. Live Adaptive Difficulty Engine (`AdaptiveDifficultyTracker.cs`)
 
 When `LR2Settings.BotDifficulty == 4` (`"ADAPTIVE"`), bots refresh a dynamic runtime `BotDifficulty` profile every `0.75 s` via exponential moving averages over live match events (`ShotFired`, `Hit`, `Killed`, `MatchStateChanged`):
-- Tracks `PlayerAccuracy01` ($\alpha = 0.15$), `PlayerHeadshotRate01`, `PlayerRushTendency01` ($\text{dist} < 15\,\text{m}$, $\alpha = 0.25$), `PlayerCrouchRate01` ($\alpha = 0.25$), and rolling win/loss streak (`Skill01` $\in [0.12, 0.96]$).
+- Tracks `PlayerAccuracy01` as an EMA ($\alpha = 0.15$) of hits/max(`8`, shots), `PlayerHeadshotRate01` as bounded cumulative headshots/hits with a minimum denominator of `4`, `PlayerRushTendency01` ($\text{dist} < 15\,\text{m}$, EMA $\alpha = 0.25$), `PlayerCrouchRate01` (EMA $\alpha = 0.25$), and rolling win/loss streak (`Skill01` $\in [0.12, 0.96]$).
 - Counter-adapts playstyle: aggressive CQB rushers face stronger crossfires/cover anchoring while passive campers face tighter anti-camp flank windows (`4.0–7.2 s` in `TacticalBotBrain`).
 
 *Implemented in:* [AdaptiveDifficultyTracker.cs](file:///h:/Unity%20Projects/GitHub%20Repos/LeadRush%202/Assets/LR2/Runtime/AI/AdaptiveDifficultyTracker.cs).
