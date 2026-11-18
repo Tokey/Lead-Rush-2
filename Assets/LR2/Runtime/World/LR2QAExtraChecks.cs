@@ -182,9 +182,15 @@ namespace LR2.World
             if (source == null)
                 return "FAIL Music.SourcePriority: missing source";
 
-            bool safe = source.priority <= MaxMusicPriority && source.bypassEffects &&
-                        source.bypassListenerEffects && source.bypassReverbZones;
-            return $"{(safe ? "PASS" : "FAIL")} Music.SourcePriority: name={source.name} priority={source.priority} max={MaxMusicPriority} bypass={source.bypassEffects}/{source.bypassListenerEffects}/{source.bypassReverbZones}";
+            return CheckMusicSourceState(source.name, source.priority, source.bypassEffects,
+                source.bypassListenerEffects, source.bypassReverbZones);
+        }
+
+        public static string CheckMusicSourceState(string sourceName, int priority, bool bypassEffects,
+            bool bypassListenerEffects, bool bypassReverbZones)
+        {
+            bool safe = priority <= MaxMusicPriority && bypassEffects && bypassListenerEffects && bypassReverbZones;
+            return $"{(safe ? "PASS" : "FAIL")} Music.SourcePriority: name={sourceName} priority={priority} max={MaxMusicPriority} bypass={bypassEffects}/{bypassListenerEffects}/{bypassReverbZones}";
         }
 
         public static string CheckMusicSources(AudioSource[] sources)
@@ -231,15 +237,18 @@ namespace LR2.World
                 Vector3.forward, LR2Layers.EnvironmentMask);
             string gainBad = CheckMusicGainDuringGunfire(0.30f, 0.20f);
             string gainGood = CheckMusicGainDuringGunfire(0.20f, 0.30f);
+            string musicSourceBad = CheckMusicSourceState("known-bad", 128, false, false, false);
+            string musicSourceGood = CheckMusicSourceState("known-good", 8, true, true, true);
             string slideBad = CheckMotionFootSlide(1.50f);
             string slideGood = CheckMotionFootSlide(0.10f);
 
             return new[]
             {
-                $"{(deathBad.StartsWith("FAIL", StringComparison.Ordinal) && deathGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.DeathAimReset: bad={deathBad.StartsWith("FAIL", StringComparison.Ordinal)} good={deathGood.StartsWith("PASS", StringComparison.Ordinal)}",
-                $"{(weaponBad.StartsWith("FAIL", StringComparison.Ordinal) && weaponGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.CloseWeaponSafety: bad={weaponBad.StartsWith("FAIL", StringComparison.Ordinal)} good={weaponGood.StartsWith("PASS", StringComparison.Ordinal)}",
-                $"{(gainBad.StartsWith("FAIL", StringComparison.Ordinal) && gainGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicGain: bad={gainBad.StartsWith("FAIL", StringComparison.Ordinal)} good={gainGood.StartsWith("PASS", StringComparison.Ordinal)}",
-                $"{(slideBad.StartsWith("FAIL", StringComparison.Ordinal) && slideGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.FootSlide: bad={slideBad.StartsWith("FAIL", StringComparison.Ordinal)} good={slideGood.StartsWith("PASS", StringComparison.Ordinal)}"
+                $"{(deathBad.StartsWith("FAIL", StringComparison.Ordinal) && deathGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.DeathAimReset: badCase=({deathBad}) goodCase=({deathGood})",
+                $"{(weaponBad.StartsWith("FAIL", StringComparison.Ordinal) && weaponGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.CloseWeaponSafety: badCase=({weaponBad}) goodCase=({weaponGood})",
+                $"{(gainBad.StartsWith("FAIL", StringComparison.Ordinal) && gainGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicGain: badCase=({gainBad}) goodCase=({gainGood})",
+                $"{(musicSourceBad.StartsWith("FAIL", StringComparison.Ordinal) && musicSourceGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicSourcePriority: badCase=({musicSourceBad}) goodCase=({musicSourceGood})",
+                $"{(slideBad.StartsWith("FAIL", StringComparison.Ordinal) && slideGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.FootSlide: badCase=({slideBad}) goodCase=({slideGood})"
             };
         }
 

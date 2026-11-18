@@ -45,7 +45,7 @@ namespace LR2.Audio
                 case AudioCategory.Weapons: return LR2Settings.SfxVolume;
                 case AudioCategory.Voice: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.2f);
                 case AudioCategory.Ambience: return LR2Settings.SfxVolume * 0.72f * (1f - DuckFactor * 0.85f);
-                case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.16f * (1f - DuckFactor * 0.55f);
+                case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.16f * (1f - DuckFactor * 0.25f);
                 case AudioCategory.Sfx: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.45f);
                 default: return LR2Settings.SfxVolume;
             }
@@ -128,17 +128,26 @@ namespace LR2.Audio
             bool isTail = forceTailRoute || (category == AudioCategory.Weapons &&
                 clip.name.IndexOf("tail", System.StringComparison.OrdinalIgnoreCase) >= 0);
             float vol = volume;
+            bool tailReserved = false;
+            float tailEndTime = 0f;
             if (isTail && _tailRouter != null)
             {
                 if (!_tailRouter.CanPlay(Time.unscaledTime + delay)) return null;
+                tailReserved = true;
                 bool indoors = tailIndoorsOverride ??
                     (clip.name.IndexOf("interior", System.StringComparison.OrdinalIgnoreCase) >= 0 || IsIndoors(parent != null ? parent.position : position));
                 vol *= _tailRouter.Gain(indoors);
-                ActiveTailEndTimes.Add(Time.unscaledTime + delay + Mathf.Clamp(clip.length, 0.15f, 2.5f));
+                tailEndTime = Time.unscaledTime + delay + Mathf.Clamp(clip.length, 0.15f, 2.5f);
             }
 
             var src = GetVoice(priority);
-            if (src == null) return null;
+            if (src == null)
+            {
+                // B65 / D39: Release reserved tail slot immediately when voice allocation fails under pool saturation.
+                if (tailReserved && _tailRouter != null) _tailRouter.CancelReservation();
+                return null;
+            }
+            if (tailReserved) ActiveTailEndTimes.Add(tailEndTime);
 
             var t = src.transform;
             t.SetParent(parent != null ? parent : _root, false);
@@ -310,6 +319,20 @@ namespace LR2.Audio
             }
             if (victim != null) victim.Stop();
             return victim;
+        }
+
+        /// <summary>Verifies tail reservation rollback under simulated voice-allocation failure (B65 / D39).</summary>
+        public static bool VerifyTailReservationRollback(out int activeAfterReserve, out int activeAfterRollback)
+        {
+            var tempGo = new GameObject("[TailRollbackCheck]");
+            var router = tempGo.AddComponent<WeaponSoundTailRouter>();
+            int before = router.ActiveTailCount;
+            bool reserved = router.CanPlay(Time.unscaledTime + 10f);
+            activeAfterReserve = router.ActiveTailCount;
+            if (reserved) router.CancelReservation();
+            activeAfterRollback = router.ActiveTailCount;
+            Object.DestroyImmediate(tempGo);
+            return reserved && activeAfterReserve == before + 1 && activeAfterRollback == before;
         }
 
         private static float StartTime(AudioSource v) => StartTimes.TryGetValue(v, out float t) ? t : 0f;

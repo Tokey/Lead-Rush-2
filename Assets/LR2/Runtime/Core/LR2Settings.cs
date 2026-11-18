@@ -77,7 +77,7 @@ namespace LR2.Core
             foreach (var key in new[] { "MouseSensitivity", "v2.MouseSensitivity", "AdsSens", "v2.AdsSens", "FOV", "InvertY",
                          "v3.CameraShake", "v3.AntiAliasing", "v3.Upscaler", "v3.ColorBlind",
                          "MasterVol", "SfxVol", "MusicVol", "UiVol", "Quality", "VSync", "FpsLimit", "ShowFps",
-                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "v3.LaserEnabled", "BotDifficulty", "v3.BotTeamMode",
+                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "v3.LaserEnabled", "v4.LaserEnabled", "BotDifficulty", "v3.BotTeamMode",
                          "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion", "v3.BodycamMotion" })
                 PlayerPrefs.DeleteKey(Prefix + key);
             Notify();

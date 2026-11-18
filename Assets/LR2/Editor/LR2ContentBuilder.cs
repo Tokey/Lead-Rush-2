@@ -697,12 +697,59 @@ namespace LR2.EditorTools
                     if (tf.name == "1P29" || tf.name == "SideScope") tf.gameObject.SetActive(false);
                 }
             }
-            // Default MK18: disable all optional optic, suppressor, and foregrip attachments so it deploys clean.
+            // Default MK18: use LeadRushHDRP's W_Mk18_ReloadEmpty mesh (crisp built-in iron sights) and disable all optional attachments.
             if (spec.id == "Mk18")
             {
                 foreach (var att in go.GetComponentsInChildren<BaseAttachment>(true))
                 {
                     if (att != null) att.gameObject.SetActive(false);
+                }
+                SkinnedMeshRenderer hdrpMk18Smr = null;
+                SkinnedMeshRenderer coreMk18Smr = null;
+                foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (smr == null || smr.sharedMesh == null) continue;
+                    string meshPath = AssetDatabase.GetAssetPath(smr.sharedMesh);
+                    if (meshPath.Contains("W_Mk18_ReloadEmpty")) hdrpMk18Smr = smr;
+                    else if (meshPath.Contains("Mk18_Core")) coreMk18Smr = smr;
+                }
+                if (hdrpMk18Smr != null)
+                {
+                    hdrpMk18Smr.gameObject.SetActive(true);
+                    hdrpMk18Smr.updateWhenOffscreen = true;
+                    Transform rigNode = hdrpMk18Smr.rootBone != null ? hdrpMk18Smr.rootBone.parent : null;
+                    if (rigNode != null)
+                    {
+                        rigNode.gameObject.SetActive(true);
+                        rigNode.name = "Mk18";
+                    }
+                    // Apply LeadRushHDRP Demo/Items/MK18/Materials PBR slots if present
+                    var pMats = hdrpMk18Smr.sharedMaterials;
+                    var mkFinish = AssetDatabase.LoadAssetAtPath<Material>("Assets/Demo/Items/MK18/Materials/finish.001.mat");
+                    var mkBright = AssetDatabase.LoadAssetAtPath<Material>("Assets/Demo/Items/MK18/Materials/metal bright-ish.mat");
+                    var mkDark = AssetDatabase.LoadAssetAtPath<Material>("Assets/Demo/Items/MK18/Materials/metal dark.mat");
+                    var mkPlastic = AssetDatabase.LoadAssetAtPath<Material>("Assets/Demo/Items/MK18/Materials/plastic.mat");
+                    var mkPoly = AssetDatabase.LoadAssetAtPath<Material>("Assets/Demo/Items/MK18/Materials/polymer.mat");
+                    if (pMats != null && pMats.Length >= 6 && mkDark != null && mkPoly != null && mkFinish != null)
+                    {
+                        pMats[0] = mkFinish;
+                        pMats[1] = mkPoly;
+                        pMats[2] = mkDark;
+                        pMats[3] = mkBright ?? mkDark;
+                        pMats[4] = mkPlastic ?? mkDark;
+                        pMats[5] = mkDark;
+                        hdrpMk18Smr.sharedMaterials = pMats;
+                    }
+                }
+                if (coreMk18Smr != null)
+                {
+                    coreMk18Smr.gameObject.SetActive(false);
+                    Transform unusedRig = coreMk18Smr.rootBone != null ? coreMk18Smr.rootBone.parent : null;
+                    if (unusedRig != null && unusedRig != go.transform)
+                    {
+                        unusedRig.name = "Mk18_Core_Unused";
+                        unusedRig.gameObject.SetActive(false);
+                    }
                 }
             }
 
@@ -766,6 +813,13 @@ namespace LR2.EditorTools
             var swatReload = UseKinemationDriver ? null : ConfigureSwatAnimationRigAndReload(); // driver: Kinemation's own reload clip
             var reloadProp = so.FindProperty("reloadClip");
             if (reloadProp != null && swatReload != null) reloadProp.objectReferenceValue = swatReload;
+            if (spec.id == "Mk18" && reloadProp != null)
+            {
+                // Generic C_Mk18_ReloadEmpty animates IK hands in Blender Z-up (-1.97 m below rig); use clean Humanoid rifle reload clip like AK-74N
+                // while Mk18_Animator.overrideController drives Mk18/Root/Mag and Mk18/Root/Bolt on the LeadRushHDRP MK18 rig.
+                var humReload = AssetDatabase.LoadAssetAtPath<FPSAnimationAsset>(DemoDir + "/Animations/Weapons/AK12/AA_AK12_Reload_Empty.asset");
+                if (humReload != null) reloadProp.objectReferenceValue = humReload;
+            }
             var reloadAsset = reloadProp != null ? reloadProp.objectReferenceValue as FPSAnimationAsset : null;
             BakeReloadRestPose(so, reloadAsset != null ? reloadAsset.clip : null, spec.id);
             var botTracerProp = so.FindProperty("botTracerEvery");
@@ -804,11 +858,35 @@ namespace LR2.EditorTools
                 var humProfile = AssetDatabase.LoadAssetAtPath<FPSAnimatorProfile>(profPath);
                 if (humProfile != null && (entity.animatorProfile == null || !entity.animatorProfile.name.Contains("Humanoid")))
                     entity.animatorProfile = humProfile;
-                if (entity.defaultAimPoint == null)
+                if (spec.id == "Mk18")
+                {
+                    var ironAp = go.transform.Find("AimPoint_Iron");
+                    if (ironAp == null)
+                    {
+                        ironAp = new GameObject("AimPoint_Iron").transform;
+                        ironAp.SetParent(go.transform, false);
+                    }
+                    ironAp.localPosition = new Vector3(0f, 0.068f, -0.175f);
+                    ironAp.localRotation = Quaternion.identity;
+                    entity.defaultAimPoint = ironAp;
+                }
+                else if (entity.defaultAimPoint == null)
                 {
                     entity.defaultAimPoint = go.GetComponentsInChildren<Transform>(true)
                         .FirstOrDefault(t => t.name == "AimPoint" || t.name == "DefaultAimPoint" || t.name == "PointAim");
-                    if (entity.defaultAimPoint == null)
+                    if (spec.id == "Mk18")
+                {
+                    var ironAp = go.transform.Find("AimPoint_Iron");
+                    if (ironAp == null)
+                    {
+                        ironAp = new GameObject("AimPoint_Iron").transform;
+                        ironAp.SetParent(go.transform, false);
+                    }
+                    ironAp.localPosition = new Vector3(0f, 0.068f, -0.175f);
+                    ironAp.localRotation = Quaternion.identity;
+                    entity.defaultAimPoint = ironAp;
+                }
+                else if (entity.defaultAimPoint == null)
                     {
                         var ap = new GameObject("AimPoint").transform;
                         ap.SetParent(go.transform, false);
@@ -1093,12 +1171,12 @@ namespace LR2.EditorTools
                 {
                     if (sub is CollisionLayerSettings colLayer)
                     {
-                        colLayer.layerMask = LR2Layers.EnvironmentMask | (1 << LR2Layers.PlayerClip);
-                        colLayer.barrelLength = 0.48f;
-                        colLayer.rayStartOffset = 0.14f;
+                        colLayer.layerMask = LR2Layers.EnvironmentMask;
+                        colLayer.barrelLength = 0.45f;
+                        colLayer.rayStartOffset = 0.12f;
                         colLayer.smoothingSpeed = 10f;
                         colLayer.useSecondaryPose = false;
-                        colLayer.primaryPose = new KTransform(new Vector3(-0.02f, -0.03f, -0.10f), Quaternion.Euler(-16f, -12f, 6f));
+                        colLayer.primaryPose = new KTransform(new Vector3(0.04f, 0.08f, -0.04f), Quaternion.Euler(-22f, -18f, 10f));
                         EditorUtility.SetDirty(colLayer);
                     }
                     else if (sub is AttachHandLayerSettings attachLayer)

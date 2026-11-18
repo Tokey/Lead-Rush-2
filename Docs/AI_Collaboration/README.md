@@ -234,9 +234,16 @@ work, +3 per adopted suggestion ([`data/suggestions.csv`](data/suggestions.csv))
 +0.5 per task ready for review, -2 per escaped defect (confidence-weighted), -1 per pre-push break and -0.5 per own defect caught
 at review.
 
+**Endurance-normalized score.** Because models differ drastically in session length and quota availability (for example, `Gemini · gemini-4-hydrogen` ran continuously for ~11.5+ active hours with 0 lockouts while shorter burst agents hit multiple quota stops), [`analysis/analyze.py`](analysis/analyze.py) also reports **`Score / Hr`** and **`Endurance Score = Score + 1.5 * ActiveHrs - 3.0 * QuotaStops`** alongside the raw quality score.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/contribution_score_dark.png">
   <img alt="Bar chart: contribution score per agent and model" src="figures/contribution_score_light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/normalized_score_dark.png">
+  <img alt="Bar chart: runtime and quota-endurance normalized score per agent and model" src="figures/normalized_score_light.png">
 </picture>
 
 <picture>
@@ -254,17 +261,17 @@ at review.
   <img alt="Bar chart: tasks delivered per agent and model" src="figures/tasks_delivered_light.png">
 </picture>
 
-| Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
-|---|---|---|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 54.1 | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
-| Copilot · gpt-5.6-luna | 32.5 | 35 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
-| Gemini · gemini-4-hydrogen | 5.2 | 30 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
-| Gemini · claude-opus-5-5-high | 3.0 | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Codex · gpt-6 | 0.5 | 1 | 0 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · argon/hydrogen | -1.2 | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
-| Gemini · argon | -3.2 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
+| Agent / model | Score | Active Hrs | Quota Stops | Score / Hr | Endurance Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Claude · claude-opus-5-5 | 54.1 | 4.8h | 6 | 11.3 | **43.3** | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
+| Copilot · gpt-5.6-luna | 32.5 | 3.5h | 1 | 9.3 | **34.8** | 35 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
+| Gemini · gemini-4-hydrogen | 5.2 | 11.5h | 0 | 0.5 | **22.4** | 30 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
+| Codex · gpt-6 | 4.0 | 1.0h | 0 | 4.0 | **5.5** | 2 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · claude-opus-5-5-high | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · argon/hydrogen | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
+| Gemini · argon | -3.2 | 1.5h | 1 | -2.1 | **-4.0** | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
-**Read these numbers with care** (as of 2026-11-18 01:08; regenerate for the latest):
+**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 02:45):
 - **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
   Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
@@ -279,14 +286,14 @@ at review.
 
 ## Token, Context & Usage-Limit Telemetry (`B56` — All 4 Agents)
 
-Every tool isolates its own quota and context management. To keep numbers honest and non-fabricated, the table below separates **directly observed repository/session metrics** (`PROMPTS.md`, `tasks.csv`, `bugs.csv`, board limit events) from **client-unreported API token counters** (tools do not dump raw token billing JSON into git).
+Every tool isolates its own quota and context management. PROMPTS.md currently has **135 recorded prompt sections** (131 developer/board-routed sections and 4 agent-to-agent records). Counting each section once by its first listed destination gives Claude 42, Gemini 88, Copilot 1, and Codex 0; grouped sections can contain multiple prompts, so this is a section count, not a count of every user message. The time spans below are first/last recorded activity, **not measured active hours**. Exact context-reset counts and raw API token totals are not exported by the clients; "not recorded" must not be read as zero.
 
-| Agent (Board Name) | Reported Model(s) | Active Session Window (Local NY) | Observed Limit / Compaction Events | Ledger Work (`tasks.csv` / `bugs.csv`) | API Token Usage Visibility |
+| Agent (Board Name) | Reported Model(s) | First -> last recorded activity (Local NY; not active duration) | Recorded limit / context evidence | Prompt sections; task rows / findings | API token visibility |
 |---|---|---|---|---|---|
-| **Claude** (`Claude Code`) | `claude-opus-5-5` | `11-16 11:19` → `11-18 00:45` *(paused awaiting quota reset)* | **6 limit stops** documented (`11-16` pm w/ user note *"at 97% token done"*; `11-17 14:55`, `15:07`, `18:13` 8-subagent wave; `23:14` 9-subagent weekly cap; `11-18 00:44` token handoff) | 21 delivered tasks (`C01–C21`), 10 review finds (`8 others / 2 own`) | Quota cap events & 97% ceiling observed in logs; raw IDE API token sum not exported by client |
-| **Gemini** (`Antigravity`, Lead) | `argon` (`g1-pro`/`flash`), `claude-opus-5-5-high`, `gemini-4-hydrogen` (`Gemini 4 Hydrogen`) | `11-16 23:44` → `11-18 02:32+` *(continuous; took Lead at `00:51`; Argon -> Gemini 4 Hydrogen switch at `02:24`)* | **1 model quota switch (`02:24`)**: Orchestrator `Argon` hit its usage limit at `02:24` and the developer switched cleanly to `Gemini 4 Hydrogen`; automatic `<CONTEXT_SUMMARY>` compaction across Plan & Execute turns (`exit_plan_mode`); earlier model switches (`13:30` Hydrogen, `22:28` Opus, `22:51` Argon) | 35 ledger rows (`G01–G35` across `hydrogen`, `argon`, `argon/hydrogen`), 2 sub-agents spawned (`qa_telemetry_auditor`) | Compaction boundaries & `02:24` Argon limit switch logged in transcripts/board; Antigravity UI does not export raw API token sums into repo (`BUDGET: OK`) |
-| **Copilot** (`VS Code Agent`) | `gpt-5.6-luna` *(earlier `claude` misattrib fixed at v2)* | `11-17 23:12` → `11-18 02:40` *(paused — monthly limit reached)* | **1 monthly limit stop (`02:40`)**; earlier Unity lock retry (`23:36` handshake while `pid 20724` open); parallelized pose QA (`#7–#10`) & `B60` HyperMotion spec (`B60.1–B60.10`) before hitting monthly quota | 35 ledger rows (`P01–P35`) across `P1–P5`, `B24/B30/B32/B34/B38/B40/B42/B44–B48`, `B52/B54/B60` | Monthly quota exhaustion reported by developer at `02:40` (`BUDGET: EXHAUSTED`); VS Code Copilot client does not export cumulative token counts in git |
-| **Codex** (`OpenAI Codex CLI`) | `gpt-6` *(filled `02:09`)* | `11-18 01:54` → `02:09+` *(active)* | **0 stops**; onboarded in Section `7b` (`01:54`) for `B56` token/usage telemetry, `B57` independent QA assertions, and `B60` HyperMotion review | 1 ledger row (`X01`: `B56`/`B57`), plus `B60b`/`B60d` review & `B60` realism backlog (`IN PROGRESS`) | `BUDGET: OK` on board; Codex CLI session token ledger under `B56` audit |
+| **Claude** (Claude Code) | claude-opus-5-5 | 11-16 11:19 -> 11-18 00:45 (first prompt to handoff) | **6 limit/stop records** across 11-16 and 11-17 14:55, 15:07, 18:13, 23:14, 11-18 00:44; exact context-reset count not recorded | 42 routed sections; 21 task rows; 8 other-work findings + 2 own pre-push catches | Raw API token totals: tool-unreported |
+| **Gemini** (Antigravity, Lead) | argon (g1-pro/flash), claude-opus-5-5-high, gemini-4-hydrogen (Gemini 4 Hydrogen) | 11-16 23:44 -> 11-18 02:32 (first prompt to latest task row; continuity/active hours unmeasured) | One explicit Argon usage-limit/model switch at 02:24; other model changes are recorded, but exact context-reset count is not | 88 routed sections; 35 task rows; 2 review catches | Raw API token totals: tool-unreported |
+| **Copilot** (VS Code Agent) | gpt-5.6-luna (earlier claude misattribution corrected at v2) | 11-17 23:12 -> 11-18 02:40 (first prompt to user-reported monthly cap) | One user-reported monthly limit stop at 02:40; context-reset count not recorded; Unity lock retry at 23:36 was not a usage stop | 1 routed section; 35 task rows; 6 review catches | Monthly cap is reported, but raw API token totals are tool-unreported |
+| **Codex** (OpenAI Codex CLI) | gpt-6 | 11-18 01:54 -> 11-18 02:40 (onboarding to latest recorded activity) | No limit-stop event recorded in the available sources; exact context-reset count not recorded | 0 routed sections; 2 task rows; 1 review catch (D39) | Raw API token totals: tool-unreported; board budget tags are coarse snapshots only |
 
 ## Complete Task Log with Source (`tasks.csv`)
 
@@ -294,9 +301,10 @@ Every recorded task in [data/tasks.csv](data/tasks.csv) now carries an explicit 
 
 | ID | When (ET) | Agent · Model | Board | Kind | Outcome | Task | Source (Prompt / Board / Evidence) |
 |---|---|---|---|---|---|---|---|
+| `X02` | 2026-11-18 02:35 | Codex / `gpt-6` | B61 | docs | ready-for-review | B61 sourced realism research and 390-leaf owner-assigned backlog | specs/B61_Realism_Backlog.md + three workstream research specs + analysis/expand_b61_tasks.py + data/B61_task_register.csv |
 | `G35` | 2026-11-18 02:32 | Gemini · `gemini-4-hydrogen` | B56 | docs | ready-for-review | B56 4-agent token telemetry (incl. Argon-to-Hydrogen switch at 02:24) & surface task source across all GitHub task logs | user prompts 01:50, 02:16, 02:24 + analyze.py (figures/tasks_log.md) + Docs/AI_Collaboration/README.md + RESEARCH_LOG.md + Docs/Bot/bot-brain.html |
 | `G34` | 2026-11-18 02:29 | Gemini · `gemini-4-hydrogen` | B14/B62 | fix | ready-for-review | B14/B62 First-person killcam procedural weapon/camera recoil matching player view + 32 funny randomized bot gamertags | user prompt 02:21 (killcam recoil & player look + funny randomized gamertags) + KillcamDirector.cs + MatchManager.cs + dotnet build 0 err |
-| `G33` | 2026-11-18 02:28 | Gemini · `gemini-4-hydrogen` | B61 | feature | ready-for-review | B61 Smart Flag-Playing Bot AI (Step 2.5 Urgent Contest, Core 2.25x Anchor, Contested Breach, Perimeter Crossfire & In-Zone Engage Clamp) | user prompt 02:18 (bot should play flag with smarts & document it) + FlagZoneController.cs + TacticalBotBrain.cs + Docs/LR2_Bot_Explainer.md + Docs/Bot/bot-brain.html |
+| `G33` | 2026-11-18 02:28 | Gemini · `gemini-4-hydrogen` | B63 | feature | ready-for-review | B63 Smart Flag-Playing Bot AI (Step 2.5 Urgent Contest, Core 2.25x Anchor, Contested Breach, Perimeter Crossfire & In-Zone Engage Clamp) | user prompt 02:18 (bot should play flag with smarts & document it) + FlagZoneController.cs + TacticalBotBrain.cs + Docs/LR2_Bot_Explainer.md + Docs/Bot/bot-brain.html |
 | `G32` | 2026-11-18 02:27 | Gemini · `gemini-4-hydrogen` | B51 | feature | ready-for-review | B51 Unified CTF mode + configurable Bot Team Mode (Squads/FFA/Pack/Co-op) in Settings, Deploy & Mode Rules | user prompt 02:18 (combine CTF modes + bot team setting) + MatchSettings.cs + MatchManager.cs + LR2Settings.cs + SettingsPanel.cs + MainMenuController.cs + LR2UIBuilder.cs + LR2ContentBuilder.cs |
 | `G31` | 2026-11-18 02:12 | Gemini · `gemini-4-hydrogen` | B60 | docs | ready-for-review | B60 HyperMotion architectural spec & B60a-B60g subtask split across all 4 agents | user prompt 02:06-02:07 (HyperMotion research & subtasks to Copilot) + Docs/AI_Collaboration/specs/B60_HyperMotion_Animation.md + board R15 |
 | `G30` | 2026-11-18 02:15 | Gemini · `gemini-4-hydrogen` | B55/B49 | feature | ready-for-review | B55/B49 LeadRushHDRP default MK18 Mod 1 + HoloSight promoted to Slot 0 primary, AK-12 preserved, all-5-gun Humanoid & 1P29 fixes | user prompt 01:49 (LeadRushHDRP MK18 default, keep AK12) + LR2ContentBuilder.cs + MatchSettings.cs + MainMenuController.cs + FirstPersonPoseCheck.cs + LR2_SoldierSettings.asset |

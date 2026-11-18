@@ -197,7 +197,7 @@ namespace LR2.Characters
             yield return Wait(0.4f);
             var akTf = _soldier.ActiveFirearm != null ? _soldier.ActiveFirearm.transform : null;
             var magTf = akTf != null ? FindDeep(akTf, "Mag") : null;
-            var chargeTf = akTf != null ? FindDeep(akTf, "Charge") : null;
+            var chargeTf = akTf != null ? (FindDeep(akTf, "Charge") ?? FindDeep(akTf, "Bolt")) : null;
             Vector3 magRestLocal = magTf != null && akTf != null ? akTf.InverseTransformPoint(magTf.position) : Vector3.zero;
             Vector3 chargeRestLocal = chargeTf != null && akTf != null ? akTf.InverseTransformPoint(chargeTf.position) : Vector3.zero;
             float maxMagDisp = 0f, maxChargeDisp = 0f;

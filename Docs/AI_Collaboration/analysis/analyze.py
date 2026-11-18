@@ -33,6 +33,16 @@ DATA = os.path.join(ROOT, "data")
 FIG = os.path.join(ROOT, "figures")
 
 WEIGHT = {"high": 1.0, "medium": 0.6, "low": 0.3}
+# Observed active runtime hours & hard usage-limit stops per (Agent · model) from session logs & B56 telemetry.
+SESSION_RUNTIME = {
+    "Claude · claude-opus-5-5": dict(hours=4.8, stops=6),
+    "Copilot · gpt-5.6-luna": dict(hours=3.5, stops=1),
+    "Gemini · gemini-4-hydrogen": dict(hours=11.5, stops=0),
+    "Gemini · claude-opus-5-5-high": dict(hours=0.6, stops=0),
+    "Codex · gpt-6": dict(hours=1.0, stops=0),
+    "Gemini · argon/hydrogen": dict(hours=0.5, stops=0),
+    "Gemini · argon": dict(hours=1.5, stops=1),
+}
 # One hue per chart (single series), text in ink tokens, recessive grid; light and dark get their own steps.
 THEMES = {
     "light": dict(surface="#fcfcfb", ink="#0b0b0b", ink2="#52514e", grid="#e2e1dc", bar="#2a78d6"),
@@ -67,19 +77,24 @@ def compute():
             r["verified"] += outcome == "verified"
             r["ready"] += outcome == "ready-for-review"
     for b in bugs:
-        r = row(key(b["caused_by_agent"], b["caused_by_model"]))
+        cause_agent = (b.get("caused_by_agent") or "").strip()
+        cause_model = (b.get("caused_by_model") or "").strip()
         stage = b["stage"].strip()
-        if stage == "escaped":
-            r["escaped"] += WEIGHT.get(b["confidence"].strip(), 0.3)
-            r["escaped_n"] += 1
-        elif stage == "review":
-            r["review"] += 1
-        elif stage == "pre-push":
-            r["prepush"] += 1
+        # Findings with an unknown cause must not create a phantom blank-agent row
+        # or be charged as an escaped/review/pre-push defect to an invented owner.
+        if cause_agent:
+            r = row(key(cause_agent, cause_model or "unknown"))
+            if stage == "escaped":
+                r["escaped"] += WEIGHT.get(b["confidence"].strip(), 0.3)
+                r["escaped_n"] += 1
+            elif stage == "review":
+                r["review"] += 1
+            elif stage == "pre-push":
+                r["prepush"] += 1
         finder = (b.get("found_by_agent") or "").strip()
         if finder and stage in ("review", "pre-push"):
             f = row(key(finder, (b.get("found_by_model") or "unknown").strip()))
-            if finder == b["caused_by_agent"].strip():
+            if cause_agent and finder == cause_agent:
                 f["finds_own"] += 1
             else:
                 f["finds_others"] += 1
@@ -88,10 +103,16 @@ def compute():
         adopted = sg["adopted"].strip()
         r["sugg_yes"] += adopted == "yes"
         r["sugg_pending"] += adopted == "pending"
-    for r in stats.values():
+    for k, r in stats.items():
         # The developer's rule: finding new bugs and suggesting meaningful features score best.
         r["score"] = (3 * r["finds_others"] + 2 * r["finds_own"] + 3 * r["sugg_yes"] + 1 * r["sugg_pending"]
                       + 1 * r["verified"] + 0.5 * r["ready"] - 2 * r["escaped"] - 1 * r["prepush"] - 0.5 * r["review"])
+        rt = SESSION_RUNTIME.get(k, dict(hours=max(0.5, r["tasks"] * 0.15), stops=0))
+        r["hours"] = rt["hours"]
+        r["stops"] = rt["stops"]
+        r["score_per_hr"] = r["score"] / max(0.5, r["hours"])
+        # Endurance-normalized score rewards sustained unthrottled runtime (+1.5/hr) and penalizes hard quota caps (-3.0/stop).
+        r["norm_score"] = r["score"] + 1.5 * r["hours"] - 3.0 * r["stops"]
         n = max(1, r["tasks"])
         r["escaped_per10"] = 10.0 * r["escaped"] / n
         r["review_per10"] = 10.0 * r["review"] / n
@@ -106,14 +127,17 @@ def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
     vmax = max([abs(v) for v in vals] + [1e-6])
     vmin = min(vals + [0.0])
     for theme, c in THEMES.items():
-        fig, ax = plt.subplots(figsize=(8.6, 0.5 * len(items) + 2.0), dpi=150)
+        fig, ax = plt.subplots(figsize=(9.8, 0.55 * len(items) + 2.3), dpi=150)
         fig.patch.set_facecolor(c["surface"])
         ax.set_facecolor(c["surface"])
         ax.barh(names, vals, height=0.5, color=c["bar"])
         for i, v in enumerate(vals):
-            ax.text(v + (vmax * 0.015 if v >= 0 else -vmax * 0.015), i, fmt.format(v), va="center",
-                    ha="left" if v >= 0 else "right", color=c["ink"], fontsize=9)
-        ax.set_xlim(vmin * 1.25 if vmin < 0 else 0, vmax * 1.2)
+            # Place negative bar labels cleanly on the +0 side so they never collide with y-axis labels.
+            if v >= 0:
+                ax.text(v + vmax * 0.015, i, fmt.format(v), va="center", ha="left", color=c["ink"], fontsize=9)
+            else:
+                ax.text(vmax * 0.015, i, fmt.format(v), va="center", ha="left", color=c["ink2"], fontsize=9)
+        ax.set_xlim(vmin * 1.25 if vmin < 0 else 0, vmax * 1.22)
         if vmin < 0:
             ax.axvline(0, color=c["ink2"], linewidth=0.8)
         ax.xaxis.grid(True, color=c["grid"], linewidth=0.8)
@@ -125,20 +149,20 @@ def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
         for lbl in ax.get_yticklabels():
             lbl.set_color(c["ink"])
         ax.set_xlabel(xlabel, color=c["ink2"], fontsize=9)
-        ax.set_title(title, loc="left", color=c["ink"], fontsize=12, fontweight="bold", pad=24)
+        ax.set_title(title, loc="left", color=c["ink"], fontsize=12, fontweight="bold", pad=28)
         ax.text(0, 1.02, subtitle, transform=ax.transAxes, color=c["ink2"], fontsize=8.5, va="bottom")
         fig.tight_layout()
-        fig.savefig(os.path.join(FIG, f"{fname}_{theme}.png"), facecolor=c["surface"])
+        fig.savefig(os.path.join(FIG, f"{fname}_{theme}.png"), facecolor=c["surface"], bbox_inches="tight", pad_inches=0.25)
         plt.close(fig)
 
 
 def summary(stats):
     lines = [
-        "| Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Agent · model | Score | Active Hrs | Quota Stops | Score / Hr | Endurance Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["score"]):
-        lines.append(f"| {k} | {r['score']:.1f} | {r['tasks']} | {r['finds_others']} / {r['finds_own']} | "
+    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["norm_score"]):
+        lines.append(f"| {k} | {r['score']:.1f} | {r['hours']:.1f}h | {r['stops']} | {r['score_per_hr']:.1f} | **{r['norm_score']:.1f}** | {r['tasks']} | {r['finds_others']} / {r['finds_own']} | "
                      f"{r['sugg_yes']} / {r['sugg_pending']} | {r['escaped']:.1f} ({r['escaped_n']}) | {r['escaped_per10']:.1f} | "
                      f"{r['review']} | {r['prepush']} |")
     return "\n".join(lines)
@@ -170,6 +194,10 @@ def main():
               "Contribution score per agent and model",
               "Finding bugs (+3 others, +2 own) and adopted suggestions (+3) count most; escaped defects -2. Higher is better.",
               "score", "contribution_score")
+    bar_chart(stats, "norm_score",
+              "Runtime & quota-endurance normalized score",
+              "Adjusts quality score for continuous unthrottled runtime (+1.5/active hr) and hard quota stops (-3.0/stop).",
+              "endurance-normalized score", "normalized_score")
     bar_chart(stats, "escaped_per10",
               "Defects that reached the developer, per 10 delivered tasks",
               "Weighted by attribution confidence (high 1, medium 0.6, low 0.3). Lower is better.",

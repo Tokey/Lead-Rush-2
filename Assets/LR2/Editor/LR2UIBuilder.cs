@@ -305,6 +305,10 @@ namespace LR2.EditorTools
             var anchorTopCenter = new Vector2(0.5f, 1f);
             var lbl = Txt("Label_" + label, parent, label, 21f, TextAlignmentOptions.MidlineLeft, anchorTopCenter, new Vector2(colLeft, y), new Vector2(labelW, 38f));
             ((RectTransform)lbl.transform).pivot = new Vector2(0f, 0.5f);
+            lbl.enableAutoSizing = true;
+            lbl.fontSizeMin = 14f;
+            lbl.fontSizeMax = 21f;
+            lbl.overflowMode = TextOverflowModes.Ellipsis;
 
             slot = Rect("Slot_" + label, parent, anchorTopCenter, anchorTopCenter, new Vector2(colLeft + labelW + 14f, y), new Vector2(slotW, 34f), new Vector2(0f, 0.5f));
 
@@ -365,6 +369,10 @@ namespace LR2.EditorTools
             next = StepBtn(">", 1f, -height * 0.5f);
             float textW = Mathf.Max(80f, ((RectTransform)slot).sizeDelta.x - height * 2f - 16f);
             valueText = AddShadow(Txt("Value", slot, "", fontSize, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(textW, height), true));
+            valueText.enableAutoSizing = true;
+            valueText.fontSizeMin = 12f;
+            valueText.fontSizeMax = fontSize;
+            valueText.overflowMode = TextOverflowModes.Ellipsis;
         }
 
         private static void SelectorColRow(Transform parent, string label, float colLeft, float y, out Button prev, out Button next, out TMP_Text valueText, float labelW = 248f, float slotW = 360f)
@@ -811,10 +819,13 @@ namespace LR2.EditorTools
             var t = mm.deployPanel.transform;
             Vector2 topC = new Vector2(0.5f, 1f);
 
-            mm.deployModeTitleText = Txt("DeployTitle", t, "1V1 DEATHMATCH  ·  STAGING", 56f, TextAlignmentOptions.Center, topC, new Vector2(0f, -72f), new Vector2(1200f, 68f), true);
-            Img("DeployRule", t, _white, accent, topC, new Vector2(0f, -112f), new Vector2(260f, 2f));
-            mm.deployModeDescText = Txt("DeployDesc", t, "", 20f, TextAlignmentOptions.Center, topC, new Vector2(0f, -148f), new Vector2(1180f, 44f), false, dim);
+            mm.deployModeTitleText = Txt("DeployTitle", t, "1V1 DEATHMATCH  ·  STAGING", 56f, TextAlignmentOptions.Center, topC, new Vector2(0f, -64f), new Vector2(1200f, 68f), true);
+            Img("DeployRule", t, _white, accent, topC, new Vector2(0f, -106f), new Vector2(260f, 2f));
+            mm.deployModeDescText = Txt("DeployDesc", t, "", 18.5f, TextAlignmentOptions.Center, topC, new Vector2(0f, -146f), new Vector2(1260f, 52f), false, dim);
             mm.deployModeDescText.textWrappingMode = TextWrappingModes.Normal;
+            mm.deployModeDescText.enableAutoSizing = true;
+            mm.deployModeDescText.fontSizeMin = 14f;
+            mm.deployModeDescText.fontSizeMax = 18.5f;
 
             CardBacking(t, "DeployLeftCard", topC, new Vector2(-392f, -458f), new Vector2(730f, 466f), accent);
             CardBacking(t, "DeployRightCard", topC, new Vector2(392f, -458f), new Vector2(730f, 466f), accent);
@@ -825,6 +836,10 @@ namespace LR2.EditorTools
             SelectorColRow(t, "PRIMARY WEAPON", leftCol, y, out mm.deployWeaponPrevButton, out mm.deployWeaponNextButton, out mm.deployWeaponValueText); y -= 40f;
             mm.deployWeaponInfoText = Txt("WeaponBlurb", t, "", 14.5f, TextAlignmentOptions.MidlineLeft, topC, new Vector2(leftCol, y), new Vector2(680f, 22f), false, accent);
             ((RectTransform)mm.deployWeaponInfoText.transform).pivot = new Vector2(0f, 0.5f);
+            mm.deployWeaponInfoText.enableAutoSizing = true;
+            mm.deployWeaponInfoText.fontSizeMin = 11f;
+            mm.deployWeaponInfoText.fontSizeMax = 14.5f;
+            mm.deployWeaponInfoText.overflowMode = TextOverflowModes.Ellipsis;
             y -= 44f;
             SelectorColRow(t, "SECTOR / MAP", leftCol, y, out mm.deployMapPrevButton, out mm.deployMapNextButton, out mm.deployMapValueText); y -= step;
             SelectorColRow(t, "BOT DIFFICULTY", leftCol, y, out mm.deployDiffPrevButton, out mm.deployDiffNextButton, out mm.deployDiffValueText); y -= step;
@@ -833,9 +848,10 @@ namespace LR2.EditorTools
             mm.deployBotsSlider = SliderColRow(t, "ENEMY BOTS", leftCol, y, out mm.deployBotsValueText);
 
             var rightCenter = topC;
-            Txt("PreviewLbl", t, "LIVE SECTOR RECON", 18f, TextAlignmentOptions.MidlineLeft, rightCenter, new Vector2(64f, -264f), new Vector2(400f, 26f), true, accent);
-            Img("DeployPreviewFrame", t, _white, new Color(1f, 1f, 1f, 0.14f), rightCenter, new Vector2(392f, -474f), new Vector2(668f, 376f));
-            mm.deployMapPreviewImage = Img("DeployPreviewImg", t, _white, Color.white, rightCenter, new Vector2(392f, -474f), new Vector2(660f, 368f));
+            var previewLbl = Txt("PreviewLbl", t, "LIVE SECTOR RECON", 18f, TextAlignmentOptions.MidlineLeft, rightCenter, new Vector2(58f, -254f), new Vector2(500f, 26f), true, accent);
+            ((RectTransform)previewLbl.transform).pivot = new Vector2(0f, 0.5f);
+            Img("DeployPreviewFrame", t, _white, new Color(1f, 1f, 1f, 0.14f), rightCenter, new Vector2(392f, -478f), new Vector2(668f, 368f));
+            mm.deployMapPreviewImage = Img("DeployPreviewImg", t, _white, Color.white, rightCenter, new Vector2(392f, -478f), new Vector2(660f, 360f));
             mm.deployMapPreviewImage.preserveAspect = false;
 
             mm.deployBackButton = Btn("Back", t, new Vector2(-360f, -364f), new Vector2(280f, 56f));

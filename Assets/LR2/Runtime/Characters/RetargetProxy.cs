@@ -41,6 +41,8 @@ namespace LR2.Characters
         [SerializeField, Range(0f, 0.2f)] private float firstPersonBodyBack = 0.02f;
         [Tooltip("First person: re-plant the feet with leg IK after the head lock moved the body.")]
         [SerializeField] private bool replantFeet = true;
+        [Tooltip("B60b: HyperMotion contact-aware foot-plant lock pins the grounded stance foot XZ while walking upright.")]
+        [SerializeField] private bool footPlantLock = true;
         [Tooltip("Log alignment numbers once, 1.5 s after spawn.")]
         [SerializeField] private bool logAlignment = true;
 
@@ -63,6 +65,10 @@ namespace LR2.Characters
         private Transform _prevItemTf;
         private Vector3 _prevLPos, _prevRPos, _lInertialOffset, _rInertialOffset;
         private const float InertialHalfLifeSeconds = 0.045f;
+        // B60b: HyperMotion contact-aware foot-plant XZ lock state.
+        private bool _hasLeftPlant, _hasRightPlant;
+        private Vector3 _leftPlantPos, _rightPlantPos, _prevRootPos;
+        private bool _hasPrevRootPos;
         private static readonly int ProneWeightHash = Animator.StringToHash("ProneWeight");
         private static readonly List<int> _lProxIdx = new List<int>();
         private static readonly List<int> _lFingerIdx = new List<int>();
@@ -595,18 +601,74 @@ namespace LR2.Characters
             else shift = Vector3.zero;
 
             AppliedShift = shift;
-            if (shift.sqrMagnitude < 1e-8f) return;
+            bool teleported = _hasPrevRootPos && Vector3.SqrMagnitude(transform.position - _prevRootPos) > 0.45f;
+            _prevRootPos = transform.position;
+            _hasPrevRootPos = true;
+            if (teleported) _hasLeftPlant = _hasRightPlant = false;
 
-            bool plant = FirstPersonActive && replantFeet && (_soldier == null || !_soldier.IsProning) && _lFoot != null && _rFoot != null;
+            bool upright = _soldier == null || (!_soldier.IsDead && !_soldier.IsProning);
+            bool hasFeet = _lFoot != null && _rFoot != null && _lThigh != null && _lShin != null && _rThigh != null && _rShin != null;
+            bool plant = FirstPersonActive && replantFeet && upright && _lFoot != null && _rFoot != null;
+            bool lockStance = footPlantLock && upright && hasFeet;
+            if (!lockStance) _hasLeftPlant = _hasRightPlant = false;
+
+            if (shift.sqrMagnitude < 1e-8f && !lockStance) return;
+
             Vector3 lf = Vector3.zero, rf = Vector3.zero;
             Quaternion lfr = Quaternion.identity, rfr = Quaternion.identity;
-            if (plant)
+            if ((plant || lockStance) && _lFoot != null && _rFoot != null)
             {
                 lf = _lFoot.position; lfr = _lFoot.rotation;
                 rf = _rFoot.position; rfr = _rFoot.rotation;
             }
-            _vHips.position += shift;
-            if (plant)
+            if (shift.sqrMagnitude >= 1e-8f)
+                _vHips.position += shift;
+
+            if (lockStance)
+            {
+                float groundY = transform.position.y;
+                float lh = lf.y - groundY;
+                float rh = rf.y - groundY;
+                bool lStance = lh <= 0.165f && lh <= rh + 0.015f;
+                bool rStance = rh <= 0.165f && rh <= lh + 0.015f;
+
+                Vector3 lTarget = lf + (plant ? new Vector3(shift.x, 0f, shift.z) : Vector3.zero);
+                if (lStance)
+                {
+                    Vector2 lDelta = new Vector2(lf.x - _leftPlantPos.x, lf.z - _leftPlantPos.z);
+                    if (!_hasLeftPlant || lDelta.sqrMagnitude > 0.38f * 0.38f)
+                    {
+                        _leftPlantPos = lf;
+                        _hasLeftPlant = true;
+                    }
+                    lTarget = new Vector3(_leftPlantPos.x, lf.y, _leftPlantPos.z);
+                    Solve(_lThigh, _lShin, _lFoot, lTarget, lfr, 1f);
+                }
+                else
+                {
+                    _hasLeftPlant = false;
+                    if (plant) Solve(_lThigh, _lShin, _lFoot, lTarget, lfr, 1f);
+                }
+
+                Vector3 rTarget = rf + (plant ? new Vector3(shift.x, 0f, shift.z) : Vector3.zero);
+                if (rStance)
+                {
+                    Vector2 rDelta = new Vector2(rf.x - _rightPlantPos.x, rf.z - _rightPlantPos.z);
+                    if (!_hasRightPlant || rDelta.sqrMagnitude > 0.38f * 0.38f)
+                    {
+                        _rightPlantPos = rf;
+                        _hasRightPlant = true;
+                    }
+                    rTarget = new Vector3(_rightPlantPos.x, rf.y, _rightPlantPos.z);
+                    Solve(_rThigh, _rShin, _rFoot, rTarget, rfr, 1f);
+                }
+                else
+                {
+                    _hasRightPlant = false;
+                    if (plant) Solve(_rThigh, _rShin, _rFoot, rTarget, rfr, 1f);
+                }
+            }
+            else if (plant)
             {
                 // feet follow the body sideways but keep the height the retargeted pose gave them (planted)
                 Vector3 horiz = new Vector3(shift.x, 0f, shift.z);

@@ -120,7 +120,7 @@ namespace LR2.UI
         private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private static readonly string[] WeaponBlurbs =
         {
-            "5.56x45 MK18 MOD 1  ·  HOLO RED-DOT ADS · TIGHT CLOSE-QUARTERS HANDLING",
+            "5.56x45 MK18  ·  CRISP IRON SIGHTS · TIGHT CLOSE-QUARTERS HANDLING",
             "5.45x39 ASSAULT RIFLE  ·  CONTROLLABLE AUTO · BALANCED ERGONOMICS",
             "5.45x39 KALASHNIKOV  ·  HIGH RATE OF FIRE · CRISP IRON-SIGHT BURST",
             "7.62x51 BATTLE RIFLE  ·  HIGH-CALIBER STOPPING POWER · HEAVY KICK"

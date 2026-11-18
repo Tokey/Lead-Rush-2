@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using KINEMATION.FPSAnimationFramework.Runtime.Core;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.CollisionLayer;
 using LR2.Audio;
 using LR2.Characters;
 using LR2.Combat;
@@ -152,6 +154,7 @@ namespace LR2.World
                 yield return AuditWeatherThunderRainWetness(player);
                 yield return AuditKillcamHitmarkersAndAudio();
                 yield return AuditCtfAndAdaptiveBot(player);
+                yield return AuditDeathAdsCloseWeaponAndB57B65(player);
             }
 
             FinishReport(outDir, sceneName);
@@ -656,7 +659,13 @@ namespace LR2.World
             mv.Footstep -= OnStep;
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw };
             if (footL != null && footR != null)
+            {
                 CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt, samplePlanted));
+                float plantedSpeed = samplePlanted && minSlideDt > 0f
+                    ? new Vector2(minSlideCur.x - minSlidePrev.x, minSlideCur.z - minSlidePrev.z).magnitude / minSlideDt
+                    : 0f;
+                CheckExtra(LR2QAExtraChecks.CheckMotionFootSlide(plantedSpeed));
+            }
 
             float measuredStride = _footsteps > 0 ? _distAccum / _footsteps : 99f;
             float meanPlantH = plantCount > 0 ? plantSum / plantCount : 0f;
@@ -767,6 +776,8 @@ namespace LR2.World
                 $"calmI={calmIntensity:0.00} fightI={fightIntensity:0.00} combatStem={combatStem:0.000} calmGain={calmGain:0.000} fightGain={fightGain:0.000} drumrollAt={dir.LastDrumrollTime:0.00}s");
             Check(calmGain <= 0.20f && fightGain <= 0.72f, "Music.LeavesFootstepsClear",
                 $"calmGain={calmGain:0.000} fightGain={fightGain:0.000} stepGain={stepCat:0.000}");
+            CheckExtra(LR2QAExtraChecks.CheckMusicSources(dir.MusicSources));
+            CheckExtra(LR2QAExtraChecks.CheckMusicGainDuringGunfire(calmGain, fightGain));
         }
 
         private IEnumerator AuditKillcamHitmarkersAndAudio()
@@ -866,6 +877,59 @@ namespace LR2.World
             var fh = FindAnyObjectByType<FireHazard>();
             Check(afx != null && fh != null, "Atmosphere.FogAndFireHazardsPresent",
                 $"atmosphere={(afx != null)} fireHazard={(fh != null)}");
+        }
+
+        private IEnumerator AuditDeathAdsCloseWeaponAndB57B65(SoldierController player)
+        {
+            // B65 / R17: Verify tail reservation rolls back immediately on voice allocation failure.
+            bool tailRollbackOk = LR2Audio.VerifyTailReservationRollback(out int resBefore, out int resAfter);
+            Check(tailRollbackOk, "Audio.TailReservationRollback", $"reserved={resBefore} afterCancel={resAfter}");
+
+            // B57 / R18: Known-bad & known-good contract fixtures.
+            foreach (string line in LR2QAExtraChecks.CheckB57KnownBadFixtures())
+                CheckExtra(line);
+
+            if (player == null || player.Health == null || player.ViewCamera == null) yield break;
+            Vector3 savedPos = player.transform.position;
+            float savedYaw = player.Yaw;
+
+            // Enter ADS, place enemy close in front, inflict lethal damage and verify immediate ADS reset + safe weapon eye-plane.
+            _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = true };
+            yield return null;
+            yield return null;
+
+            int colMask = LR2Layers.EnvironmentMask;
+            var gun = player.ActiveFirearm;
+            var entity = gun != null ? gun.GetComponent<FPSAnimatorEntity>() : null;
+            if (entity != null && entity.animatorProfile != null && entity.animatorProfile.settings != null)
+            {
+                foreach (var s in entity.animatorProfile.settings)
+                    if (s is CollisionLayerSettings cls) { colMask = cls.layerMask; break; }
+            }
+
+            Vector3 eyePos = player.ViewCamera.transform.position;
+            Vector3 aimFwd = player.ViewCamera.transform.forward;
+            if (gun != null)
+                CheckExtra(LR2QAExtraChecks.CheckCloseWeaponSafety(gun.transform.position, eyePos, aimFwd, colMask));
+
+            var dmg = new DamageInfo
+            {
+                amount = 999f,
+                type = DamageType.Bullet,
+                zone = HitZone.UpperTorso,
+                direction = -aimFwd,
+                weaponName = "QA_CloseCheck"
+            };
+            player.Health.ApplyDamage(ref dmg);
+            _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = false };
+            yield return null;
+
+            CheckExtra(LR2QAExtraChecks.CheckDeathAimReset(player));
+            if (gun != null)
+                CheckExtra(LR2QAExtraChecks.CheckCloseWeaponSafety(gun.transform.position, player.ViewCamera.transform.position, player.ViewCamera.transform.forward, colMask));
+
+            player.Respawn(savedPos, savedYaw);
+            yield return null;
         }
 
         private static Texture2D CaptureCamera(Camera cam, int w, int h)

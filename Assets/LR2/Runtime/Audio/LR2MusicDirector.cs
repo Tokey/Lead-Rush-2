@@ -53,6 +53,19 @@ namespace LR2.Audio
         public float LastDrumrollTime { get; private set; } = -10f;
         public float MenuVolume => _menuSrc != null ? _menuSrc.volume : 0f;
         public float EffectiveTotalGain => _isMenuScene ? MenuVolume : (CalmVolume + TensionVolume * 0.75f + CombatVolume * 0.85f);
+        public AudioSource[] MusicSources
+        {
+            get
+            {
+                var list = new System.Collections.Generic.List<AudioSource>(5);
+                if (_menuSrc != null) list.Add(_menuSrc);
+                if (_calmSrc != null) list.Add(_calmSrc);
+                if (_tensionSrc != null) list.Add(_tensionSrc);
+                if (_combatSrc != null) list.Add(_combatSrc);
+                if (_drumrollSrc != null) list.Add(_drumrollSrc);
+                return list.ToArray();
+            }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()

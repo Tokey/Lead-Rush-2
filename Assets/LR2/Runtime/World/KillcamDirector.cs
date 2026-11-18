@@ -582,7 +582,7 @@ namespace LR2.World
         }
 
         /// <summary>Render-only copy (no colliders, physics, scripts, animators) of a soldier's SWAT body or weapon; preserves MuzzleFlash if requested.</summary>
-        private static GameObject MakePuppet(GameObject source, string name, bool hideHead, bool keepMuzzleFlash = false)
+        private static GameObject MakePuppet(GameObject source, string name, bool hideHead, bool keepMuzzleFlash = false, bool isPlayerTeamLaser = false)
         {
             if (source == null) return null;
             var p = Instantiate(source);
@@ -614,16 +614,22 @@ namespace LR2.World
             }
             foreach (var r in p.GetComponentsInChildren<Renderer>(true))
             {
-                r.enabled = true;
+                // B14.1: Keep disabled attachments, sights, and laser helper renderers off instead of illuminating inactive parts.
+                if (!r.enabled) continue;
                 bool head = r.name.ToLowerInvariant().Contains("head");
                 r.shadowCastingMode = hideHead && head ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
             }
             if (hasWeaponLaser)
             {
-                var firearm = p.GetComponent<LR2Firearm>() ?? p.GetComponentInChildren<LR2Firearm>(true);
-                if (firearm != null && firearm.GetComponent<WeaponLaser>() == null)
-                    firearm.gameObject.AddComponent<WeaponLaser>();
+                Transform muzzle = null;
+                foreach (var t in p.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "Muzzle") { muzzle = t; break; }
+                if (muzzle != null)
+                {
+                    var wl = p.GetComponent<WeaponLaser>() ?? p.AddComponent<WeaponLaser>();
+                    wl.SetExternalMuzzle(muzzle, p.transform, isPlayerTeamLaser);
+                }
             }
             p.SetActive(true);
             return p;
@@ -641,8 +647,17 @@ namespace LR2.World
             _victimPuppetBones = _victimPuppet.GetComponentsInChildren<Transform>(true);
             var kGun = _killer.ActiveFirearm;
             var vGun = _victim.ActiveFirearm;
-            _killerGunPuppet = kGun != null ? MakePuppet(kGun.gameObject, "KillcamPuppet_KillerGun", false, keepMuzzleFlash: true) : null;
-            _victimGunPuppet = vGun != null ? MakePuppet(vGun.gameObject, "KillcamPuppet_VictimGun", false) : null;
+            var local = Combat.Combatant.FindLocalPlayer();
+            bool IsGreen(SoldierController sc)
+            {
+                if (sc == null || sc.Combatant == null) return false;
+                if (sc.Combatant.IsLocalPlayer) return true;
+                return local != null ? !sc.Combatant.IsHostileTo(local) : !sc.Combatant.IsBot;
+            }
+            bool killerGreenLaser = IsGreen(_killer);
+            bool victimGreenLaser = IsGreen(_victim);
+            _killerGunPuppet = kGun != null ? MakePuppet(kGun.gameObject, "KillcamPuppet_KillerGun", false, keepMuzzleFlash: true, isPlayerTeamLaser: killerGreenLaser) : null;
+            _victimGunPuppet = vGun != null ? MakePuppet(vGun.gameObject, "KillcamPuppet_VictimGun", false, keepMuzzleFlash: false, isPlayerTeamLaser: victimGreenLaser) : null;
             _puppetMuzzle = null;
             _puppetMuzzleFlashes = _killerGunPuppet != null ? _killerGunPuppet.GetComponentsInChildren<MuzzleFlash>(true) : null;
             if (_killerGunPuppet != null)

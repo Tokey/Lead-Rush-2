@@ -137,6 +137,14 @@ namespace LR2.Weapons
         private bool _ammoInitialized;
         private bool _dryFiredThisPress;
         private bool _indoors;
+        private float _barrelHeat;
+        private ParticleSystem _barrelSmoke;
+        private ParticleSystem.EmissionModule _barrelSmokeEmission;
+        private Renderer _barrelGlowRenderer;
+        private Material _barrelGlowMat;
+        private Light _barrelGlowLight;
+        private bool _heatFxBuilt;
+        public float BarrelHeat => _barrelHeat;
 
         // Reload
         private float _reloadStart;
@@ -246,6 +254,8 @@ namespace LR2.Weapons
         public override void OnUnEquip()
         {
             CancelActions();
+            _barrelHeat = 0f;
+            UpdateBarrelHeatFX();
             if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(unEquipMotion);
         }
 
@@ -437,10 +447,19 @@ namespace LR2.Weapons
 
             // Semi/burst: release recoil after one cycle like the Kinemation demo.
             if (_recoilActive && (!_triggerHeld || _fireMode != FireMode.Auto) && Time.time >= _nextShotTime) StopRecoil();
+
+            if (_barrelHeat > 0f && Time.time - _lastShotTime > 0.30f)
+            {
+                _barrelHeat = Mathf.MoveTowards(_barrelHeat, 0f, deltaTime * 0.13f);
+                UpdateBarrelHeatFX();
+            }
         }
 
         private void Shoot()
         {
+            EnsureHeatFX();
+            _barrelHeat = Mathf.Clamp01(_barrelHeat + 0.042f);
+            UpdateBarrelHeatFX();
             AmmoInMagazine--;
             _shotCounter++;
             var owner = Owner;
@@ -521,23 +540,125 @@ namespace LR2.Weapons
             var combatant = Owner.Combatant;
             // Indoor check is cheap (2 rays) but only needed every few shots.
             if (_shotCounter % 4 == 1 || Time.time - _lastShotTime > 0.4f) _indoors = LR2Audio.IsIndoors(pos);
+            float overheat = Mathf.Clamp01((_barrelHeat - 0.30f) / 0.70f);
+            float heatPitch = overheat > 0f ? Mathf.Lerp(1f, 1.16f, overheat) * (1f + UnityEngine.Random.Range(-0.03f, 0.07f) * overheat) : 1f;
             if (combatant != null && combatant.IsLocalPlayer)
             {
                 bool first = Time.time - _lastShotTime > 0.35f && a.fireFirstShot.IsValid;
-                LR2Audio.PlayAt(first ? a.fireFirstShot : a.firePlayer, pos);
-                LR2Audio.PlayAt(Owner.IsAiming && a.fireMechAds.IsValid ? a.fireMechAds : a.fireMech, pos);
-                if (_shotCounter % 2 == 0 || !_triggerHeld) LR2Audio.PlayAt(a.TailFor(_indoors), pos);
+                LR2Audio.PlayAt(first ? a.fireFirstShot : a.firePlayer, pos, 1f + overheat * 0.18f, 0f, false, heatPitch);
+                LR2Audio.PlayAt(Owner.IsAiming && a.fireMechAds.IsValid ? a.fireMechAds : a.fireMech, pos, 1f + overheat * 0.45f, 0f, false, heatPitch * (1f + overheat * 0.12f));
+                if (overheat > 0.25f && a.fireMech.IsValid)
+                    LR2Audio.PlayAt(a.fireMech, pos, 0.44f * overheat, 0.012f, true, 1.48f + overheat * 0.18f);
+                if (_shotCounter % 2 == 0 || !_triggerHeld) LR2Audio.PlayAt(a.TailFor(_indoors), pos, 1f, 0f, false, 1f + overheat * 0.08f);
                 LR2Audio.Duck(_indoors ? 0.75f : 0.55f);
             }
             else
             {
                 Vector3 listener = LR2Audio.ListenerPosition;
                 float dist = Vector3.Distance(listener, pos);
-                LR2Audio.PlayAtWithTravelTime(a.NpcShotForDistance(dist), pos, listener);
+                LR2Audio.PlayAtWithTravelTime(a.NpcShotForDistance(dist), pos, listener, 1f + overheat * 0.15f);
                 if (dist < 30f && (_shotCounter % 3 == 0)) LR2Audio.PlayAt(a.TailFor(_indoors), pos, 0.6f);
                 if (dist < 20f) LR2Audio.Duck(0.25f);
             }
             if (_shotCounter % 2 == 0 || !_triggerHeld) PlayEchoes(pos, a.TailFor(_indoors));
+        }
+
+        private void EnsureHeatFX()
+        {
+            if (_heatFxBuilt) return;
+            _heatFxBuilt = true;
+            Transform m = Muzzle;
+
+            // Persistent rising barrel smoke wisps after sustained fire.
+            var smokeGo = new GameObject("BarrelHeatSmoke");
+            smokeGo.transform.SetParent(m, false);
+            _barrelSmoke = smokeGo.AddComponent<ParticleSystem>();
+            var main = _barrelSmoke.main;
+            main.playOnAwake = true;
+            main.loop = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.85f, 1.55f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.28f, 0.65f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.024f, 0.058f);
+            main.startColor = new Color(0.82f, 0.84f, 0.88f, 0.34f);
+            main.gravityModifier = -0.22f;
+            main.maxParticles = 48;
+            var shape = _barrelSmoke.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 12f;
+            shape.radius = 0.012f;
+            var sol = _barrelSmoke.sizeOverLifetime;
+            sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 2.2f));
+            var pr = smokeGo.GetComponent<ParticleSystemRenderer>();
+            if (pr != null)
+            {
+                Shader sh = Shader.Find("HDRP/Unlit") ?? Shader.Find("Particles/Standard Unlit");
+                if (sh != null)
+                {
+                    var smat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
+                    if (smat.HasProperty("_UnlitColor")) smat.SetColor("_UnlitColor", new Color(0.76f, 0.79f, 0.84f, 0.28f));
+                    if (smat.HasProperty("_BaseColor")) smat.SetColor("_BaseColor", new Color(0.76f, 0.79f, 0.84f, 0.28f));
+                    pr.sharedMaterial = smat;
+                }
+                pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            _barrelSmokeEmission = _barrelSmoke.emission;
+            _barrelSmokeEmission.rateOverTime = 0f;
+
+            // Cherry-red glowing barrel sleeve just behind the muzzle brake/gas block.
+            var glowGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            glowGo.name = "BarrelHeatGlow";
+            var col = glowGo.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+            glowGo.transform.SetParent(m, false);
+            glowGo.transform.localPosition = new Vector3(0f, 0f, -0.15f);
+            glowGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            glowGo.transform.localScale = new Vector3(0.024f, 0.11f, 0.024f);
+            _barrelGlowRenderer = glowGo.GetComponent<Renderer>();
+            if (_barrelGlowRenderer != null)
+            {
+                Shader sh = Shader.Find("HDRP/Unlit") ?? Shader.Find("HDRP/Lit");
+                _barrelGlowMat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
+                _barrelGlowRenderer.sharedMaterial = _barrelGlowMat;
+                _barrelGlowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _barrelGlowRenderer.enabled = false;
+            }
+            var lightGo = new GameObject("BarrelHeatLight");
+            lightGo.transform.SetParent(glowGo.transform, false);
+            _barrelGlowLight = lightGo.AddComponent<Light>();
+            _barrelGlowLight.type = LightType.Point;
+            _barrelGlowLight.color = new Color(1f, 0.26f, 0.04f);
+            _barrelGlowLight.range = 0.45f;
+            _barrelGlowLight.intensity = 0f;
+            _barrelGlowLight.enabled = false;
+        }
+
+        private void UpdateBarrelHeatFX()
+        {
+            if (!_heatFxBuilt) return;
+            float smokeRate = _barrelHeat > 0.26f ? Mathf.Lerp(2f, 24f, (_barrelHeat - 0.26f) / 0.74f) : 0f;
+            if (_barrelSmoke != null) _barrelSmokeEmission.rateOverTime = smokeRate;
+
+            float glowT = Mathf.Clamp01((_barrelHeat - 0.34f) / 0.66f);
+            bool glowActive = glowT > 0.01f;
+            if (_barrelGlowRenderer != null)
+            {
+                _barrelGlowRenderer.enabled = glowActive;
+                if (glowActive && _barrelGlowMat != null)
+                {
+                    Color hot = Color.Lerp(new Color(0.55f, 0.05f, 0.01f, 0.45f), new Color(1f, 0.24f, 0.03f, 0.92f), glowT);
+                    Color hdr = hot * Mathf.Lerp(1.8f, 16f, glowT * glowT);
+                    if (_barrelGlowMat.HasProperty("_UnlitColor")) _barrelGlowMat.SetColor("_UnlitColor", hdr);
+                    if (_barrelGlowMat.HasProperty("_BaseColor")) _barrelGlowMat.SetColor("_BaseColor", hot);
+                    if (_barrelGlowMat.HasProperty("_EmissiveColor")) _barrelGlowMat.SetColor("_EmissiveColor", hdr);
+                }
+            }
+            if (_barrelGlowLight != null)
+            {
+                _barrelGlowLight.enabled = glowActive;
+                _barrelGlowLight.intensity = glowT * glowT * 10f;
+            }
         }
 
         private static readonly RaycastHit[] EchoHits = new RaycastHit[1];

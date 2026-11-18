@@ -13,11 +13,21 @@ namespace LR2.Weapons
         private static readonly RaycastHit[] Hits = new RaycastHit[16];
 
         private LR2Firearm _firearm;
+        private Transform _externalMuzzle;
+        private Transform _ignoreRoot;
+        private bool _externalIsPlayer;
         private LineRenderer _beam;
         private Transform _dot;
         private Renderer _dotRenderer;
         private Material _beamMaterial;
         private Material _dotMaterial;
+        private bool _appliedColorValid;
+        private bool _appliedIsPlayer;
+
+        private static readonly Color PlayerBeamColor = new Color(0.05f, 1f, 0.22f, 0.72f);
+        private static readonly Color PlayerDotColor = new Color(0.08f, 1f, 0.28f, 0.95f);
+        private static readonly Color EnemyBeamColor = new Color(1f, 0.08f, 0.025f, 0.65f);
+        private static readonly Color EnemyDotColor = new Color(1f, 0.04f, 0.01f, 0.92f);
 
         private void Awake()
         {
@@ -28,7 +38,7 @@ namespace LR2.Weapons
             _beam.endWidth = BeamWidth * 0.65f;
             _beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _beam.receiveShadows = false;
-            _beamMaterial = CreateMaterial(new Color(1f, 0.08f, 0.025f, 0.62f));
+            _beamMaterial = CreateMaterial(EnemyBeamColor);
             _beam.sharedMaterial = _beamMaterial;
 
             var dotObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -39,7 +49,7 @@ namespace LR2.Weapons
             if (collider != null) Destroy(collider);
             _dot = dotObject.transform;
             _dotRenderer = dotObject.GetComponent<Renderer>();
-            _dotMaterial = CreateMaterial(new Color(1f, 0.04f, 0.01f, 0.9f));
+            _dotMaterial = CreateMaterial(EnemyDotColor);
             _dotRenderer.sharedMaterial = _dotMaterial;
             SetVisible(false);
         }
@@ -50,15 +60,55 @@ namespace LR2.Weapons
             if (_dotMaterial != null) Destroy(_dotMaterial);
         }
 
+        public void SetExternalMuzzle(Transform muzzle, Transform ignoreRoot = null, bool isPlayerTeam = false)
+        {
+            _externalMuzzle = muzzle;
+            _ignoreRoot = ignoreRoot;
+            _externalIsPlayer = isPlayerTeam;
+            _appliedColorValid = false;
+        }
+
+        private bool IsPlayerTeamLaser()
+        {
+            if (_externalMuzzle != null) return _externalIsPlayer;
+            if (_firearm == null || _firearm.Owner == null || _firearm.Owner.Combatant == null) return false;
+            var c = _firearm.Owner.Combatant;
+            if (c.IsLocalPlayer) return true;
+            var local = Combatant.FindLocalPlayer();
+            return local != null ? !c.IsHostileTo(local) : !c.IsBot;
+        }
+
+        private void SyncLaserColor()
+        {
+            bool isPlayer = IsPlayerTeamLaser();
+            if (_appliedColorValid && _appliedIsPlayer == isPlayer) return;
+            _appliedColorValid = true;
+            _appliedIsPlayer = isPlayer;
+            ApplyColor(_beamMaterial, isPlayer ? PlayerBeamColor : EnemyBeamColor);
+            ApplyColor(_dotMaterial, isPlayer ? PlayerDotColor : EnemyDotColor);
+        }
+
+        private static void ApplyColor(Material material, Color color)
+        {
+            if (material == null) return;
+            if (material.HasProperty("_UnlitColor")) material.SetColor("_UnlitColor", color);
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 2.5f);
+        }
+
         private void LateUpdate()
         {
-            if (_firearm == null || !LR2Settings.LaserEnabled || !_firearm.gameObject.activeInHierarchy)
+            bool active = _externalMuzzle != null ? (_externalMuzzle.gameObject.activeInHierarchy && LR2Settings.LaserEnabled)
+                : (_firearm != null && LR2Settings.LaserEnabled && _firearm.gameObject.activeInHierarchy);
+            if (!active)
             {
                 SetVisible(false);
                 return;
             }
+            SyncLaserColor();
 
-            Transform muzzle = _firearm.Muzzle;
+            Transform muzzle = _externalMuzzle != null ? _externalMuzzle : _firearm.Muzzle;
             if (muzzle == null)
             {
                 SetVisible(false);
@@ -95,7 +145,8 @@ namespace LR2.Weapons
 
         private bool IsOwnedCollider(Transform colliderTransform)
         {
-            if (_firearm.Owner == null) return colliderTransform.IsChildOf(transform.root);
+            if (_ignoreRoot != null && colliderTransform.IsChildOf(_ignoreRoot)) return true;
+            if (_firearm == null || _firearm.Owner == null) return colliderTransform.IsChildOf(transform.root);
             return colliderTransform.IsChildOf(_firearm.Owner.transform) || colliderTransform.IsChildOf(transform.root);
         }
 

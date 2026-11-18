@@ -12,6 +12,7 @@ namespace LR2.Audio
         private float _lastTailTime = -999f;
         private int _activeTails;
 
+        public int ActiveTailCount => _activeTails;
         public float Gain(bool indoors) => indoors ? indoorGain : outdoorGain;
         public bool CanPlay(float now)
         {
@@ -20,6 +21,8 @@ namespace LR2.Audio
             _activeTails++;
             return true;
         }
+
+        public void CancelReservation() => NotifyTailEnded();
 
         public void NotifyTailEnded()
         {

@@ -56,3 +56,5 @@ suggestion, +1 per pending suggestion, +1 per verified task, +0.5 per task ready
 ## Who may edit a defect row
 
 Only the finder (or the reviewer) writes a defect's `found_by`, `stage` and attribution. The agent that caused it may add context in its log entry but must not change those fields; disagreements go to the reviewer or the developer. (Added 2026-11-18 after an agent re-filed a defect the developer had seen as its own pre-push catch.)
+
+If the source task or cause is not established, leave its cause fields blank and explain the uncertainty in `description`. `analysis.py` skips the unknown-cause penalty instead of inventing a blank-agent score row; a named finder can still receive review credit when the review stage is known.
