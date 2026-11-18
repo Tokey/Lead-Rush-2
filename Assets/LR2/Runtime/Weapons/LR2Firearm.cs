@@ -26,6 +26,14 @@ namespace LR2.Weapons
         [SerializeField] private LR2.Characters.ReloadMotionBridge.Rest reloadRestPose;
         [Tooltip("Reload animation play rate (1 = authored speed). Below 1 = slower, more deliberate reloads.")]
         [SerializeField, Range(0.5f, 1.5f)] private float reloadPlayRate = 0.85f;
+        [Tooltip("Multiplies reloadPlayRate. 1.5 = the user's 'reload 1.5x faster' (2026-11-17).")]
+        [SerializeField, Range(0.5f, 3f)] private float reloadSpeedMultiplier = 1.5f;
+        [Tooltip("Tactical reload: with a round still chambered, the empty-reload clip is cut shortly after the new magazine seats (no charging handle).")]
+        [SerializeField] private bool tacticalReload = true;
+        [Tooltip("How long after the mag-in cue (fraction of the full clip) a tactical reload ends and blends back to ready.")]
+        [SerializeField, Range(0f, 0.3f)] private float tacticalEndAfterMagIn = 0.08f;
+        [Tooltip("A tactical reload keeps the chambered round, so the gun holds magazine + 1 (30+1).")]
+        [SerializeField] private bool chamberedRoundBonus = true;
         private FPSAnimationAsset _reloadRuntime;
         [SerializeField] private FPSCameraAnimation cameraReloadAnimation;
         [SerializeField] private FPSAnimationAsset grenadeClip;
@@ -73,6 +81,8 @@ namespace LR2.Weapons
         public FireMode FireMode => _fireMode;
         public Transform Muzzle => muzzle != null ? muzzle : transform;
         public float ReloadProgress => IsReloading ? Mathf.Clamp01((Time.time - _reloadStart) / Mathf.Max(0.01f, _reloadDuration)) : 0f;
+        /// <summary>0..1 over the part of the clip this reload actually plays (tactical reloads end early), for HUD bars.</summary>
+        public float ReloadDisplayProgress => IsReloading ? Mathf.Clamp01(ReloadProgress / Mathf.Max(0.05f, _reloadEndAt)) : 0f;
         public override bool IsBusy => IsReloading || Time.time < _equipReadyAt;
         public override string DisplayName => definition != null ? definition.displayName : base.DisplayName;
 
@@ -130,6 +140,12 @@ namespace LR2.Weapons
         private float _reloadStart;
         private float _reloadDuration;
         private bool _reloadEmpty;
+        private float _reloadEndAt = 1f; // fraction of the full clip at which this reload completes (tactical < 1)
+        private float ReloadRate => Mathf.Max(0.1f, reloadPlayRate * reloadSpeedMultiplier);
+        /// <summary>True while a tactical reload (round chambered, no charging handle) is playing.</summary>
+        public bool IsTacticalReload => IsReloading && !_reloadEmpty && _reloadEndAt < 1f;
+        /// <summary>Rounds the gun holds after a reload from this state: magazine + 1 when a round stays chambered.</summary>
+        private int ReloadCapacity => MagazineSize + (chamberedRoundBonus && AmmoInMagazine > 0 ? 1 : 0);
         private bool _magOutPlayed, _magInPlayed, _boltPlayed;
 
         public void Configure(WeaponDefinition def, Transform muzzlePoint, MuzzleFlash flash, ShellEjector ejector)
@@ -517,7 +533,7 @@ namespace LR2.Weapons
         // ------------------------------------------------------------------ reload
         public override bool OnReload()
         {
-            if (IsReloading || AmmoInMagazine >= MagazineSize || ReserveAmmo <= 0 || Time.time < _equipReadyAt) return false;
+            if (IsReloading || AmmoInMagazine >= ReloadCapacity || ReserveAmmo <= 0 || Time.time < _equipReadyAt) return false;
 
             _reloadEmpty = AmmoInMagazine == 0;
             bool hasClip = FPSAnimationAsset.IsValid(reloadClip);
@@ -525,12 +541,16 @@ namespace LR2.Weapons
             {
                 _reloadRuntime = Instantiate(reloadClip);
                 var bt = _reloadRuntime.blendTime;
-                bt.rateScale = reloadPlayRate;
+                bt.rateScale = ReloadRate;
                 _reloadRuntime.blendTime = bt;
             }
             _reloadDuration = hasClip
-                ? reloadClip.clip.length / Mathf.Max(0.1f, reloadPlayRate)
-                : (definition != null ? (_reloadEmpty ? definition.emptyReloadTime : definition.reloadTime) : 2.4f);
+                ? reloadClip.clip.length / ReloadRate
+                : (definition != null ? (_reloadEmpty ? definition.emptyReloadTime : definition.reloadTime) / reloadSpeedMultiplier : 2.4f);
+            // Only empty-reload clips exist, so a tactical reload plays the same clip and ends right after the mag seats.
+            var cues = definition != null ? definition.audio : null;
+            _reloadEndAt = tacticalReload && !_reloadEmpty && hasClip && cues != null
+                ? Mathf.Clamp(cues.magInAt + tacticalEndAfterMagIn, 0.3f, 1f) : 1f;
             _reloadStart = Time.time;
             IsReloading = true;
             _magOutPlayed = _magInPlayed = _boltPlayed = false;
@@ -541,7 +561,7 @@ namespace LR2.Weapons
             {
                 _weaponAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 _weaponAnimator.Rebind();
-                _weaponAnimator.speed = reloadPlayRate;
+                _weaponAnimator.speed = ReloadRate;
                 _weaponAnimator.Play("Reload", 0, 0f);
                 _weaponAnimator.Update(0f);
             }
@@ -560,15 +580,22 @@ namespace LR2.Weapons
             {
                 if (!_magOutPlayed && t >= a.magOutAt) { _magOutPlayed = true; LR2Audio.PlayAt(a.magOut, transform.position); }
                 if (!_magInPlayed && t >= a.magInAt) { _magInPlayed = true; LR2Audio.PlayAt(a.magIn, transform.position); }
-                if (!_boltPlayed && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); }
+                if (!_boltPlayed && _reloadEmpty && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); }
             }
-            if (t < 1f) return;
+            if (t < _reloadEndAt) return;
 
-            int need = MagazineSize - AmmoInMagazine;
+            bool tactical = _reloadEndAt < 1f;
+            int need = ReloadCapacity - AmmoInMagazine;
             int take = Mathf.Min(need, ReserveAmmo);
             AmmoInMagazine += take;
             ReserveAmmo -= take;
             IsReloading = false;
+            if (tactical)
+            {
+                // Cut before the charging-handle part of the clip and blend the arms back to ready.
+                if (_playables != null) _playables.StopAnimation(0.2f);
+                if (_weaponAnimator != null) { _weaponAnimator.Rebind(); _weaponAnimator.Play("Empty", 0, 0f); _weaponAnimator.Update(0f); }
+            }
             if (_weaponAnimator != null) _weaponAnimator.speed = 1f;
             AmmoChanged?.Invoke();
             ReloadFinished?.Invoke();

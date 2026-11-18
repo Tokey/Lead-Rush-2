@@ -18,9 +18,16 @@ namespace LR2.Core
         /// <summary>HORIZONTAL field of view in degrees (CoD/BF convention). Cameras need the vertical angle: use <see cref="VerticalFov"/>.</summary>
         public static float FieldOfView { get => GetF("FOV", 90f); set => SetF("FOV", Mathf.Clamp(value, 65f, 120f)); }
 
-        /// <summary>Converts a horizontal FOV to Unity's vertical <c>Camera.fieldOfView</c> for the given aspect (90 h = 58.7 v at 16:9).</summary>
+        /// <summary>Aspect ratio the horizontal FOV setting is measured on (16:9, like CoD and Battlefield).</summary>
+        public const float FovReferenceAspect = 16f / 9f;
+
+        /// <summary>
+        /// Vertical camera angle for a HORIZONTAL FOV setting, using Hor+ scaling: the setting is measured on a 16:9 screen and the
+        /// vertical angle is kept for every aspect ratio. Ultrawide screens therefore see more to the sides instead of getting a
+        /// zoomed-in picture, and 16:9 screens are unchanged. <paramref name="aspect"/> is ignored on purpose (kept for callers).
+        /// </summary>
         public static float VerticalFov(float horizontalDegrees, float aspect) =>
-            Camera.HorizontalToVerticalFieldOfView(Mathf.Clamp(horizontalDegrees, 1f, 179f), aspect > 0.01f ? aspect : 16f / 9f);
+            Camera.HorizontalToVerticalFieldOfView(Mathf.Clamp(horizontalDegrees, 1f, 179f), FovReferenceAspect);
         public static bool InvertY { get => GetB("InvertY", false); set => SetB("InvertY", value); }
         public static float MasterVolume { get => GetF("MasterVol", 0.9f); set => SetF("MasterVol", Mathf.Clamp01(value)); }
         public static float SfxVolume { get => GetF("SfxVol", 1f); set => SetF("SfxVol", Mathf.Clamp01(value)); }

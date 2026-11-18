@@ -31,6 +31,7 @@ Material:
   - _DISABLE_SSR_TRANSPARENT
   - _MAPPING_TRIPLANAR
   - _MASKMAP
+  - _MATERIAL_FEATURE_CLEAR_COAT
   - _NORMALMAP
   - _NORMALMAP_TANGENT_SPACE
   m_InvalidKeywords: []
@@ -163,7 +164,7 @@ Material:
     - _AlphaSrcBlend: 1
     - _Anisotropy: 0
     - _BlendMode: 0
-    - _CoatMask: 0.35916376
+    - _CoatMask: 0.35927477
     - _CullMode: 2
     - _CullModeForward: 2
     - _Cutoff: 0.5
@@ -222,9 +223,9 @@ Material:
     - _ReceivesSSR: 1
     - _ReceivesSSRTransparent: 0
     - _RefractionModel: 0
-    - _Smoothness: 0.87911725
-    - _SmoothnessRemapMax: 0.9396748
-    - _SmoothnessRemapMin: 0.41902435
+    - _Smoothness: 0.87923443
+    - _SmoothnessRemapMax: 0.93971795
+    - _SmoothnessRemapMin: 0.41915387
     - _SpecularAAScreenSpaceVariance: 0.1
     - _SpecularAAThreshold: 0.2
     - _SpecularOcclusionMode: 1
@@ -262,8 +263,8 @@ Material:
     - _ZTestTransparent: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.38187075, g: 0.38187075, b: 0.38187075, a: 1}
-    - _Color: {r: 0.75, g: 0.75, b: 0.75, a: 1}
+    - _BaseColor: {r: 0.36767536, g: 0.36767536, b: 0.36767536, a: 1}
+    - _Color: {r: 0.38187072, g: 0.38187072, b: 0.38187072, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
