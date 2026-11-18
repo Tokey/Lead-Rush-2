@@ -89,6 +89,7 @@ namespace LR2.Characters
         public bool IsDead => Health != null && !Health.IsAlive;
         public bool IsLocalPlayer => Combatant != null && Combatant.IsLocalPlayer;
         public bool IsSwitchingWeapon => _switching;
+        public bool InteractTriggeredFrame { get; private set; }
         public LR2Item ActiveItem => _items.Count > 0 ? _items[_activeIndex] : null;
         public LR2Firearm ActiveFirearm => ActiveItem as LR2Firearm;
         public IReadOnlyList<LR2Item> Items => _items;
@@ -370,6 +371,7 @@ namespace LR2.Characters
             AimOrigin = IsLocalPlayer && ViewCamera != null && ViewCamera.isActiveAndEnabled ? ViewCamera.transform.position : EyeTransform.position;
             if (Combatant != null) Combatant.ViewDirection = AimDirection;
 
+            InteractTriggeredFrame = _input.interact;
             _input.ResetOneShots();
         }
 

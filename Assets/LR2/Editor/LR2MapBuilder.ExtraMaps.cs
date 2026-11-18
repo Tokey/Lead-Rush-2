@@ -94,8 +94,8 @@ namespace LR2.EditorTools
                 PropOrBox("SM_Crate_01", "Crate", b, new Vector3(cx + 1.8f, 0.14f, cz - 1.4f), 18f, 0.95f, new Vector3(0.95f, 0.9f, 0.95f), _m.wood, SurfaceType.Wood);
                 Prop("SM_Chair_01", b, new Vector3(cx - 1.5f, 0.14f, cz + 0.25f), 175f, 1f, true, SurfaceType.Wood);
                 FittedPackProp("Lockers", "SM_Crate_02", b, new Vector3(cx - 2.2f, 1.14f, cz - 2.0f), new Vector3(0.6f, 2.0f, 1.6f), 90f, SurfaceType.Wood);
-                AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3600f, 3800f, 16f, 0f, false);
-                AddLight(_lighting, "OpeningBounce_" + name, new Vector3(cx - Mathf.Sign(cx) * 3.6f, 2.8f, cz - Mathf.Sign(cz) * 5.2f), Quaternion.identity, LightType.Point, 5000f, 2800f, 15f, 0f, false);
+                AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3600f, 4000f, 16f, 0f, false);
+                AddLight(_lighting, "OpeningBounce_" + name, new Vector3(cx - Mathf.Sign(cx) * 3.6f, 2.8f, cz - Mathf.Sign(cz) * 5.2f), Quaternion.identity, LightType.Point, 5000f, 3600f, 17f, 0f, false);
             }
             CornerRuins("TransitDepot_NW", -24f, -11f, 11f, 23f, true, true);
             CornerRuins("Pharmacy_NE", 11f, 24f, 11f, 23f, false, true);
@@ -236,15 +236,15 @@ namespace LR2.EditorTools
             AddAmbientParticles(_lighting, "DeadsectorAsh", true, new Vector3(0f, 3.0f, 0f), new Vector3(42f, 5.5f, 42f),
                 new Color(0.55f, 0.55f, 0.58f, 0.18f), new Color(0.35f, 0.35f, 0.38f, 0.10f), 55, 9f, 3.8f, 6.2f, 0.35f, 0.85f, new Vector3(0.6f, -0.15f, -0.35f), 0.01f);
 
-            // Spawns, TacticalPoints & AmmoCrates
-            AddSpawn(new Vector3(-25f, 0.15f, -3f), 90f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-22f, 0.15f, 7f), 110f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-18f, 0.15f, -20f), 45f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-4f, 0.05f, -24f), 0f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(25f, 0.15f, 3f), -90f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(22f, 0.15f, -7f), -70f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(18f, 0.15f, 20f), -135f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(4f, 0.05f, 24f), 180f, TeamId.Bravo, true, false);
+            // Spawns, TacticalPoints & AmmoCrates (B46: protected behind SW/NE corner buildings with doorway + alley exits, zero spawn-to-spawn LOS)
+            AddSpawn(new Vector3(-25.8f, 0.15f, -15.5f), 85f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-15.5f, 0.15f, -25.8f), 10f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-20.0f, 0.15f, -17.5f), 45f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-25.5f, 0.15f, -11.8f), 90f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(25.8f, 0.15f, 15.5f), -95f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(15.5f, 0.15f, 25.8f), 170f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(20.0f, 0.15f, 17.5f), -135f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(25.5f, 0.15f, 11.8f), -90f, TeamId.Bravo, true, false);
             AddSpawn(new Vector3(0f, 0.05f, 24f), 180f, TeamId.None, false, false);
             AddSpawn(new Vector3(0f, 0.05f, -24f), 0f, TeamId.None, false, false);
             AddSpawn(new Vector3(-24f, 0.05f, 0f), 90f, TeamId.None, false, false);
@@ -264,10 +264,13 @@ namespace LR2.EditorTools
             // Moody overcast dusk HDRP lighting + streetlamps + alleyway/visibility fill + weather rain
             foreach (var (sx, sz) in new[] { (-8f, 8f), (8f, 8f), (-8f, -8f), (8f, -8f) })
                 AddLight(_lighting, $"StreetLamp_{(sx < 0 ? "W" : "E")}_{(sz < 0 ? "S" : "N")}",
-                    new Vector3(sx, 4.5f, sz), Quaternion.identity, LightType.Point, 4800f, 4200f, 24f, 0f, false);
+                    new Vector3(sx, 4.5f, sz), Quaternion.identity, LightType.Point, 4800f, 5600f, 22f, 0f, false);
             foreach (float oz in new[] { -14f, 14f })
                 AddLight(_lighting, $"Overhead_{(oz < 0 ? "S" : "N")}",
-                    new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 4700f, 4400f, 24f, 0f, false);
+                    new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 4700f, 5200f, 22f, 0f, false);
+            // Cross-intersection rim fills separate character silhouettes from sandstone walls at Central Intersection (#0) without extra shadow casters.
+            AddLight(_lighting, "CentralCrossRimW", new Vector3(-4.2f, 3.6f, 0f), Quaternion.identity, LightType.Point, 3400f, 3800f, 13f, 0f, false);
+            AddLight(_lighting, "CentralCrossRimE", new Vector3(4.2f, 3.6f, 0f), Quaternion.identity, LightType.Point, 6200f, 2800f, 13f, 0f, false);
             BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 20000f, sunTemp: 4300f,
                 fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.28f, contrast: 14f, saturation: -14f,
                 rainDefaultPreset: 2, evMin: 2.6f, evMax: 12.2f,
@@ -423,15 +426,15 @@ namespace LR2.EditorTools
             Prop("SM_Barrel_02", _props, new Vector3(-20f, 0f, 12f), 20f);
             Prop("SM_Barrel_04", _props, new Vector3(20f, 0f, -12f), -30f);
 
-            // Spawns, Tactical points & Ammo crates (in open hall aisles, clear of GeneratorW/E & ControlConsole)
-            AddSpawn(new Vector3(-23f, 0.05f, -11f), 45f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-20f, 0.05f, -22f), 30f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-7f, 0.05f, -18f), 0f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(-24f, 0.05f, 11f), 120f, TeamId.Alpha, true, false);
-            AddSpawn(new Vector3(23f, 0.05f, 11f), -135f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(20f, 0.05f, 22f), -150f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(7f, 0.05f, 18f), 180f, TeamId.Bravo, true, false);
-            AddSpawn(new Vector3(24f, 0.05f, -11f), -60f, TeamId.Bravo, true, false);
+            // Spawns, Tactical points & Ammo crates (B46: inside solid central shelter of South/North halls, 0/16 spawn-to-spawn LOS)
+            AddSpawn(new Vector3(-3.8f, 0.05f, -20.5f), 0f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-1.3f, 0.05f, -22.5f), 0f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(1.3f, 0.05f, -22.5f), 0f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(3.8f, 0.05f, -20.5f), 0f, TeamId.Alpha, true, false);
+            AddSpawn(new Vector3(-3.8f, 0.05f, 20.5f), 180f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(-1.3f, 0.05f, 22.5f), 180f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(1.3f, 0.05f, 22.5f), 180f, TeamId.Bravo, true, false);
+            AddSpawn(new Vector3(3.8f, 0.05f, 20.5f), 180f, TeamId.Bravo, true, false);
             AddSpawn(new Vector3(0f, 0.05f, 18f), 180f, TeamId.None, false, false);
             AddSpawn(new Vector3(0f, 0.05f, -18f), 0f, TeamId.None, false, false);
             AddSpawn(new Vector3(19f, 3.08f, 0f), -90f, TeamId.None, false, false);
@@ -458,19 +461,18 @@ namespace LR2.EditorTools
 
             foreach (var (fx, fz) in new[] { (-18f, 18f), (18f, 18f), (-18f, -18f), (18f, -18f) })
                 AddLight(_lighting, $"YardFlood_{(fx < 0 ? "W" : "E")}_{(fz < 0 ? "S" : "N")}",
-                    new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 4600f, 4400f, 24f, 0f, false);
+                    new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 4600f, 5000f, 21f, 0f, false);
             foreach (var fbp in new[] { new Vector3(-8.5f, 0f, 11f), new Vector3(8.5f, 0f, -11f), new Vector3(-13.5f, 0f, -5.5f), new Vector3(11.5f, 0f, 6.5f) })
                 SpawnBurningBarrel(_lighting, _props, fbp);
-            AddLight(_lighting, "TrenchFillN", new Vector3(0f, 1.8f, 6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
-            AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
-            AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
+            AddLight(_lighting, "TrenchFillN", new Vector3(0f, 1.8f, 6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 14f, 0f, false);
+            AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 14f, 0f, false);
+            AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 14f, 0f, false);
             BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 24000f, sunTemp: 4300f,
                 fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: 0.25f, contrast: 16f, saturation: -6f,
                 rainDefaultPreset: 0, evMin: 2.6f, evMax: 12.2f,
                 hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 11.6f,
                 shadowsTint: new Vector4(0.95f, 0.99f, 1.03f, 0.015f), highlightsTint: new Vector4(1.05f, 1.00f, 0.93f, 0.02f));
-            PlaceEnvironmentRealism(new Color(0.64f, 0.68f, 0.70f, 1f), new Color(0.65f, 0.52f, 0.35f, 1f), 0.14f, 19f);
-            PlaceEnvironmentRealism(new Color(0.70f, 0.74f, 0.76f, 1f), new Color(0.70f, 0.55f, 0.32f, 1f), 0.16f, 12f, new Vector3(0f, -1.48f, 0f), "FoundryTrenchMist");
+            PlaceEnvironmentRealism(new Color(0.64f, 0.68f, 0.70f, 1f), new Color(0.65f, 0.52f, 0.35f, 1f), 0.14f, 18f);
             PlaceMapDecals(pMin, pMax, 130);
             PlaceTargetedWearDecals();
             AddMatchSystems(38f);
@@ -542,6 +544,8 @@ namespace LR2.EditorTools
                 // B46: symmetric cover gates at +/-8.2m + spawn exit flank shields (+/-18.5m) keeping x=0 clean
                 (-2.8f, 8.2f, 2.2f, 1.08f, 0.75f), (2.8f, -8.2f, 2.2f, 1.08f, 0.75f),
                 (-2.4f, -18.5f, 2.4f, 1.95f, 0.75f), (2.4f, 18.5f, 2.4f, 1.95f, 0.75f),
+                (-14.5f, -19.8f, 3.2f, 2.15f, 0.85f), (-14.5f, 19.8f, 3.2f, 2.15f, 0.85f),
+                (14.5f, -19.8f, 3.2f, 2.15f, 0.85f), (14.5f, 19.8f, 3.2f, 2.15f, 0.85f),
             })
             {
                 tb++;
@@ -594,6 +598,16 @@ namespace LR2.EditorTools
             Prop("SM_Barrel_01", _props, new Vector3(14f, 0f, 0f), 0f);
             Prop("SM_Gascylender", _props, new Vector3(18f, 0f, 0f), 0f);
             Prop("SM_Barrel_02", _props, new Vector3(22f, 0f, 0f), 0f);
+
+            // B46: ballistic range spawn blast-shields at +/-21.5m blocking all spawn-to-spawn rays while keeping 4.2m walkways open
+            var rangeBaffles = Child(_structures, "SpawnBaffles");
+            foreach (float sbz in new[] { -21.5f, 21.5f })
+            {
+                string side = sbz < 0f ? "S" : "N";
+                Box($"SpawnBaffle_{side}_Center", rangeBaffles, new Vector3(0f, 1.2f, sbz), new Vector3(9.4f, 2.4f, 0.5f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                Box($"SpawnBaffle_{side}_West", rangeBaffles, new Vector3(-14.2f, 1.2f, sbz), new Vector3(10.6f, 2.4f, 0.5f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                Box($"SpawnBaffle_{side}_East", rangeBaffles, new Vector3(14.2f, 1.2f, sbz), new Vector3(10.6f, 2.4f, 0.5f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+            }
 
             // Deterministic Spawns, TacticalPoints & AmmoCrates
             AddSpawn(new Vector3(0f, 0.05f, -25.5f), 0f, TeamId.Alpha, true, false);
@@ -715,12 +729,11 @@ namespace LR2.EditorTools
             var so = new SerializedObject(fh);
             so.FindProperty("damagePerSecond").floatValue = 14f;
             so.FindProperty("damageRadius").floatValue = 1.65f;
-            so.FindProperty("lightIntensity").floatValue = 4200f;
-            so.FindProperty("lightRange").floatValue = 14f;
+            so.FindProperty("lightIntensity").floatValue = 6500f;
+            so.FindProperty("lightRange").floatValue = 17f;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var l = AddLight(fireHolder.transform, "FireGlow", Vector3.up * 0.35f, Quaternion.identity, LightType.Point, 2400f, 3600f, 14f, 0f, false);
-            l.gameObject.AddComponent<LightFlicker>().Configure(0.08f, 4.5f, 0f);
+            // FireHazard owns the flickering runtime Fire Light; avoid stacking a duplicate static PointLight on the same barrel.
             var hazeGo = new GameObject("FireHeatHaze");
             hazeGo.transform.SetParent(fireHolder.transform, false);
             hazeGo.transform.localPosition = Vector3.up * 0.55f;
@@ -770,8 +783,7 @@ namespace LR2.EditorTools
             sun.shadows = LightShadows.Soft;
             var hdSun = sunGo.AddComponent<HDAdditionalLightData>();
             hdSun.angularDiameter = 1.6f;
-            hdSun.SetShadowResolutionOverride(true);
-            hdSun.SetShadowResolution(4096);
+            hdSun.SetShadowResolutionOverride(false);
             RenderSettings.sun = sun;
 
             var profile = NewProfile($"{LightDir}/{profileName}.asset");
@@ -882,7 +894,7 @@ namespace LR2.EditorTools
             var rp = go.AddComponent<ReflectionProbe>();
             rp.mode = ReflectionProbeMode.Realtime;
             rp.refreshMode = ReflectionProbeRefreshMode.OnAwake;
-            rp.timeSlicingMode = ReflectionProbeTimeSlicingMode.NoTimeSlicing;
+            rp.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
             rp.size = size;
             rp.boxProjection = true;
             rp.resolution = 256;

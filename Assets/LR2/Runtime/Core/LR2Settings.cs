@@ -33,8 +33,8 @@ namespace LR2.Core
         public static float CameraShake { get => GetF("v3.CameraShake", 1f); set => SetF("v3.CameraShake", Mathf.Clamp01(value)); }
         /// <summary>View-camera anti-aliasing: 0 off, 1 FXAA, 2 SMAA, 3 TAA (default). Applied by ViewCameraQuality.</summary>
         public static int AntiAliasing { get => Mathf.Clamp(Mathf.RoundToInt(GetF("v3.AntiAliasing", 3f)), 0, 3); set => SetF("v3.AntiAliasing", Mathf.Clamp(value, 0, 3)); }
-        /// <summary>HDRP upscaler mode: 0 Native (100%), 1 STP (Spatial-Temporal Post-processing, when supported). Vendor DLSS/FSR require plugin integration (specs/B48.md).</summary>
-        public static int UpscalerMode { get => Mathf.Clamp(GetI("v3.Upscaler", 0), 0, 1); set => SetI("v3.Upscaler", Mathf.Clamp(value, 0, 1)); }
+        /// <summary>HDRP upscaler mode: 0 Native (100%), 1 STP, 2 TAAU, 3 FSR 1.0, 4 DLSS (when plugin+RTX available), 5 FSR 2 (when plugin available). Handled by UpscalerBackend.</summary>
+        public static int UpscalerMode { get => Mathf.Clamp(GetI("v3.Upscaler", 0), 0, 5); set => SetI("v3.Upscaler", Mathf.Clamp(value, 0, 5)); }
         /// <summary>Color-blind-safe hitmarker palette: 0 Standard, 1 Color-Blind Safe (HitmarkerPalette).</summary>
         public static int ColorBlindMode { get => Mathf.Clamp(GetI("v3.ColorBlind", 0), 0, 1); set => SetI("v3.ColorBlind", Mathf.Clamp(value, 0, 1)); }
         public static float MasterVolume { get => GetF("MasterVol", 0.9f); set => SetF("MasterVol", Mathf.Clamp01(value)); }

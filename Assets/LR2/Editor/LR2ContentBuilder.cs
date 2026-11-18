@@ -1627,7 +1627,7 @@ namespace LR2.EditorTools
             Debug.Log($"[LR2] LocoSpeed driving {count} locomotion states");
         }
 
-        /// <summary>NVIDIA DLSS Super Resolution (RTX 20/30/40/50) with STP as fallback on other GPUs, in every HDRP asset.</summary>
+        /// <summary>Enables HDRP 17.5 dynamic resolution + STP (with DLSS/FSR2 priority when vendor plugins exist) on every HDRP asset; native cameras keep allowDynamicResolution = false via UpscalerBackend.</summary>
         private static void ConfigureUpscaling()
         {
             foreach (var g in AssetDatabase.FindAssets("t:HDRenderPipelineAsset", new[] { "Assets/Settings" }))
@@ -1638,11 +1638,26 @@ namespace LR2.EditorTools
                 var d = so.FindProperty("m_RenderPipelineSettings.dynamicResolutionSettings");
                 if (d == null) continue;
                 void B(string n, bool v) { var p = d.FindPropertyRelative(n); if (p != null) p.boolValue = v; }
+                void F(string n, float v) { var p = d.FindPropertyRelative(n); if (p != null) p.floatValue = v; }
                 void I(string n, int v) { var p = d.FindPropertyRelative(n); if (p != null) { if (p.propertyType == SerializedPropertyType.Enum) p.enumValueIndex = v; else p.intValue = v; } }
-                B("enabled", false); // dynamic res/DLSS off: caused shimmer/flicker (enable in HDRP asset to test)
+                B("enabled", true);
                 B("useMipBias", true);
+                B("forceResolution", false);
+                F("minPercentage", 67f);
+                F("maxPercentage", 100f);
+                F("forcedPercentage", 77f);
+                I("dynResType", (int)UnityEngine.Rendering.DynamicResolutionType.Hardware);
+                I("upsampleFilter", (int)UnityEngine.Rendering.DynamicResUpscaleFilter.EdgeAdaptiveScalingUpres);
                 B("DLSSUseOptimalSettings", true);
                 I("DLSSPerfQualitySetting", 2);           // Quality
+                var names = d.FindPropertyRelative("advancedUpscalerNames");
+                if (names != null && names.isArray)
+                {
+                    names.arraySize = 3;
+                    names.GetArrayElementAtIndex(0).stringValue = nameof(AdvancedUpscalers.DLSS);
+                    names.GetArrayElementAtIndex(1).stringValue = nameof(AdvancedUpscalers.FSR2);
+                    names.GetArrayElementAtIndex(2).stringValue = nameof(AdvancedUpscalers.STP);
+                }
                 var list = d.FindPropertyRelative("advancedUpscalersByPriority");
                 if (list != null && list.isArray)
                 {
@@ -1654,7 +1669,7 @@ namespace LR2.EditorTools
                 EditorUtility.SetDirty(asset);
             }
             AssetDatabase.SaveAssets();
-            Debug.Log("[LR2] Upscaling: DLSS (STP fallback) enabled in HDRP assets");
+            Debug.Log("[LR2] Upscaling: HDRP DRS enabled (DLSS -> FSR2 -> STP priority; Native cameras stay 100% via UpscalerBackend)");
         }
 
         private static Material[] _gear;

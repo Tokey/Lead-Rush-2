@@ -1570,8 +1570,7 @@ namespace LR2.EditorTools
             sun.shadows = LightShadows.Soft;
             var hdSun = sunGo.AddComponent<HDAdditionalLightData>();
             hdSun.angularDiameter = _cfg.sunAngularDiameter;
-            hdSun.SetShadowResolutionOverride(true);
-            hdSun.SetShadowResolution(4096);
+            hdSun.SetShadowResolutionOverride(false);
             RenderSettings.sun = sun;
 
             // Global volume (photoreal grade + HDRI skybox + atmosphere + reflection probe)
@@ -1705,7 +1704,12 @@ namespace LR2.EditorTools
                 Box("Pole", pole, new Vector3(0f, 4f, 0f), new Vector3(0.18f, 8f, 0.18f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 Box("Arm", pole, new Vector3(0.6f, 7.9f, 0f), new Vector3(1.3f, 0.12f, 0.25f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 Prop("SM_Lantern_01", pole, new Vector3(1.2f, 7.62f, 0f), 0f, 1.25f, false);
-                AddLight(pole, "Sodium", new Vector3(1.2f, 7.75f, 0f), Quaternion.Euler(90f, 0f, 0f), LightType.Spot, 2100f, 9000f, 22f, 115f, i < 2);
+                var sod = AddLight(pole, "Sodium", new Vector3(1.2f, 7.75f, 0f), Quaternion.Euler(90f, 0f, 0f), LightType.Spot, 2100f, 9000f, 22f, 115f, i < 2);
+                if (i < 2 && sod.TryGetComponent<HDAdditionalLightData>(out var hdSod))
+                {
+                    hdSod.SetShadowResolutionOverride(true);
+                    hdSod.SetShadowResolution(512);
+                }
             }
             Vector3[] whLights = { new Vector3(-9f, 7.0f, -17f), new Vector3(-3f, 7.0f, -17f), new Vector3(3f, 7.0f, -17f), new Vector3(9f, 7.0f, -17f) };
             for (int i = 0; i < whLights.Length; i++)
@@ -1737,7 +1741,10 @@ namespace LR2.EditorTools
                 l.innerSpotAngle = angle * 0.55f;
             }
             l.shadows = shadows ? LightShadows.Soft : LightShadows.None;
-            go.AddComponent<HDAdditionalLightData>();
+            var hd = go.AddComponent<HDAdditionalLightData>();
+            // Cull distant point/spot shading & shadow evaluation outside local combat pockets across all 4 maps (P3).
+            hd.fadeDistance = Mathf.Max(range * 1.85f, range + 8f);
+            if (shadows) hd.shadowFadeDistance = Mathf.Max(range * 1.35f, range + 4f);
             return l;
         }
 

@@ -15,6 +15,16 @@ namespace LR2.Core
         private static InputActionAsset _asset;
         private static InputActionMap _gameplay;
 
+        public static event Action Changed;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            Changed = null;
+            _asset = null;
+            _gameplay = null;
+        }
+
         public static InputActionAsset Asset
         {
             get
@@ -74,11 +84,31 @@ namespace LR2.Core
             return operation;
         }
 
+        public static string GetPrimaryBindingPath(string actionName, string fallback = null)
+        {
+            var action = GetAction(actionName);
+            if (action == null || action.bindings.Count == 0) return fallback;
+            string effective = action.bindings[0].effectivePath;
+            return string.IsNullOrEmpty(effective) ? fallback : effective;
+        }
+
+        public static void SetBindingOverride(string actionName, int bindingIndex, string controlPath)
+        {
+            var action = GetAction(actionName);
+            if (action == null) throw new ArgumentException("Unknown LR2 action: " + actionName, nameof(actionName));
+            if (bindingIndex < 0 || bindingIndex >= action.bindings.Count)
+                throw new ArgumentOutOfRangeException(nameof(bindingIndex));
+
+            action.ApplyBindingOverride(bindingIndex, controlPath);
+            Save();
+        }
+
         public static void Save()
         {
             EnsureCreated();
             PlayerPrefs.SetString(OverridesKey, _asset.SaveBindingOverridesAsJson());
             PlayerPrefs.Save();
+            Changed?.Invoke();
         }
 
         public static void ResetToDefaults()
@@ -87,6 +117,7 @@ namespace LR2.Core
             _asset.RemoveAllBindingOverrides();
             PlayerPrefs.DeleteKey(OverridesKey);
             PlayerPrefs.Save();
+            Changed?.Invoke();
         }
 
         private static void EnsureCreated()

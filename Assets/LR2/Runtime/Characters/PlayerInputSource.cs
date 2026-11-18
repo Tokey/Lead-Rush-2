@@ -63,17 +63,74 @@ namespace LR2.Characters
             _interact = new InputAction("Interact", InputActionType.Button, "<Keyboard>/f");
             _laser = new InputAction("Laser", InputActionType.Button, "<Keyboard>/l");
 
+            ApplyBindingsFromRegistry();
+            LR2Bindings.Changed -= ApplyBindingsFromRegistry;
+            LR2Bindings.Changed += ApplyBindingsFromRegistry;
+
             foreach (var a in All()) a.Enable();
         }
 
         private void OnDisable()
         {
+            LR2Bindings.Changed -= ApplyBindingsFromRegistry;
             foreach (var a in All())
             {
                 if (a == null) continue;
                 a.Disable();
                 a.Dispose();
             }
+        }
+
+        public string GetActiveBindingPath(string actionName)
+        {
+            var a = FindActionByName(actionName);
+            if (a == null) return string.Empty;
+            int idx = a == _move ? 1 : 0;
+            return idx < a.bindings.Count ? a.bindings[idx].effectivePath : string.Empty;
+        }
+
+        private InputAction FindActionByName(string actionName) => actionName switch
+        {
+            "Move" => _move,
+            "Fire" => _fire,
+            "Aim" => _aim,
+            "Sprint" => _sprint,
+            "Jump" => _jump,
+            "Crouch" => _crouch,
+            "Prone" => _prone,
+            "Reload" => _reload,
+            "LeanLeft" => _leanL,
+            "LeanRight" => _leanR,
+            "Interact" => _interact,
+            "Laser" => _laser,
+            _ => null
+        };
+
+        private void ApplyBindingsFromRegistry()
+        {
+            SyncAction(_move, "Move", 1, "<Keyboard>/w");
+            SyncAction(_fire, "Fire", 0, "<Mouse>/leftButton");
+            SyncAction(_aim, "Aim", 0, "<Mouse>/rightButton");
+            SyncAction(_sprint, "Sprint", 0, "<Keyboard>/leftShift");
+            SyncAction(_jump, "Jump", 0, "<Keyboard>/space");
+            SyncAction(_crouch, "Crouch", 0, "<Keyboard>/c");
+            SyncAction(_prone, "Prone", 0, "<Keyboard>/z");
+            SyncAction(_reload, "Reload", 0, "<Keyboard>/r");
+            SyncAction(_leanL, "LeanLeft", 0, "<Keyboard>/q");
+            SyncAction(_leanR, "LeanRight", 0, "<Keyboard>/e");
+            SyncAction(_interact, "Interact", 0, "<Keyboard>/f");
+            SyncAction(_laser, "Laser", 0, "<Keyboard>/l");
+        }
+
+        private static void SyncAction(InputAction target, string registryName, int bindingIndex, string fallbackPath)
+        {
+            if (target == null || bindingIndex < 0 || bindingIndex >= target.bindings.Count) return;
+            string path = LR2Bindings.GetPrimaryBindingPath(registryName, fallbackPath);
+            if (string.IsNullOrEmpty(path)) return;
+            bool wasEnabled = target.enabled;
+            if (wasEnabled) target.Disable();
+            target.ApplyBindingOverride(bindingIndex, path);
+            if (wasEnabled) target.Enable();
         }
 
         private InputAction[] All() => new[]

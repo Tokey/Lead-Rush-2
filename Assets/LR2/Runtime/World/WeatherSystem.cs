@@ -149,7 +149,7 @@ namespace LR2.World
             if (lightning != null) lightning.intensity = 0f;
             _from = _to = Mathf.Clamp(randomStart ? Random.Range(0, presets.Length) : startPreset, 0, Mathf.Max(0, presets.Length - 1));
             _nextChange = Time.time + Random.Range(holdTime.x, holdTime.y);
-            if (maxRainRate < 1400f) maxRainRate = 1850f;
+            maxRainRate = Mathf.Clamp(maxRainRate, 1400f, 2200f);
             if (lightningLux < 2500f) lightningLux = 18000f;
             CreateRainAudio();
             EnsureRealisticRainRig();
@@ -357,7 +357,7 @@ namespace LR2.World
             // Fine high-altitude optical rain streaks + strict 3D roof collision (keeps interiors dry)
             var main = rain.main;
             main.loop = true;
-            main.maxParticles = 5200;
+            main.maxParticles = Mathf.Min(main.maxParticles > 0 ? main.maxParticles : 2400, 2400);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startLifetime = new ParticleSystem.MinMaxCurve(1.35f, 1.85f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(19f, 24f);
@@ -473,9 +473,9 @@ namespace LR2.World
             if (cam == null) return;
 
             // Emit real ground crown splashes & concentric water ripples strictly on outdoor surfaces
-            float targetPerSec = Mathf.Lerp(12f, 160f, rainAmount);
+            float targetPerSec = Mathf.Lerp(10f, 90f, rainAmount);
             _splashAcc += targetPerSec * Time.deltaTime;
-            int burstCount = Mathf.Min(12, Mathf.FloorToInt(_splashAcc));
+            int burstCount = Mathf.Min(4, Mathf.FloorToInt(_splashAcc));
             _splashAcc -= burstCount;
 
             Vector3 originCenter = cam.transform.position + cam.transform.forward * 7f;
@@ -529,7 +529,7 @@ namespace LR2.World
                 Wetness = Mathf.MoveTowards(Wetness, 0f, 0.018f * Time.deltaTime);
             }
 
-            if (Mathf.Abs(Wetness - _appliedWetness) >= 0.008f)
+            if (Mathf.Abs(Wetness - _appliedWetness) >= 0.02f)
             {
                 _appliedWetness = Wetness;
                 ApplyWetnessToWorld(Wetness);

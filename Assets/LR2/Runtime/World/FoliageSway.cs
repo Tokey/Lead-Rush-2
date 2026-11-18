@@ -49,6 +49,11 @@ namespace LR2.World
 
         private void Update()
         {
+            Camera cam = Camera.main;
+            Vector3 camPos = cam != null ? cam.transform.position : Vector3.zero;
+            bool hasCam = cam != null;
+            int frameParity = Time.frameCount & 1;
+
             float wind = WeatherSystem.Instance != null ? WeatherSystem.Wind : 0.3f;
             float time = Time.time * frequency * (0.7f + wind * 0.8f);
             float a = maxAngle * wind;
@@ -56,6 +61,12 @@ namespace LR2.World
             {
                 var p = _plants[i];
                 if (p.t == null) continue;
+                if (hasCam)
+                {
+                    float sqrDist = (p.t.position - camPos).sqrMagnitude;
+                    if (sqrDist > 900f) continue; // > 30m: skip distant non-visible transform updates
+                    if (sqrDist > 324f && (i & 1) != frameParity) continue; // 18-30m: stagger across alternate frames
+                }
                 float s = Mathf.Sin(time + p.phase) + 0.35f * Mathf.Sin(time * 2.3f + p.phase * 1.7f);
                 float c = Mathf.Cos(time * 0.8f + p.phase * 0.6f);
                 p.t.localRotation = p.baseRot * Quaternion.Euler(s * a * p.amp, 0f, (c * 0.6f + 0.4f) * a * p.amp);

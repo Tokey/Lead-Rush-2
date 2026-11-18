@@ -159,7 +159,7 @@ namespace LR2.EditorTools
         [MenuItem("LR2/Configure Build Icon & Version", priority = 35)]
         public static void ConfigureBuildIdentity()
         {
-            PlayerSettings.bundleVersion = "11.18.26.3";
+            PlayerSettings.bundleVersion = "11.18.26.4";
             const string iconPath = "Assets/LR2/UI/Icons/LR2_AppIcon.png";
             Directory.CreateDirectory(Path.GetDirectoryName(iconPath));
             if (!File.Exists(iconPath))

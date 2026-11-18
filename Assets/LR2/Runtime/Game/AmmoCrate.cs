@@ -47,11 +47,13 @@ namespace LR2.Game
             if (indicator != null) indicator.enabled = ready;
             if (indicatorRenderer != null) indicatorRenderer.enabled = ready;
 
-            if (ready && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+            if (ready)
             {
                 var lp = Combat.Combatant.FindLocalPlayer();
                 var soldier = lp != null ? lp.GetComponent<SoldierController>() : null;
-                if (soldier != null && !soldier.IsDead && Vector3.Distance(soldier.transform.position, transform.position) <= 3.0f)
+                bool pressed = (soldier != null && soldier.InteractTriggeredFrame)
+                    || (soldier != null && soldier.InputSource == null && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame);
+                if (pressed && soldier != null && !soldier.IsDead && Vector3.Distance(soldier.transform.position, transform.position) <= 3.0f)
                     TryResupply(soldier);
             }
         }

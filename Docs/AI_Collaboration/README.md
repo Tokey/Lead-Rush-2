@@ -6,7 +6,7 @@ written by AI coding agents that work in the same repository **at the same time*
 They coordinate through one Markdown file in the repo, [`AGENT_COORDINATION.md`](../../AGENT_COORDINATION.md) (the "board").
 
 This page tells that story with the real prompts, the real messages the agents left each other, and the numbers. It covers
-**2026-11-16 11:19 to 2026-11-18 02:12+** (local time, America/New_York) and keeps growing as all four agents commit to the repo.
+**2026-11-16 11:19 to 2026-11-18 12:40+** (local time, America/New_York) and keeps growing as all four agents commit to the repo.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ This page tells that story with the real prompts, the real messages the agents l
 | **Developer prompts** | 135+ recorded verbatim headings across sessions ([every prompt, verbatim](PROMPTS.md)) |
 | **Board** | v1 archived verbatim; v2 (`23:25`); v3 (`00:05+`) with compile gate, Check-the-Check & ledger integrity |
 | **Handoffs & Limit Stops** | 6 documented Claude Code usage-limit / token-cap handoffs (`11-16` afternoon; `11-17 14:55`, `15:07`, `18:13`, `23:14` sub-agent cap; `11-18 00:44` reset wait) |
-| **Tracked work items** | `B1–B60` (incl. `B60a–B60g` & `B60.1–B60.10` HyperMotion subtasks) + research specs `P1–P5` |
+| **Tracked work items** | `B1–B78` (incl. `B60a–B60g` & `B60.1–B60.10` HyperMotion subtasks) + research specs `P1–P5` |
 
 ## The team
 
@@ -262,7 +262,8 @@ worker writes into the shared Assets folder, and Claude's process check only loo
 | Antigravity | `claude-opus-5-5-high` | 11-17 13:12 to 13:30, 22:28 to 22:51 | Bridge runs, map preview capture, a few hard tasks late in the evening |
 | Antigravity | `gemini-4-hydrogen` | 11-17 13:30 to 22:28 | Hit feedback, map fixes, README and pushes, QA bot, music, weather, loading screen, build-crash fix |
 | Antigravity | "argon" | 11-17 22:51 onwards | CTF mode, tactical chat, lighting and HDRI skies, human-like bot aiming |
-| GitHub Copilot | not recorded yet | 11-17 23:12 onwards | Pain/death voices, laser, bot research write-up, first review catch |
+| GitHub Copilot | `gpt-5.6-luna` | 11-17 23:12 to 11-18 02:40 | Pain/death voices (`B12`), weapon laser (`B13`), bot research write-up (`B24`), project history & tooling docs (`B45`), glass materials (`B30`), specs (`B42`/`B44`/`B46`/`B47`/`B48`/`B60`/`P1–P5`), per-gun pose runs, review catches |
+| OpenAI Codex | `gpt-6` | 11-18 01:54 onwards | 4-agent token/limit telemetry (`B56`), independent known-bad QA assertions (`B57`), 390-leaf realism backlog (`B61`), pre-rated task difficulty rubric (`B66a`), heat-haze/laser/TDM/ADS-FOV fixes (`B67a`/`B68a`/`B69`/`B70`), `D39` review catch |
 
 ## Quality: which model produced what quality of work
 
@@ -303,17 +304,18 @@ another agent stopped it first.
   <img alt="Bar chart: completed task count per agent and model" src="figures/tasks_delivered_light.png">
 </picture>
 
-| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Difficulty-rated tasks | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |
+| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 54.1 | 54.1 | 4.8h | 6 | 11.3 | **43.3** | 21 | 0 | 9.00 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
-| Copilot · gpt-5.6-luna | 32.5 | 32.5 | 3.5h | 1 | 9.3 | **34.8** | 35 | 0 | 21.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
-| Gemini · gemini-4-hydrogen | 5.2 | 5.2 | 11.5h | 0 | 0.5 | **22.4** | 30 | 0 | 12.00 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
-| Codex · gpt-6 | 7.0 | 7.0 | 1.0h | 0 | 7.0 | **8.5** | 8 | 0 | 4.00 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · claude-opus-5-5-high | 3.0 | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · argon/hydrogen | -1.2 | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 0 | 0.00 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
-| Gemini · argon | -3.2 | -3.2 | 1.5h | 1 | -2.1 | **-4.0** | 3 | 0 | 1.00 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
+| Claude · `claude-opus-5-5` | 76.6 | 76.6 | 4.8h | 6 | 16.0 | **65.8** | 32 | 21 (21 / 0) | 13.50 | 13 / 4 | 10 / 2 | 5.7 (8) | 1.8 | 5 | 2 |
+| Copilot · `gpt-5.6-luna` | 32.5 | 31.5 | 3.5h | 1 | 9.0 | **33.8** | 35 | 35 (35 / 0) | 20.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
+| Gemini · `gemini-4-hydrogen` | 3.6 | 5.7 | 11.5h | 0 | 0.5 | **23.0** | 31 | 30 (30 / 0) | 14.62 | 1 / 0 | 0 / 0 | 4.2 (6) | 1.4 | 7 | 0 |
+| Gemini · `gemini-4-hydrogen-high` | 14.5 | 14.5 | 1.5h | 0 | 9.7 | **16.8** | 10 | 0 (0 / 0) | 4.50 | 0 / 6 | 0 / 0 | 0.0 (0) | 0.0 | 4 | 0 |
+| Codex · `gpt-6` | 6.0 | 6.2 | 1.0h | 0 | 6.2 | **7.8** | 8 | 8 (8 / 0) | 4.25 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 2 | 0 |
+| Gemini · `claude-opus-5-5-high` | 3.0 | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 (0 / 0) | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · `argon/hydrogen` | -1.2 | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 1 (1 / 0) | 0.00 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
+| Gemini · `argon` | -3.2 | -3.0 | 1.5h | 1 | -2.0 | **-3.7** | 3 | 3 (3 / 0) | 1.25 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
-**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 04:18):
+**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 12:46):
 - **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
   Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
@@ -390,9 +392,28 @@ The board changed three times: v1 (no review), v2 (names by tool, model and caus
 |---|---|---|---|---|---|
 | v1: before 11-17 23:25 | 23 | 13.8 | 6.0 | 1 | 0.4 |
 | v2: 11-17 23:25 to 11-18 00:05 | 15 | 2.0 | 1.3 | 8 | 5.3 |
-| v3: after 11-18 00:05 | 73 | 0.9 | 0.1 | 17 | 2.3 |
+| v3: after 11-18 00:05 | 82 | 0.9 | 0.1 | 23 | 2.8 |
 
 Read with care: later periods have had less playtest time (their after-delivery count will rise as the developer plays), and the task mix differs between periods. Generated by `analysis/analyze.py` into `figures/protocol_periods.md`.
+
+### How the agents test the game & which method catches what ([QA Process](QA_PROCESS.md))
+
+See **[`QA_PROCESS.md`](QA_PROCESS.md)** and [`figures/qa_summary.md`](figures/qa_summary.md) for the full automated test taxonomy (22 pose checks, `FirstPersonPoseCheck` + `motion_baseline.csv`, `BotAim` test [`bot_aim_shots.csv`](../Media/bot/bot_aim_shots.csv), `PlaytestRobot`, 5-scene `LR2QABot` with known-bad fixtures, and [`P3_Report.md`](specs/P3_Report.md) 1080p multi-upscaler telemetry).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/qa_methods_dark.png">
+  <img alt="Bar chart: defects found by developer playtest, code review, automated runtime checks, and compile gate" src="figures/qa_methods_light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/qa_footslide_dark.png">
+  <img alt="Walk foot slide (m/s) across 22 pose checks dropping from 4.25 to 0.36 m/s" src="figures/qa_footslide_light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../Media/bot/bot_aim_real_dark.png">
+  <img alt="Real BotController aim distribution (stationary 37% hit vs strafing 18% hit, 54% misses behind motion)" src="../Media/bot/bot_aim_real_light.png">
+</picture>
 
 ## What worked, and what didn't
 
@@ -431,4 +452,6 @@ Read with care: later periods have had less playtest time (their after-delivery 
 | [`archive/`](archive/) | The board as it was before each format change, verbatim |
 | [`data/`](data/) | The research ledgers: `tasks.csv` (who did what, with which model, outcome) and `bugs.csv` (each defect and its cause) |
 | [`analysis/analyze.py`](analysis/analyze.py) | Turns the ledgers into the charts and table in [`figures/`](figures/) |
-| [`specs/`](specs/) | Specs and reviews for individual tracker items |
+| [`QA_PROCESS.md`](QA_PROCESS.md) | Automated pose-check, aim-test, QA bot, and defect-discovery comparison ([`qa_summary.md`](figures/qa_summary.md) + `qa_*.png`) |
+| [`analysis/qa_analysis.py`](analysis/qa_analysis.py) | Parses local QA logs & `bugs.csv` into [`qa_methods_*.png`](figures/qa_methods_light.png), [`qa_footslide_*.png`](figures/qa_footslide_light.png), and `data/qa_*.csv` |
+| [`specs/`](specs/) | Specs, diagnostics, and benchmark reports for individual tracker items (incl. [`P3_Report.md`](specs/P3_Report.md) & [`P3-results.md`](specs/P3-results.md)) |

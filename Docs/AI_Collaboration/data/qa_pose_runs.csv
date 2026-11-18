@@ -1,0 +1,23 @@
+run,finished,runner,walk_foot_slide,sprint_foot_slide,mag_travel_m,walking_reload_gun_vs_cam,end_jump_walking,end_jump_tactical,killcam_lens_y,killcam_head_hidden,harness_errors,exceptions,screenshots
+LR2_PoseCheck,2026-11-17 14:01,unattributed,4.25,1.47,,,,,,,0,0,23
+LR2_PoseCheck_AK74N,2026-11-18 02:00,Copilot,2.24,0.15,0.64,4.5,,,,,0,0,39
+LR2_PoseCheck_C10_mk18,2026-11-18 09:37,Claude,0.36,0.04,0.428,18.0,5.26,4.32,1.49,True,0,4,51
+LR2_PoseCheck_C7_mk18,2026-11-18 04:14,Claude,1.92,0.29,0.0,5.5,,,,,3,0,39
+LR2_PoseCheck_C8_mk18,2026-11-18 04:30,Claude,0.69,0.15,0.0,11.0,,,,,3,0,39
+LR2_PoseCheck_C9_mk18,2026-11-18 09:19,Claude,-0.29,-0.01,0.428,14.0,17.16,3.68,1.59,False,0,12,51
+LR2_PoseCheck_Claude1,2026-11-17 23:34,Claude,1.49,0.41,0.634,,,,,,0,0,30
+LR2_PoseCheck_Claude2,2026-11-18 00:23,Claude,1.54,0.24,0.634,5.9,,,,,0,0,37
+LR2_PoseCheck_Claude3,2026-11-18 00:27,Claude,1.83,0.23,0.634,5.7,,,,,0,0,37
+LR2_PoseCheck_Claude4,2026-11-18 00:32,Claude,,,,,,,,,0,0,0
+LR2_PoseCheck_Claude5,2026-11-18 00:35,Claude,0.61,0.15,0.634,5.1,,,,,0,0,37
+LR2_PoseCheck_Copilot7,2026-11-18 01:56,Copilot,2.38,0.23,0.634,6.9,,,,,0,0,39
+LR2_PoseCheck_FAL,2026-11-18 02:04,Copilot,1.5,0.1,0.312,6.0,,,,,0,0,39
+LR2_PoseCheck_Final,2026-11-17 21:08,unattributed,0.9,0.06,,,,,,,0,0,28
+LR2_PoseCheck_Final2,2026-11-17 21:25,unattributed,2.01,0.12,,,,,,,0,0,28
+LR2_PoseCheck_Final3,2026-11-17 22:03,unattributed,,0.1,,,,,,,0,0,28
+LR2_PoseCheck_Final4,2026-11-17 22:59,unattributed,1.41,0.03,,,,,,,0,40,28
+LR2_PoseCheck_Final5,2026-11-17 23:23,unattributed,1.45,0.07,,,,,,,0,0,28
+LR2_PoseCheck_Mk18,2026-11-18 02:02,Copilot,2.22,0.15,0.427,15.3,,,,,0,0,39
+LR2_PoseCheck_Round3,2026-11-17 20:41,unattributed,1.69,-0.07,,,,,,,0,0,28
+LR2_PoseCheck_Round4,2026-11-17 20:57,unattributed,1.66,-0.05,,,,,,,0,0,28
+LR2_PoseCheck_Verify,2026-11-17 15:20,unattributed,1.69,-0.15,,,,,,,0,0,28

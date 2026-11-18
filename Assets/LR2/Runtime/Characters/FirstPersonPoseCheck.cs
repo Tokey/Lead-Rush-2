@@ -139,7 +139,11 @@ namespace LR2.Characters
             yield return Wait(1.2f);
 
             // -lr2AimTest: only measure where the real bot AI's shots land (stationary vs strafing target), then quit.
-            if (Array.IndexOf(args, "-lr2AimTest") >= 0) { yield return BotAimTest(); Finish(); yield break; }
+            bool aimRun = Array.IndexOf(args, "-lr2AimTest") >= 0, gifRun = Array.IndexOf(args, "-lr2GifRun") >= 0;
+            if (aimRun) yield return BotAimTest();
+            // -lr2GifRun: record real gameplay clips (HUD included) for the README GIFs, then quit.
+            if (gifRun) yield return GifRun();
+            if (aimRun || gifRun) { Finish(); yield break; }
 
             LogDriverWeaponBones("idle");
             yield return Capture("fp_01_idle", "idle");
@@ -467,9 +471,14 @@ namespace LR2.Characters
         // ------------------------------------------------------------------ real bot AI aim test (user 11-18 10:05)
         private SoldierController _aimShooter;
         private string _aimPhase;
-        private readonly StringBuilder _aimCsv = new StringBuilder("phase,time,lateral_m,height_m,distance_m,target_lateral_speed,lead_lateral_m,hit,zone\n");
-        private float _aimLastShotTime = -1f;
-        private int _aimLastRowStart = -1;
+        private sealed class AimShot
+        {
+            public string phase, zone = "none";
+            public float time, lateral, height, dist, vLat, lead;
+            public Vector3 cross, right, playerPos;
+            public bool hit;
+        }
+        private readonly List<AimShot> _aimShots = new List<AimShot>();
         private readonly Dictionary<string, int[]> _aimStats = new Dictionary<string, int[]>(); // phase -> {shots, hits, head, trailingMisses, misses}
 
         /// <summary>
@@ -507,6 +516,16 @@ namespace LR2.Characters
             // the bot's NavMeshAgent plans paths with updatePosition = false: move its internal position to the teleport too
             if (bot.Agent != null && bot.Agent.isOnNavMesh) bot.Agent.Warp(shooter.transform.position);
             Note($"AIM-TEST bot={shooter.name} weapon={shooter.ActiveFirearm?.DisplayName} start distance 15 m (real BotController AI)");
+            // Start the fight the way a real one starts (C11-C13: a patrolling bot turned away before its meter filled):
+            // the player fires a short burst at it, so it hears the shots and knows who attacked it.
+            Vector3 eyeP = _soldier.ViewTransform != null ? _soldier.ViewTransform.position : _soldier.transform.position + Vector3.up * 1.6f;
+            Vector3 toBot = shooter.transform.position + Vector3.up * 1.3f - eyeP;
+            _cmd.aimYaw = Mathf.Atan2(toBot.x, toBot.z) * Mathf.Rad2Deg;
+            _cmd.aimPitch = -Mathf.Atan2(toBot.y, new Vector2(toBot.x, toBot.z).magnitude) * Mathf.Rad2Deg;
+            _cmd.fire = true;
+            yield return Wait(0.25f);
+            _cmd.fire = false;
+            Note("AIM-TEST player fired a 0.25 s opening burst at the bot");
 
             _aimPhase = "stationary";
             float stEnd = Time.time + 12f, nextNote = Time.time + 3f;
@@ -537,7 +556,17 @@ namespace LR2.Characters
             bot.enabled = false;
             shooter.ControlsEnabled = false;
             if (h != null) { h.MaxHealth = oldMax; h.Heal(oldMax); }
-            File.WriteAllText(Path.Combine(_outDir, "bot_aim_shots.csv"), _aimCsv.ToString());
+            var csvOut = new StringBuilder("phase,time,lateral_m,height_m,distance_m,target_lateral_speed,lead_lateral_m,hit,zone\n");
+            _aimStats.Clear();
+            foreach (var sh in _aimShots)
+            {
+                csvOut.Append(FormattableString.Invariant($"{sh.phase},{sh.time:0.000},{sh.lateral:0.0000},{sh.height:0.0000},{sh.dist:0.00},{sh.vLat:0.000},{sh.lead:0.0000},{(sh.hit ? 1 : 0)},{sh.zone}\n"));
+                if (!_aimStats.TryGetValue(sh.phase, out var a)) _aimStats[sh.phase] = a = new int[5];
+                a[0]++;
+                if (sh.hit) { a[1]++; if (sh.zone == "Head") a[2]++; }
+                else { a[4]++; if (sh.phase == "moving" && Mathf.Abs(sh.vLat) > 0.5f && sh.lead < -0.25f) a[3]++; }
+            }
+            File.WriteAllText(Path.Combine(_outDir, "bot_aim_shots.csv"), csvOut.ToString());
             foreach (var kv in _aimStats)
             {
                 var a = kv.Value;
@@ -548,9 +577,22 @@ namespace LR2.Characters
         private void AimProgress()
         {
             if (_aimShooter == null) return;
-            int shots = _aimStats.TryGetValue(_aimPhase ?? "", out var a) ? a[0] : 0;
-            Note($"AIM-TEST [{_aimPhase}] bot {Vector3.Distance(_aimShooter.transform.position, _soldier.transform.position):0.0} m away, " +
-                 $"dead={_aimShooter.IsDead}, shots so far {shots}, player hp {(_soldier.Health != null ? _soldier.Health.Current : -1f):0}");
+            int shots = 0, hits = 0;
+            foreach (var sh in _aimShots) if (sh.phase == _aimPhase) { shots++; if (sh.hit) hits++; }
+            var bot = _aimShooter.GetComponent<BotController>();
+            var bb = bot != null ? bot.Blackboard : null;
+            var best = bot != null && bot.Perception != null ? bot.Perception.BestThreat : null;
+            var self = _aimShooter.Combatant;
+            var me = _soldier.Combatant;
+            Vector3 eye = self != null ? self.EyePosition : _aimShooter.transform.position + Vector3.up * 1.6f;
+            Vector3 head = me != null ? me.HeadPosition : _soldier.transform.position + Vector3.up * 1.7f;
+            bool blocked = Physics.Linecast(eye, head, out var hit, LR2Layers.VisionMask, QueryTriggerInteraction.Ignore);
+            float ang = self != null ? Vector3.Angle(self.ViewDirection, head - eye) : -1f;
+            Note($"AIM-TEST [{_aimPhase}] bot {Vector3.Distance(_aimShooter.transform.position, _soldier.transform.position):0.0} m, goal={(bot != null ? bot.CurrentGoalName : "-")}, " +
+                 $"botEnabled={(bot != null && bot.enabled)} controls={_aimShooter.ControlsEnabled}, bbTarget={(bb != null && bb.target != null ? bb.target.name : "none")} visible={(bb != null && bb.targetVisible)}, " +
+                 $"best={(best != null && best.combatant != null ? best.combatant.name : "none")} det={(best != null ? best.detection : -1f):0.00} aware={(best != null && best.aware)}, " +
+                 $"angleToPlayer={ang:0} deg, losBlocked={blocked}{(blocked ? " by " + hit.collider.name : "")}, hostile={(self != null && me != null && self.IsHostileTo(me))}, " +
+                 $"shots {shots}, matched hits {hits}, player hp {(_soldier.Health != null ? _soldier.Health.Current : -1f):0}");
         }
 
         private void OnAimShot(ShotEvent e)
@@ -571,33 +613,146 @@ namespace LR2.Characters
             float vLat = Vector3.Dot(v, right);
             float lead = Mathf.Abs(vLat) > 0.5f ? lateral * Mathf.Sign(vLat) : lateral; // + = ahead of the motion
             float dist = Vector3.Distance(new Vector3(e.origin.x, 0f, e.origin.z), new Vector3(P.x, 0f, P.z));
-            _aimLastShotTime = Time.time;
-            _aimLastRowStart = _aimCsv.Length;
-            _aimCsv.Append(FormattableString.Invariant($"{_aimPhase},{Time.time:0.000},{lateral:0.0000},{height:0.0000},{dist:0.00},{vLat:0.000},{lead:0.0000},0,none\n"));
-            if (!_aimStats.TryGetValue(_aimPhase, out var st)) _aimStats[_aimPhase] = st = new int[5];
-            st[0]++; st[4]++;
-            if (_aimPhase == "moving" && Mathf.Abs(vLat) > 0.5f && lead < -0.25f) st[3]++;
+            _aimShots.Add(new AimShot { phase = _aimPhase, time = Time.time, lateral = lateral, height = height, dist = dist, vLat = vLat, lead = lead,
+                                        cross = X, right = right, playerPos = P });
         }
 
         private void OnAimHit(HitEvent e)
         {
             if (_aimPhase == null || _aimShooter == null || e.attacker == null || e.attacker.gameObject != _aimShooter.gameObject) return;
-            if (e.victim == null || e.victim.gameObject != _soldier.gameObject || _aimLastRowStart < 0 || Time.time - _aimLastShotTime > 0.05f) return;
-            string row = _aimCsv.ToString(_aimLastRowStart, _aimCsv.Length - _aimLastRowStart);
-            if (!row.EndsWith(",0,none\n")) return; // already marked
-            _aimCsv.Length = _aimLastRowStart;
-            _aimCsv.Append(row.Substring(0, row.Length - ",0,none\n".Length) + $",1,{e.zone}\n");
-            var st = _aimStats[_aimPhase];
-            st[1]++; st[4]--;
-            if (e.zone == HitZone.Head) st[2]++;
-            // a hit is never a trailing miss
-            if (_aimPhase == "moving")
+            if (e.victim == null || e.victim.gameObject != _soldier.gameObject) return;
+            // Bullets are projectiles: a hit lands one or more frames after its shot (often after the next shot at 800 RPM).
+            // Match it to the unmatched shot of the last 0.35 s whose crossing point is nearest the real impact point.
+            AimShot best = null;
+            float bestD = 1.2f;
+            for (int i = _aimShots.Count - 1; i >= 0; i--)
             {
-                var parts = row.Split(',');
-                if (parts.Length > 6 && float.TryParse(parts[5], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float vl)
-                    && float.TryParse(parts[6], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ld)
-                    && Mathf.Abs(vl) > 0.5f && ld < -0.25f) st[3]--;
+                var sh = _aimShots[i];
+                if (Time.time - sh.time > 0.35f) break;
+                if (sh.hit) continue;
+                float d = Vector3.Distance(sh.cross, e.point);
+                if (d < bestD) { bestD = d; best = sh; }
             }
+            if (best == null) return;
+            best.hit = true;
+            best.zone = e.zone.ToString();
+            // plot the real impact point, relative to where the player stood when the shot was fired
+            best.lateral = Vector3.Dot(e.point - best.playerPos, best.right);
+            best.height = e.point.y - best.playerPos.y;
+            best.lead = Mathf.Abs(best.vLat) > 0.5f ? best.lateral * Mathf.Sign(best.vLat) : best.lateral;
+        }
+
+        // ------------------------------------------------------------------ gameplay GIF clips (user 11-18 10:33)
+        private int _clipFrames;
+        private bool _clipRecording;
+
+        /// <summary>Saves the game view (HUD included) about <paramref name="fps"/> times a second into gif_&lt;name&gt;/.</summary>
+        private IEnumerator RecordClip(string name, float seconds, float fps = 12f)
+        {
+            string dir = Path.Combine(_outDir, "gif_" + name);
+            Directory.CreateDirectory(dir);
+            foreach (var f in Directory.GetFiles(dir)) File.Delete(f);
+            _clipRecording = true;
+            _clipFrames = 0;
+            float end = Time.realtimeSinceStartup + seconds, next = 0f;
+            while (Time.realtimeSinceStartup < end)
+            {
+                yield return new WaitForEndOfFrame();
+                if (Time.realtimeSinceStartup < next) continue;
+                next = Time.realtimeSinceStartup + 1f / fps;
+                var tex = ScreenCapture.CaptureScreenshotAsTexture();
+                if (tex == null) continue;
+                File.WriteAllBytes(Path.Combine(dir, $"f_{_clipFrames++:000}.jpg"), tex.EncodeToJPG(92));
+                Destroy(tex);
+            }
+            _clipRecording = false;
+            Note($"GIF [{name}] {_clipFrames} frames in {seconds:0.0} s");
+        }
+
+        private void AimAt(SoldierController target, float errDeg)
+        {
+            Vector3 eyeP = _soldier.ViewTransform != null ? _soldier.ViewTransform.position : _soldier.transform.position + Vector3.up * 1.6f;
+            Vector3 d = target.transform.position + Vector3.up * 1.3f - eyeP;
+            _cmd.aimYaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg + Mathf.Sin(Time.time * 2.3f) * errDeg;
+            _cmd.aimPitch = -Mathf.Atan2(d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg + Mathf.Sin(Time.time * 3.1f + 1f) * errDeg * 0.6f;
+        }
+
+        private IEnumerator GifRun()
+        {
+            SoldierController bot = null;
+            foreach (var c in Combatant.All)
+            {
+                if (c == null || c.gameObject == _soldier.gameObject) continue;
+                var sc = c.GetComponent<SoldierController>();
+                if (sc != null && !sc.IsDead && _soldier.Combatant != null && TeamUtil.AreHostile(c, _soldier.Combatant)) { bot = sc; break; }
+            }
+            var brain = bot != null ? bot.GetComponent<BotController>() : null;
+            float yaw = OpenYaw();
+
+            // 1. tactical reload in first person
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+            yield return Wait(0.6f);
+            _cmd.fire = true; yield return Wait(0.35f); _cmd.fire = false;
+            yield return Wait(0.3f);
+            StartCoroutine(RecordClip("reload", 3.0f));
+            yield return Wait(0.25f);
+            _cmd.reload = true; yield return null;
+            while (_clipRecording) yield return null;
+
+            // 2. sprint, slow down, crouch
+            StartCoroutine(RecordClip("sprint", 3.4f));
+            _cmd.move = new Vector2(0f, 1f); _cmd.sprint = true;
+            yield return Wait(1.8f);
+            _cmd.sprint = false;
+            yield return Wait(0.6f);
+            _cmd.move = Vector2.zero; _cmd.crouch = true; yield return null; _cmd.crouch = false;
+            while (_clipRecording) yield return null;
+            _cmd.crouch = true; yield return null; _cmd.crouch = false;
+            yield return Wait(0.4f);
+
+            if (bot == null || brain == null) { Note("GIF gunfight skipped: no hostile bot"); yield break; }
+
+            // 3. gunfight against the real bot AI (bigger health pools so it lasts the clip)
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+            Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            bot.Teleport(_soldier.transform.position + fwd * 16f, yaw + 180f);
+            var ph = _soldier.Health; var bh = bot.Health;
+            float pMax = ph != null ? ph.MaxHealth : 100f, bMax = bh != null ? bh.MaxHealth : 100f;
+            if (ph != null) { ph.MaxHealth = 600f; ph.Heal(600f); }
+            if (bh != null) { bh.MaxHealth = 450f; bh.Heal(450f); }
+            brain.enabled = true; bot.ControlsEnabled = true;
+            if (brain.Agent != null && brain.Agent.isOnNavMesh) brain.Agent.Warp(bot.transform.position);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true;
+            AimAt(bot, 0f);
+            _cmd.fire = true; yield return Wait(0.2f); _cmd.fire = false;   // opening burst: the bot knows who shot
+            _cmd.aim = true;
+            StartCoroutine(RecordClip("gunfight", 6.5f));
+            float burstEnd = 0f, nextBurst = Time.time + 0.5f, strafeFlip = 0f, dir = 1f;
+            while (_clipRecording)
+            {
+                if (bot.IsDead || _soldier.IsDead) break;
+                AimAt(bot, 1.6f);
+                if (Time.time >= nextBurst) { burstEnd = Time.time + UnityEngine.Random.Range(0.25f, 0.5f); nextBurst = burstEnd + UnityEngine.Random.Range(0.4f, 0.8f); }
+                _cmd.fire = Time.time < burstEnd;
+                if (Time.time >= strafeFlip) { dir = -dir; strafeFlip = Time.time + UnityEngine.Random.Range(0.6f, 1.1f); }
+                _cmd.move = new Vector2(dir * 0.6f, 0f);
+                yield return null;
+            }
+            _cmd.fire = false; _cmd.move = Vector2.zero; _cmd.aim = false;
+            while (_clipRecording) yield return null;
+
+            // 4. the bot wins this time: death, then the killcam replay of it
+            if (bh != null) { bh.MaxHealth = bMax; bh.Heal(bMax); }
+            if (ph != null) { ph.MaxHealth = pMax; ph.Heal(pMax); }
+            if (!bot.IsDead)
+            {
+                float until = Time.time + 10f;
+                while (!_soldier.IsDead && Time.time < until) { AimAt(bot, 6f); yield return null; }
+                if (_soldier.IsDead) yield return RecordClip("death_and_killcam", 5.4f);
+                else Note("GIF killcam skipped: the bot did not kill the player within 10 s");
+            }
+            brain.enabled = false; bot.ControlsEnabled = false;
         }
 
         /// <summary>Scripted bot input: absolute aim at the target's chest, ADS held, trigger on demand.</summary>

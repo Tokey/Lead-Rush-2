@@ -15,6 +15,7 @@ using LR2.Game;
 using LR2.UI;
 using LR2.Weapons;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
@@ -37,6 +38,17 @@ namespace LR2.World
         private int _runtimeErrors;
         private int _footsteps;
         private float _distAccum;
+        private int _savedUpscalerMode = -1;
+        private string _telemetrySuffix;
+
+        private static string GetArgValue(string flag)
+        {
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (string.Equals(args[i], flag, StringComparison.OrdinalIgnoreCase))
+                    return args[i + 1];
+            return null;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
@@ -101,6 +113,23 @@ namespace LR2.World
             Application.logMessageReceived += OnLog;
             string outDir = OutDir();
             string sceneName = SceneManager.GetActiveScene().name;
+            string upArg = GetArgValue("-lr2Upscaler");
+            if (!string.IsNullOrEmpty(upArg))
+            {
+                _savedUpscalerMode = LR2Settings.UpscalerMode;
+                int req = upArg.ToLowerInvariant() switch
+                {
+                    "stp" => 1,
+                    "taau" => 2,
+                    "fsr1" => 3,
+                    "dlss" => 4,
+                    "fsr2" => 5,
+                    _ => 0
+                };
+                LR2Settings.UpscalerMode = req;
+                LR2Settings.Apply();
+                _telemetrySuffix = upArg.ToLowerInvariant();
+            }
             _report.AppendLine($"=== LR2 QA BOT ({sceneName}) ===");
 
             // Pause-free deterministic test setup
@@ -141,6 +170,7 @@ namespace LR2.World
                 if (bot != null) bot.enabled = false;
 
             yield return AuditVolumeAndVisibility(player, outDir, sceneName);
+            AuditMapFlowB46(sceneName);
 
             if (sceneName.Contains("Saltworks"))
             {
@@ -154,6 +184,7 @@ namespace LR2.World
                 yield return AuditWeatherThunderRainWetness(player);
                 yield return AuditKillcamHitmarkersAndAudio();
                 yield return AuditCtfAndAdaptiveBot(player);
+                yield return AuditUpscalerBindingsAndDamageHud(player);
                 yield return AuditDeathAdsCloseWeaponAndB57B65(player);
             }
 
@@ -886,6 +917,107 @@ namespace LR2.World
                 $"atmosphere={(afx != null)} fireHazard={(fh != null)}");
         }
 
+        private void AuditMapFlowB46(string sceneName)
+        {
+            var spawns = FindObjectsByType<SpawnPoint>();
+            var alphas = new List<SpawnPoint>();
+            var bravos = new List<SpawnPoint>();
+            foreach (var sp in spawns)
+            {
+                if (sp == null) continue;
+                if (sp.team == TeamId.Alpha) alphas.Add(sp);
+                else if (sp.team == TeamId.Bravo) bravos.Add(sp);
+            }
+
+            int totalPairs = 0, exposedPairs = 0;
+            float minDist = float.MaxValue;
+            foreach (var a in alphas)
+            {
+                foreach (var b in bravos)
+                {
+                    totalPairs++;
+                    Vector3 pa = a.transform.position + Vector3.up * 1.55f;
+                    Vector3 pb = b.transform.position + Vector3.up * 1.55f;
+                    minDist = Mathf.Min(minDist, Vector3.Distance(pa, pb));
+                    if (!Physics.Linecast(pa, pb, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                        exposedPairs++;
+                }
+            }
+
+            int navConnected = 0;
+            var path = new NavMeshPath();
+            if (alphas.Count > 0 && bravos.Count > 0 &&
+                NavMesh.SamplePosition(alphas[0].transform.position, out var hA, 2.5f, NavMesh.AllAreas) &&
+                NavMesh.SamplePosition(bravos[0].transform.position, out var hB, 2.5f, NavMesh.AllAreas) &&
+                NavMesh.CalculatePath(hA.position, hB.position, NavMesh.AllAreas, path) &&
+                path.status == NavMeshPathStatus.PathComplete)
+                navConnected = 1;
+
+            int coverCount = FindObjectsByType<LR2.AI.CoverPoint>().Length;
+            // TestRange preserves the center x=0 shooting lane for QA sightline tests; combat maps guarantee 0 direct spawn-to-spawn LOS.
+            bool safeLos = sceneName.Contains("TestRange") ? exposedPairs <= 1 : exposedPairs == 0;
+            bool ok = totalPairs > 0 && safeLos && navConnected == 1 && coverCount >= 6 && minDist >= 18f;
+            Check(ok, $"{sceneName}.MapFlowB46",
+                $"spawns={alphas.Count}v{bravos.Count} exposedPairs={exposedPairs}/{totalPairs} minSpawnDist={minDist:0.0}m navOk={navConnected == 1} cover={coverCount}");
+        }
+
+        private IEnumerator AuditUpscalerBindingsAndDamageHud(SoldierController player)
+        {
+            // B48: Verify HDRP upscaler capability probe & Native <-> STP runtime toggle
+            Camera cam = player != null && player.ViewCamera != null ? player.ViewCamera : Camera.main;
+            var hd = cam != null ? cam.GetComponent<HDAdditionalCameraData>() : null;
+            int origUpscaler = LR2Settings.UpscalerMode;
+            LR2Settings.UpscalerMode = 0;
+            UpscalerBackend.ApplyToCamera(cam, LR2Settings.AntiAliasing, 0);
+            bool nativeOff = hd != null && !hd.allowDynamicResolution;
+
+            LR2Settings.UpscalerMode = 1;
+            UpscalerBackend.ApplyToCamera(cam, LR2Settings.AntiAliasing, 1);
+            yield return null;
+            bool stpActive = hd != null && (!UpscalerBackend.SupportsStp || (hd.allowDynamicResolution && hd.antialiasing == HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing));
+            string stpLabel = UpscalerBackend.ActiveUpscalerLabel();
+
+            LR2Settings.UpscalerMode = origUpscaler;
+            UpscalerBackend.ApplyToCamera(cam, LR2Settings.AntiAliasing, origUpscaler);
+            Check(nativeOff && stpActive && UpscalerBackend.AssetSupportsDrs, "Upscaler.NativeAndStpSwitch",
+                $"nativeOff={nativeOff} stpActive={stpActive} assetDrs={UpscalerBackend.AssetSupportsDrs} supportsStp={UpscalerBackend.SupportsStp} hwDrs={UpscalerBackend.SupportsHardwareDrs} label={stpLabel} dlss={UpscalerBackend.IsDlssAvailable} fsr2={UpscalerBackend.IsFsr2Available}");
+
+            // B44: Verify LR2Bindings override propagates live into PlayerInputSource and resets cleanly
+            string origJump = LR2Bindings.GetPrimaryBindingPath("Jump", "<Keyboard>/space");
+            var pis = player != null ? player.GetComponent<PlayerInputSource>() : null;
+            bool wasEnabled = pis != null && pis.enabled;
+            if (pis != null && !wasEnabled) pis.enabled = true;
+            LR2Bindings.SetBindingOverride("Jump", 0, "<Keyboard>/g");
+            yield return null;
+            string boundRegistry = LR2Bindings.GetPrimaryBindingPath("Jump");
+            string boundSource = pis != null ? pis.GetActiveBindingPath("Jump") : boundRegistry;
+            LR2Bindings.ResetToDefaults();
+            string resetRegistry = LR2Bindings.GetPrimaryBindingPath("Jump");
+            if (pis != null && !wasEnabled) pis.enabled = false;
+            Check(boundRegistry == "<Keyboard>/g" && boundSource == "<Keyboard>/g" && resetRegistry == origJump,
+                "Settings.KeybindsRebindAndPersistence",
+                $"rebind={boundSource} reset={resetRegistry} orig={origJump}");
+
+            // B8: Verify directional damage arc indicator reacts to incoming directional hit
+            var hud = FindAnyObjectByType<HUDController>();
+            if (player != null && hud != null)
+            {
+                int beforeInd = hud.ActiveDamageIndicatorCount;
+                GameEvents.RaiseHit(new HitEvent
+                {
+                    attacker = null,
+                    victim = player.Combatant,
+                    damage = 12f,
+                    direction = Vector3.right,
+                    point = player.transform.position
+                });
+                yield return null;
+                int afterInd = hud.ActiveDamageIndicatorCount;
+                Check(afterInd >= Mathf.Max(1, beforeInd), "HUD.DamageIndicatorDirectional",
+                    $"before={beforeInd} after={afterInd}");
+            }
+        }
+
         private IEnumerator AuditDeathAdsCloseWeaponAndB57B65(SoldierController player)
         {
             // B65 / R17: Verify tail reservation rolls back immediately on voice allocation failure.
@@ -951,6 +1083,7 @@ namespace LR2.World
 
         private static Texture2D CaptureCamera(Camera cam, int w, int h)
         {
+            PerformanceFrameTelemetry.MarkExternalStall(3);
             var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             try
             {
@@ -1026,27 +1159,18 @@ namespace LR2.World
         {
             Application.logMessageReceived -= OnLog;
             var perf = FindAnyObjectByType<PerformanceFrameTelemetry>();
-            if (perf != null && perf.Count >= 8)
+            if (perf != null && perf.TryGetSummary(out int sc, out float avg, out float med, out float p99,
+                out float avgCpu, out float avgGpu, out float p99Gpu, out float rawP99))
             {
-                int sc = Mathf.Min(perf.Count, 3600);
-                var ms = new float[sc];
-                double sum = 0.0;
-                int offset = Mathf.Max(0, perf.Count - sc);
-                for (int i = 0; i < sc; i++)
-                {
-                    float v = perf.Get((offset + i) % sc).frameMs;
-                    ms[i] = v;
-                    sum += v;
-                }
-                System.Array.Sort(ms);
-                float avg = (float)(sum / sc);
-                float med = ms[sc / 2];
-                float p99 = ms[Mathf.Clamp(Mathf.CeilToInt(sc * 0.99f) - 1, 0, sc - 1)];
-                Check(true, "Performance.FrameTelemetry", $"samples={sc} avg={avg:0.00}ms med={med:0.00}ms p99={p99:0.00}ms");
-                string p3Dir = Path.Combine(Directory.GetCurrentDirectory(), "Logs", "LR2_P3");
-                Directory.CreateDirectory(p3Dir);
-                File.WriteAllText(Path.Combine(p3Dir, $"{sceneName}_frame_timing.txt"),
-                    $"scene={sceneName}\nsamples={sc}\navgFrameMs={avg:0.00}\nmedianFrameMs={med:0.00}\np99FrameMs={p99:0.00}\n");
+                Check(true, "Performance.FrameTelemetry",
+                    $"samples={sc} avg={avg:0.00}ms med={med:0.00}ms p99={p99:0.00}ms rawP99={rawP99:0.00}ms cpu={avgCpu:0.00}ms gpu={avgGpu:0.00}ms upscaler={UpscalerBackend.ActiveUpscalerLabel()}");
+                perf.FlushReport(sceneName, _telemetrySuffix);
+            }
+            if (_savedUpscalerMode >= 0)
+            {
+                LR2Settings.UpscalerMode = _savedUpscalerMode;
+                LR2Settings.Apply();
+                _savedUpscalerMode = -1;
             }
             Check(_runtimeErrors == 0, $"{sceneName}.RuntimeErrors", $"count={_runtimeErrors}");
             _report.AppendLine($"Failures: {_failures.Count}");
@@ -1056,10 +1180,22 @@ namespace LR2.World
 #if UNITY_EDITOR
             if (Application.isBatchMode || Requested)
             {
-                string setupPath = Path.Combine(Directory.GetCurrentDirectory(), "Library", "LastSceneManagerSetup.txt");
-                if (File.Exists("Assets/LR2/Scenes/LR2_MainMenu.unity"))
-                    File.WriteAllText(setupPath, "sceneSetups:\n- path: Assets/LR2/Scenes/LR2_MainMenu.unity\n  isLoaded: 1\n  isActive: 1\n  isSubScene: 0\n");
-                UnityEditor.EditorApplication.Exit(_failures.Count > 0 ? 1 : 0);
+                int exitCode = _failures.Count > 0 ? 1 : 0;
+                UnityEditor.SessionState.SetInt("LR2QABot.ExitCode", exitCode);
+                UnityEditor.SessionState.SetBool("LR2QABot.Done", true);
+                bool exited = false;
+                void ExitWhenStopped()
+                {
+                    if (exited || UnityEditor.EditorApplication.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return;
+                    exited = true;
+                    UnityEditor.EditorApplication.update -= ExitWhenStopped;
+                    string setupPath = Path.Combine(Directory.GetCurrentDirectory(), "Library", "LastSceneManagerSetup.txt");
+                    if (File.Exists("Assets/LR2/Scenes/LR2_MainMenu.unity"))
+                        File.WriteAllText(setupPath, "sceneSetups:\n- path: Assets/LR2/Scenes/LR2_MainMenu.unity\n  isLoaded: 1\n  isActive: 1\n  isSubScene: 0\n");
+                    UnityEditor.EditorApplication.Exit(exitCode);
+                }
+                UnityEditor.EditorApplication.update += ExitWhenStopped;
+                UnityEditor.EditorApplication.isPlaying = false;
             }
 #endif
         }

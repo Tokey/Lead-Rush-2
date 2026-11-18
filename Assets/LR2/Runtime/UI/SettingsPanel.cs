@@ -84,7 +84,7 @@ namespace LR2.UI
 
         private static readonly int[] FrameLimits = { 0, 60, 120, 144, 165, 240 };
         private static readonly string[] AaLabels = { "OFF", "FXAA", "SMAA", "TAA" };
-        private static readonly string[] UpscalerLabels = { "NATIVE", "STP" };
+        private static readonly string[] UpscalerLabels = { "NATIVE", "STP", "TAAU", "FSR 1.0", "DLSS", "FSR 2" };
         private static readonly string[] ColorBlindLabels = { "STANDARD", "COLOR-BLIND SAFE" };
         private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private bool _loading;
@@ -95,8 +95,15 @@ namespace LR2.UI
 
         private void OnEnable()
         {
+            LR2Settings.Changed -= OnSettingsChanged;
+            LR2Settings.Changed += OnSettingsChanged;
             Load();
             SelectTab(0);
+        }
+
+        private void OnSettingsChanged()
+        {
+            if (!_loading) UpdateUpscalerNote();
         }
 
         public void Load()
@@ -125,14 +132,16 @@ namespace LR2.UI
                 rayTracing.interactable = supported;
                 rayTracing.isOn = supported && LR2Settings.RayTracing;
             }
-            if (upscalerStatusNote != null)
-            {
-                string rtState = GraphicsPresetContract.SupportsRayTracing ? "DXR SUPPORTED" : "DXR UNAVAILABLE ON GPU";
-                upscalerStatusNote.text = $"{rtState} · DLSS/FSR REQUIRE VENDOR PLUGIN";
-            }
+            UpdateUpscalerNote();
             UpdateLabels();
             RefreshKeybindLabels();
             _loading = false;
+        }
+
+        private void UpdateUpscalerNote()
+        {
+            if (upscalerStatusNote != null)
+                upscalerStatusNote.text = UpscalerBackend.GetCapabilitiesNote();
         }
 
         private void Awake()
@@ -266,6 +275,7 @@ namespace LR2.UI
 
         private void OnDisable()
         {
+            LR2Settings.Changed -= OnSettingsChanged;
             _activeRebind?.Dispose();
             _activeRebind = null;
             LR2Settings.Save();

@@ -341,6 +341,10 @@ namespace LR2.EditorTools
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
             rt.pivot = new Vector2(0f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
+            var bg = go.transform.Find("Background")?.GetComponent<Image>();
+            if (bg != null) bg.color = new Color(0.06f, 0.075f, 0.095f, 0.96f);
+            var chk = go.transform.Find("Background/Checkmark")?.GetComponent<Image>();
+            if (chk != null) chk.color = _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f, 1f);
             var label2 = go.GetComponentInChildren<Text>();
             if (label2 != null) label2.text = "";
             return go.GetComponent<Toggle>();

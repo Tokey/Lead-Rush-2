@@ -7,8 +7,8 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 ![LeadRush 2 — Main Menu & Tactical Recon](Docs/Media/menu_main.png)
 
 > **Built by 4 AI agents.** One developer directs; **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`gemini-4-hydrogen` / `argon`), **GitHub Copilot** (`gpt-5.6-luna`), and **OpenAI Codex** (`gpt-6`) write the code, verify metrics, and cross-review through a shared board. The full story — with prompts, agent messages, 4-agent token/usage telemetry (`B56`), and model quality charts:
-> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)**.
-> Project documentation: [Project history](Docs/PROJECT_HISTORY.md) and [Tooling](Docs/TOOLING.md).
+> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
+> Project documentation: [Project history](Docs/PROJECT_HISTORY.md), [Tooling](Docs/TOOLING.md), and [P3 + HDRP 17.5 Upscaler Benchmark Report](Docs/AI_Collaboration/specs/P3_Report.md).
 
 ### Who built what
 
@@ -25,11 +25,21 @@ and the protocol experiments: [How AI agents are building LeadRush 2](Docs/AI_Co
 
 ## Screenshots
 
-In-game captures, 1920 x 1080, build 11.18.26.3 (2026-11-18).
+In-game captures, 1920 x 1080, build 11.18.26.4 (2026-11-18).
 
-### Live Combat Clip (MK18, Tracers, Armour HUD & Half & Half CTF)
+### Gameplay Clips (`11.18.26.4`)
 
-![Live combat in Saltworks with MK18 iron sights, green/red lasers, armour HUD, and tracers](Docs/Media/gameplay_combat.gif)
+| Live Combat (Saltworks MK18 & Tracers) | Gunfight & Hitmarkers |
+|---|---|
+| ![Live combat in Saltworks with MK18 iron sights, green/red lasers, armour HUD, and tracers](Docs/Media/gameplay_combat.gif) | ![First-person gunfight with hitmarkers and tracers](Docs/Media/gifs/gunfight.gif) |
+
+| Tactical & Empty Reloads | Locomotion & Sprint Transition |
+|---|---|
+| ![First-person MK18 reload sequence](Docs/Media/gifs/reload.gif) | ![First-person sprint cadence and locomotion transition](Docs/Media/gifs/sprint.gif) |
+
+| Ragdoll Death & Killcam Transition |
+|---|
+| ![Elimination vignette transitioning into the killer killcam](Docs/Media/gifs/death_and_killcam.gif) |
 
 | Armour HUD: 100 health + 50 armour | MK18 iron sights |
 |---|---|
@@ -84,7 +94,8 @@ human miss pattern, strafe tracking, recoil pull-down, armour and resupply, skil
 - **Full-Body First-Person Rig (`Assets/LR2/Runtime/Characters/`):** Kinemation humanoid FPS driver (`FPSAnimator`) retargeted onto a full-body SWAT operator mesh (`RetargetProxy.cs`) with eye-locked camera alignment, leg IK foot planting, procedural weapon reload replay (`ReloadMotionBridge.cs`), wall anti-clipping (`WeaponAntiClip.cs`), standing/crouch/slide/prone/mantle stances (`SoldierMovement.cs`), and optional bodycam optics & motion (`BodycamRig.cs`).
 - **Weapons, Overheat & Ballistics (`Assets/LR2/Runtime/Weapons/`, `Combat/`):** The default local loadout carries the **MK18** (`5.56x45` carbine from `LeadRushHDRP` with built-in iron sights) and **MK23** suppressed sidearm (12-round mag); selectable primary rifles also keep **AK-12**, **AK-74N** (clean iron sights), and **FAL** (`LR2ContentBuilder.cs`, `LR2Session.SelectedPrimaryWeapon`). Sustained fire heats the barrel (`LR2Firearm.BarrelHeat`) causing cherry-red pipe glow, rising smoke wisps, and harsher overgassed gunfire audio; toggleable weapon lasers render **green** for player/friendly units and **red** for enemies (`WeaponLaser.cs`). Physical projectile ballistics (`Ballistics.cs`), range damage dropoff, penetration & destructible glass/props (`DestructibleProp.cs`), directional impact audio, and shell ejection (`ShellEjector.cs`).
 - **Tactile Combat Feedback & Killcams:** 100 HP + 50 armour layer (`Health.cs` with overflow, procedural plate-shatter audio, and ammo-station refill), Battlefield-inspired hit/headshot/armour/kill markers with CoD-style vibration (`HitFeedbackHUD.cs`), dynamic `+50 HEADSHOT` / `+100 KILL` score popups & kill feed (`HUDController.cs`), Cobalt-Navy SWAT vs Desert-Crimson Marauder faction uniforms & masks (`SoldierVisuals.cs`), 3D blood droplets that trickle across weapon meshes (`GunBloodFX.cs`), directional damage arcs, and eye-socket first-person killer-perspective killcam replays (`KillcamDirector.cs`).
-- **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, **Team Deathmatch**, and **Rotating Capture the Flag** (`FlagZoneController.cs` BF6-inspired proximity-weighted capture speed across 5 `BotTeamAlignment` modes including **Half & Half 50/50 split**, Squads, FFA, Pack, and Co-op) plus live **Tactical Bot Chat** (`[T]` keyword directives & delayed banter in `TacticalChatSystem.cs`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, `< VALUE >` stepper controls for graphics quality, frame rate limit, and bot difficulty, plus FPS counter persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`, `MainMenuController.cs`).
+- **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, **Team Deathmatch**, and **Rotating Capture the Flag** (`FlagZoneController.cs` BF6-inspired proximity-weighted capture speed across 5 `BotTeamAlignment` modes including **Half & Half 50/50 split**, Squads, FFA, Pack, and Co-op) plus live **Tactical Bot Chat** (`[T]` keyword directives & delayed banter in `TacticalChatSystem.cs`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, `< VALUE >` stepper controls for graphics quality, **HDRP 17.5 multi-upscaler backend (`NATIVE`, `STP`, `TAAU`, `FSR 1.0`, `DLSS`, `FSR 2` in `UpscalerBackend.cs`)**, anti-aliasing (`None`, `FXAA`, `SMAA`, `TAA`), frame rate limit, bot difficulty, live keybind rebinding (`LR2Bindings.cs` -> `PlayerInputSource.cs`), and FPS counter persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`, `MainMenuController.cs`).
+- **Four-Map Optimization & Automated Telemetry (`Assets/LR2/Runtime/World/PerformanceFrameTelemetry.cs`, `specs/P3_Report.md`):** Quality-aware shadow tiers, camera-distance light culling (`fadeDistance`/`shadowFadeDistance`), single-light burning barrels, time-sliced arena reflection probes, throttled `WeatherSystem` & `FoliageSway`, and spawn-to-spawn cover safety across all four maps bring steady 1080p frame times to `6.8–9.6 ms` avg (`15.7–19.1 ms` p99, `0` QA failures across all 5 scenes).
 - **War-Torn Procedural Arenas (`Assets/LR2/Editor/LR2MapBuilder*.cs`, `Assets/LR2/Meshes/Procedural/`):** Leartes/ScansFactory pack props preserving tactical cover heights (`B75`), tileable `_DetailMap` wear, HDRP `SSAO` + `ContactShadows`, per-map `ShadowsMidtonesHighlights` colour grading, ground-level `AtmosphereFX` fog, `FireHazard` burning barrels (`heat haze`), destructible thin-refraction `M_LR2_Glass_*` panes (`B30`), and tuned HDRP lighting across all four combat maps (`B1`/`B72`).
 - **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, disengaged-only `AmmoCrate` ammo/armour resupply (`B74b`), stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling, Fitts/ESTA/CSKnow/Aim Lab biomechanical aiming (`BotController.cs`), Adaptive difficulty (`AdaptiveDifficultyTracker.cs`), and external LLM/commander hooks (`IBotDirectiveProvider`). Explore the **[LR2 Bot Lab](Docs/Bot/bot-lab.html)** (eight live scenarios, also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)), the **[Bot explainer with animated GIFs](Docs/LR2_Bot_Explainer.md)**, or the [3-tab manual](Docs/Bot/bot-brain.html).
 

@@ -559,7 +559,7 @@ namespace LR2.EditorTools
             main.startSpeed = 0f;
             main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.022f);
             main.startColor = new Color(0.75f, 0.8f, 0.85f, 0.35f);
-            main.maxParticles = 9000;
+            main.maxParticles = 2400;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.playOnAwake = false;
             var em = ps.emission;

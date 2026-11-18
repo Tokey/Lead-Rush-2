@@ -22,7 +22,12 @@ namespace LR2.Characters
 
         private Camera _applied, _appliedMain;
         private int _appliedMode = -1;
+        private int _appliedUpscaler = -1;
         private float _nextCheck;
+
+        private void OnEnable() => LR2Settings.Changed += Invalidate;
+        private void OnDisable() => LR2Settings.Changed -= Invalidate;
+        private void Invalidate() { _nextCheck = 0f; _appliedMode = -1; _appliedUpscaler = -1; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
@@ -39,40 +44,24 @@ namespace LR2.Characters
             _nextCheck = Time.unscaledTime + 0.5f;
 
             int mode = LR2Settings.AntiAliasing;
+            int upscaler = LR2Settings.UpscalerMode;
             Camera view = null;
             foreach (var s in FindObjectsByType<SoldierController>())
                 if (s != null && s.IsLocalPlayer && s.ViewCamera != null) { view = s.ViewCamera; break; }
             Camera main = Camera.main;
-            if (view == _applied && main == _appliedMain && mode == _appliedMode) return;
+            if (view == _applied && main == _appliedMain && mode == _appliedMode && upscaler == _appliedUpscaler) return;
 
-            if (view != null) Apply(view, mode);
-            if (main != null && main != view) Apply(main, mode);
+            if (view != null) Apply(view, mode, upscaler);
+            if (main != null && main != view) Apply(main, mode, upscaler);
             _applied = view;
             _appliedMain = main;
             _appliedMode = mode;
+            _appliedUpscaler = upscaler;
         }
 
-        private void Apply(Camera cam, int mode)
+        private void Apply(Camera cam, int mode, int upscaler)
         {
-            var hd = cam.GetComponent<HDAdditionalCameraData>();
-            if (hd == null) return;
-            switch (mode)
-            {
-                case 0: hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.None; break;
-                case 1: hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing; break;
-                case 2:
-                    hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-                    hd.SMAAQuality = HDAdditionalCameraData.SMAAQualityLevel.High;
-                    break;
-                default:
-                    hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing;
-                    hd.TAAQuality = HDAdditionalCameraData.TAAQualityLevel.High;
-                    hd.taaSharpenStrength = taaSharpen;
-                    hd.taaHistorySharpening = taaHistorySharpening;
-                    hd.taaAntiFlicker = taaAntiFlicker;
-                    hd.taaBaseBlendFactor = taaBaseBlend;
-                    break;
-            }
+            UpscalerBackend.ApplyToCamera(cam, mode, upscaler, taaSharpen, taaHistorySharpening, taaAntiFlicker, taaBaseBlend);
         }
     }
 }

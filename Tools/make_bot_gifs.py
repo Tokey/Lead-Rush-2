@@ -891,17 +891,23 @@ def make_ctf_chat_gif():
 
 # ------------------------------------------------------------------ 9. AI Multi-Agent Workflow
 def make_ai_workflow_gif():
-    W_PX, H_PX = 820, 480
+    W_PX, H_PX = 860, 520
+    CODEX_C = "#47d9ff"
     nodes = [
-        (0.50, 0.16, ACCENT, "Developer (1)", "Prompts · Calls"),
-        (0.18, 0.48, PURPLE, "Claude Code", "opus-5-5 · Rig/Review"),
-        (0.50, 0.48, INK, "AGENT_COORDINATION.md", "Lock · Queue · Ledger"),
-        (0.82, 0.48, BOT_C, "Gemini (Lead)", "hydrogen · AI/UI/Maps"),
-        (0.50, 0.82, GOOD, "GitHub Copilot", "gpt-5.6 · QA/Docs/Push"),
-        (0.18, 0.82, WARN, "Unity 6000.5", "Visible Lock + QA"),
-        (0.82, 0.82, INK2, "GitHub Main", "dotnet build -> Push"),
+        (0.50, 0.13, ACCENT, "Developer (1)", "Prompts · Playtest · Calls"),
+        (0.16, 0.43, PURPLE, "Claude Code", "opus-5-5 · Rig & Reviews"),
+        (0.50, 0.43, INK, "AGENT_COORDINATION.md", "v3 Lock · Queue · Ledger"),
+        (0.84, 0.43, BOT_C, "Gemini (Lead)", "hydrogen · AI/UI/Maps/P3"),
+        (0.14, 0.78, WARN, "Unity 6000.5", "1 Lock + ParallelWorker"),
+        (0.38, 0.78, GOOD, "GitHub Copilot", "gpt-5.6 · Specs/QA/Push"),
+        (0.62, 0.78, CODEX_C, "OpenAI Codex", "gpt-6 · B56/B57 QA/Review"),
+        (0.86, 0.78, INK2, "GitHub Main", "dotnet 0/0 -> Push"),
     ]
-    edges = [(0, 1), (0, 2), (0, 3), (1, 2), (3, 2), (4, 2), (1, 5), (3, 5), (4, 6), (2, 6)]
+    edges = [
+        (0, 1), (0, 2), (0, 3), (0, 5), (0, 6),
+        (1, 2), (3, 2), (5, 2), (6, 2),
+        (1, 4), (3, 4), (5, 7), (6, 7), (2, 7),
+    ]
     frames = []
     for fi in range(48):
         img, d, w2, h2 = new_canvas(W_PX, H_PX, BG)
@@ -910,16 +916,16 @@ def make_ai_workflow_gif():
             x0, y0 = nodes[a][0] * w2, nodes[a][1] * h2
             x1, y1 = nodes[b][0] * w2, nodes[b][1] * h2
             d.line((x0, y0, x1, y1), fill=hex_rgba(LINE), width=3)
-            u = ((fi / 48.0) * 2.0 + ei * 0.13) % 1.0
+            u = ((fi / 48.0) * 2.0 + ei * 0.11) % 1.0
             px, py = lerp(x0, x1, u), lerp(y0, y1, u)
             d.ellipse((px - 7, py - 7, px + 7, py + 7), fill=hex_rgba(ACCENT))
-        for nx, ny, col, lbl, sub in nodes:
+        for idx, (nx, ny, col, lbl, sub) in enumerate(nodes):
             bx, by = nx * w2, ny * h2
-            rw, rh = 300, 72
+            rw, rh = (390 if idx == 2 else 360), 76
             d.rounded_rectangle((bx - rw / 2, by - rh / 2, bx + rw / 2, by + rh / 2), radius=10, fill=hex_rgba(PANEL2), outline=hex_rgba(col), width=3)
-            d.text((bx - rw / 2 + 14, by - 24), lbl, fill=hex_rgba(INK), font=FONT_MD)
+            d.text((bx - rw / 2 + 14, by - 25), lbl, fill=hex_rgba(INK), font=FONT_MD)
             d.text((bx - rw / 2 + 14, by + 6), sub, fill=hex_rgba(INK2), font=FONT_SM)
-        d.text((34, h2 - 48), "Protocol v3: Research First -> Implement -> Cross-Review -> Visible QA -> dotnet Gate -> Push", fill=hex_rgba(INK2), font=FONT_SM)
+        d.text((34, h2 - 50), "Protocol v3 (4 Agents): Research First -> Implement -> Cross-Review -> Visible QA -> dotnet 0/0 -> Push", fill=hex_rgba(INK2), font=FONT_SM)
         frames.append(finish_frame(img, W_PX, H_PX))
     save_gif("ai-multiagent-workflow.gif", frames, fps=14)
 

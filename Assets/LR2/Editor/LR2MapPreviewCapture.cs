@@ -1023,7 +1023,12 @@ namespace LR2.EditorTools
                         mm.SelectMap(0); // Saltworks
                         LR2Settings.LaserEnabled = true;
                         LR2Settings.BodycamMotion = 0f;
-                        yield return new WaitForSecondsRealtime(1.1f);
+                        // Wait for the boot intro to finish fading: the 11-18 10:12 hero caught "LEADRUSH II / DEPLOYMENT READY"
+                        // at half opacity over the menu (Claude 10:30). Then let auto-exposure settle.
+                        float tIntro = Time.realtimeSinceStartup;
+                        while ((LR2LoadingIntro.IsCoveringScreen || LR2LoadingIntro.IsShowingTitleScreen) && Time.realtimeSinceStartup - tIntro < 20f)
+                            yield return null;
+                        yield return new WaitForSecondsRealtime(1.6f);
                         yield return SaveScreenPng(Path.Combine(MediaDir, "menu_main.png"));
 
                         // 1b. Mode Rules panel

@@ -169,6 +169,8 @@ namespace LR2.UI
             if (_instance != null) _instance.AddPopup(text);
         }
 
+        public int ActiveDamageIndicatorCount => _damageIndicators.Count;
+
         private void OnEnable()
         {
             _instance = this;
@@ -818,7 +820,7 @@ namespace LR2.UI
                     if (vis)
                     {
                         _flagCompassMarker.rectTransform.anchoredPosition = new Vector2(rel / half * compassWidth * 0.5f, -18f);
-                        _flagCompassMarker.text = $"◆ {dir.magnitude:0}m";
+                        _flagCompassMarker.text = $"+ {dir.magnitude:0}m";
                         _flagCompassMarker.color = flag.State == FlagZoneController.ZoneState.Contested ? Accent : new Color(0.28f, 0.85f, 1f, 1f);
                     }
                 }
@@ -953,7 +955,7 @@ namespace LR2.UI
 
             if (_flagTitleText != null)
             {
-                _flagTitleText.text = $"◆ FLAG // {flag.ActiveSectorName.ToUpperInvariant()}";
+                _flagTitleText.text = $"FLAG // {flag.ActiveSectorName.ToUpperInvariant()}";
                 _flagTitleText.color = flag.State == FlagZoneController.ZoneState.Contested ? Accent : Color.white;
             }
             if (_flagSubText != null)

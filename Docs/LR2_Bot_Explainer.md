@@ -150,7 +150,7 @@ Pull-down starts after `65–135 ms`, fatigues with `sprayHeat` (`0.19/shot` hip
 
 ## 6. How AI Agents Build LeadRush 2 (`AGENT_COORDINATION.md`)
 
-![How Claude, Gemini, and Copilot collaborate through AGENT_COORDINATION.md](Media/bot/ai-multiagent-workflow.gif)
+![How Claude, Gemini, Copilot, and Codex collaborate through AGENT_COORDINATION.md](Media/bot/ai-multiagent-workflow.gif)
 
 See the full documented multi-agent engineering story, model quality ledger charts, and research spec index in [`Docs/AI_Collaboration/README.md`](AI_Collaboration/README.md) and interactively inside Tab 3 of [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html).
 

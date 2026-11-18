@@ -1,0 +1,56 @@
+id,method,found_by,stage,measured_wrong_thing
+D01,Developer playing the game,user,escaped,False
+D02,Developer playing the game,user,escaped,False
+D03,Developer playing the game,user,escaped,False
+D04,Developer playing the game,user,escaped,False
+D05,Developer playing the game,user,escaped,False
+D06,Developer playing the game,user,escaped,False
+D07,Developer playing the game,user,escaped,False
+D08,Developer playing the game,user,escaped,False
+D09,Developer playing the game,user,escaped,False
+D10,Developer playing the game,user,escaped,False
+D11,Developer playing the game,user,escaped,False
+D12,Developer playing the game,user,escaped,False
+D13,Developer playing the game,user,escaped,False
+D14,Developer playing the game,user,escaped,False
+D15,Developer playing the game,user,escaped,False
+D16,Developer playing the game,user,escaped,False
+D17,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,True
+D18,Agent reading code (review),gemini-review,review,False
+D19,Developer playing the game,user,escaped,False
+D20,Compile and push gate,push-check,pre-push,False
+D21,Agent reading code (review),claude-review,review,False
+D22,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,True
+D23,Agent reading code (review),claude-review,review,False
+D24,Agent reading code (review),claude-review,review,False
+D25,Compile and push gate,claude-self,pre-push,False
+D26,Agent reading code (review),copilot-review,review,False
+D27,Developer playing the game,user,escaped,False
+D28,Developer playing the game,user,escaped,False
+D29,Developer playing the game,user,escaped,False
+D30,Compile and push gate,claude-self,pre-push,False
+D31,Agent reading code (review),claude-review,review,False
+D32,Compile and push gate,claude-review,review,False
+D33,Agent reading code (review),gemini-review,review,False
+D34,Agent reading code (review),copilot-review,review,False
+D35,Agent reading code (review),copilot-review,review,False
+D36,"Automated runtime check (pose check, QA bot, captured frames)",copilot-review,review,False
+D37,"Automated runtime check (pose check, QA bot, captured frames)",copilot-review,review,False
+D38,"Automated runtime check (pose check, QA bot, captured frames)",copilot-review,review,False
+D39,Agent reading code (review),codex-review,review,False
+D40,Developer playing the game,user,escaped,False
+D41,Developer playing the game,user,escaped,False
+D42,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,False
+D44,Agent reading code (review),claude-self,review,True
+D43,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,True
+D45,Developer playing the game,user,escaped,False
+D46,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,False
+D47,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,False
+D48,Agent reading code (review),claude-review,review,False
+D49,"Automated runtime check (pose check, QA bot, captured frames)",claude-review,review,False
+D50,Agent reading code (review),qa-bot,review,False
+D51,Agent reading code (review),gemini-review,review,False
+D52,Agent reading code (review),qa-bot,review,False
+D53,Agent reading code (review),gemini-review,review,False
+D54,Agent reading code (review),gemini-review,review,False
+D55,Agent reading code (review),qa-bot,review,False
