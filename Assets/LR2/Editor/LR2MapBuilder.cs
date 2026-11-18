@@ -2582,6 +2582,7 @@ namespace LR2.EditorTools
         // ================================================================================================= main menu scene
         public static void BuildMenuScene()
         {
+            _rnd ??= new System.Random(1024);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cfg = LoadOrCreate<MapBuildConfig>(ConfigPath);
             if (_m == null) _m = MakeMaterials();
@@ -2590,12 +2591,34 @@ namespace LR2.EditorTools
             Container(set, "BackA", new Vector3(-1.5f, 0f, 4.2f), 0f, 0);
             Container(set, "BackB", new Vector3(-1.5f, 2.59f, 4.2f), 0f, 3);
             Container(set, "Side", new Vector3(5.2f, 0f, 1.5f), 70f, 1);
-            PropOrBox("SM_Crate_01", "Crate", set, new Vector3(1.6f, 0f, 1.4f), 12f, 1f, new Vector3(0.9f, 0.9f, 0.9f), _m.wood, SurfaceType.Wood);
+            var crate = PropOrBox("SM_Crate_01", "Crate", set, new Vector3(1.6f, 0f, 1.4f), 12f, 1f, new Vector3(0.9f, 0.9f, 0.9f), _m.wood, SurfaceType.Wood);
             PropOrBox("SM_Cablespool", "Crate2", set, new Vector3(2.55f, 0f, 1.9f), -22f, 0.95f, new Vector3(0.7f, 0.7f, 0.7f), _m.wood, SurfaceType.Metal);
             Prop("SM_Barrel_01", set, new Vector3(-1.35f, 0f, 2.4f), 35f, 1f, false);
             Prop("SM_Gascylender", set, new Vector3(-1.9f, 0f, 2.75f), 15f, 1f, false);
             Prop("SM_Woodpallet_1", set, new Vector3(0.6f, 0f, 3.1f), 40f, 1f, false);
-            Prop("SM_Lantern_01", set, new Vector3(1.6f, 0.92f, 1.4f), 0f, 1f, false);
+            float crateTopY = 0.62f;
+            if (crate != null)
+            {
+                var crateRenderers = crate.GetComponentsInChildren<Renderer>(true);
+                if (crateRenderers.Length > 0)
+                {
+                    crateTopY = crateRenderers[0].bounds.max.y;
+                    for (int ri = 1; ri < crateRenderers.Length; ri++)
+                        crateTopY = Mathf.Max(crateTopY, crateRenderers[ri].bounds.max.y);
+                }
+            }
+            var lantern = Prop("SM_Lantern_01", set, new Vector3(1.6f, crateTopY, 1.4f), 0f, 1f, false);
+            if (lantern != null)
+            {
+                var lRenderers = lantern.GetComponentsInChildren<Renderer>(true);
+                if (lRenderers.Length > 0)
+                {
+                    float minY = lRenderers[0].bounds.min.y;
+                    for (int ri = 1; ri < lRenderers.Length; ri++)
+                        minY = Mathf.Min(minY, lRenderers[ri].bounds.min.y);
+                    lantern.transform.position += Vector3.up * (crateTopY - 0.005f - minY);
+                }
+            }
 
             var bot = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LR2/Prefabs/Characters/LR2_Soldier_Bot.prefab");
             if (bot != null)
@@ -2680,8 +2703,10 @@ namespace LR2.EditorTools
             sun.colorTemperature = 3600f;
             sun.shadows = LightShadows.Soft;
             sunGo.AddComponent<HDAdditionalLightData>();
-            AddLight(lights, "RimLight", new Vector3(2.2f, 2.6f, 3.4f), Quaternion.LookRotation(new Vector3(0.4f, 1.2f, 1.6f) - new Vector3(2.2f, 2.6f, 3.4f)), LightType.Spot, 5200f, 16000f, 10f, 50f, true);
-            AddLight(lights, "KeyLight", new Vector3(-2.5f, 2.2f, -1f), Quaternion.LookRotation(new Vector3(0.4f, 1.3f, 1.6f) - new Vector3(-2.5f, 2.2f, -1f)), LightType.Spot, 3200f, 6000f, 9f, 60f, false);
+            AddLight(lights, "RimLight", new Vector3(2.2f, 2.6f, 3.4f), Quaternion.LookRotation(new Vector3(0.4f, 1.2f, 1.6f) - new Vector3(2.2f, 2.6f, 3.4f)), LightType.Spot, 5800f, 28000f, 12f, 54f, true);
+            AddLight(lights, "KeyLight", new Vector3(-2.2f, 2.25f, -0.8f), Quaternion.LookRotation(new Vector3(0.4f, 1.28f, 1.6f) - new Vector3(-2.2f, 2.25f, -0.8f)), LightType.Spot, 4500f, 24000f, 12f, 64f, false);
+            AddLight(lights, "FillLight", new Vector3(0.1f, 1.55f, -1.2f), Quaternion.LookRotation(new Vector3(0.4f, 1.25f, 1.6f) - new Vector3(0.1f, 1.55f, -1.2f)), LightType.Spot, 5200f, 7500f, 9f, 55f, false);
+            AddLight(lights, "LanternGlow", new Vector3(1.6f, crateTopY + 0.14f, 1.4f), Quaternion.identity, LightType.Point, 2400f, 220f, 4.5f, 0f, false);
 
             var profile = NewProfile(LightDir + "/LR2_Menu_Profile.asset");
             var ve = profile.Add<VisualEnvironment>(true);

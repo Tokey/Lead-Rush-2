@@ -12,6 +12,33 @@ Top-down arena (`32×18 m`) paired with the live 12-second **Detection / Goal / 
 
 ---
 
+## Bot Lab scenarios
+
+Each GIF is captured from the interactive **[LR2 Bot Lab](Bot/bot-lab.html)** (source of the [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)),
+which runs a compact copy of the bot brain: detection meter, the goal ladder every 0.25 s, reaction time, Fitts flicks with a
+minimum-jerk path, 125 ms lag on your velocity, bursts and recoil heat. The player (orange) follows a script; the bot (blue) does
+not. Regenerate with `python Tools/make_bot_lab_gifs.py` (headless Edge renders the page itself, so the GIFs match the artifact).
+
+| Spot and duel | Counter-strafe |
+|---|---|
+| ![Spot and duel](Media/bot/lab-1-spot-and-duel.gif) | ![Counter-strafe](Media/bot/lab-2-counter-strafe.gif) |
+| You walk into view. The detection meter fills (0.9 + 9/distance per second, faster when you move), then a human reaction time, then bursts with a settling aim error. | You strafe left and right. The bot reads your sideways speed 125 ms late, so its misses land behind you after each direction change. |
+
+| Break line of sight | Flank a camper |
+|---|---|
+| ![Break line of sight](Media/bot/lab-3-break-line-of-sight.gif) | ![Flank a camper](Media/bot/lab-4-flank-a-camper.gif) |
+| You fire and hide behind a wall. It hunts your last known position, finds it empty, checks where the shots came from; you get the first shot. | You hold an angle. After 6 s of you anchored in place it passes its flank roll, leaves the lane and comes in from the side you are not watching. |
+
+| Retreat and heal | Armour break and resupply |
+|---|---|
+| ![Retreat and heal](Media/bot/lab-5-retreat-and-heal.gif) | ![Armour break and resupply](Media/bot/lab-6-armour-break-and-resupply.gif) |
+| Below 38 % health under fire it breaks off to cover, waits out the 4 s regen delay, heals past 85 % and hunts you again. | Its armour breaks and you leave. Hunting outranks resupply, so it checks your last position first, then walks to the nearest ready ammo station (+50 armour, +120 rounds; the station goes dark for 20 s). |
+
+| Investigate a shot | Contest the flag |
+|---|---|
+| ![Investigate a shot](Media/bot/lab-7-investigate-a-shot.gif) | ![Contest the flag](Media/bot/lab-8-contest-the-flag.gif) |
+| You fire out of sight 29 m away. It sprints to a fuzzy guess of the position (noises over 20 m away are sprinted to) and spots you on the way. | Capture the Flag: you start capturing. Stopping a capture outranks everything but survival and orders, so it drops its patrol and sprints to contest. |
+
 ## 0. Six-Component Pipeline (`Assets/LR2/Runtime/AI/`)
 
 | Component | Rate | Source File | Responsibility |

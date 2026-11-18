@@ -1,0 +1,1620 @@
+<title>LR2 Bot Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: a field manual in pipeline order (senses, decide, aim, shoot). Each drill is a live instrument with its readout beside it. */
+:root {
+  --bg: #eef0e9; --panel: #fbfcf8; --raised: #d6dbd1; --line: #b9c2b5; --grid: #e2e6dd;
+  --ink: #141b17; --muted: #56625a; --accent: #c4501b; --bot: #2a6cab; --good: #2c8540;
+  --bad: #c2352b; --warn: #946805; --zone: #74499f;
+  --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
+    --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
+    --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
+  --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
+  --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1140px; margin: 0 auto; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(38px, 6vw, 62px); }
+h2 { font-size: clamp(26px, 3.4vw, 34px); }
+h3 { font-size: 20px; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--bot); }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+header { display: grid; gap: 14px; }
+header .lede { font-size: 17px; color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 12px/1 var(--mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.chip b { color: var(--ink); font-weight: 500; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 13px/1.4 var(--mono); }
+nav.toc a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); }
+section { display: grid; gap: 16px; scroll-margin-top: 16px; }
+.head { display: grid; gap: 8px; }
+.head .num { font: 700 15px/1 var(--display); color: var(--accent); letter-spacing: .08em; }
+.drill { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 880px) { .drill { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
+.stage { display: grid; gap: 10px; min-width: 0; }
+canvas { display: block; width: 100%; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.cv-arena { aspect-ratio: 5 / 3; }
+.cv-wide { aspect-ratio: 16 / 7; }
+.cv-square { aspect-ratio: 1 / 1; }
+.cv-chart { aspect-ratio: 16 / 9; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+button, select {
+  font: 500 13px/1 var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 8px 11px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--bot); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+label.ctl { display: grid; gap: 4px; font-size: 13px; color: var(--muted); min-width: 150px; flex: 1 1 150px; }
+label.ctl output { font-family: var(--mono); color: var(--ink); }
+input[type=range] { width: 100%; accent-color: var(--bot); }
+label.tick { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+label.tick input { margin-top: 3px; accent-color: var(--bot); }
+.readout { display: grid; gap: 10px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0%; }
+.bar.hp > i { background: var(--good); }
+.bar.ar > i { background: var(--bot); }
+.bar.det > i { background: var(--warn); }
+.bars { display: grid; grid-template-columns: 70px 1fr 52px; gap: 6px 10px; align-items: center; font-size: 12px; }
+.bars span:last-child { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+ol.ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: rung; }
+ol.ladder li { counter-increment: rung; display: grid; grid-template-columns: 26px 1fr; gap: 2px 8px; padding: 6px 8px; border-radius: var(--radius); border: 1px solid transparent; font-size: 13px; color: var(--muted); }
+ol.ladder li::before { content: counter(rung); font: 600 12px/1.6 var(--mono); color: var(--muted); }
+ol.ladder li b { color: var(--ink); font-weight: 600; }
+ol.ladder li small { grid-column: 2; font-size: 12px; }
+ol.ladder li.on { border-color: var(--bot); background: color-mix(in srgb, var(--bot) 12%, transparent); color: var(--ink); }
+ol.ladder li.on::before { color: var(--bot); }
+ol.ladder li.miss small::after { content: " (not met)"; color: var(--muted); }
+ol.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font: 12px/1.45 var(--mono); max-height: 248px; overflow-y: auto; }
+ol.log li { display: grid; grid-template-columns: 46px 1fr; gap: 8px; }
+ol.log li time { color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.log li.warn span { color: var(--warn); }
+ol.log li.bad span { color: var(--bad); }
+ol.log li.good span { color: var(--good); }
+ol.log li.bot span { color: var(--bot); }
+.note { font-size: 13px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.big { font: 700 34px/1 var(--display); font-variant-numeric: tabular-nums; }
+.verdict { padding: 12px; border-radius: var(--radius); border: 1px solid var(--bot); background: color-mix(in srgb, var(--bot) 10%, transparent); }
+.verdict .big { color: var(--bot); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 500 12px/1.2 var(--mono); color: var(--muted); letter-spacing: .04em; }
+td.num { font-family: var(--mono); text-align: right; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.facts { display: grid; gap: 8px; }
+.srcs { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.srcs li { display: grid; gap: 2px; }
+.srcs li span { color: var(--muted); font-size: 13px; }
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+body.gifmode { padding: 0; }
+body.gifmode .wrap { display: none; }
+.gifgrid { display: grid; grid-template-columns: repeat(8, 640px); gap: 0; }
+.gifgrid canvas { width: 640px; height: 400px; border: 0; border-radius: 0; }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">LeadRush 2 · bot behaviour field manual</span>
+  <h1>LR2 Bot Lab</h1>
+  <p class="lede">How a LeadRush 2 bot notices you, decides what to do, turns to you and pulls its shots. Every drill below runs the same rules and numbers as the game's bot code, so you can watch the mistakes a human makes appear for the same reasons.</p>
+  <div class="chips">
+    <span class="chip">code <b>7e2b37d</b> · build <b>11.18.26.2</b></span>
+    <span class="chip">BotController · TacticalBotBrain · BotPerception · BotDifficulty</span>
+    <span class="chip">soldiers <b>100 HP + 50 armour</b></span>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#theater">1 Scenarios</a><a href="#ladder">2 Decision ladder</a><a href="#senses">3 Detection</a>
+    <a href="#flick">4 Reaction and flick</a><a href="#strafe">5 Tracking a strafer</a><a href="#recoil">6 Recoil pull-down</a>
+    <a href="#armour">7 Armour and resupply</a><a href="#skill">8 Skill and adaptation</a><a href="#sources">9 Sources</a>
+  </nav>
+</header>
+
+<section id="theater" aria-labelledby="h-theater">
+  <div class="head"><span class="num">01 · WATCH A BOT PLAY</span><h2 id="h-theater">Eight scenarios, one brain</h2>
+    <p>The blue bot runs a compact copy of the game's brain: detection meter, the goal ladder every 0.25 s, reaction time, Fitts flicks with a minimum-jerk path, 125 ms lag on your velocity, bursts and recoil heat. You are orange, on a script. Nothing about the bot's choices is scripted.</p></div>
+  <div class="drill">
+    <div class="stage">
+      <div class="seg" id="scnButtons" role="group" aria-label="Scenario"></div>
+      <p class="note" id="scnBlurb"></p>
+      <canvas id="cvTheater" class="cv-arena" aria-label="Top-down arena with the bot and the player"></canvas>
+      <div class="controls">
+        <button id="btnPlay" type="button">Pause</button>
+        <button id="btnRestart" type="button">Restart</button>
+        <div class="seg" role="group" aria-label="Speed">
+          <button type="button" data-speed="0.5">0.5×</button><button type="button" data-speed="1" aria-pressed="true">1×</button><button type="button" data-speed="2">2×</button>
+        </div>
+        <span class="note mono" id="tClock">t = 0.0 s</span>
+      </div>
+      <p class="note">The tour plays all eight; pick one to replay it. In scenarios 2 to 8 the scripted player cannot drop below 10 health until its script ends, so the whole behaviour plays out. The duel is a real fight.</p>
+      <div class="legend"><span><i style="background:var(--bot)"></i>bot and its view cone (±55°, ±100° inside 6 m)</span><span><i style="background:var(--accent)"></i>player</span><span><i style="background:var(--warn)"></i>last known position, noise</span><span><i style="background:var(--good)"></i>ammo station</span></div>
+    </div>
+    <div class="readout">
+      <div class="panel readout">
+        <div class="eyebrow">Bot</div>
+        <div class="bars">
+          <span>Health</span><div class="bar hp"><i id="bHp"></i></div><span id="bHpN">100</span>
+          <span>Armour</span><div class="bar ar"><i id="bAr"></i></div><span id="bArN">50</span>
+          <span>Detection</span><div class="bar det"><i id="bDet"></i></div><span id="bDetN">0 %</span>
+        </div>
+        <dl class="kv">
+          <dt>Goal</dt><dd id="bGoal">Patrol</dd>
+          <dt>Distance to player</dt><dd id="bDist">-</dd>
+          <dt>Aim error now</dt><dd id="bErr">-</dd>
+          <dt>Ammo</dt><dd id="bAmmo">30 / 120</dd>
+          <dt>Shots / hits</dt><dd id="bShots">0 / 0</dd>
+        </dl>
+        <div class="eyebrow">Player</div>
+        <div class="bars">
+          <span>Health</span><div class="bar hp"><i id="pHp"></i></div><span id="pHpN">100</span>
+          <span>Armour</span><div class="bar ar"><i id="pAr"></i></div><span id="pArN">50</span>
+        </div>
+      </div>
+      <div class="panel"><div class="eyebrow" style="margin-bottom:8px">Goal ladder (first rule that holds wins)</div><ol class="ladder" id="tLadder"></ol></div>
+      <div class="panel"><div class="eyebrow" style="margin-bottom:8px">What the bot just did</div><ol class="log" id="tLog" aria-live="polite"></ol></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder" aria-labelledby="h-ladder">
+  <div class="head"><span class="num">02 · DECIDE</span><h2 id="h-ladder">The goal ladder</h2>
+    <p>Four times a second the brain walks down this list and takes the first rule that holds. Tick what the bot currently knows and see which goal wins and why the rules above it did not fire.</p></div>
+  <div class="drill">
+    <div class="panel facts" id="factBox">
+      <label class="tick"><input type="checkbox" id="fLow"><span>Health under 38 % and taking hits</span></label>
+      <label class="tick"><input type="checkbox" id="fDir"><span>Squad (or LLM) order received</span></label>
+      <label class="tick"><input type="checkbox" id="fFlagC"><span>CTF: an enemy is capturing a flag</span></label>
+      <label class="tick"><input type="checkbox" id="fVis" checked><span>Target in sight, detection meter full</span></label>
+      <label class="tick"><input type="checkbox" id="fCamp"><span>Target camped for 6 s and the flank roll passed</span></label>
+      <label class="tick"><input type="checkbox" id="fLost"><span>Target lost less than 12 s ago</span></label>
+      <label class="tick"><input type="checkbox" id="fNoise"><span>Heard a shot or footsteps</span></label>
+      <label class="tick"><input type="checkbox" id="fSupply"><span>Armour broken or low on ammo</span></label>
+      <label class="tick"><input type="checkbox" id="fZone"><span>CTF flag zone active</span></label>
+      <label class="tick"><input type="checkbox" id="fSquad"><span>Squad leader to follow (TDM)</span></label>
+    </div>
+    <div class="readout">
+      <div class="verdict"><div class="eyebrow">Chosen goal</div><div class="big" id="lvGoal">Engage</div><p class="note" id="lvWhy"></p></div>
+      <div class="panel"><ol class="ladder" id="lvLadder"></ol></div>
+    </div>
+  </div>
+</section>
+
+<section id="senses" aria-labelledby="h-senses">
+  <div class="head"><span class="num">03 · NOTICE</span><h2 id="h-senses">The detection meter</h2>
+    <p>A bot never knows where you are just because you exist. While you are in its view cone and in line of sight, a meter fills at <code>0.9 + 9 / distance</code> per second, faster if you move, much faster if you just fired. It must reach 100 % before the bot reacts. Out of sight it drains at 0.5 per second.</p></div>
+  <div class="drill">
+    <div class="stage">
+      <canvas id="cvSenses" class="cv-chart" aria-label="Time to be noticed against distance for four cases"></canvas>
+      <div class="controls">
+        <label class="ctl">Distance <output id="oDist">20 m</output><input type="range" id="sDist" min="2" max="70" value="20"></label>
+        <label class="ctl">Angle off the bot's gaze <output id="oAng">25°</output><input type="range" id="sAng" min="0" max="180" value="25"></label>
+      </div>
+      <div class="controls">
+        <label class="tick"><input type="checkbox" id="sMove"><span>You are moving</span></label>
+        <label class="tick"><input type="checkbox" id="sFire"><span>You fired in the last second</span></label>
+        <label class="tick"><input type="checkbox" id="sCrouch"><span>You are crouched</span></label>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="verdict"><div class="eyebrow">Time until the bot notices you</div><div class="big" id="sOut">-</div><p class="note" id="sWhy"></p></div>
+      <div class="panel"><div class="eyebrow" style="margin-bottom:8px">Meter, live</div><div class="bar det" style="height:14px"><i id="sMeter"></i></div><p class="note" id="sMeterNote" style="margin-top:8px"></p></div>
+      <dl class="kv panel"><dt>View cone</dt><dd>±55° (110° FOV)</dd><dt>Close range</dt><dd>±100° inside 6 m</dd><dt>Range</dt><dd>70 m</dd><dt>Memory</dt><dd>12 s</dd><dt>Hearing a shot</dt><dd>position fuzz min(6 m, 8 % of distance)</dd></dl>
+    </div>
+  </div>
+</section>
+
+<section id="flick" aria-labelledby="h-flick">
+  <div class="head"><span class="num">04 · TURN</span><h2 id="h-flick">Reaction, flick and where it lands</h2>
+    <p>After the meter fills the bot waits a human reaction time, longer when you are far off to the side. Then it flicks with one fast, bell-shaped movement whose duration follows Fitts's law, and lands near you, not on you: errors along the flick are about 2.3 times larger than across it, and calm bots tend to land a little short.</p></div>
+  <div class="drill">
+    <div class="stage">
+      <canvas id="cvFlick" class="cv-wide" aria-label="First-person view of a bot flicking onto a target"></canvas>
+      <div class="controls">
+        <label class="ctl">Target off-centre <output id="oOff">40°</output><input type="range" id="fOff" min="6" max="110" value="40"></label>
+        <label class="ctl">Distance <output id="oFd">18 m</output><input type="range" id="fDist" min="4" max="60" value="18"></label>
+        <label class="ctl">Stress (under fire) <output id="oStress">0.0</output><input type="range" id="fStress" min="0" max="1" step="0.05" value="0"></label>
+      </div>
+      <div class="controls">
+        <select id="fPreset" aria-label="Bot skill preset"></select>
+        <label class="tick"><input type="checkbox" id="fHead"><span>Aim for the head</span></label>
+        <button type="button" id="btnFlick">Flick once</button>
+        <button type="button" id="btnCloud">Run 60 flicks</button>
+      </div>
+    </div>
+    <div class="readout">
+      <canvas id="cvCloud" class="cv-square" aria-label="Where 60 flicks landed around the target"></canvas>
+      <dl class="kv panel" id="flickKv"></dl>
+      <canvas id="cvJerk" class="cv-chart" aria-label="Minimum-jerk position and speed profile of the flick"></canvas>
+    </div>
+  </div>
+</section>
+
+<section id="strafe" aria-labelledby="h-strafe">
+  <div class="head"><span class="num">05 · TRACK</span><h2 id="h-strafe">Tracking a counter-strafer</h2>
+    <p>The bot sees your sideways speed through a 125 ms lag, the same lag people show, and leads by 55 ms of that lagged speed. When you change direction it keeps swinging the old way for a moment, so its misses land behind you, right after each direction change.</p></div>
+  <div class="drill">
+    <div class="stage">
+      <canvas id="cvStrafe" class="cv-wide" aria-label="Target strafing left and right with the bot's aim trailing it"></canvas>
+      <div class="controls">
+        <label class="ctl">Strafe speed <output id="oSs">4.0 m/s</output><input type="range" id="sSpeed" min="1" max="6" step="0.5" value="4"></label>
+        <label class="ctl">Direction change every <output id="oSp">0.45 s</output><input type="range" id="sPeriod" min="0.25" max="1.2" step="0.05" value="0.45"></label>
+        <label class="ctl">Distance <output id="oSd">15 m</output><input type="range" id="sDistS" min="5" max="40" value="15"></label>
+        <select id="sPreset" aria-label="Bot skill preset"></select>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="verdict"><div class="eyebrow">Hit rate, last 4 s</div><div class="big" id="stHit">-</div><p class="note" id="stWhy"></p></div>
+      <p class="note">Orange line: your sideways position. Blue line: where the bot aims. Dots are shots: green hit, red miss. Misses cluster just after each direction change.</p>
+    </div>
+  </div>
+</section>
+
+<section id="recoil" aria-labelledby="h-recoil">
+  <div class="head"><span class="num">06 · CONTROL</span><h2 id="h-recoil">Recoil and the pull-down</h2>
+    <p>Bots do not get recoil-free guns. Every shot kicks the view up, the bot starts pulling down 65 to 135 ms later, and how well it compensates depends on its skill and tires as the spray goes on. Late in a long spray a sideways weave appears. Four bots, same rifle, 24 rounds at a target 15 m away:</p></div>
+  <div class="stage">
+    <canvas id="cvRecoil" class="cv-wide" aria-label="Spray patterns of four bot skill levels"></canvas>
+    <div class="controls"><button type="button" id="btnSpray">Spray again</button><span class="note" id="rcNote"></span></div>
+  </div>
+</section>
+
+<section id="armour" aria-labelledby="h-armour">
+  <div class="head"><span class="num">07 · SURVIVE</span><h2 id="h-armour">Armour and the ammo stations</h2>
+    <p>Every soldier, bot or player, has 100 health and 50 armour. Armour takes damage first and does not grow back; health does, after 4 s without damage. Breaking someone's armour makes a ceramic crack for both of you. Each map has two ammo stations that give back 120 rounds and 50 armour, then go dark for 20 s for everyone.</p></div>
+  <div class="drill">
+    <div class="panel readout">
+      <div class="bars">
+        <span>Armour</span><div class="bar ar" style="height:14px"><i id="aAr"></i></div><span id="aArN">50</span>
+        <span>Health</span><div class="bar hp" style="height:14px"><i id="aHp"></i></div><span id="aHpN">100</span>
+      </div>
+      <div class="controls">
+        <button type="button" id="aHit">Rifle hit (24)</button>
+        <button type="button" id="aHead">Headshot (40)</button>
+        <button type="button" id="aFire">Fire tick (8)</button>
+        <button type="button" id="aCrate">Use ammo station</button>
+        <button type="button" id="aReset">Reset</button>
+      </div>
+      <ol class="log" id="aLog"></ol>
+    </div>
+    <div class="readout">
+      <dl class="kv panel">
+        <dt>Health / armour</dt><dd>100 + 50 = 150 effective</dd>
+        <dt>Order</dt><dd>armour first, overflow to health</dd>
+        <dt>Fire, falls</dt><dd>skip armour</dd>
+        <dt>Health regen</dt><dd>55 / s after 4 s</dd>
+        <dt>Armour regen</dt><dd>none</dd>
+        <dt>Ammo station</dt><dd>+120 rounds, +50 armour</dd>
+        <dt>Station cooldown</dt><dd>20 s, shared</dd>
+      </dl>
+      <p class="note">Bots go to a station only when they are out of the fight: no target seen for 2.5 s, not under fire and nothing better to do than patrol, idle or follow. They pick the nearest ready station within 85 m and sprint if it is more than 6 m away. Scenario 6 shows it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="skill" aria-labelledby="h-skill">
+  <div class="head"><span class="num">08 · ADAPT</span><h2 id="h-skill">Skill presets and the adaptive mode</h2>
+    <p>Four presets change the human limits, never the rules. The adaptive mode moves one skill value between them during the match, from how you play: your hit rate, how often you rush to close range, how often you crouch.</p></div>
+  <div class="table-wrap panel">
+    <table>
+      <thead><tr><th>Preset</th><th>Reaction</th><th>Aim speed</th><th>First error</th><th>Settled error</th><th>Headshot</th><th>Aggression</th><th>Flank chance</th></tr></thead>
+      <tbody id="presetRows"></tbody>
+    </table>
+  </div>
+  <div class="drill">
+    <div class="panel">
+      <label class="ctl">Adaptive skill value <output id="oAdapt">0.50</output><input type="range" id="sAdapt" min="0" max="1" step="0.01" value="0.5"></label>
+      <div class="bars" id="adaptBars" style="margin-top:12px"></div>
+    </div>
+    <p class="note">Values interpolate linearly between the two ends shown, as in <code>AdaptiveDifficultyTracker</code>. Ends: reaction 0.52 to 0.76 s down to 0.16 to 0.26 s, view 95° to 132°, detection 0.80× to 1.38×, hearing 0.85× to 1.35×, aim speed 4.4 to 10.2.</p>
+  </div>
+</section>
+
+<section id="sources" aria-labelledby="h-sources">
+  <div class="head"><span class="num">09 · WHERE THE NUMBERS COME FROM</span><h2 id="h-sources">Human data behind the model</h2>
+    <p>LeadRush 2 uses these as calibration targets. The constants are hand-tuned to match the published behaviour; they are not fitted to a dataset inside this project.</p></div>
+  <ul class="srcs panel">
+    <li><b>Fitts (1954), J. Exp. Psychology 47(6)</b><span>Movement time grows with log2(distance / target width + 1): the flick duration and why heads take longer to hit.</span></li>
+    <li><b>Meyer, Abrams, Kornblum, Wright and Smith (1988), Psychological Review 95(3)</b><span>A fast primary movement plus corrective submovements: the flick, the 110 to 165 ms pause, then the correction.</span></li>
+    <li><b>Flash and Hogan (1985), J. Neuroscience 5(7)</b><span>Minimum-jerk trajectories, s(u) = 10u³ − 15u⁴ + 6u⁵: the bell-shaped speed of every flick.</span></li>
+    <li><b>Harris and Wolpert (1998), Nature 394</b><span>Signal-dependent noise: bigger, faster movements are noisier, so long flicks scatter more.</span></li>
+    <li><b>van Beers, Haggard and Wolpert (2004), J. Neurophysiology 91(2)</b><span>Endpoint scatter is larger along the movement than across it: the 2.3 : 1 ellipse.</span></li>
+    <li><b>ESTA esports trajectory dataset and CSKnow (Counter-Strike player data)</b><span>Real players' reaction times, crosshair placement and miss patterns used as targets: around 125 ms of visuomotor lag on a moving target, horizontal errors larger than vertical ones.</span></li>
+    <li><b>Aim-trainer studies (Aim Lab)</b><span>Ranges of flick times and accuracy between new and expert players, used to space the four presets.</span></li>
+  </ul>
+  <footer>
+    <span>Mirror on GitHub: <code>Docs/Bot/bot-lab.html</code> with animated GIFs in <code>Docs/Media/bot/</code> and the write-up in <code>Docs/LR2_Bot_Explainer.md</code>.</span>
+    <span>Built for the LeadRush 2 project by Claude Code (claude-opus-5-5), 2026-11-18.</span>
+  </footer>
+</section>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------------------------------------------------------------- shared
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const T = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'panel', 'raised', 'line', 'grid', 'ink', 'muted', 'accent', 'bot', 'good', 'bad', 'warn', 'zone'])
+    T[k] = cs.getPropertyValue('--' + k).trim();
+}
+readTokens();
+const redraws = [];
+function onTheme() { readTokens(); redraws.forEach(f => f()); }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', onTheme);
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let resizeTimer = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => redraws.forEach(f => f()), 120); });
+
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const clamp01 = v => clamp(v, 0, 1);
+const lerp = (a, b, t) => a + (b - a) * t;
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+function wrap(a) { while (a > 180) a -= 360; while (a < -180) a += 360; return a; }
+function mulberry(seed) {
+  let a = seed >>> 0;
+  return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function rgba(hex, a) {
+  const h = (hex || '').trim();
+  if (h[0] === '#' && h.length === 7) { const n = parseInt(h.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
+  return h || `rgba(128,128,128,${a})`;
+}
+function fit(cv) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const r = cv.getBoundingClientRect();
+  const w = Math.max(10, r.width), h = Math.max(10, r.height);
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { g, w, h };
+}
+const $ = id => document.getElementById(id);
+
+// Skill presets: Assets/LR2/Data/AI/BotDifficulty_*.asset
+const PRESETS = {
+  Recruit:  { react: [0.55, 0.80], aimSpeed: 4.2,  initErr: 7.0, settleErr: 1.6,  head: 0.05, aggression: 0.35, flank: 0.08 },
+  Regular:  { react: [0.34, 0.52], aimSpeed: 6.0,  initErr: 4.8, settleErr: 0.9,  head: 0.13, aggression: 0.55, flank: 0.22 },
+  Hardened: { react: [0.24, 0.38], aimSpeed: 7.8,  initErr: 3.4, settleErr: 0.55, head: 0.22, aggression: 0.70, flank: 0.35 },
+  Veteran:  { react: [0.17, 0.27], aimSpeed: 10.0, initErr: 2.4, settleErr: 0.32, head: 0.32, aggression: 0.82, flank: 0.50 }
+};
+const PRESET_NAMES = Object.keys(PRESETS);
+
+// Aim model: BotController.UpdateAim
+const AIM = {
+  halfWidth(dist, head) { return Math.atan2(head ? 0.16 : 0.34, Math.max(0.5, dist)) * R2D; },
+  skillScale(aimSpeed) { return clamp(7.5 / Math.max(2.5, aimSpeed), 0.62, 1.55); },
+  flickTime(D, dist, head, aimSpeed) {
+    const W = AIM.halfWidth(dist, head);
+    const id = Math.log2(1 + D / Math.max(0.4, W));
+    return { id, T: clamp((0.065 + 0.042 * id) * AIM.skillScale(aimSpeed), 0.085, 0.38) };
+  },
+  endpoint(D, stress, aimSpeed, r) {
+    const sig = clamp(D * (0.045 + 0.045 * stress) * AIM.skillScale(aimSpeed), 0.35, 6.5);
+    const mu = lerp(-0.075, 0.035, stress) * D;
+    const along = mu + ((r() + r()) - 1) * sig;
+    const perp = ((r() + r()) - 1) * (0.44 * sig);
+    return { along, perp, sig, mu };
+  },
+  reaction(p, eccDeg, r) { return lerp(p.react[0], p.react[1], r()) * lerp(0.76, 1.58, clamp01(eccDeg / 115)); },
+  minJerk(u) { u = clamp01(u); return u * u * u * (10 - 15 * u + 6 * u * u); },
+  minJerkVel(u) { u = clamp01(u); return 30 * u * u * (1 - u) * (1 - u); }
+};
+
+// Perception: BotPerception.Tick
+function detectRate(o) {
+  const inCone = o.angle <= 55 || (o.dist < 6 && o.angle < 100);
+  if (!inCone || o.dist > 70) return { inCone: o.dist <= 70 && inCone, rate: 0 };
+  let rate = (o.speedMul || 1) * (0.9 + 9 / Math.max(o.dist, 1.5));
+  if (o.moving) rate *= 1.35;
+  if (o.firing) rate *= 2.2;
+  if (o.angle < 12) rate *= 1.4;
+  if (o.crouched) rate *= 0.7;
+  return { inCone: true, rate };
+}
+
+// Goal ladder: TacticalBotBrain.Think (+ BotController resupply override)
+const RUNGS = [
+  { key: 'retreat', goal: 'Retreat', label: 'Health under 38 % while taking hits, with a target', note: 'Cover up to 22 m away for up to 7 s; leave above 85 % health.' },
+  { key: 'directive', goal: 'Follow order', label: 'Squad or LLM order', note: 'Hold, move to or hunt as ordered.' },
+  { key: 'flagContest', goal: 'Contest flag', label: 'CTF: an enemy is capturing', note: 'Stop a near-capture before anything far away.' },
+  { key: 'engage', goal: 'Engage', label: 'Target in sight, meter full', note: 'Fight; under fire it may take cover.' },
+  { key: 'flank', goal: 'Flank', label: 'Target camped 6 s, flank roll passed', note: 'Come in from the side for up to 9 s; 18 s cooldown.' },
+  { key: 'hunt', goal: 'Hunt', label: 'Target lost under 12 s ago', note: 'Last known position, slicing corners.' },
+  { key: 'noise', goal: 'Investigate', label: 'Heard a shot or steps', note: 'Check where the noise came from.' },
+  { key: 'resupply', goal: 'Resupply', label: 'Armour broken or low ammo, out of the fight', note: 'Nearest ready ammo station within 85 m.' },
+  { key: 'flagZone', goal: 'Play objective', label: 'CTF flag zone active', note: 'Take the zone when nothing else is happening.' },
+  { key: 'squad', goal: 'Follow leader', label: 'Squad leader nearby (TDM)', note: 'Stay with the player leading the squad.' },
+  { key: 'patrol', goal: 'Patrol', label: 'Nothing else', note: 'Rotate through tactical points.' }
+];
+function buildLadder(ol) {
+  ol.innerHTML = '';
+  const map = {};
+  for (const r of RUNGS) {
+    const li = document.createElement('li');
+    li.innerHTML = `<b>${r.goal}</b><small>${r.label}</small>`;
+    ol.appendChild(li);
+    map[r.key] = li;
+  }
+  return map;
+}
+
+// ---------------------------------------------------------------- 1. scenario theatre
+const AW = 40, AH = 24;
+const WALLS = [
+  [6, 3, 1.2, 6], [6, 15, 1.2, 6], [32.8, 3, 1.2, 6], [32.8, 15, 1.2, 6],
+  [15, 5, 10, 1.2], [15, 17.8, 10, 1.2], [11, 9.6, 2.4, 1.2], [26.6, 13.2, 2.4, 1.2],
+  [19.4, 8.6, 1.2, 1.6], [19.4, 13.8, 1.2, 1.6]
+];
+const CRATE_POS = [[11, 21.5], [29, 2.5]];
+const ZONE = { x: 20, y: 21.4, r: 2.2 };
+const PATROL = [[16, 12], [24, 12], [30, 7.5], [29, 2.6], [20, 2.6], [10, 3.6], [9.5, 12], [10.5, 20.5], [20, 21], [29.5, 20.5], [30.5, 12]];
+
+function segRect(ax, ay, bx, by, x, y, w, h) {
+  let t0 = 0, t1 = 1;
+  const dx = bx - ax, dy = by - ay;
+  const p = [-dx, dx, -dy, dy], q = [ax - x, x + w - ax, ay - y, y + h - ay];
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) { if (q[i] < 0) return false; }
+    else {
+      const t = q[i] / p[i];
+      if (p[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+      else { if (t < t0) return false; if (t < t1) t1 = t; }
+    }
+  }
+  return true;
+}
+function clearPath(ax, ay, bx, by, inf) {
+  for (const r of WALLS) if (segRect(ax, ay, bx, by, r[0] - inf, r[1] - inf, r[2] + 2 * inf, r[3] + 2 * inf)) return false;
+  return true;
+}
+function insideWall(x, y, inf) {
+  for (const r of WALLS) if (x > r[0] - inf && x < r[0] + r[2] + inf && y > r[1] - inf && y < r[1] + r[3] + inf) return true;
+  return false;
+}
+// navigation grid (1 m), 8-neighbour A* + string pulling
+const NODES = [], NODE_AT = new Map(), ADJ = [];
+for (let i = 0; i < AW; i++) for (let j = 0; j < AH; j++) {
+  const x = i + 0.5, y = j + 0.5;
+  if (insideWall(x, y, 0.45)) continue;
+  NODE_AT.set(i * 100 + j, NODES.length);
+  NODES.push([x, y, i, j]);
+}
+for (let n = 0; n < NODES.length; n++) {
+  const [x, y, i, j] = NODES[n];
+  const list = [];
+  for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+    if (!di && !dj) continue;
+    const m = NODE_AT.get((i + di) * 100 + (j + dj));
+    if (m === undefined) continue;
+    if (!clearPath(x, y, NODES[m][0], NODES[m][1], 0.4)) continue;
+    list.push([m, Math.hypot(di, dj)]);
+  }
+  ADJ.push(list);
+}
+function nearestNode(x, y) {
+  let best = -1, bd = 1e9;
+  for (let n = 0; n < NODES.length; n++) { const d = (NODES[n][0] - x) ** 2 + (NODES[n][1] - y) ** 2; if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+function astar(sx, sy, tx, ty) {
+  if (clearPath(sx, sy, tx, ty, 0.4)) return [[tx, ty]];
+  const s = nearestNode(sx, sy), goal = nearestNode(tx, ty);
+  if (s < 0 || goal < 0) return [[tx, ty]];
+  const N = NODES.length;
+  const gs = new Float32Array(N).fill(1e9), f = new Float32Array(N).fill(1e9);
+  const came = new Int32Array(N).fill(-1), inOpen = new Uint8Array(N), closed = new Uint8Array(N);
+  const hx = NODES[goal][0], hy = NODES[goal][1];
+  const open = [s]; gs[s] = 0; f[s] = Math.hypot(NODES[s][0] - hx, NODES[s][1] - hy); inOpen[s] = 1;
+  while (open.length) {
+    let bi = 0;
+    for (let k = 1; k < open.length; k++) if (f[open[k]] < f[open[bi]]) bi = k;
+    const cur = open[bi]; open.splice(bi, 1); inOpen[cur] = 0;
+    if (cur === goal) break;
+    closed[cur] = 1;
+    for (const [nb, c] of ADJ[cur]) {
+      if (closed[nb]) continue;
+      const ng = gs[cur] + c;
+      if (ng < gs[nb]) {
+        gs[nb] = ng; came[nb] = cur; f[nb] = ng + Math.hypot(NODES[nb][0] - hx, NODES[nb][1] - hy);
+        if (!inOpen[nb]) { open.push(nb); inOpen[nb] = 1; }
+      }
+    }
+  }
+  if (goal !== s && came[goal] < 0) return [[tx, ty]];
+  const pts = [];
+  for (let c = goal; c !== -1; c = came[c]) pts.push([NODES[c][0], NODES[c][1]]);
+  pts.reverse();
+  pts.push([tx, ty]);
+  const res = [];
+  let ax = sx, ay = sy, i = 0;
+  while (i < pts.length) {
+    let j = pts.length - 1;
+    while (j > i && !clearPath(ax, ay, pts[j][0], pts[j][1], 0.4)) j--;
+    res.push(pts[j]); ax = pts[j][0]; ay = pts[j][1]; i = j + 1;
+  }
+  return res;
+}
+function moveAlong(a, speed, dt) {
+  if (!a.path.length) return false;
+  let rem = speed * dt;
+  while (rem > 0 && a.path.length) {
+    const p = a.path[0];
+    const dx = p[0] - a.x, dy = p[1] - a.y, d = Math.hypot(dx, dy);
+    if (d > 1e-4) a.moveDir = Math.atan2(dy, dx) * R2D;
+    if (d <= rem) { a.x = p[0]; a.y = p[1]; a.path.shift(); rem -= d; }
+    else { a.x += dx / d * rem; a.y += dy / d * rem; rem = 0; }
+  }
+  return true;
+}
+
+const SCENARIOS = [
+  { id: 'duel', name: 'Spot and duel', preset: 'Regular',
+    blurb: 'You walk up the far lane and open fire. Watch the meter fill from the side, the reaction pause, one flick, then bursts with a settling aim error.',
+    setup(S) { place(S.bot, 4, 12, 0); S.bot.patrol = [[16, 12], [24, 12]]; place(S.player, 37, 20.5, 180); },
+    script: () => [{ say: 'Player moves up the east side.' }, { go: [30, 12], speed: 3.5 }, { fire: 4, p: 0.22 }, { wait: 0.6 }, { fire: 8, p: 0.22 }] },
+  { id: 'strafe', guard: true, name: 'Counter-strafe', preset: 'Hardened',
+    blurb: 'You strafe left and right while trading shots. The bot reads your speed 125 ms late, so its misses trail behind you after each direction change.',
+    setup(S) { place(S.bot, 8, 13.5, 0); place(S.player, 18, 12, 180); aware(S); },
+    script: () => [{ strafe: 10, amp: 1.6, period: 0.9, p: 0.05 }] },
+  { id: 'lost', guard: true, name: 'Break line of sight', preset: 'Regular',
+    blurb: 'You fire, then sprint behind the north wall and wait crouched. The bot hunts your last known position, finds it empty, checks where your shots came from, and you get the first shot when it comes back into view.',
+    setup(S) { place(S.bot, 10, 12, 0); place(S.player, 24, 12, 180); aware(S); },
+    script: () => [{ fire: 1.4, p: 0.18 }, { go: [26, 4], speed: 6.1 }, { go: [18, 3.2], speed: 3.5 }, { crouch: true }, { fire: 12, p: 0.24 }] },
+  { id: 'camper', guard: true, name: 'Flank a camper', preset: 'Hardened',
+    blurb: 'You hold an angle and do not move. After 6 s of you anchored in place the bot passes its flank roll (forced here), leaves the lane and comes in from the side you are not watching.',
+    setup(S) { place(S.bot, 10, 12, 0); place(S.player, 30, 12, 180); S.player.crouch = true; aware(S); S.forceFlank = true; },
+    script: () => [{ fire: 30, p: 0.12, cone: 35 }] },
+  { id: 'retreat', guard: true, name: 'Retreat and heal', preset: 'Recruit',
+    blurb: 'You are the better shot. Below 38 % health under fire the bot breaks off to cover, waits out the 4 s regen delay, heals past 85 % and comes back to hunt you.',
+    setup(S) { place(S.bot, 13, 12, 0); S.bot.armour = 0; place(S.player, 26, 12, 180); aware(S); },
+    script: () => [{ fire: 5, p: 0.45, rate: 0.15, maxHits: 3 }, { hold: 9 }, { fire: 12, p: 0.3, rate: 0.13 }] },
+  { id: 'resupply', guard: true, name: 'Armour break and resupply', preset: 'Regular',
+    blurb: 'You crack the bot’s armour and leave the area. It hunts your last position first (hunting outranks resupply), finds nothing, and only then walks to the nearest ready ammo station.',
+    setup(S) { place(S.bot, 14, 12, 0); S.bot.reserve = 60; place(S.player, 26, 12, 180); aware(S); },
+    script: () => [{ fire: 3, p: 0.35, maxHits: 3 }, { go: [36, 12.5], speed: 6.1 }, { leave: true }, { wait: 30 }] },
+  { id: 'noise', guard: true, name: 'Investigate a shot', preset: 'Regular',
+    blurb: 'You fire out of sight on the far side. The bot hears it, walks to a fuzzy guess of where it came from, and sees you on the way.',
+    setup(S) { place(S.bot, 9, 3.4, 0); S.bot.patrol = [[20, 2.6], [10, 3.6]]; place(S.player, 36.5, 21.5, 180); },
+    script: () => [{ wait: 1.4 }, { shootAir: 0.7 }, { wait: 0.4 }, { fire: 14, p: 0.22 }] },
+  { id: 'ctf', guard: true, name: 'Contest the flag', preset: 'Regular',
+    blurb: 'Capture the Flag. You walk into the flag zone and start capturing. Stopping a capture outranks almost everything, so the bot drops its patrol and sprints to contest.',
+    setup(S) { place(S.bot, 22, 2.6, 180); S.bot.patrol = [[10, 3.6], [22, 2.6]]; place(S.player, 37, 21, 180); S.ctf = true; },
+    script: () => [{ go: [20.5, 21.5], speed: 3.5 }, { capture: 16, p: 0.2 }] }
+];
+
+function place(a, x, y, face) { a.x = x; a.y = y; a.face = face; a.aim = face; a.moveDir = face; }
+function aware(S) { const b = S.bot; b.det = 1.1; b.lastSeen = 0; b.visible = true; b.lastVisibleT = 0; b.lastKnown = [S.player.x, S.player.y]; b.reactAt = 0.25; b.aimErr = b.preset.initErr; }
+function newAgent(o) {
+  return Object.assign({ x: 0, y: 0, face: 0, aim: 0, moveDir: 0, path: [], hp: 100, armour: 50, alive: true, present: true,
+    vx: 0, vy: 0, crouch: false, lastHit: -99, lastShot: -99, nextShot: 0 }, o);
+}
+
+const theater = {
+  cv: $('cvTheater'), S: null, scn: 0, playing: !reduceMotion, speed: 1, last: 0, acc: 0, tour: true,
+  ladderEls: buildLadder($('tLadder'))
+};
+
+function newSim(idx) {
+  const sc = SCENARIOS[idx];
+  const S = {
+    t: 0, rng: mulberry(1000 + idx * 77), sc, ctf: false, forceFlank: false, endAt: -1, logN: 0,
+    tracers: [], fx: [], crates: CRATE_POS.map(p => ({ x: p[0], y: p[1], readyAt: 0 })),
+    zone: { progress: 0, capturing: false, contested: false },
+    shots: { fired: 0, hit: 0 },
+    player: newAgent({ script: sc.script(), si: 0, stepT: 0 }),
+    bot: newAgent({ preset: PRESETS[sc.preset], goal: '', det: 0, visible: false, lastSeen: -99, lastKnown: null, noise: null, noiseT: -99,
+      reactAt: -1, flick: null, nextFlickAt: 0, aimErr: PRESETS[sc.preset].initErr, heat: 0, stress: 0, burst: 0, nextBurstAt: 0,
+      mag: 30, reserve: 120, reloadUntil: 0, retreating: false, retreatUntil: 0, flankUntil: 0, nextFlank: 0, flankPt: null,
+      anchor: null, anchorT: 0, underFireT: -99, nextThink: 0, pv: [0, 0], glanceT: 0, glanceOff: 0, strafeDir: 1, strafeFlip: 0,
+      patrol: PATROL, patrolIdx: 0, supplyCrate: null, seed: idx * 3.7 + 1.3, dest: null, lastVisibleT: -99 })
+  };
+  sc.setup(S);
+  $('tLog').innerHTML = '';
+  log(S, `${sc.name}: ${sc.preset} bot.`, 'bot');
+  theater.S = S;
+  return S;
+}
+
+function log(S, text, cls) {
+  const ol = $('tLog');
+  const li = document.createElement('li');
+  if (cls) li.className = cls;
+  li.innerHTML = `<time>${S.t.toFixed(1)}s</time><span></span>`;
+  li.lastChild.textContent = text;
+  S.lastLog = text;
+  ol.appendChild(li);
+  while (ol.children.length > 40) ol.removeChild(ol.firstChild);
+  ol.scrollTop = ol.scrollHeight;
+}
+function setGoal(S, key) {
+  const b = S.bot;
+  if (b.goal !== key) {
+    const r = RUNGS.find(x => x.key === key);
+    log(S, `Goal: ${r ? r.goal : key}`, 'bot');
+    b.goal = key;
+  }
+}
+function damage(S, who, dmg, bypassArmour) {
+  if (!who.alive) return;
+  const soak = bypassArmour ? 0 : Math.min(who.armour, dmg);
+  who.armour -= soak; who.hp -= dmg - soak; who.lastHit = S.t;
+  if (soak > 0 && who.armour <= 0.001) {
+    who.armour = 0;
+    log(S, `${who === S.bot ? 'Bot' : 'Player'} armour broken (plate crack).`, 'warn');
+    S.fx.push({ kind: 'crack', x: who.x, y: who.y, t: S.t });
+  }
+  if (who === S.bot) { S.bot.underFireT = S.t; S.bot.stress = 1; }
+  // demo guard: in scenarios 2-8 the scripted player survives until its script has run (the duel stays a real fight)
+  if (who === S.player && S.sc.guard && who.si < who.script.length && who.hp < 10) who.hp = 10;
+  if (who.hp <= 0) {
+    who.hp = 0; who.alive = false;
+    log(S, who === S.bot ? 'Bot down.' : 'Player eliminated.', who === S.bot ? 'good' : 'bad');
+    S.endAt = S.t + 2.2;
+  }
+}
+function heard(S, x, y) {
+  const b = S.bot, d = Math.hypot(x - b.x, y - b.y);
+  if (d > 45) return;
+  const fz = Math.min(6, d * 0.08);
+  const a = S.rng() * Math.PI * 2, rr = Math.sqrt(S.rng()) * fz;
+  let nx = clamp(x + Math.cos(a) * rr, 1, AW - 1), ny = clamp(y + Math.sin(a) * rr, 1, AH - 1);
+  if (insideWall(nx, ny, 0.5)) { nx = x; ny = y; }
+  if (S.t - b.noiseT > 1.5) log(S, `Heard a shot ${d.toFixed(0)} m away (guess within ${fz.toFixed(1)} m).`, 'warn');
+  b.noise = [nx, ny]; b.noiseT = S.t;
+}
+function addTracer(S, x0, y0, x1, y1, col) { S.tracers.push({ x0, y0, x1, y1, col, t: S.t }); }
+
+function pickCover(S) {
+  const b = S.bot, tgt = b.lastKnown || [S.player.x, S.player.y];
+  let best = null, bs = 1e9;
+  for (const n of NODES) {
+    const d = Math.hypot(n[0] - b.x, n[1] - b.y);
+    if (d > 22 || d < 2) continue;
+    if (Math.hypot(n[0] - tgt[0], n[1] - tgt[1]) < 7) continue;
+    if (clearPath(n[0], n[1], tgt[0], tgt[1], 0)) continue;
+    const s = d + Math.max(0, 9 - Math.hypot(n[0] - tgt[0], n[1] - tgt[1]));
+    if (s < bs) { bs = s; best = [n[0], n[1]]; }
+  }
+  return best;
+}
+function pickFlank(S) {
+  const b = S.bot, p = S.player;
+  const base = Math.atan2(b.y - p.y, b.x - p.x) * R2D;
+  let best = null, bs = 1e9;
+  for (const n of NODES) {
+    const d = Math.hypot(n[0] - p.x, n[1] - p.y);
+    if (d < 5.5 || d > 9.5) continue;
+    const ang = Math.abs(wrap(Math.atan2(n[1] - p.y, n[0] - p.x) * R2D - base));
+    if (ang < 70 || ang > 125) continue;
+    if (!clearPath(n[0], n[1], p.x, p.y, 0)) continue;
+    const s = Math.abs(ang - 95) * 0.08 + Math.hypot(n[0] - b.x, n[1] - b.y) * 0.05;
+    if (s < bs) { bs = s; best = [n[0], n[1]]; }
+  }
+  return best;
+}
+function goTo(S, x, y) {
+  const b = S.bot;
+  if (!b.dest || Math.hypot(b.dest[0] - x, b.dest[1] - y) > 0.8 || !b.path.length) {
+    b.dest = [x, y];
+    b.path = astar(b.x, b.y, x, y);
+  }
+}
+
+// --- player script
+function playerStep(S, dt) {
+  const p = S.player, b = S.bot;
+  const st = p.script[p.si];
+  if (!st || !p.alive || !p.present) return;
+  const next = () => { p.si++; p.stepT = 0; };
+  p.stepT += dt;
+  if (st.say) { log(S, st.say); next(); return; }
+  if (st.crouch !== undefined) { p.crouch = st.crouch; next(); return; }
+  if (st.leave) { p.present = false; log(S, 'Player leaves the area.'); next(); return; }
+  if (st.wait !== undefined) { if (p.stepT >= st.wait) next(); return; }
+  if (st.hold !== undefined) { if (p.stepT >= st.hold) next(); return; }
+  if (st.go) {
+    if (!st._init) { p.path = astar(p.x, p.y, st.go[0], st.go[1]); st._init = true; }
+    if (!moveAlong(p, st.speed || 3.5, dt)) next(); else p.face = p.moveDir;
+    return;
+  }
+  if (st.shootAir !== undefined) {
+    if (S.t >= p.nextShot) { p.nextShot = S.t + 0.1; p.lastShot = S.t; addTracer(S, p.x, p.y, p.x + 4, p.y + 1.5, 'accent'); heard(S, p.x, p.y); }
+    if (p.stepT >= st.shootAir) next();
+    return;
+  }
+  if (st.strafe !== undefined) {
+    if (!st._init) { st._y0 = p.y; st._dir = 1; st._flip = st.period * 0.5; st._init = true; }
+    if (p.stepT >= st._flip) { st._dir *= -1; st._flip += st.period * (0.4 + 0.25 * S.rng()); }
+    const target = st._y0 + st._dir * st.amp;
+    const dy = clamp(target - p.y, -4.5 * dt, 4.5 * dt);
+    p.y += dy;
+    playerFire(S, st);
+    if (p.stepT >= st.strafe) next();
+    return;
+  }
+  if (st.capture !== undefined) {
+    playerFire(S, st);
+    if (p.stepT >= st.capture) next();
+    return;
+  }
+  if (st.fire !== undefined) {
+    playerFire(S, st);
+    if (p.stepT >= st.fire) next();
+  }
+}
+function playerFire(S, st) {
+  const p = S.player, b = S.bot;
+  if (!b.alive || !p.alive) return;
+  if (!clearPath(p.x, p.y, b.x, b.y, 0)) return;
+  const yaw = Math.atan2(b.y - p.y, b.x - p.x) * R2D;
+  if (st.cone !== undefined && Math.abs(wrap(yaw - p.face)) > st.cone) return;
+  if (st.cone === undefined) p.face = yaw;
+  if (S.t < p.nextShot) return;
+  p.nextShot = S.t + (st.rate || 0.11) + (S.rng() < 0.16 ? 0.3 : 0);
+  p.lastShot = S.t;
+  const capped = st.maxHits !== undefined && (st._hits || 0) >= st.maxHits;
+  const hit = !capped && S.rng() < st.p;
+  if (hit) st._hits = (st._hits || 0) + 1;
+  if (hit) addTracer(S, p.x, p.y, b.x, b.y, 'accent');
+  else addTracer(S, p.x, p.y, b.x + (S.rng() - 0.5) * 2.6, b.y + (S.rng() - 0.5) * 2.6, 'accent');
+  b.underFireT = S.t; b.stress = Math.max(b.stress, 0.65);
+  heard(S, p.x, p.y);
+  if (hit) damage(S, b, 24, false);
+}
+
+// --- bot
+function perceive(S, dt) {
+  const b = S.bot, p = S.player;
+  const dx = p.x - b.x, dy = p.y - b.y, dist = Math.hypot(dx, dy);
+  const ang = Math.abs(wrap(Math.atan2(dy, dx) * R2D - b.aim));
+  const los = p.alive && p.present && clearPath(b.x, b.y, p.x, p.y, 0);
+  const r = detectRate({ dist, angle: ang, moving: Math.hypot(p.vx, p.vy) > 2, firing: S.t - p.lastShot < 1, crouched: p.crouch });
+  const wasVisible = b.visible;
+  b.visible = los && r.inCone;
+  const before = b.det;
+  if (b.visible) b.det = Math.min(1.25, b.det + r.rate * dt);
+  else b.det = Math.max(0, b.det - 0.5 * dt);
+  if (b.visible) {
+    const fresh = before < 1 && b.det >= 1;
+    const reacquired = !wasVisible && b.det >= 1 && S.t - b.lastVisibleT > 0.5;
+    if (fresh || reacquired) {
+      b.reactAt = S.t + AIM.reaction(b.preset, ang, S.rng);
+      b.aimErr = b.preset.initErr;
+      log(S, `${fresh ? 'Spotted' : 'Re-acquired'} you at ${dist.toFixed(0)} m, ${ang.toFixed(0)}° off its gaze${fresh ? ` (meter ${r.rate.toFixed(2)}/s)` : ''}. Reaction ${((b.reactAt - S.t) * 1000).toFixed(0)} ms.`, 'warn');
+    }
+    b.lastVisibleT = S.t;
+  }
+}
+
+function think(S) {
+  const b = S.bot, p = S.player, t = S.t, P = b.preset;
+  const tv = b.visible && b.det >= 1 && p.alive && p.present;
+  if (tv) { b.lastSeen = t; b.lastKnown = [p.x, p.y]; }
+  const hasTarget = b.lastKnown && t - b.lastSeen < 12;
+  const recentlyHit = t - b.lastHit < 1.5, underFire = t - b.underFireT < 1.2;
+  const lowAmmo = b.reserve <= 30 && b.mag + b.reserve < 150;
+  // 1 retreat
+  if (!b.retreating && b.hp / 100 < 0.38 && (recentlyHit || underFire) && hasTarget) {
+    b.retreating = true; b.retreatUntil = t + 7;
+    const c = pickCover(S);
+    if (c) { b.dest = c; b.path = astar(b.x, b.y, c[0], c[1]); }
+    log(S, `Health ${b.hp.toFixed(0)} %: breaking off to cover.`, 'bad');
+  }
+  if (b.retreating) {
+    if (b.hp / 100 > 0.85 || t > b.retreatUntil) { b.retreating = false; log(S, 'Healed past 85 %: back in.', 'good'); }
+    else return setGoal(S, 'retreat');
+  }
+  // 2.5 CTF contest
+  if (S.ctf && S.zone.capturing && !tv) { goTo(S, ZONE.x, ZONE.y - 0.4); return setGoal(S, 'flagContest'); }
+  // 3 engage (+ anti-camp flank decision)
+  if (tv) {
+    if (!b.anchor || Math.hypot(p.x - b.anchor[0], p.y - b.anchor[1]) > 1.5) { b.anchor = [p.x, p.y]; b.anchorT = t; }
+    if (t - b.anchorT > 6 && t > b.nextFlank) {
+      const roll = S.rng();
+      if (S.forceFlank || roll < P.flank) {
+        const fp = pickFlank(S);
+        if (fp) {
+          b.flankUntil = t + 9; b.nextFlank = t + 18; b.flankPt = fp; b.dest = fp; b.path = astar(b.x, b.y, fp[0], fp[1]);
+          log(S, 'You have camped for 6 s: flanking from the side.', 'warn');
+          return setGoal(S, 'flank');
+        }
+      }
+      b.nextFlank = t + 4;
+    }
+    if (t >= b.flankUntil) { b.path = []; b.dest = null; return setGoal(S, 'engage'); }
+  }
+  // 4 flank in progress
+  if (t < b.flankUntil) {
+    if (tv && !b.path.length) { b.flankUntil = 0; return setGoal(S, 'engage'); }
+    if (!b.path.length && b.flankPt) b.path = astar(b.x, b.y, b.flankPt[0], b.flankPt[1]);
+    return setGoal(S, 'flank');
+  }
+  if (tv) { b.path = []; return setGoal(S, 'engage'); }
+  // 5 hunt
+  if (hasTarget) {
+    if (Math.hypot(b.x - b.lastKnown[0], b.y - b.lastKnown[1]) < 1.3) {
+      log(S, 'Last known position is empty: target lost.');
+      b.lastSeen = -99; b.lastKnown = null;
+    } else { goTo(S, b.lastKnown[0], b.lastKnown[1]); return setGoal(S, 'hunt'); }
+  }
+  // 6 investigate
+  if (b.noise && t - b.noiseT < 8) {
+    if (Math.hypot(b.x - b.noise[0], b.y - b.noise[1]) < 1.3) { b.noise = null; log(S, 'Nothing at the noise.'); }
+    else { goTo(S, b.noise[0], b.noise[1]); return setGoal(S, 'noise'); }
+  }
+  // resupply override (disengaged only)
+  const disengaged = !tv && !recentlyHit && !underFire && t - b.lastSeen > 2.5;
+  if ((b.armour <= 0 || lowAmmo) && disengaged) {
+    let crate = b.supplyCrate;
+    if (crate && t < crate.readyAt) crate = null;
+    if (!crate) {
+      let bd = 85;
+      for (const c of S.crates) { if (t < c.readyAt) continue; const d = Math.hypot(c.x - b.x, c.y - b.y); if (d < bd) { bd = d; crate = c; } }
+      if (crate && crate !== b.supplyCrate) log(S, `Armour ${b.armour <= 0 ? 'broken' : 'ok'}, ammo ${b.mag + b.reserve}: heading to the ammo station ${bd.toFixed(0)} m away.`, 'good');
+      b.supplyCrate = crate;
+    }
+    if (crate) {
+      if (Math.hypot(b.x - crate.x, b.y - crate.y) < 1.3) {
+        const add = 50 - b.armour; b.armour = 50; b.reserve += 120; crate.readyAt = t + 20; b.supplyCrate = null;
+        log(S, `Resupplied: +${add.toFixed(0)} armour, +120 rounds. Station dark for 20 s.`, 'good');
+        S.fx.push({ kind: 'supply', x: crate.x, y: crate.y, t });
+      } else { goTo(S, crate.x, crate.y); return setGoal(S, 'resupply'); }
+    }
+  }
+  // 6.5 flag zone
+  if (S.ctf) { goTo(S, ZONE.x, ZONE.y); return setGoal(S, 'flagZone'); }
+  // 8 patrol
+  const pt = b.patrol[b.patrolIdx % b.patrol.length];
+  if (Math.hypot(b.x - pt[0], b.y - pt[1]) < 1.2) b.patrolIdx++;
+  const np = b.patrol[b.patrolIdx % b.patrol.length];
+  goTo(S, np[0], np[1]);
+  setGoal(S, 'patrol');
+}
+
+function botMotor(S, dt) {
+  const b = S.bot, p = S.player, t = S.t;
+  if (!b.alive) return;
+  const reloading = t < b.reloadUntil;
+  if (b.goal !== 'engage') b.strafeAnchor = null;
+  if (b.goal === 'engage') {
+    // hold and strafe across the line of fire
+    if (!b.strafeAnchor) b.strafeAnchor = [b.x, b.y];
+    if (t > b.strafeFlip) { b.strafeDir = S.rng() < 0.5 ? -1 : 1; b.strafeFlip = t + lerp(0.8, 1.6, S.rng()); }
+    const yaw = Math.atan2(p.y - b.y, p.x - b.x) + Math.PI / 2;
+    // stay within 1.5 m of where the fight started (strafe back toward it)
+    const offA = (b.x - b.strafeAnchor[0]) * Math.cos(yaw) + (b.y - b.strafeAnchor[1]) * Math.sin(yaw);
+    if (Math.abs(offA) > 1.5) b.strafeDir = -Math.sign(offA);
+    const sp = 1.9 * b.preset.aggression + 0.6;
+    const nx = b.x + Math.cos(yaw) * b.strafeDir * sp * dt, ny = b.y + Math.sin(yaw) * b.strafeDir * sp * dt;
+    if (nx > 0.8 && nx < AW - 0.8 && ny > 0.8 && ny < AH - 0.8 && !insideWall(nx, ny, 0.5)) { b.x = nx; b.y = ny; }
+    else b.strafeDir *= -1;
+    return;
+  }
+  const far = b.path.length && Math.hypot(b.path[b.path.length - 1][0] - b.x, b.path[b.path.length - 1][1] - b.y) > 6;
+  const sprintGoals = ['flagContest', 'flank', 'retreat', 'resupply'];
+  // investigate sprints only to a noise more than 20 m away (TacticalBotBrain)
+  const farNoise = b.goal === 'noise' && b.noise && Math.hypot(b.noise[0] - b.x, b.noise[1] - b.y) > 20;
+  const sprint = !reloading && ((sprintGoals.includes(b.goal) && (b.goal !== 'resupply' || far)) || farNoise);
+  if (moveAlong(b, sprint ? 6.1 : 3.5, dt)) b.face = b.moveDir;
+}
+
+function botAim(S, dt) {
+  const b = S.bot, p = S.player, t = S.t, P = b.preset;
+  if (!b.alive) return;
+  const dx = p.x - b.x, dy = p.y - b.y, dist = Math.hypot(dx, dy);
+  b.pv[0] += (p.vx - b.pv[0]) * dt / (0.125 + dt);
+  b.pv[1] += (p.vy - b.pv[1]) * dt / (0.125 + dt);
+  const lx = p.x + b.pv[0] * 0.055, ly = p.y + b.pv[1] * 0.055;
+  const leadYaw = Math.atan2(ly - b.y, lx - b.x) * R2D;
+  b.stress = Math.max(0, b.stress - dt * 0.7);
+  b.heat = Math.max(0, b.heat - dt * 0.95);
+  if (b.goal === 'engage' && b.det >= 1 && p.alive && p.present) {
+    if (b.reactAt < 0) { b.reactAt = t + AIM.reaction(P, Math.abs(wrap(leadYaw - b.aim)), S.rng); b.aimErr = P.initErr; }
+    if (t < b.reactAt) return;
+    if (!b.flick && t >= b.nextFlickAt) {
+      const delta = wrap(leadYaw - b.aim);
+      if (Math.abs(delta) > 10.5) {
+        const ft = AIM.flickTime(Math.abs(delta), dist, false, P.aimSpeed);
+        const e = AIM.endpoint(Math.abs(delta), b.stress, P.aimSpeed, S.rng);
+        b.flick = { from: b.aim, to: b.aim + delta + Math.sign(delta) * e.along, t0: t, T: ft.T };
+        log(S, `Flick ${Math.abs(delta).toFixed(0)}° in ${(ft.T * 1000).toFixed(0)} ms (Fitts ID ${ft.id.toFixed(1)}), lands ${Math.abs(e.along).toFixed(1)}° ${e.along < 0 ? 'short' : 'long'}.`, 'bot');
+      }
+    }
+    if (b.flick) {
+      const u = (t - b.flick.t0) / b.flick.T;
+      b.aim = lerp(b.flick.from, b.flick.to, AIM.minJerk(u));
+      if (u >= 1) { b.flick = null; b.nextFlickAt = t + lerp(0.11, 0.165, S.rng()); }
+      return;
+    }
+    b.aimErr = lerp(b.aimErr, P.settleErr + b.heat * 1.35 + (Math.hypot(b.pv[0], b.pv[1]) > 1 ? 0.45 : 0), 1 - Math.exp(-2 * dt));
+    const noise = (Math.sin(t * 1.9 + b.seed) * 0.6 + Math.sin(t * 3.4 + b.seed * 2.3) * 0.4) * b.aimErr * 1.15;
+    b.aim += wrap(leadYaw + noise - b.aim) * (1 - Math.exp(-P.aimSpeed * 1.4 * dt));
+  } else {
+    b.reactAt = b.det >= 1 ? b.reactAt : -1;
+    b.flick = null;
+    let look = b.face;
+    if (b.goal === 'hunt' && b.lastKnown) {
+      look = Math.atan2(b.lastKnown[1] - b.y, b.lastKnown[0] - b.x) * R2D;
+      if (t > b.glanceT) { b.glanceT = t + lerp(1.8, 3.4, S.rng()); b.glanceOff = S.rng() < 0.55 ? lerp(-28, 28, S.rng()) : 0; }
+      look += b.glanceOff;
+    } else if (b.goal === 'noise' && b.noise) {
+      look = Math.atan2(b.noise[1] - b.y, b.noise[0] - b.x) * R2D; // look at where the noise came from
+    } else if ((b.goal === 'flagContest' || b.goal === 'flank') && b.path.length === 0 && b.dest) {
+      look = Math.atan2(p.y - b.y, p.x - b.x) * R2D;
+    }
+    b.aim += wrap(look - b.aim) * (1 - Math.exp(-6 * dt));
+  }
+}
+
+function botFire(S, dt) {
+  const b = S.bot, p = S.player, t = S.t, P = b.preset;
+  if (!b.alive) return;
+  if (b.reloadUntil > 0 && t >= b.reloadUntil) {
+    const take = Math.min(30 - b.mag, b.reserve); b.mag += take; b.reserve -= take; b.reloadUntil = 0;
+  }
+  if (t < b.reloadUntil) return;
+  if (b.goal !== 'engage' || b.det < 1 || t < b.reactAt || b.flick || !p.alive || !p.present || !b.visible) { b.burst = 0; return; }
+  const dist = Math.hypot(p.x - b.x, p.y - b.y);
+  const trueYaw = Math.atan2(p.y - b.y, p.x - b.x) * R2D;
+  if (Math.abs(wrap(trueYaw - b.aim)) > 3.5 || t < b.nextShot) return;
+  if (b.burst <= 0) { if (t < b.nextBurstAt) return; b.burst = 3 + Math.floor(S.rng() * 5); }
+  if (b.mag <= 0) {
+    if (b.reserve > 0) { b.reloadUntil = t + 2.3; log(S, 'Reloading (a bot finishes its reload before it sprints).'); }
+    return;
+  }
+  b.mag--; b.burst--; b.nextShot = t + 0.075;
+  if (b.burst <= 0) b.nextBurstAt = t + lerp(0.18, 0.45, S.rng());
+  b.heat = Math.min(1, b.heat + 0.08);
+  const spread = 0.4 + b.heat * 0.9;
+  const shotYaw = b.aim + gauss(S.rng) * spread;
+  const half = AIM.halfWidth(dist, false);
+  const hit = Math.abs(wrap(shotYaw - trueYaw)) < half;
+  const head = hit && S.rng() < P.head;
+  const ex = b.x + Math.cos(shotYaw * D2R) * dist, ey = b.y + Math.sin(shotYaw * D2R) * dist;
+  addTracer(S, b.x, b.y, ex, ey, 'bot');
+  S.shots.fired++;
+  if (hit) { S.shots.hit++; damage(S, p, head ? 40 : 24, false); S.fx.push({ kind: head ? 'head' : 'hit', x: p.x, y: p.y, t }); }
+}
+
+function stepSim(S, dt) {
+  const p = S.player, b = S.bot;
+  const px = p.x, py = p.y;
+  playerStep(S, dt);
+  p.vx = (p.x - px) / dt; p.vy = (p.y - py) / dt;
+  perceive(S, dt);
+  if (S.t >= b.nextThink) { b.nextThink = S.t + 0.25; if (b.alive) think(S); }
+  botMotor(S, dt);
+  botAim(S, dt);
+  botFire(S, dt);
+  for (const a of [b, p]) if (a.alive && S.t - a.lastHit > 4 && a.hp < 100) a.hp = Math.min(100, a.hp + 55 * dt);
+  if (S.ctf) {
+    const pin = p.alive && p.present && Math.hypot(p.x - ZONE.x, p.y - ZONE.y) < ZONE.r;
+    const bin = b.alive && Math.hypot(b.x - ZONE.x, b.y - ZONE.y) < ZONE.r;
+    S.zone.capturing = pin && S.zone.progress < 1;
+    S.zone.contested = pin && bin;
+    if (pin && !bin && S.zone.progress < 1) {
+      S.zone.progress = Math.min(1, S.zone.progress + dt / 10);
+      if (S.zone.progress >= 1) { log(S, 'Flag captured by the player.', 'bad'); S.endAt = S.t + 2; }
+    }
+  }
+  S.tracers = S.tracers.filter(tr => S.t - tr.t < 0.12);
+  S.fx = S.fx.filter(f => S.t - f.t < 0.9);
+  S.t += dt;
+}
+
+function drawTheater() {
+  const S = theater.S; if (!S) return;
+  const { g, w, h } = fit(theater.cv);
+  renderArena(g, w, h, S);
+  updateReadouts(S);
+}
+function renderArena(g, w, h, S) {
+  const s = Math.min(w / AW, h / AH), ox = (w - AW * s) / 2, oy = (h - AH * s) / 2;
+  const X = x => ox + x * s, Y = y => oy + y * s;
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.beginPath();
+  for (let x = 0; x <= AW; x += 2) { g.moveTo(X(x), Y(0)); g.lineTo(X(x), Y(AH)); }
+  for (let y = 0; y <= AH; y += 2) { g.moveTo(X(0), Y(y)); g.lineTo(X(AW), Y(y)); }
+  g.stroke();
+  if (S.ctf) {
+    g.fillStyle = rgba(T.zone, S.zone.contested ? 0.28 : 0.16); g.beginPath(); g.arc(X(ZONE.x), Y(ZONE.y), ZONE.r * s, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = T.zone; g.lineWidth = 2; g.beginPath(); g.arc(X(ZONE.x), Y(ZONE.y), ZONE.r * s, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * S.zone.progress); g.stroke();
+    g.fillStyle = T.zone; g.font = `600 ${Math.max(10, s * 0.55)}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.fillText('FLAG', X(ZONE.x), Y(ZONE.y) + 4);
+  }
+  for (const r of WALLS) { g.fillStyle = T.raised; g.fillRect(X(r[0]), Y(r[1]), r[2] * s, r[3] * s); g.strokeStyle = T.line; g.strokeRect(X(r[0]) + 0.5, Y(r[1]) + 0.5, r[2] * s - 1, r[3] * s - 1); }
+  for (const c of S.crates) {
+    const ready = S.t >= c.readyAt;
+    g.fillStyle = ready ? T.good : rgba(T.good, 0.3);
+    g.fillRect(X(c.x) - s * 0.45, Y(c.y) - s * 0.3, s * 0.9, s * 0.6);
+    if (!ready) { g.strokeStyle = T.good; g.lineWidth = 2; g.beginPath(); g.arc(X(c.x), Y(c.y), s * 0.85, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - (c.readyAt - S.t) / 20)); g.stroke(); }
+  }
+  const b = S.bot, p = S.player;
+  // bot view cone
+  if (b.alive) {
+    const a0 = (b.aim - 55) * D2R, a1 = (b.aim + 55) * D2R, R = 16 * s;
+    const grad = g.createRadialGradient(X(b.x), Y(b.y), 0, X(b.x), Y(b.y), R);
+    grad.addColorStop(0, rgba(T.bot, 0.22)); grad.addColorStop(1, rgba(T.bot, 0));
+    g.fillStyle = grad; g.beginPath(); g.moveTo(X(b.x), Y(b.y)); g.arc(X(b.x), Y(b.y), R, a0, a1); g.closePath(); g.fill();
+    g.fillStyle = rgba(T.bot, 0.07); g.beginPath(); g.moveTo(X(b.x), Y(b.y)); g.arc(X(b.x), Y(b.y), 6 * s, (b.aim - 100) * D2R, (b.aim + 100) * D2R); g.closePath(); g.fill();
+  }
+  if (b.path.length) {
+    g.setLineDash([4, 5]); g.strokeStyle = rgba(T.bot, 0.6); g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(b.x), Y(b.y));
+    for (const q of b.path) g.lineTo(X(q[0]), Y(q[1]));
+    g.stroke(); g.setLineDash([]);
+  }
+  if (b.lastKnown && b.goal === 'hunt') {
+    const k = b.lastKnown; g.strokeStyle = T.warn; g.lineWidth = 2.2; const m = s * 0.4;
+    g.beginPath(); g.moveTo(X(k[0]) - m, Y(k[1]) - m); g.lineTo(X(k[0]) + m, Y(k[1]) + m); g.moveTo(X(k[0]) + m, Y(k[1]) - m); g.lineTo(X(k[0]) - m, Y(k[1]) + m); g.stroke();
+  }
+  if (b.noise && S.t - b.noiseT < 8) {
+    const age = (S.t - b.noiseT) % 1.2;
+    g.strokeStyle = rgba(T.warn, 1 - age / 1.2); g.lineWidth = 1.5; g.beginPath(); g.arc(X(b.noise[0]), Y(b.noise[1]), s * (0.4 + age * 2.2), 0, Math.PI * 2); g.stroke();
+  }
+  for (const tr of S.tracers) { g.strokeStyle = rgba(tr.col === 'bot' ? T.bot : T.accent, 0.85); g.lineWidth = 1.4; g.beginPath(); g.moveTo(X(tr.x0), Y(tr.y0)); g.lineTo(X(tr.x1), Y(tr.y1)); g.stroke(); }
+  for (const f of S.fx) {
+    const age = S.t - f.t;
+    const col = f.kind === 'crack' ? T.warn : f.kind === 'supply' ? T.good : f.kind === 'head' ? T.bad : T.ink;
+    g.strokeStyle = rgba(col, 1 - age / 0.9); g.lineWidth = 2; g.beginPath(); g.arc(X(f.x), Y(f.y), s * (0.55 + age * (f.kind === 'supply' ? 2.5 : 1.2)), 0, Math.PI * 2); g.stroke();
+  }
+  const drawAgent = (a, col, label) => {
+    if (!a.present) return;
+    const r = s * 0.45;
+    g.globalAlpha = a.alive ? 1 : 0.35;
+    g.fillStyle = col; g.beginPath(); g.arc(X(a.x), Y(a.y), a.crouch ? r * 0.85 : r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = T.panel; g.lineWidth = 2; g.beginPath(); g.moveTo(X(a.x), Y(a.y)); g.lineTo(X(a.x) + Math.cos(a.aim * D2R) * r * 1.6, Y(a.y) + Math.sin(a.aim * D2R) * r * 1.6); g.stroke();
+    g.globalAlpha = 1;
+    const bw = s * 1.6, bx = X(a.x) - bw / 2, by = Y(a.y) - r - 12;
+    g.fillStyle = T.grid; g.fillRect(bx, by, bw, 3); g.fillRect(bx, by + 4, bw, 3);
+    g.fillStyle = T.bot; g.fillRect(bx, by, bw * a.armour / 50, 3);
+    g.fillStyle = T.good; g.fillRect(bx, by + 4, bw * a.hp / 100, 3);
+    if (label) { g.fillStyle = T.ink; g.font = `600 ${Math.max(10, Math.round(s * 0.52))}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.fillText(label, X(a.x), by - 5); }
+  };
+  p.aim = p.face;
+  drawAgent(p, T.accent, 'YOU');
+  const rung = RUNGS.find(x => x.key === b.goal);
+  drawAgent(b, T.bot, rung ? rung.goal.toUpperCase() : '');
+  if (b.alive && b.det > 0 && b.det < 1) {
+    g.strokeStyle = T.warn; g.lineWidth = 3; g.beginPath(); g.arc(X(b.x), Y(b.y), s * 0.8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.det); g.stroke();
+  }
+}
+function updateReadouts(S) {
+  const b = S.bot, p = S.player;
+  const rung = RUNGS.find(x => x.key === b.goal);
+  const pct = v => `${Math.round(v)}`;
+  $('bHp').style.width = `${b.hp}%`; $('bHpN').textContent = pct(b.hp);
+  $('bAr').style.width = `${b.armour * 2}%`; $('bArN').textContent = pct(b.armour);
+  $('bDet').style.width = `${Math.min(100, b.det * 100)}%`; $('bDetN').textContent = `${Math.min(100, Math.round(b.det * 100))} %`;
+  $('pHp').style.width = `${p.hp}%`; $('pHpN').textContent = pct(p.hp);
+  $('pAr').style.width = `${p.armour * 2}%`; $('pArN').textContent = pct(p.armour);
+  $('bGoal').textContent = rung ? rung.goal : '-';
+  $('bDist').textContent = p.present ? `${Math.hypot(p.x - b.x, p.y - b.y).toFixed(1)} m` : 'gone';
+  $('bErr').textContent = b.goal === 'engage' && b.det >= 1 ? `${Math.abs(wrap(Math.atan2(p.y - b.y, p.x - b.x) * R2D - b.aim)).toFixed(1)}°` : '-';
+  $('bAmmo').textContent = `${b.mag} / ${b.reserve}${S.t < b.reloadUntil ? ' (reloading)' : ''}`;
+  $('bShots').textContent = `${S.shots.fired} / ${S.shots.hit}`;
+  $('tClock').textContent = `t = ${S.t.toFixed(1)} s`;
+  for (const r of RUNGS) theater.ladderEls[r.key].classList.toggle('on', r.key === b.goal);
+}
+
+function selectScenario(i) {
+  theater.scn = i;
+  document.querySelectorAll('#scnButtons button').forEach((bt, k) => bt.setAttribute('aria-pressed', k === i ? 'true' : 'false'));
+  $('scnBlurb').textContent = SCENARIOS[i].blurb;
+  newSim(i);
+  drawTheater();
+}
+SCENARIOS.forEach((sc, i) => {
+  const bt = document.createElement('button');
+  bt.type = 'button'; bt.textContent = `${i + 1} ${sc.name}`;
+  bt.addEventListener('click', () => { theater.tour = false; selectScenario(i); });
+  $('scnButtons').appendChild(bt);
+});
+$('btnPlay').addEventListener('click', () => { theater.playing = !theater.playing; $('btnPlay').textContent = theater.playing ? 'Pause' : 'Play'; });
+$('btnRestart').addEventListener('click', () => selectScenario(theater.scn));
+document.querySelectorAll('[data-speed]').forEach(bt => bt.addEventListener('click', () => {
+  theater.speed = parseFloat(bt.dataset.speed);
+  document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', x === bt ? 'true' : 'false'));
+}));
+$('btnPlay').textContent = theater.playing ? 'Pause' : 'Play';
+selectScenario(0);
+// GitHub GIF capture (local file only): #gifgrid-<scenario>-<seconds per frame>-<frames>[-dark] renders a frame grid
+const gifMode = /^#gifgrid-(\d+)-([\d.]+)-(\d+)(-dark)?$/.exec(location.hash);
+if (gifMode) {
+  if (gifMode[4]) document.documentElement.dataset.theme = 'dark';
+  readTokens();
+  document.body.classList.add('gifmode');
+  theater.playing = false; theater.tour = false;
+  const n = +gifMode[1], step = +gifMode[2], count = +gifMode[3];
+  selectScenario(n);
+  const grid = document.createElement('div'); grid.className = 'gifgrid'; document.body.appendChild(grid);
+  const font = getComputedStyle(document.body).fontFamily;
+  for (let f = 0; f < count; f++) {
+    const S = theater.S;
+    while (S.t < f * step && !(S.endAt > 0 && S.t >= S.endAt + 1)) stepSim(S, 1 / 60);
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 400; cv.className = 'gifcell';
+    grid.appendChild(cv);
+    const g = cv.getContext('2d');
+    renderArena(g, 640, 384, S);
+    g.fillStyle = T.bg; g.fillRect(0, 352, 640, 48);
+    const rung = RUNGS.find(x => x.key === S.bot.goal);
+    g.fillStyle = T.ink; g.font = `600 15px ${font}`; g.textAlign = 'left';
+    g.fillText(`${n + 1}. ${SCENARIOS[n].name}`, 10, 370);
+    g.fillStyle = T.bot; g.textAlign = 'right'; g.fillText(`${rung ? rung.goal : ''}  ·  t ${S.t.toFixed(1)} s`, 630, 370);
+    g.fillStyle = T.muted; g.font = `12px ${font}`; g.textAlign = 'left';
+    g.fillText((S.lastLog || '').slice(0, 96), 10, 391);
+  }
+}
+// warm-up: show a meaningful first frame even when paused (reduced motion)
+if (!theater.playing && !gifMode) { for (let k = 0; k < 240; k++) stepSim(theater.S, 1 / 60); drawTheater(); }
+redraws.push(drawTheater);
+function frame(ts) {
+  const dtReal = theater.last ? Math.min(0.1, (ts - theater.last) / 1000) : 0;
+  theater.last = ts;
+  if (theater.playing && theater.S) {
+    theater.acc += dtReal * theater.speed;
+    while (theater.acc >= 1 / 60) {
+      stepSim(theater.S, 1 / 60);
+      theater.acc -= 1 / 60;
+      const S = theater.S;
+      if ((S.endAt > 0 && S.t >= S.endAt) || S.t > 34) { selectScenario(theater.tour ? (theater.scn + 1) % SCENARIOS.length : theater.scn); break; }
+    }
+    drawTheater();
+  }
+  if (!reduceMotion) { stepStrafe(dtReal); stepRecoil(dtReal); stepSensesMeter(dtReal); }
+  stepFlick(dtReal);
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------- 2. ladder explorer
+const lv = { els: buildLadder($('lvLadder')) };
+const FACTS = ['fLow', 'fDir', 'fFlagC', 'fVis', 'fCamp', 'fLost', 'fNoise', 'fSupply', 'fZone', 'fSquad'];
+function decide(f) {
+  const target = f.fVis || f.fLost;
+  const checks = {
+    retreat: f.fLow && target,
+    directive: f.fDir,
+    flagContest: f.fFlagC,
+    engage: f.fVis,
+    flank: f.fCamp && target,
+    hunt: f.fLost && !f.fVis,
+    noise: f.fNoise,
+    resupply: f.fSupply && !f.fVis && !f.fLost && !f.fDir && !f.fLow,
+    flagZone: f.fZone,
+    squad: f.fSquad,
+    patrol: true
+  };
+  return { checks, win: RUNGS.find(r => checks[r.key]) };
+}
+const WHY = {
+  retreat: 'Low health under fire beats everything: a dead bot plays no objective.',
+  directive: 'An order from the squad system (or a future LLM) overrides the bot’s own plans.',
+  flagContest: 'An enemy about to capture is the most urgent objective problem.',
+  engage: 'A visible enemy is the next most urgent thing.',
+  flank: 'You camped, so the bot leaves the lane to hit you from the side.',
+  hunt: 'It saw you less than 12 s ago, so it goes where you were.',
+  noise: 'No sight of you, but it heard something worth checking.',
+  resupply: 'Out of the fight with broken armour or low ammo: time for an ammo station.',
+  flagZone: 'Quiet moment in Capture the Flag: go play the objective.',
+  squad: 'Nothing urgent: stay with the squad leader.',
+  patrol: 'Nothing is happening: rotate through the map’s tactical points.'
+};
+function updateLadder() {
+  const f = {};
+  for (const id of FACTS) f[id] = $(id).checked;
+  const { checks, win } = decide(f);
+  let passed = true;
+  for (const r of RUNGS) {
+    const el = lv.els[r.key];
+    el.classList.toggle('on', r === win);
+    el.classList.toggle('miss', passed && r !== win && !checks[r.key]);
+    if (r === win) passed = false;
+  }
+  $('lvGoal').textContent = win.goal;
+  let why = WHY[win.key];
+  if (f.fSupply && win.key !== 'resupply' && RUNGS.indexOf(win) < RUNGS.findIndex(r => r.key === 'resupply')) why += ' Resupply waits until the bot is out of the fight.';
+  $('lvWhy').textContent = why;
+}
+FACTS.forEach(id => $(id).addEventListener('change', updateLadder));
+updateLadder();
+
+// ---------------------------------------------------------------- 3. detection meter
+const senses = { cv: $('cvSenses'), meter: 0, meterT: 0 };
+function sensesInput() {
+  return { dist: +$('sDist').value, angle: +$('sAng').value, moving: $('sMove').checked, firing: $('sFire').checked, crouched: $('sCrouch').checked };
+}
+function drawSenses() {
+  const o = sensesInput();
+  $('oDist').textContent = `${o.dist} m`; $('oAng').textContent = `${o.angle}°`;
+  const r = detectRate(o);
+  if (!r.inCone || r.rate <= 0) {
+    $('sOut').textContent = 'never';
+    $('sWhy').textContent = o.dist > 70 ? 'Beyond the 70 m vision range.' : `Outside the view cone: ±55°, or ±100° within 6 m. You are ${o.angle}° off its gaze.`;
+  } else {
+    $('sOut').textContent = `${(1 / r.rate).toFixed(2)} s`;
+    const parts = [`base ${(0.9 + 9 / Math.max(o.dist, 1.5)).toFixed(2)}/s at ${o.dist} m`];
+    if (o.moving) parts.push('×1.35 moving'); if (o.firing) parts.push('×2.2 just fired'); if (o.angle < 12) parts.push('×1.4 near the centre of its view'); if (o.crouched) parts.push('×0.7 crouched');
+    $('sWhy').textContent = `${parts.join(', ')} = ${r.rate.toFixed(2)}/s, then the reaction time on top.`;
+  }
+  const { g, w, h } = fit(senses.cv);
+  const L = 44, R = 12, Tp = 14, B = 30, pw = w - L - R, ph = h - Tp - B;
+  const xm = 70, ym = 3;
+  const X = d => L + d / xm * pw, Y = s => Tp + ph - Math.min(s, ym) / ym * ph;
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`;
+  g.textAlign = 'right';
+  for (let s = 0; s <= 3; s += 0.5) { g.beginPath(); g.moveTo(L, Y(s)); g.lineTo(w - R, Y(s)); g.stroke(); g.fillText(`${s.toFixed(1)} s`, L - 6, Y(s) + 4); }
+  g.textAlign = 'center';
+  for (let d = 0; d <= 70; d += 10) { g.beginPath(); g.moveTo(X(d), Tp); g.lineTo(X(d), Tp + ph); g.stroke(); g.fillText(`${d} m`, X(d), h - 10); }
+  const cases = [
+    { lab: 'standing still', col: T.muted, m: 1 },
+    { lab: 'moving', col: T.bot, m: 1.35 },
+    { lab: 'crouched', col: T.good, m: 0.7 },
+    { lab: 'just fired', col: T.accent, m: 2.2 }
+  ];
+  for (const c of cases) {
+    g.strokeStyle = c.col; g.lineWidth = 2; g.beginPath();
+    for (let d = 1.5; d <= 70; d += 0.5) { const t = 1 / ((0.9 + 9 / Math.max(d, 1.5)) * c.m); const px = X(d), py = Y(t); if (d === 1.5) g.moveTo(px, py); else g.lineTo(px, py); }
+    g.stroke();
+    const tEnd = 1 / ((0.9 + 9 / 70) * c.m);
+    g.fillStyle = c.col; g.textAlign = 'right'; g.fillText(c.lab, w - R - 2, Y(tEnd) - 5);
+  }
+  g.strokeStyle = T.ink; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(X(o.dist), Tp); g.lineTo(X(o.dist), Tp + ph); g.stroke(); g.setLineDash([]);
+  if (r.rate > 0) { g.fillStyle = T.ink; g.beginPath(); g.arc(X(o.dist), Y(1 / r.rate), 4, 0, Math.PI * 2); g.fill(); }
+  senses.meter = 0; senses.meterT = 0;
+}
+function stepSensesMeter(dt) {
+  const r = detectRate(sensesInput());
+  if (r.rate <= 0) { $('sMeter').style.width = '0%'; $('sMeterNote').textContent = 'Not filling: outside the cone or range.'; return; }
+  senses.meterT += dt;
+  senses.meter += r.rate * dt;
+  if (senses.meter >= 1.6) { senses.meter = 0; senses.meterT = 0; }
+  $('sMeter').style.width = `${Math.min(100, senses.meter * 100)}%`;
+  $('sMeterNote').textContent = senses.meter >= 1 ? `Spotted after ${(1 / r.rate).toFixed(2)} s. Reaction time starts now.` : `Filling at ${r.rate.toFixed(2)} per second.`;
+}
+['sDist', 'sAng', 'sMove', 'sFire', 'sCrouch'].forEach(id => $(id).addEventListener('input', drawSenses));
+redraws.push(drawSenses);
+drawSenses();
+
+// ---------------------------------------------------------------- 4. flick lab
+for (const id of ['fPreset', 'sPreset']) {
+  const sel = $(id);
+  for (const n of PRESET_NAMES) { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); }
+  sel.value = 'Regular';
+}
+const flick = { cv: $('cvFlick'), cloudCv: $('cvCloud'), jerkCv: $('cvJerk'), anim: null, cloud: [], rng: mulberry(4242), lastT: 0 };
+function flickParams() {
+  const P = PRESETS[$('fPreset').value];
+  const D = +$('fOff').value, dist = +$('fDist').value, stress = +$('fStress').value, head = $('fHead').checked;
+  return { P, D, dist, stress, head };
+}
+function flickReadout() {
+  const { P, D, dist, stress, head } = flickParams();
+  $('oOff').textContent = `${D}°`; $('oFd').textContent = `${dist} m`; $('oStress').textContent = stress.toFixed(2);
+  const ft = AIM.flickTime(D, dist, head, P.aimSpeed);
+  const sig = clamp(D * (0.045 + 0.045 * stress) * AIM.skillScale(P.aimSpeed), 0.35, 6.5);
+  const mu = lerp(-0.075, 0.035, stress) * D;
+  const ecc = lerp(0.76, 1.58, clamp01(D / 115));
+  const W = AIM.halfWidth(dist, head);
+  $('flickKv').innerHTML = `
+    <dt>Reaction (this angle)</dt><dd>${Math.round(P.react[0] * ecc * 1000)} to ${Math.round(P.react[1] * ecc * 1000)} ms</dd>
+    <dt>Target half-width</dt><dd>${W.toFixed(2)}°</dd>
+    <dt>Fitts index of difficulty</dt><dd>${ft.id.toFixed(2)} bits</dd>
+    <dt>Flick duration</dt><dd>${Math.round(ft.T * 1000)} ms</dd>
+    <dt>Average landing bias</dt><dd>${Math.abs(mu).toFixed(2)}° ${mu < 0 ? 'short' : 'long'}</dd>
+    <dt>Scatter along / across</dt><dd>${(sig * 0.408).toFixed(2)}° / ${(sig * 0.408 * 0.44).toFixed(2)}°</dd>
+    <dt>Pause before correcting</dt><dd>110 to 165 ms</dd>`;
+  return { ft, sig, mu, W };
+}
+function startFlick() {
+  const { P, D, dist, stress, head } = flickParams();
+  const ft = AIM.flickTime(D, dist, head, P.aimSpeed);
+  const e = AIM.endpoint(D, stress, P.aimSpeed, flick.rng);
+  flick.anim = { t: 0, react: AIM.reaction(P, D, flick.rng), T: ft.T, D, endX: D + e.along, endY: e.perp * 0.7, dist, head, P, pause: lerp(0.11, 0.165, flick.rng()) };
+}
+function runCloud() {
+  const { P, D, stress } = flickParams();
+  flick.cloud = [];
+  for (let i = 0; i < 60; i++) { const e = AIM.endpoint(D, stress, P.aimSpeed, flick.rng); flick.cloud.push([e.along, e.perp * 0.7]); }
+  drawCloud();
+}
+function drawFlick() {
+  const { g, w, h } = fit(flick.cv);
+  const { dist, head, D } = flickParams();
+  const a = flick.anim;
+  const fov = 70, ppd = w / fov;
+  let aimX = 0, aimY = 0, phase = 'Ready', tgt = a ? a.D : D, dd = a ? a.dist : dist;
+  if (a) {
+    if (a.t < a.react) { phase = `Reacting ${Math.round(a.t * 1000)} / ${Math.round(a.react * 1000)} ms`; }
+    else if (a.t < a.react + a.T) { const u = (a.t - a.react) / a.T; aimX = a.endX * AIM.minJerk(u); aimY = a.endY * AIM.minJerk(u); phase = `Flick ${Math.round(u * a.T * 1000)} / ${Math.round(a.T * 1000)} ms`; }
+    else if (a.t < a.react + a.T + a.pause) { aimX = a.endX; aimY = a.endY; phase = `Landed ${Math.abs(a.endX - a.D).toFixed(1)}° ${a.endX < a.D ? 'short' : 'long'}, pause`; }
+    else { const k = 1 - Math.exp(-(a.t - a.react - a.T - a.pause) * a.P.aimSpeed * 1.4); aimX = lerp(a.endX, a.D, k); aimY = lerp(a.endY, 0, k); phase = k > 0.97 ? 'On target' : 'Correcting'; }
+  }
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  const hy = h * 0.55 - aimY * ppd;
+  g.fillStyle = T.grid; g.fillRect(0, hy, w, h - hy);
+  g.strokeStyle = T.line; g.lineWidth = 1;
+  for (let d = -180; d <= 180; d += 10) { const x = w / 2 + (d - aimX) * ppd; if (x < -2 || x > w + 2) continue; g.beginPath(); g.moveTo(x, hy); g.lineTo(x, hy + (d % 30 === 0 ? 10 : 5)); g.stroke(); }
+  // target silhouette at angle tgt
+  const mpd = Math.atan2(1, dd) * R2D;
+  const sx = w / 2 + (tgt - aimX) * ppd, scale = ppd * mpd;
+  // the aim point (chest 1.3 m or head 1.67 m) sits on the eye-level horizon the crosshair is drawn on
+  const isHead = a ? a.head : head;
+  const footY = hy + (isHead ? 1.67 : 1.3) * scale;
+  g.fillStyle = T.accent;
+  g.fillRect(sx - 0.2 * scale, footY - 1.0 * scale, 0.4 * scale, 1.0 * scale);
+  g.fillRect(sx - 0.3 * scale, footY - 1.55 * scale, 0.6 * scale, 0.57 * scale);
+  g.beginPath(); g.arc(sx, footY - 1.67 * scale, 0.12 * scale, 0, Math.PI * 2); g.fill();
+  if (sx < 0 || sx > w) { g.fillStyle = T.accent; g.font = `600 13px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = sx < 0 ? 'left' : 'right'; g.fillText(sx < 0 ? '◀ target' : 'target ▶', sx < 0 ? 8 : w - 8, hy - 8); }
+  // crosshair
+  g.strokeStyle = T.bot; g.lineWidth = 2; const c = 9;
+  g.beginPath(); g.moveTo(w / 2 - c, h * 0.55); g.lineTo(w / 2 - 3, h * 0.55); g.moveTo(w / 2 + 3, h * 0.55); g.lineTo(w / 2 + c, h * 0.55); g.moveTo(w / 2, h * 0.55 - c); g.lineTo(w / 2, h * 0.55 - 3); g.moveTo(w / 2, h * 0.55 + 3); g.lineTo(w / 2, h * 0.55 + c); g.stroke();
+  g.fillStyle = T.ink; g.font = `500 13px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  g.fillText(phase, 10, 20);
+  g.fillStyle = T.muted; g.fillText(`${dd} m, ${head ? 'head' : 'body'}`, 10, 38);
+  drawJerk();
+}
+function drawCloud() {
+  const { g, w, h } = fit(flick.cloudCv);
+  const { D, dist, head } = flickParams();
+  const r = flickReadout();
+  const span = Math.max(3, r.sig * 1.25 + Math.abs(r.mu) + 1);
+  const ppd = Math.min(w, h) / (2 * span);
+  const cx = w / 2, cy = h / 2;
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  g.strokeStyle = T.grid; g.lineWidth = 1;
+  for (let d = -Math.floor(span); d <= span; d++) { g.beginPath(); g.moveTo(cx + d * ppd, 0); g.lineTo(cx + d * ppd, h); g.moveTo(0, cy + d * ppd); g.lineTo(w, cy + d * ppd); g.stroke(); }
+  const hw = AIM.halfWidth(dist, false), hh = AIM.halfWidth(dist, true);
+  g.fillStyle = rgba(T.accent, 0.22); g.fillRect(cx - hw * ppd, cy - hw * ppd * 0.6, hw * 2 * ppd, hw * 2.6 * ppd);
+  g.beginPath(); g.arc(cx, cy - hw * ppd * 0.6 - hh * ppd, hh * ppd, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = T.bot; g.lineWidth = 1.5; g.setLineDash([4, 4]);
+  g.beginPath(); g.ellipse(cx + r.mu * ppd, cy, r.sig * 0.408 * ppd, r.sig * 0.408 * 0.44 * 0.7 * ppd, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  for (const p of flick.cloud) {
+    const x = cx + p[0] * ppd, y = cy + p[1] * ppd;
+    const onTarget = Math.abs(p[0]) < (head ? hh : hw) && Math.abs(p[1]) < (head ? hh : hw * 1.3);
+    g.fillStyle = onTarget ? T.good : T.bad; g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill();
+  }
+  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  g.fillText(`flick direction → · 1° per grid line · ${flick.cloud.length ? flick.cloud.length + ' flicks' : 'press Run 60 flicks'}`, 8, h - 8);
+  if (flick.cloud.length) {
+    const hits = flick.cloud.filter(p => Math.abs(p[0]) < (head ? hh : hw) && Math.abs(p[1]) < (head ? hh : hw * 1.3)).length;
+    g.fillStyle = T.ink; g.fillText(`first-shot hits: ${hits} / ${flick.cloud.length}`, 8, 16);
+  }
+}
+function drawJerk() {
+  const { g, w, h } = fit(flick.jerkCv);
+  const r = flickReadout();
+  const L = 30, R = 10, Tp = 12, B = 24, pw = w - L - R, ph = h - Tp - B;
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(L, Tp + ph); g.lineTo(L + pw, Tp + ph); g.moveTo(L, Tp); g.lineTo(L, Tp + ph); g.stroke();
+  g.lineWidth = 2;
+  g.strokeStyle = T.bot; g.beginPath();
+  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.minJerk(u) * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
+  g.stroke();
+  g.strokeStyle = T.accent; g.beginPath();
+  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.minJerkVel(u) / 1.875 * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
+  g.stroke();
+  const a = flick.anim;
+  if (a && a.t >= a.react && a.t <= a.react + a.T) { const u = (a.t - a.react) / a.T; g.fillStyle = T.ink; g.beginPath(); g.arc(L + u * pw, Tp + ph - AIM.minJerk(u) * ph, 4, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  g.fillText('position', L + 6, Tp + 12); g.fillStyle = T.accent; g.fillText('speed', L + 66, Tp + 12);
+  g.fillStyle = T.muted; g.textAlign = 'right'; g.fillText(`${Math.round(r.ft.T * 1000)} ms`, L + pw, h - 6); g.textAlign = 'left'; g.fillText('0', L, h - 6);
+}
+function stepFlick(dt) {
+  if (!flick.anim) return;
+  flick.anim.t += dt;
+  drawFlick();
+  if (flick.anim.t > flick.anim.react + flick.anim.T + flick.anim.pause + 0.9) {
+    flick.cloud.push([flick.anim.endX - flick.anim.D, flick.anim.endY]);
+    if (flick.cloud.length > 120) flick.cloud.shift();
+    drawCloud();
+    flick.anim = null;
+    drawFlick();
+  }
+}
+$('btnFlick').addEventListener('click', startFlick);
+$('btnCloud').addEventListener('click', runCloud);
+['fOff', 'fDist', 'fStress', 'fPreset', 'fHead'].forEach(id => $(id).addEventListener('input', () => { flick.cloud = []; drawFlick(); drawCloud(); }));
+redraws.push(() => { drawFlick(); drawCloud(); });
+runCloud(); drawFlick();
+
+// ---------------------------------------------------------------- 5. strafe tracking
+const st = { cv: $('cvStrafe'), t: 0, x: 0, v: 0, dir: 1, nextFlip: 0.45, lastFlip: -9, aim: 0, pv: 0, nextShot: 0, hist: [], shots: [], heat: 0, rng: mulberry(77) };
+function stepStrafe(dt) {
+  if (dt <= 0) return;
+  const speed = +$('sSpeed').value, period = +$('sPeriod').value, dist = +$('sDistS').value, P = PRESETS[$('sPreset').value];
+  $('oSs').textContent = `${speed.toFixed(1)} m/s`; $('oSp').textContent = `${period.toFixed(2)} s`; $('oSd').textContent = `${dist} m`;
+  const h = Math.min(dt, 1 / 30);
+  st.t += h;
+  if (st.t >= st.nextFlip) { st.dir *= -1; st.nextFlip = st.t + period * (0.8 + 0.4 * st.rng()); st.lastFlip = st.t; }
+  if (Math.abs(st.x) > 2.6) st.dir = -Math.sign(st.x);
+  const want = st.dir * speed;
+  st.v += clamp(want - st.v, -speed / 0.09 * h, speed / 0.09 * h);
+  st.x += st.v * h;
+  st.pv += (st.v - st.pv) * h / (0.125 + h);
+  const lead = st.x + st.pv * 0.055;
+  const noise = Math.sin(st.t * 2.1) * 0.6 + Math.sin(st.t * 3.7 + 1.3) * 0.4;
+  const errM = dist * Math.tan((P.settleErr + st.heat * 1.35) * D2R) * 0.6;
+  st.aim += (lead + noise * errM - st.aim) * (1 - Math.exp(-P.aimSpeed * 1.4 * h));
+  st.heat = Math.max(0, st.heat - h * 0.95);
+  if (st.t >= st.nextShot) {
+    st.nextShot = st.t + 0.075;
+    st.heat = Math.min(1, st.heat + 0.05);
+    const spreadM = dist * Math.tan((0.4 + st.heat * 0.9) * D2R);
+    const sx = st.aim + gauss(st.rng) * spreadM * 0.5;
+    const hit = Math.abs(sx - st.x) < 0.25;
+    st.shots.push({ t: st.t, x: sx, hit, trail: !hit && st.t - st.lastFlip < 0.25 });
+  }
+  st.hist.push([st.t, st.x, st.aim]);
+  while (st.hist.length && st.t - st.hist[0][0] > 4) st.hist.shift();
+  while (st.shots.length && st.t - st.shots[0].t > 4) st.shots.shift();
+  drawStrafe(dist);
+}
+function drawStrafe(dist) {
+  const { g, w, h } = fit(st.cv);
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  const top = h * 0.38;
+  const ppm = w / 7.5;
+  const cx = w / 2;
+  // first-person strip
+  g.fillStyle = T.grid; g.fillRect(0, top * 0.62, w, top * 0.38);
+  const bw = 0.5 * ppm * 0.6, bh = top * 0.55;
+  g.fillStyle = T.accent; g.fillRect(cx + st.x * ppm - bw / 2, top * 0.95 - bh, bw, bh);
+  g.beginPath(); g.arc(cx + st.x * ppm, top * 0.95 - bh - bw * 0.35, bw * 0.32, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = T.bot; g.lineWidth = 2; const ax = cx + st.aim * ppm, ay = top * 0.95 - bh * 0.6;
+  g.beginPath(); g.moveTo(ax - 9, ay); g.lineTo(ax + 9, ay); g.moveTo(ax, ay - 9); g.lineTo(ax, ay + 9); g.stroke();
+  // time chart (x across, time down the last 4 s)
+  const c0 = top + 10, ch = h - c0 - 8;
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, c0); g.lineTo(cx, c0 + ch); g.stroke();
+  const Yt = t => c0 + ch - (st.t - t) / 4 * ch;
+  const line = (idx, col) => { g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); st.hist.forEach((p, i) => { const x = cx + p[idx] * ppm, y = Yt(p[0]); if (!i) g.moveTo(x, y); else g.lineTo(x, y); }); g.stroke(); };
+  line(1, T.accent); line(2, T.bot);
+  for (const s of st.shots) { g.fillStyle = s.hit ? T.good : T.bad; g.beginPath(); g.arc(cx + s.x * ppm, Yt(s.t), 2.6, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left'; g.fillText('now', 6, c0 + ch - 2); g.fillText('4 s ago', 6, c0 + 10);
+  const n = st.shots.length, hits = st.shots.filter(s => s.hit).length, trail = st.shots.filter(s => s.trail).length, miss = n - hits;
+  $('stHit').textContent = n ? `${Math.round(hits / n * 100)} %` : '-';
+  $('stWhy').textContent = miss ? `${Math.round(trail / miss * 100)} % of the misses came within 0.25 s after a direction change, at ${dist} m.` : 'No misses in the last 4 s.';
+}
+redraws.push(() => drawStrafe(+$('sDistS').value));
+
+// ---------------------------------------------------------------- 6. recoil pull-down
+const rc = { cv: $('cvRecoil'), t: 0, runs: [], rng: mulberry(9) };
+function startSpray() {
+  rc.t = 0;
+  rc.runs = PRESET_NAMES.map((n, i) => ({ name: n, P: PRESETS[n], pitch: 0, yaw: 0, heat: 0, shots: [], next: 0, n: 0, latency: lerp(0.065, 0.135, rc.rng()), phase: i * 1.7, climbNoComp: 0 }));
+}
+function stepRecoil(dt) {
+  if (!rc.runs.length) startSpray();
+  rc.t += Math.min(dt, 1 / 30);
+  let busy = false;
+  for (const r of rc.runs) {
+    const eff = clamp(clamp(r.P.aimSpeed / 10.5, 0.55, 0.92) * (1 - r.heat * 0.22), 0.45, 0.94);
+    if (r.n < 24) {
+      busy = true;
+      if (rc.t >= r.next) {
+        r.next = rc.t + 0.075; r.n++;
+        const kv = 0.55 + rc.rng() * 0.15, kh = gauss(rc.rng) * 0.12;
+        r.pitch += kv; r.yaw += kh; r.climbNoComp += kv;
+        r.heat = Math.min(1, r.heat + 0.06);
+        const sp = 0.25 + r.heat * 0.35;
+        r.shots.push([r.yaw + gauss(rc.rng) * sp * 0.5, r.pitch + gauss(rc.rng) * sp * 0.5]);
+      }
+    }
+    if (rc.t > r.latency) r.pitch -= r.pitch * (1 - Math.exp(-eff * 9 * Math.min(dt, 1 / 30)));
+    if (r.heat > 0.25) { r.phase += Math.min(dt, 1 / 30) * 6; r.yaw += Math.sin(r.phase * 2.2) * 0.65 * (r.heat - 0.25) * Math.min(dt, 1 / 30) * 3; }
+    r.heat = Math.max(0, r.heat - Math.min(dt, 1 / 30) * 0.4);
+  }
+  if (!busy && rc.t > 3.4) startSpray();
+  drawRecoil();
+}
+function drawRecoil() {
+  const { g, w, h } = fit(rc.cv);
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  const n = rc.runs.length || 4, cw = w / n;
+  const ppd = Math.min(cw / 8, h / 9);
+  const font = getComputedStyle(document.body).fontFamily;
+  rc.runs.forEach((r, i) => {
+    const cx = cw * i + cw / 2, cy = h * 0.72;
+    const mpd = Math.atan2(1, 15) * R2D;
+    const s = ppd / mpd;
+    g.fillStyle = T.grid; g.fillRect(cx - 0.34 * s, cy - 1.25 * s, 0.68 * s, 0.7 * s); g.fillRect(cx - 0.25 * s, cy - 0.55 * s, 0.5 * s, 0.8 * s);
+    g.beginPath(); g.arc(cx, cy - 1.42 * s, 0.13 * s, 0, Math.PI * 2); g.fill();
+    for (const sh of r.shots) {
+      const x = cx + sh[0] * ppd, y = cy - 0.9 * s - sh[1] * ppd;
+      g.fillStyle = T.bot; g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = T.ink; g.font = `600 13px ${font}`; g.textAlign = 'center'; g.fillText(r.name, cx, 18);
+    g.fillStyle = T.muted; g.font = `11px ${font}`;
+    const eff = clamp(r.P.aimSpeed / 10.5, 0.55, 0.92);
+    g.fillText(`pull-down ${Math.round(eff * 100)} %, ${Math.round(r.latency * 1000)} ms late`, cx, 34);
+    if (i > 0) { g.strokeStyle = T.line; g.beginPath(); g.moveTo(cw * i, 8); g.lineTo(cw * i, h - 8); g.stroke(); }
+  });
+  $('rcNote').textContent = 'Without pull-down the last round would land about 15° above the first.';
+}
+$('btnSpray').addEventListener('click', startSpray);
+redraws.push(drawRecoil);
+
+// ---------------------------------------------------------------- 7. armour
+const ar = { hp: 100, armour: 50, crateReady: true };
+function arLog(t, cls) { const ol = $('aLog'); const li = document.createElement('li'); if (cls) li.className = cls; li.innerHTML = '<time></time><span></span>'; li.lastChild.textContent = t; ol.prepend(li); while (ol.children.length > 6) ol.removeChild(ol.lastChild); }
+function arDraw() { $('aAr').style.width = `${ar.armour * 2}%`; $('aArN').textContent = Math.round(ar.armour); $('aHp').style.width = `${ar.hp}%`; $('aHpN').textContent = Math.round(ar.hp); }
+function arDamage(d, bypass) {
+  if (ar.hp <= 0) { arLog('Already down. Press Reset.', 'bad'); return; }
+  const soak = bypass ? 0 : Math.min(ar.armour, d);
+  ar.armour -= soak; ar.hp = Math.max(0, ar.hp - (d - soak));
+  let msg = bypass ? `Fire: ${d} straight to health.` : soak >= d ? `Armour soaked all ${d}.` : soak > 0 ? `Armour soaked ${soak.toFixed(0)}, ${(d - soak).toFixed(0)} went through to health.` : `${d} to health (no armour left).`;
+  if (soak > 0 && ar.armour <= 0) msg += ' Armour broken: plate crack for both players.';
+  if (ar.hp <= 0) msg += ' Down.';
+  arLog(msg, ar.hp <= 0 ? 'bad' : soak > 0 && ar.armour <= 0 ? 'warn' : '');
+  arDraw();
+}
+$('aHit').addEventListener('click', () => arDamage(24, false));
+$('aHead').addEventListener('click', () => arDamage(40, false));
+$('aFire').addEventListener('click', () => arDamage(8, true));
+$('aCrate').addEventListener('click', () => {
+  if (!ar.crateReady) { arLog('Station dark: 20 s cooldown after the last use.', 'warn'); return; }
+  const add = 50 - ar.armour; ar.armour = 50; ar.crateReady = false; setTimeout(() => { ar.crateReady = true; arLog('Ammo station ready again.', 'good'); }, 20000);
+  arLog(add > 0 ? `Ammo station: +${add.toFixed(0)} armour, +120 rounds.` : 'Ammo station: +120 rounds (armour was full).', 'good'); arDraw();
+});
+$('aReset').addEventListener('click', () => { ar.hp = 100; ar.armour = 50; arDraw(); arLog('Fresh soldier: 100 health, 50 armour.'); });
+arDraw(); arLog('Fresh soldier: 100 health, 50 armour. 150 damage to kill: seven rifle hits, or six with a headshot.');
+
+// ---------------------------------------------------------------- 8. skill
+$('presetRows').innerHTML = PRESET_NAMES.map(n => { const p = PRESETS[n]; return `<tr><td>${n}</td><td class="num">${p.react[0].toFixed(2)} to ${p.react[1].toFixed(2)} s</td><td class="num">${p.aimSpeed.toFixed(1)}</td><td class="num">${p.initErr.toFixed(1)}°</td><td class="num">${p.settleErr.toFixed(2)}°</td><td class="num">${Math.round(p.head * 100)} %</td><td class="num">${p.aggression.toFixed(2)}</td><td class="num">${Math.round(p.flank * 100)} %</td></tr>`; }).join('');
+function drawAdapt() {
+  const s = +$('sAdapt').value;
+  $('oAdapt').textContent = s.toFixed(2);
+  const rows = [
+    ['Reaction', `${lerp(0.52, 0.16, s).toFixed(2)} to ${lerp(0.76, 0.26, s).toFixed(2)} s`, 1 - (lerp(0.64, 0.21, s) - 0.21) / 0.43],
+    ['View cone', `${lerp(95, 132, s).toFixed(0)}°`, (lerp(95, 132, s) - 95) / 37],
+    ['Detection', `${lerp(0.80, 1.38, s).toFixed(2)}×`, (lerp(0.80, 1.38, s) - 0.8) / 0.58],
+    ['Hearing', `${lerp(0.85, 1.35, s).toFixed(2)}×`, (lerp(0.85, 1.35, s) - 0.85) / 0.5],
+    ['Aim speed', `${lerp(4.4, 10.2, s).toFixed(1)}`, (lerp(4.4, 10.2, s) - 4.4) / 5.8]
+  ];
+  $('adaptBars').innerHTML = rows.map(r => `<span>${r[0]}</span><div class="bar ar"><i style="width:${Math.round(clamp01(r[2]) * 100)}%"></i></div><span>${r[1]}</span>`).join('');
+}
+$('sAdapt').addEventListener('input', drawAdapt);
+drawAdapt();
+
+// Reduced motion: render a meaningful still state for the continuous drills (they stay interactive).
+if (reduceMotion) {
+  for (let k = 0; k < 140; k++) { stepStrafe(1 / 30); stepRecoil(1 / 30); }
+  stepSensesMeter(0.4);
+}
+requestAnimationFrame(frame);
+})();
+</script>

@@ -158,6 +158,8 @@ namespace LR2.Weapons
         private float _reloadStart;
         private float _reloadDuration;
         private bool _reloadEmpty;
+        private Transform _tacticalBolt;
+        private Vector3 _tacticalBoltClosedPos;
         private float _reloadEndAt = 1f; // fraction of the full clip at which this reload completes (tactical < 1)
         private float ReloadRate => Mathf.Max(0.1f, reloadPlayRate * reloadSpeedMultiplier);
         /// <summary>True while a tactical reload (round chambered, no charging handle) is playing.</summary>
@@ -840,6 +842,16 @@ namespace LR2.Weapons
             _magOutPlayed = _magInPlayed = _boltPlayed = false;
             OnFireReleased();
 
+            _tacticalBolt = null;
+            if (tacticalReload && !_reloadEmpty)
+            {
+                _tacticalBolt = FindActiveWeaponPart(transform, "Charge")
+                    ?? FindActiveWeaponPart(transform, "ChargingHandle")
+                    ?? FindActiveWeaponPart(transform, "Bolt")
+                    ?? FindActiveWeaponPart(transform, "Slider");
+                if (_tacticalBolt != null) _tacticalBoltClosedPos = _tacticalBolt.localPosition;
+            }
+
             if (hasClip && _playables != null) _playables.PlayAnimation(_reloadRuntime, 0f);
             if (_weaponAnimator != null)
             {
@@ -848,12 +860,38 @@ namespace LR2.Weapons
                 _weaponAnimator.speed = ReloadRate;
                 _weaponAnimator.Play("Reload", 0, 0f);
                 _weaponAnimator.Update(0f);
+                if (hasClip && _weaponAnimator.GetCurrentAnimatorClipInfoCount(0) > 0)
+                {
+                    var clip = _weaponAnimator.GetCurrentAnimatorClipInfo(0)[0].clip;
+                    if (clip != null && clip.length > 0.05f && reloadClip.clip != null && reloadClip.clip.length > 0.05f)
+                        _weaponAnimator.speed = ReloadRate * (clip.length / reloadClip.clip.length);
+                }
+                if (tacticalReload && !_reloadEmpty && _tacticalBolt != null)
+                    _tacticalBolt.localPosition = _tacticalBoltClosedPos;
             }
             if (_cameraController != null) _cameraController.PlayCameraAnimation(cameraReloadAnimation);
 
             ReloadStarted?.Invoke();
             GameEvents.RaiseNoise(Owner != null ? Owner.Combatant : null, transform.position, 9f, NoiseType.Reload);
             return true;
+        }
+
+        private void LateUpdate()
+        {
+            if (IsReloading && tacticalReload && !_reloadEmpty && _tacticalBolt != null)
+                _tacticalBolt.localPosition = _tacticalBoltClosedPos;
+        }
+
+        private static Transform FindActiveWeaponPart(Transform root, string targetName)
+        {
+            if (root == null || !root.gameObject.activeSelf) return null;
+            if (string.Equals(root.name, targetName, StringComparison.Ordinal)) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var found = FindActiveWeaponPart(root.GetChild(i), targetName);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>Aggressive reload feel: camera jolts on the local player's reload cues (B27/B29).</summary>

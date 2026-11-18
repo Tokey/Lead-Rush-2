@@ -10,21 +10,57 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 > **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)**.
 > Project documentation: [Project history](Docs/PROJECT_HISTORY.md) and [Tooling](Docs/TOOLING.md).
 
+### Who built what
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/AI_Collaboration/figures/contribution_score_dark.png">
+  <img alt="Bar chart: contribution score per AI agent and model (tasks delivered, bugs found, suggestions adopted, minus defects caused)" src="Docs/AI_Collaboration/figures/contribution_score_light.png">
+</picture>
+
+Contribution score per agent and model, from the task and defect ledgers in `Docs/AI_Collaboration/data` (tasks delivered and
+verified, bugs found in other agents' work, adopted suggestions, minus defects that reached the developer). Method, all charts
+and the protocol experiments: [How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md#quality-which-model-produced-what-quality-of-work).
+
 ---
 
 ## Screenshots
 
-| Combat HUD, Hit Feedback & Blood FX | Urban Combat — Deadsector |
-|---|---|
-| ![Combat HUD and Weapon Blood](Docs/Media/combat_hud_blood.png) | ![Deadsector First-Person](Docs/Media/gameplay_deadsector.png) |
+In-game captures, 1920 x 1080, build 11.18.26.2 (2026-11-18).
 
-| Pipe Refinery — Foundry | Custom Match Rules Setup |
+| Armour HUD: 100 health + 50 armour | MK18 iron sights |
 |---|---|
-| ![Foundry First-Person](Docs/Media/gameplay_foundry.png) | ![Custom Mode Rules UI](Docs/Media/mode_rules.png) |
+| ![Armour bar above the health bar](Docs/Media/hud_armour.png) | ![MK18 aiming down its iron sights](Docs/Media/mk18_ironsight_ads.png) |
 
-| Main Menu | Settings Steppers (No Dropdowns) |
+| Green (friendly) and red (enemy) lasers | Overheated barrel after a long spray |
 |---|---|
-| ![LeadRush 2 Main Menu](Docs/Media/menu_main.png) | ![Settings Panel Steppers](Docs/Media/settings_steppers.png) |
+| ![Green and red weapon lasers](Docs/Media/lasers_green_vs_red.png) | ![Barrel smoke after sustained fire](Docs/Media/mk18_overheat_smoke.png) |
+
+| Foundry: enemy by the burning trench | Saltworks: storm and fire |
+|---|---|
+| ![Enemy with a red laser near a fire in Foundry](Docs/Media/foundry_trench_01.png) | ![Saltworks with fog, trees and fire](Docs/Media/saltworks_fire_02.png) |
+
+| Deadsector: fog in the streets | Test Range at dusk |
+|---|---|
+| ![Deadsector street in ground fog](Docs/Media/deadsector_fog_01.png) | ![Test Range firing lane with fire](Docs/Media/testrange_fire_02.png) |
+
+| Killcam: the killer's own sights | Killcam: the replay ends on your ragdoll |
+|---|---|
+| ![Killcam replay through the killer's iron sights](Docs/Media/killcam_ads_replay.png) | ![Killcam end with the victim's ragdoll on the floor](Docs/Media/killcam_victim_down.png) |
+
+| Deploy screen | Settings |
+|---|---|
+| ![Deploy screen with loadout, map and bot team mode](Docs/Media/menu_deploy.png) | ![Graphics settings page](Docs/Media/settings_steppers.png) |
+
+### How the bots behave
+
+| Armour break and resupply | Flank a camper |
+|---|---|
+| ![Bot armour breaks, it hunts, then walks to an ammo station](Docs/Media/bot/lab-6-armour-break-and-resupply.gif) | ![Bot leaves the lane and flanks a player who camps](Docs/Media/bot/lab-4-flank-a-camper.gif) |
+
+Eight scenarios run on a compact copy of the game's bot brain in the interactive **[LR2 Bot Lab](Docs/Bot/bot-lab.html)**
+(also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)): detection meter, goal ladder, Fitts flicks and the
+human miss pattern, strafe tracking, recoil pull-down, armour and resupply, skill presets. All eight as GIFs:
+[Bot explainer](Docs/LR2_Bot_Explainer.md#bot-lab-scenarios).
 
 ---
 
@@ -46,7 +82,7 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 - **Tactile Combat Feedback & Killcams:** Battlefield-inspired hit/headshot/kill markers and skull badge (`HitFeedbackHUD.cs`), dynamic `+50 HEADSHOT` / `+100 KILL` score popups & kill feed (`HUDController.cs`), 3D blood droplets that trickle across weapon meshes and camera lens (`GunBloodFX.cs`), directional damage arcs, and first-person killer-perspective killcam replays (`KillcamDirector.cs`).
 - **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, **Team Deathmatch**, and **Rotating Capture the Flag (Team & FFA)** (`FlagZoneController.cs` BF6-inspired proximity-weighted capture speed) plus live **Tactical Bot Chat** (`[T]` keyword directives & delayed banter in `TacticalChatSystem.cs`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, `< VALUE >` stepper controls for graphics quality, frame rate limit, and bot difficulty, plus FPS counter persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`, `MainMenuController.cs`).
 - **War-Torn Procedural Arenas (`Assets/LR2/Editor/LR2MapBuilder*.cs`, `Assets/LR2/Meshes/Procedural/`):** Dented/warped corrugated containers, jagged broken masonry parapets and ruined skyline silhouettes, exposed rusty rebar, scattered rubble, destructible glass panels in steel frames, and tuned HDRP volumetric lighting across all four combat maps.
-- **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling, Fitts/ESTA/CSKnow/Aim Lab biomechanical aiming (`BotController.cs`), Adaptive difficulty (`AdaptiveDifficultyTracker.cs`), and external LLM/commander hooks (`IBotDirectiveProvider`). Explore **[LR2 Bot Brain (GitHub Explainer + 9 Animated GIFs)](Docs/LR2_Bot_Explainer.md)**, the self-contained interactive **[3-Tab HTML Manual](Docs/Bot/bot-brain.html)**, or the [Claude Artifact](https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo).
+- **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling, Fitts/ESTA/CSKnow/Aim Lab biomechanical aiming (`BotController.cs`), Adaptive difficulty (`AdaptiveDifficultyTracker.cs`), and external LLM/commander hooks (`IBotDirectiveProvider`). Explore the **[LR2 Bot Lab](Docs/Bot/bot-lab.html)** (eight live scenarios, also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)), the **[Bot explainer with animated GIFs](Docs/LR2_Bot_Explainer.md)**, or the older [3-tab manual](Docs/Bot/bot-brain.html).
 
 ---
 

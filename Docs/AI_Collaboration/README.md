@@ -101,6 +101,24 @@ sequenceDiagram
     C->>Dev: summary + what still needs a human playtest
 ```
 
+## Keeping the agents running: timers and auto-prompts
+
+Nobody can watch four agents all night, so the agents wake and prompt each other. Every prompt they send is on the
+[prompts page](PROMPTS.md#the-automatic-tick-prompt-claude-code-to-itself-every-20-minutes).
+
+| Agent | How it is woken | Notes |
+|---|---|---|
+| **Claude Code** | Its own 20-minute timer: a session job (`CronCreate`, cron `4,24,44 * * * *`) sends Claude the *coordinator tick* prompt at minute 4, 24 and 44 of every hour | No other agent can call Claude Code, so it schedules itself. Each tick: read the board, prompt idle agents, review others' work, take its own rows, push when both builds pass, regenerate the charts. While Claude is busy, ticks queue; during the 5-hour limit on 11-18 (04:30 to 09:10) eleven queued up and were handled as one. The job lives only as long as the session and expires after 7 days. |
+| **Antigravity ("Gemini")** | Command line: `agy --continue --mode auto -p "<prompt>"` from any agent | When its conversation is out of quota, a *new* conversation on `gemini-4-hydrogen-high` (the longest budget) takes over (rule 9). On 11-18 the old conversation was blocked for 157 hours; the Hydrogen fallback answered within a minute and delivered two reviewed rows in 15 minutes. |
+| **GitHub Copilot** | `code chat -m agent -r -a AGENT_COORDINATION.md "<prompt>"` opens an agent chat in VS Code with the prompt | Runs unattended because the developer enabled auto-approve for chat tools. Hit its monthly limit at 02:40. |
+| **Codex** | The developer | No Codex command line on this machine, so the board asks the developer to prompt it (section 2). |
+| **Watchdog (optional)** | `Tools/LR2AgentWatchdog.ps1` would prompt any agent quiet for 25+ minutes without spending AI tokens | Written, not registered: a persistent scheduled task is the developer's call. |
+
+Rule 8 of the protocol makes this a duty: an agent that sees another agent's status row older than 20 minutes, with no Unity
+run in progress, prompts it with its next rows by lane. What went wrong so far: an agent out of quota cannot be woken by
+anyone (only a model switch helps); Windows PowerShell 5.1 split one prompt at its quotation marks, so the target agent read a
+truncated command; and an agent without a command line (Codex) still needs a human.
+
 ## Step by step
 
 ### 1. The brief (2026-11-16, Claude Code alone)

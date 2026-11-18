@@ -351,14 +351,21 @@ namespace LR2.World
             }
             if (cam != null && gun != null)
             {
+                float readyWait = Time.time + 1.0f;
+                while (gun.IsBusy && Time.time < readyWait) yield return null;
+                yield return null;
                 LR2QAExtraChecks.TryGetCameraShakeTrauma(out float traumaBefore);
                 var tBefore = CaptureCamera(cam, 480, 270);
                 beforeLum = SampleMeanLuminance(tBefore, out _);
                 Destroy(tBefore);
 
                 _cmd = new SoldierInput { absoluteLook = true, aimYaw = player.Yaw, aimPitch = 0f, fire = true };
-                yield return null;
-                yield return null;
+                float shotWait = Time.time + 0.25f;
+                while (Time.time < shotWait)
+                {
+                    yield return null;
+                    if (LR2QAExtraChecks.TryGetCameraShakeTrauma(out float tNow) && tNow > 0.005f) break;
+                }
                 LR2QAExtraChecks.TryGetCameraShakeTrauma(out float traumaAfter);
                 var tDuring = CaptureCamera(cam, 480, 270);
                 duringLum = SampleMeanLuminance(tDuring, out _);
@@ -401,8 +408,8 @@ namespace LR2.World
 
         private static Transform FindChildNamed(Transform root, string targetName)
         {
-            if (root == null) return null;
-            if (root.name == targetName) return root;
+            if (root == null || !root.gameObject.activeSelf) return null;
+            if (string.Equals(root.name, targetName, StringComparison.Ordinal)) return root;
             for (int i = 0; i < root.childCount; i++)
             {
                 var found = FindChildNamed(root.GetChild(i), targetName);

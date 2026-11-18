@@ -5,6 +5,7 @@ using LR2.Core;
 using LR2.FX;
 using LR2.Game;
 using LR2.UI;
+using LR2.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -906,8 +907,16 @@ namespace LR2.EditorTools
 
         static LR2ReadmeMediaRunner()
         {
-            if (!SessionState.GetBool(KeyActive, false)) return;
-            EnsureProbe();
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            if (EditorApplication.isPlaying && SessionState.GetBool(KeyActive, false))
+                EditorApplication.delayCall += EnsureProbe;
+        }
+
+        private static void OnPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(KeyActive, false))
+                EnsureProbe();
         }
 
         [MenuItem("LR2/Media/Capture README Gallery", priority = 223)]
@@ -1017,6 +1026,26 @@ namespace LR2.EditorTools
                         yield return new WaitForSecondsRealtime(1.1f);
                         yield return SaveScreenPng(Path.Combine(MediaDir, "menu_main.png"));
 
+                        // 1b. Mode Rules panel
+                        if (mm.modeRulesButton != null)
+                        {
+                            mm.modeRulesButton.onClick.Invoke();
+                            yield return new WaitForSecondsRealtime(0.4f);
+                            yield return SaveScreenPng(Path.Combine(MediaDir, "mode_rules.png"));
+                            if (mm.modeRulesBackButton != null) mm.modeRulesBackButton.onClick.Invoke();
+                            yield return new WaitForSecondsRealtime(0.25f);
+                        }
+
+                        // 1c. Settings Steppers panel
+                        if (mm.settingsButton != null)
+                        {
+                            mm.settingsButton.onClick.Invoke();
+                            yield return new WaitForSecondsRealtime(0.4f);
+                            yield return SaveScreenPng(Path.Combine(MediaDir, "settings_steppers.png"));
+                            if (mm.settingsBackButton != null) mm.settingsBackButton.onClick.Invoke();
+                            yield return new WaitForSecondsRealtime(0.25f);
+                        }
+
                         // 2. Capture The Flag Deploy Staging with Half & Half (3 Ally / 3 Enemy)
                         if (mm.ctfButton != null) mm.ctfButton.onClick.Invoke();
                         yield return new WaitForSecondsRealtime(0.45f);
@@ -1034,29 +1063,21 @@ namespace LR2.EditorTools
                     }
 
                     // Wait for Saltworks active play
-                    float waitPlay = Time.realtimeSinceStartup;
-                    while (Time.realtimeSinceStartup - waitPlay < 20f)
-                    {
-                        var match = MatchManager.Instance;
-                        if (SceneManager.GetActiveScene().name == "LR2_Saltworks"
-                            && match != null && match.State == MatchState.Playing
-                            && Combatant.FindLocalPlayer() != null)
-                            break;
-                        yield return null;
-                    }
-                    yield return new WaitForSecondsRealtime(1.2f);
-
-                    var local = Combatant.FindLocalPlayer();
-                    var soldier = local != null ? local.GetComponent<SoldierController>() : null;
+                    var soldier = default(SoldierController);
+                    yield return WaitForPlayScene("LR2_Saltworks", s => soldier = s);
                     if (soldier == null)
                     {
                         Debug.LogError("[LR2 ReadmeMedia] Failed to enter Saltworks play state.");
                         yield break;
                     }
 
-                    var pis = soldier.GetComponent<PlayerInputSource>();
-                    if (pis != null) pis.enabled = false;
-                    soldier.InputSource = this;
+                    var local = Combatant.FindLocalPlayer();
+                    GunBloodFX.EnsureInstance();
+
+                    // Pause all bots briefly so staged weapon/HUD/armour captures stay clean
+                    var botControllers = Object.FindObjectsByType<LR2.AI.BotController>();
+                    foreach (var bc in botControllers)
+                        if (bc != null) bc.enabled = false;
 
                     // Pick open lane on Saltworks and stage an Allied SWAT (green laser) + Hostile OpFor (red laser, desert/crimson uniform)
                     Combatant ally = null, enemy = null;
@@ -1067,43 +1088,56 @@ namespace LR2.EditorTools
                         else if (TeamUtil.AreHostile(local, c) && enemy == null) enemy = c;
                     }
 
-                    Vector3 origin = GroundAt(new Vector3(0f, 3f, -5.5f));
-                    Vector3 aimTarget = GroundAt(new Vector3(1.2f, 3f, 5.5f)) + Vector3.up * 1.38f;
+                    Vector3 origin = GroundAt(new Vector3(-11.5f, 3f, 6.5f));
+                    Vector3 aimTarget = GroundAt(new Vector3(-1.5f, 3f, 9.5f)) + Vector3.up * 1.38f;
                     soldier.Movement.Teleport(origin);
-                    Vector3 flat = aimTarget - (origin + Vector3.up * 1.55f);
-                    float yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
-                    _cmd = new SoldierInput { absoluteLook = true, aimYaw = yaw, aimPitch = -1.5f };
+                    AimAt(origin, aimTarget, -1.5f, out float yaw);
                     yield return null;
 
                     if (ally != null)
                     {
                         var ac = ally.GetComponent<SoldierController>();
-                        Vector3 ap = GroundAt(new Vector3(-2.3f, 3f, 1.2f));
+                        Vector3 ap = GroundAt(new Vector3(-5.2f, 3f, 6.2f));
                         ac.Movement.Teleport(ap);
                         ac.transform.LookAt(new Vector3(aimTarget.x, ap.y, aimTarget.z));
                         ally.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(true);
-                        var ab = ally.GetComponent<LR2.AI.BotController>();
-                        if (ab != null) ab.enabled = false;
                     }
+                    Vector3 enemyLanePos = GroundAt(new Vector3(-2.6f, 3f, 10.6f));
                     if (enemy != null)
                     {
                         var ec = enemy.GetComponent<SoldierController>();
-                        Vector3 ep = GroundAt(new Vector3(1.9f, 3f, 4.8f));
-                        ec.Movement.Teleport(ep);
-                        ec.transform.LookAt(new Vector3(origin.x, ep.y, origin.z));
+                        ec.Movement.Teleport(enemyLanePos);
+                        ec.transform.LookAt(new Vector3(origin.x, enemyLanePos.y, origin.z));
                         enemy.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(false);
-                        var eb = enemy.GetComponent<LR2.AI.BotController>();
-                        if (eb != null) eb.enabled = false;
                     }
 
-                    yield return new WaitForSecondsRealtime(0.8f);
+                    yield return new WaitForSecondsRealtime(0.75f);
                     yield return SaveScreenPng(Path.Combine(MediaDir, "lasers_green_vs_red.png"));
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "hud_armour.png"));
 
                     // ADS iron sight shot
                     _cmd.aim = true;
                     _cmd.aimYaw = yaw + 1.2f;
                     yield return new WaitForSecondsRealtime(0.45f);
                     yield return SaveScreenPng(Path.Combine(MediaDir, "mk18_ironsight_ads.png"));
+
+                    // Close skull-mask OpFor ADS shot
+                    if (enemy != null)
+                    {
+                        var ec = enemy.GetComponent<SoldierController>();
+                        Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+                        Vector3 closePos = GroundAt(origin + fwd * 3.2f);
+                        ec.Movement.Teleport(closePos);
+                        ec.transform.LookAt(new Vector3(origin.x, closePos.y, origin.z));
+                        enemy.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(false);
+                        AimAt(origin, closePos + Vector3.up * 1.48f, null, out _);
+                        _cmd.aim = true;
+                        yield return new WaitForSecondsRealtime(0.45f);
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "enemy_skullmask_ads.png"));
+                        ec.Movement.Teleport(enemyLanePos);
+                        ec.transform.LookAt(new Vector3(origin.x, enemyLanePos.y, origin.z));
+                        AimAt(origin, aimTarget, -1.5f, out yaw);
+                    }
 
                     // Sustained fire to build barrel red glow + rising barrel heat smoke + green tracers
                     _cmd.aim = false;
@@ -1116,13 +1150,34 @@ namespace LR2.EditorTools
                     }
                     yield return SaveScreenPng(Path.Combine(MediaDir, "mk18_overheat_smoke.png"));
 
-                    // Dynamic combat shot + sequential GIF frames (firing, overheat smoke, green vs red tracers)
-                    _cmd.aim = true;
-                    if (enemy != null)
+                    // Combat HUD + Armour damaged + GunBloodFX droplets shot
+                    if (soldier.ActiveFirearm != null) soldier.ActiveFirearm.RefillAmmo();
+                    var localHealth = local != null ? local.GetComponent<Health>() : null;
+                    if (localHealth != null)
                     {
-                        var eb = enemy.GetComponent<LR2.AI.BotController>();
-                        if (eb != null) eb.enabled = true;
+                        Vector3 hitFrom = enemy != null ? enemy.transform.position : origin + Vector3.forward * 6f;
+                        var hitDmg = new DamageInfo
+                        {
+                            amount = 28f,
+                            type = DamageType.Bullet,
+                            zone = HitZone.UpperTorso,
+                            attacker = enemy,
+                            victim = local,
+                            point = origin + Vector3.up * 1.35f,
+                            direction = (origin - hitFrom).normalized,
+                            distance = 6f,
+                            force = 12f
+                        };
+                        localHealth.ApplyDamage(ref hitDmg);
                     }
+                    _cmd.aim = true;
+                    _cmd.fire = true;
+                    yield return new WaitForSecondsRealtime(0.12f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "combat_hud_blood.png"));
+
+                    // Dynamic combat shot + sequential GIF frames (firing, overheat smoke, green vs red tracers)
+                    foreach (var bc in botControllers)
+                        if (bc != null) bc.enabled = true;
                     yield return new WaitForSecondsRealtime(0.15f);
                     yield return SaveScreenPng(Path.Combine(MediaDir, "gameplay_saltworks.png"));
 
@@ -1138,6 +1193,40 @@ namespace LR2.EditorTools
                     }
                     _cmd.fire = false;
                     _cmd.aim = false;
+
+                    // Additional Saltworks atmospheric shots (fog + fire barrel lighting)
+                    yield return CaptureMapAtmosphericShots(
+                        "LR2_Saltworks",
+                        null,
+                        "saltworks_fog_01.png",
+                        "saltworks_fire_02.png",
+                        new Vector3(-11f, 2f, -10f),
+                        new Vector3(0f, 1.8f, 0f));
+
+                    // Remaining 3 maps: 3 atmospheric shots per map (hero, fog/trench/lane, fire lighting)
+                    yield return CaptureMapAtmosphericShots(
+                        "LR2_Deadsector",
+                        "gameplay_deadsector.png",
+                        "deadsector_fog_01.png",
+                        "deadsector_fire_02.png",
+                        new Vector3(-10f, 2f, -11f),
+                        new Vector3(0f, 1.7f, 0f));
+
+                    yield return CaptureMapAtmosphericShots(
+                        "LR2_Foundry",
+                        "gameplay_foundry.png",
+                        "foundry_trench_01.png",
+                        "foundry_fire_02.png",
+                        new Vector3(-12f, 2f, -9f),
+                        new Vector3(0f, 1.8f, 0f));
+
+                    yield return CaptureMapAtmosphericShots(
+                        "LR2_TestRange",
+                        "gameplay_testrange.png",
+                        "testrange_lane_01.png",
+                        "testrange_fire_02.png",
+                        new Vector3(-8f, 2f, -14f),
+                        new Vector3(0f, 1.5f, 4f));
                 }
                 finally
                 {
@@ -1145,6 +1234,145 @@ namespace LR2.EditorTools
                     Finish(_errors);
                     Destroy(gameObject);
                 }
+            }
+
+            private System.Collections.IEnumerator WaitForPlayScene(string sceneName, System.Action<SoldierController> onReady)
+            {
+                float waitPlay = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - waitPlay < 20f)
+                {
+                    var match = MatchManager.Instance;
+                    if (SceneManager.GetActiveScene().name == sceneName
+                        && match != null && match.State == MatchState.Playing
+                        && Combatant.FindLocalPlayer() != null)
+                        break;
+                    yield return null;
+                }
+                yield return new WaitForSecondsRealtime(1.1f);
+
+                var local = Combatant.FindLocalPlayer();
+                var soldier = local != null ? local.GetComponent<SoldierController>() : null;
+                if (soldier != null)
+                {
+                    var pis = soldier.GetComponent<PlayerInputSource>();
+                    if (pis != null) pis.enabled = false;
+                    soldier.InputSource = this;
+                }
+                onReady?.Invoke(soldier);
+            }
+
+            private System.Collections.IEnumerator CaptureMapAtmosphericShots(
+                string sceneName,
+                string heroFile,
+                string fogFile,
+                string fireFile,
+                Vector3 fallbackPos,
+                Vector3 fallbackLook)
+            {
+                SoldierController soldier = null;
+                if (SceneManager.GetActiveScene().name != sceneName)
+                {
+                    SceneManager.LoadScene(sceneName);
+                    yield return null;
+                }
+                yield return WaitForPlayScene(sceneName, s => soldier = s);
+                if (soldier == null)
+                {
+                    Debug.LogError($"[LR2 ReadmeMedia] Failed to enter {sceneName} play state.");
+                    yield break;
+                }
+
+                GunBloodFX.EnsureInstance();
+                var fires = Object.FindObjectsByType<FireHazard>();
+                System.Array.Sort(fires, (a, b) => string.CompareOrdinal(a.name, b.name));
+
+                Vector3 arenaCenter = Vector3.zero;
+                var spawns = Object.FindObjectsByType<SpawnPoint>();
+                if (spawns != null && spawns.Length > 0)
+                {
+                    Vector3 sum = Vector3.zero;
+                    foreach (var sp in spawns) sum += sp.transform.position;
+                    arenaCenter = sum / spawns.Length;
+                }
+
+                Vector3 centerLook = new Vector3(arenaCenter.x, GroundAt(arenaCenter).y + 1.55f, arenaCenter.z);
+
+                if (!string.IsNullOrEmpty(heroFile))
+                {
+                    PlaceOnClearVantage(soldier, centerLook, new[] { 15f, 11f, 8f }, new[] { 35f, -35f, 140f, -140f, 75f, -75f }, fallbackPos, fallbackLook);
+                    yield return new WaitForSecondsRealtime(0.55f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, heroFile));
+                }
+
+                if (!string.IsNullOrEmpty(fogFile))
+                {
+                    Vector3 fogLook = fires.Length > 0
+                        ? fires[0].transform.position + Vector3.up * 0.9f
+                        : centerLook;
+                    PlaceOnClearVantage(soldier, fogLook, new[] { 12f, 16f, 9f }, new[] { 165f, -155f, 110f, -100f, 50f, -50f }, fallbackPos, fallbackLook);
+                    yield return new WaitForSecondsRealtime(0.55f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, fogFile));
+                }
+
+                if (!string.IsNullOrEmpty(fireFile))
+                {
+                    FireHazard haz = fires.Length > 1 ? fires[1] : (fires.Length == 1 ? fires[0] : null);
+                    Vector3 fireLook = haz != null ? haz.transform.position + Vector3.up * 0.65f : centerLook;
+                    PlaceOnClearVantage(soldier, fireLook, new[] { 5.8f, 7.2f, 4.6f, 9.0f }, new[] { 20f, -20f, 65f, -65f, 115f, -115f, 160f }, fallbackPos, fallbackLook);
+                    yield return new WaitForSecondsRealtime(0.55f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, fireFile));
+                }
+            }
+
+            private void PlaceOnClearVantage(
+                SoldierController soldier,
+                Vector3 focusTarget,
+                float[] distances,
+                float[] anglesDeg,
+                Vector3 fallbackPos,
+                Vector3 fallbackLook)
+            {
+                Vector3 chosenPos = GroundAt(fallbackPos);
+                bool found = false;
+
+                foreach (float dist in distances)
+                {
+                    foreach (float ang in anglesDeg)
+                    {
+                        Vector3 probe = focusTarget + Quaternion.Euler(0f, ang, 0f) * Vector3.forward * dist;
+                        Vector3 grounded = GroundAt(probe);
+                        if (Mathf.Abs(grounded.y - probe.y) > 4.5f) continue;
+
+                        if (Physics.CheckCapsule(grounded + Vector3.up * 0.45f, grounded + Vector3.up * 1.65f, 0.42f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                            continue;
+
+                        Vector3 eye = grounded + Vector3.up * 1.55f;
+                        Vector3 dir = focusTarget - eye;
+                        float len = dir.magnitude;
+                        if (len < 2.2f) continue;
+                        if (Physics.SphereCast(eye, 0.25f, dir / len, out _, Mathf.Max(0.5f, len - 0.8f), LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                            continue;
+
+                        chosenPos = grounded;
+                        found = true;
+                        break;
+                    }
+                    if (found) break;
+                }
+
+                soldier.Movement.Teleport(chosenPos);
+                AimAt(chosenPos, found ? focusTarget : fallbackLook, null, out _);
+                _cmd.aim = false;
+                _cmd.fire = false;
+            }
+
+            private void AimAt(Vector3 soldierPos, Vector3 target, float? pitchOverride, out float yaw)
+            {
+                Vector3 d = target - (soldierPos + Vector3.up * 1.55f);
+                float horiz = Mathf.Max(0.05f, Mathf.Sqrt(d.x * d.x + d.z * d.z));
+                yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                float pitch = pitchOverride ?? Mathf.Clamp(-Mathf.Atan2(d.y, horiz) * Mathf.Rad2Deg, -35f, 35f);
+                _cmd = new SoldierInput { absoluteLook = true, aimYaw = yaw, aimPitch = pitch };
             }
 
             private static Vector3 GroundAt(Vector3 probe)
