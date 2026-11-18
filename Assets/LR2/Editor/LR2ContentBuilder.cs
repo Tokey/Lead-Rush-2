@@ -597,7 +597,7 @@ namespace LR2.EditorTools
         /// for the humanoid driver rig. Loadout = weaponPrefabs order (1 = primary, 2 = sidearm).</summary>
         private static readonly WeaponSpec[] Guns =
         {
-            // B55/B49: LeadRushHDRP default MK18 Mod 1 (HoloSight red-dot ADS) is Slot 0 default primary; AK-12 remains selectable alongside Mk23 sidearm.
+            // B55/B49: LeadRushHDRP default MK18 Mod 1 (clean, attachment-free iron-sight primary) is Slot 0 default; AK-12 remains selectable alongside Mk23 sidearm.
             new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4", akMaterials = true,
                              rpm = 850f, near = 32f, mid = 26f, far = 21f, range = 28f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
                              pattern = 0.3f, adsRecoil = 0.50f, rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 5.56 recoils less than 5.45 in ADS
@@ -697,6 +697,14 @@ namespace LR2.EditorTools
                     if (tf.name == "1P29" || tf.name == "SideScope") tf.gameObject.SetActive(false);
                 }
             }
+            // Default MK18: disable all optional optic, suppressor, and foregrip attachments so it deploys clean.
+            if (spec.id == "Mk18")
+            {
+                foreach (var att in go.GetComponentsInChildren<BaseAttachment>(true))
+                {
+                    if (att != null) att.gameObject.SetActive(false);
+                }
+            }
 
             // Ensure a single weapon Animator on the child node that owns the rig (never shadow AK12's W_AK12_ReloadEmpty child Animator with a root Animator).
             var weaponCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(WeaponAnimControllerPath);
@@ -769,10 +777,17 @@ namespace LR2.EditorTools
                 var ovProp = so.FindProperty("overrideController");
                 if (ovProp != null && humCtrl != null) ovProp.objectReferenceValue = humCtrl;
             }
-            if (spec.id == "AK74N")
+            if (spec.id == "AK74N" || spec.id == "Mk18")
             {
                 var sg = so.FindProperty("scopeGroups");
                 if (sg != null) sg.ClearArray();
+            }
+            if (spec.id == "Mk18")
+            {
+                var ba = so.FindProperty("barrelAttachments.attachments");
+                if (ba != null) ba.ClearArray();
+                var ga = so.FindProperty("gripAttachments.attachments");
+                if (ga != null) ga.ClearArray();
             }
             so.ApplyModifiedPropertiesWithoutUndo();
 

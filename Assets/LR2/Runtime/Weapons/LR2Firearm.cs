@@ -120,6 +120,8 @@ namespace LR2.Weapons
         private RecoilPattern _recoilPattern;
         private Animator _weaponAnimator;
         private int _scopeIndex;
+        private Transform _baseDefaultAimPoint;
+        private bool _baseAimPointCached;
 
         // Gunplay state
         private FireMode _fireMode = FireMode.Auto;
@@ -206,6 +208,11 @@ namespace LR2.Weapons
 
             _fpsAnimator = owner.FPSAnimator;
             _entity = GetComponent<FPSAnimatorEntity>();
+            if (_entity != null && !_baseAimPointCached)
+            {
+                _baseDefaultAimPoint = _entity.defaultAimPoint;
+                _baseAimPointCached = true;
+            }
             _weaponAnimator = ResolveWeaponAnimator();
             _controllerAnimator = owner.Animator;
             _userInput = owner.UserInput;
@@ -244,6 +251,8 @@ namespace LR2.Weapons
 
         private void InitializeAttachments()
         {
+            DisableAttachments();
+
             // B49/B55: Strip any Generic-rig AttachHandLayerSettings from Kinemation attachments (e.g. Mk18 GripEmpty/GripMount)
             // so Humanoid left-hand IK stays locked to the handguard instead of snapping to the waist.
             foreach (var att in GetComponentsInChildren<BaseAttachment>(true))
@@ -273,8 +282,8 @@ namespace LR2.Weapons
                 att.gameObject.SetActive(false);
             }
             _scopeIndex = 0;
-            if (_entity != null)
-                _entity.defaultAimPoint = null;
+            if (_entity != null && _baseAimPointCached)
+                _entity.defaultAimPoint = _baseDefaultAimPoint;
         }
 
         private void UpdateAimPoint()
