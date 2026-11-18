@@ -222,6 +222,17 @@ Every finished item and every defect goes into two ledgers, [`data/tasks.csv`](d
 needs matplotlib). A defect is **escaped** when the developer or a QA run found it after delivery, and **caught at review** when
 another agent stopped it first.
 
+**Contribution score.** The developer's rule: *tools that find new bugs and suggest meaningful features should score best.* So each
+agent and model gets +3 per defect it finds in another agent's work before the developer sees it, +2 per defect it finds in its own
+work, +3 per adopted suggestion ([`data/suggestions.csv`](data/suggestions.csv)), +1 per pending suggestion, +1 per verified task,
++0.5 per task ready for review, -2 per escaped defect (confidence-weighted), -1 per pre-push break and -0.5 per own defect caught
+at review.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/contribution_score_dark.png">
+  <img alt="Bar chart: contribution score per agent and model" src="figures/contribution_score_light.png">
+</picture>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/escaped_per_10_tasks_dark.png">
   <img alt="Bar chart: defects that reached the developer per 10 delivered tasks, by agent and model" src="figures/escaped_per_10_tasks_light.png">
@@ -237,15 +248,18 @@ another agent stopped it first.
   <img alt="Bar chart: tasks delivered per agent and model" src="figures/tasks_delivered_light.png">
 </picture>
 
-| Agent · model | Tasks delivered | Escaped defects, weighted (count) | Escaped per 10 tasks | Caught at review | Pre-push breaks |
-|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 16 | 5.7 (8) | 3.6 | 1 | 1 |
-| Copilot · unknown | 10 | 0.0 (0) | 0.0 | 4 | 0 |
-| Gemini · gemini-4-hydrogen | 8 | 3.9 (5) | 4.9 | 1 | 0 |
-| Gemini · argon | 3 | 3.6 (4) | 12.0 | 1 | 1 |
-| Gemini · argon/hydrogen | 1 | 0.6 (1) | 6.0 | 0 | 0 |
+| Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
+|---|---|---|---|---|---|---|---|---|
+| Claude · claude-opus-5-5 | 45.1 | 16 | 6 / 1 | 10 / 2 | 5.7 (8) | 3.6 | 1 | 1 |
+| Copilot · gpt-5.6-luna | 3.0 | 16 | 1 / 0 | 0 / 0 | 2.0 (2) | 1.2 | 4 | 0 |
+| Gemini · claude-opus-5-5-high | 3.0 | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · argon/hydrogen | -1.2 | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
+| Gemini · argon | -2.7 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 1 | 1 |
+| Gemini · gemini-4-hydrogen | -7.3 | 8 | 0 / 0 | 0 / 0 | 3.9 (5) | 4.9 | 1 | 0 |
 
-**Read these numbers with care** (as of 2026-11-18 00:05; regenerate for the latest):
+**Read these numbers with care** (as of 2026-11-18 00:15; regenerate for the latest):
+- **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
+  Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
 - **Time at risk differs.** Copilot's work is minutes old and not yet playtested: its 0 escaped defects means "none found yet",
   and its review catches show the defects exist. Older work has had more playtests to reveal problems.
@@ -254,7 +268,7 @@ another agent stopped it first.
 - **Attribution before the tracker is reconstructed** from timing and prompts, so it carries a confidence weight. From 2026-11-17
   23:25 on, agents log model and cause as they work, which makes later data much more reliable.
 - **Models are named as the tools report them.** "argon" is the developer's name for `gemini-pro-orchestrator-g1-pro` with
-  `gemini-flash-worker-agy` helpers; Copilot's model is not reported yet (board request R9).
+  `gemini-flash-worker-agy` helpers; Copilot reported `gpt-5.6-luna` after board request R9.
 
 ## What worked, and what didn't
 

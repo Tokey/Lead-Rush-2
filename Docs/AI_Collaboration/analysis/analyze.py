@@ -55,12 +55,17 @@ def compute():
 
     def row(k):
         if k not in stats:
-            stats[k] = dict(tasks=0, escaped=0.0, escaped_n=0, review=0, prepush=0)
+            stats[k] = dict(tasks=0, escaped=0.0, escaped_n=0, review=0, prepush=0, verified=0, ready=0,
+                            finds_others=0, finds_own=0, sugg_yes=0, sugg_pending=0)
         return stats[k]
 
     for t in tasks:
-        if t["outcome"].strip() != "open":
-            row(key(t["agent"], t["model"]))["tasks"] += 1
+        outcome = t["outcome"].strip()
+        if outcome != "open":
+            r = row(key(t["agent"], t["model"]))
+            r["tasks"] += 1
+            r["verified"] += outcome == "verified"
+            r["ready"] += outcome == "ready-for-review"
     for b in bugs:
         r = row(key(b["caused_by_agent"], b["caused_by_model"]))
         stage = b["stage"].strip()
@@ -71,7 +76,22 @@ def compute():
             r["review"] += 1
         elif stage == "pre-push":
             r["prepush"] += 1
+        finder = (b.get("found_by_agent") or "").strip()
+        if finder and stage in ("review", "pre-push"):
+            f = row(key(finder, (b.get("found_by_model") or "unknown").strip()))
+            if finder == b["caused_by_agent"].strip():
+                f["finds_own"] += 1
+            else:
+                f["finds_others"] += 1
+    for sg in read("suggestions.csv"):
+        r = row(key(sg["agent"], sg["model"]))
+        adopted = sg["adopted"].strip()
+        r["sugg_yes"] += adopted == "yes"
+        r["sugg_pending"] += adopted == "pending"
     for r in stats.values():
+        # The developer's rule: finding new bugs and suggesting meaningful features score best.
+        r["score"] = (3 * r["finds_others"] + 2 * r["finds_own"] + 3 * r["sugg_yes"] + 1 * r["sugg_pending"]
+                      + 1 * r["verified"] + 0.5 * r["ready"] - 2 * r["escaped"] - 1 * r["prepush"] - 0.5 * r["review"])
         n = max(1, r["tasks"])
         r["escaped_per10"] = 10.0 * r["escaped"] / n
         r["review_per10"] = 10.0 * r["review"] / n
@@ -79,19 +99,23 @@ def compute():
 
 
 def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
-    items = [(k, v) for k, v in stats.items() if v["tasks"] > 0]
+    items = [(k, v) for k, v in stats.items() if v["tasks"] > 0 or metric == "score"]
     items.sort(key=lambda kv: kv[1][metric])
     names = [f"{k}  (n={v['tasks']})" for k, v in items]
     vals = [v[metric] for _, v in items]
-    vmax = max(vals + [1e-6])
+    vmax = max([abs(v) for v in vals] + [1e-6])
+    vmin = min(vals + [0.0])
     for theme, c in THEMES.items():
         fig, ax = plt.subplots(figsize=(8.6, 0.5 * len(items) + 2.0), dpi=150)
         fig.patch.set_facecolor(c["surface"])
         ax.set_facecolor(c["surface"])
         ax.barh(names, vals, height=0.5, color=c["bar"])
         for i, v in enumerate(vals):
-            ax.text(v + vmax * 0.015, i, fmt.format(v), va="center", ha="left", color=c["ink"], fontsize=9)
-        ax.set_xlim(0, vmax * 1.2)
+            ax.text(v + (vmax * 0.015 if v >= 0 else -vmax * 0.015), i, fmt.format(v), va="center",
+                    ha="left" if v >= 0 else "right", color=c["ink"], fontsize=9)
+        ax.set_xlim(vmin * 1.25 if vmin < 0 else 0, vmax * 1.2)
+        if vmin < 0:
+            ax.axvline(0, color=c["ink2"], linewidth=0.8)
         ax.xaxis.grid(True, color=c["grid"], linewidth=0.8)
         ax.set_axisbelow(True)
         for side in ("top", "right", "left"):
@@ -110,11 +134,12 @@ def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
 
 def summary(stats):
     lines = [
-        "| Agent · model | Tasks delivered | Escaped defects, weighted (count) | Escaped per 10 tasks | Caught at review | Pre-push breaks |",
-        "|---|---|---|---|---|---|",
+        "| Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
-    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["tasks"]):
-        lines.append(f"| {k} | {r['tasks']} | {r['escaped']:.1f} ({r['escaped_n']}) | {r['escaped_per10']:.1f} | "
+    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["score"]):
+        lines.append(f"| {k} | {r['score']:.1f} | {r['tasks']} | {r['finds_others']} / {r['finds_own']} | "
+                     f"{r['sugg_yes']} / {r['sugg_pending']} | {r['escaped']:.1f} ({r['escaped_n']}) | {r['escaped_per10']:.1f} | "
                      f"{r['review']} | {r['prepush']} |")
     return "\n".join(lines)
 
@@ -122,6 +147,10 @@ def summary(stats):
 def main():
     os.makedirs(FIG, exist_ok=True)
     stats = compute()
+    bar_chart(stats, "score",
+              "Contribution score per agent and model",
+              "Finding bugs (+3 others, +2 own) and adopted suggestions (+3) count most; escaped defects -2. Higher is better.",
+              "score", "contribution_score")
     bar_chart(stats, "escaped_per10",
               "Defects that reached the developer, per 10 delivered tasks",
               "Weighted by attribution confidence (high 1, medium 0.6, low 0.3). Lower is better.",

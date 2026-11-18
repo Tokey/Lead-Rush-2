@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace LR2.World
 {
@@ -58,8 +59,45 @@ namespace LR2.World
             var noise = ps.noise;
             noise.enabled = true;
             noise.strength = 0.25f;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                Shader shader = Shader.Find("HDRP/Unlit") ?? Shader.Find("Unlit/Color");
+                if (shader != null)
+                {
+                    var mat = new Material(shader) { name = name + "_Mat" };
+                    var softTex = CreateSoftMistTexture();
+                    if (mat.HasProperty("_UnlitColorMap")) mat.SetTexture("_UnlitColorMap", softTex);
+                    if (mat.HasProperty("_BaseColorMap")) mat.SetTexture("_BaseColorMap", softTex);
+                    if (mat.HasProperty("_UnlitColor")) mat.SetColor("_UnlitColor", new Color(color.r, color.g, color.b, Mathf.Clamp01(opacity)));
+                    if (mat.HasProperty("_SurfaceType")) mat.SetFloat("_SurfaceType", 1f);
+                    if (mat.HasProperty("_BlendMode")) mat.SetFloat("_BlendMode", 0f);
+                    HDMaterial.ValidateMaterial(mat);
+                    renderer.sharedMaterial = mat;
+                }
+            }
             ps.Play();
             return ps;
+        }
+
+        private static Texture2D _softMistTex;
+        private static Texture2D CreateSoftMistTexture()
+        {
+            if (_softMistTex != null) return _softMistTex;
+            const int S = 64;
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            var px = new Color[S * S];
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f, v = (y + 0.5f) / S * 2f - 1f;
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                px[y * S + x] = new Color(1f, 1f, 1f, a * a * 0.85f);
+            }
+            tex.SetPixels(px);
+            tex.Apply(false, true);
+            _softMistTex = tex;
+            return _softMistTex;
         }
 
         private void OnDestroy()

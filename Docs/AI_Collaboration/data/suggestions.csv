@@ -1,0 +1,16 @@
+id,when,agent,model,suggestion,kind,adopted,board_id
+S01,2026-11-17 12:45,Claude,claude-opus-5-5,"Coordination board with a Unity lock line, task split, requests and log",process,yes,
+S02,2026-11-17 13:22,Claude,claude-opus-5-5,"Name agents by tool, not model; START HERE onboarding",process,yes,
+S03,2026-11-17 13:28,Gemini,claude-opus-5-5-high,"refresh command for the agent bridge (pick up script edits without the user)",tooling,yes,
+S04,2026-11-17 13:28,Gemini,claude-opus-5-5-high,"RetargetProxy head-alignment approach for first person",feature,no,
+S05,2026-11-17 14:55,Claude,claude-opus-5-5,"Handoff section with exact files, values and checks before a usage limit",process,yes,
+S06,2026-11-17 18:08,Claude,claude-opus-5-5,"Tracker with owner, reviewer and review statuses",process,yes,
+S07,2026-11-17 23:02,Gemini,argon,"Wake-up briefing with dedicated critical tasks for a returning agent",process,yes,
+S08,2026-11-17 23:24,Claude,claude-opus-5-5,"Board v2: name-by-tool table, Model and Caused-by columns, event tags",process,yes,B21
+S09,2026-11-17 23:26,Claude,claude-opus-5-5,"Tactical reload as a cut of the empty-reload clip with the chambered round kept",feature,yes,B28
+S10,2026-11-17 23:30,Claude,claude-opus-5-5,"Camera shake applied only while rendering, so aim never shakes",feature,yes,B29
+S11,2026-11-17 23:40,Claude,claude-opus-5-5,"Polish backlog: indoor/outdoor tails, surface decals, perf pass, colour-blind hitmarkers, presets",feature,pending,P1-P5
+S12,2026-11-17 23:40,Claude,claude-opus-5-5,"QA checks for tonight's misses (absolute reload angle, hands on gun, foot slide...)",tooling,yes,B34
+S13,2026-11-17 23:46,Claude,claude-opus-5-5,"Agents prompt each other directly through their CLIs",process,yes,
+S14,2026-11-18 00:05,Claude,claude-opus-5-5,"Protocol v3: check the check, compile before save, WIP limit, lanes",process,yes,
+S15,2026-11-18 00:08,Claude,claude-opus-5-5,"Token-free watchdog + continuity plan",process,pending,

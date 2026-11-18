@@ -26,9 +26,33 @@ developer's prompts, the board archive and git; their `source` says so.
 | `id` | Unique ID |
 | `found` | Local time it was reported |
 | `found_by` | user, qa-bot, claude-review, copilot-review, gemini-review, push-check, claude-self |
+| `found_by_agent`, `found_by_model` | Who gets the credit for finding it (empty when the developer found it) |
 | `stage` | **escaped** (found after delivery), **review** (caught by another agent before the developer saw it), **pre-push** (broken build stopped before a push) |
 | `description` | Short description |
 | `caused_by_task` | `id` from tasks.csv |
 | `caused_by_agent`, `caused_by_model` | Copied from that task |
 | `confidence` | high, medium, low: how sure the attribution is |
 | `status` | open, fixed |
+
+## suggestions.csv
+
+Ideas that came from an agent, not from the developer (features, tools, process changes).
+
+| Column | Meaning |
+|---|---|
+| `id`, `when`, `agent`, `model` | As above |
+| `suggestion` | The idea |
+| `kind` | feature, tooling, process |
+| `adopted` | yes, no, pending |
+| `board_id` | Tracker row it became, if any |
+
+## Contribution score
+
+The developer's rule (2026-11-18): **finding new bugs and suggesting meaningful features should score best.** `analyze.py` scores each agent
+and model: +3 per defect found in another agent's work before the developer saw it, +2 per defect found in its own work, +3 per adopted
+suggestion, +1 per pending suggestion, +1 per verified task, +0.5 per task ready for review, -2 per escaped defect (confidence-weighted),
+-1 per pre-push break, -0.5 per own defect caught at review.
+
+## Who may edit a defect row
+
+Only the finder (or the reviewer) writes a defect's `found_by`, `stage` and attribution. The agent that caused it may add context in its log entry but must not change those fields; disagreements go to the reviewer or the developer. (Added 2026-11-18 after an agent re-filed a defect the developer had seen as its own pre-push catch.)

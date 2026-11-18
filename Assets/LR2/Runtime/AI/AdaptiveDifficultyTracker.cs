@@ -76,7 +76,10 @@ namespace LR2.AI
         private static void OnShotFired(ShotEvent e)
         {
             if (e.shooter != null && e.shooter.IsLocalPlayer)
+            {
                 _playerShots++;
+                PlayerAccuracy01 = Mathf.Lerp(PlayerAccuracy01, Mathf.Clamp01((float)_playerHits / Mathf.Max(8, _playerShots)), 0.08f);
+            }
         }
 
         private static void OnHit(HitEvent e)

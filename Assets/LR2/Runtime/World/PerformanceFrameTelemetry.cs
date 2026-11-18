@@ -34,7 +34,7 @@ namespace LR2.World
         {
             _samples = new Sample[Mathf.Max(8, capacity)];
             _gcRecorder = Recorder.Get("GC.Alloc");
-            _gcRecorder.enabled = true;
+            if (_gcRecorder != null) _gcRecorder.enabled = true;
         }
 
         private void LateUpdate()
@@ -42,7 +42,7 @@ namespace LR2.World
             _samples[_count % _samples.Length] = new Sample
             {
                 frameMs = Time.unscaledDeltaTime * 1000f,
-                totalAllocatedBytes = _gcRecorder.valid ? _gcRecorder.sampleBlockCount : 0
+                totalAllocatedBytes = _gcRecorder != null ? _gcRecorder.sampleBlockCount : 0
             };
             _count++;
         }

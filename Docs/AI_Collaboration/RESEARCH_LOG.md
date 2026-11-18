@@ -20,7 +20,7 @@ Raw material for a possible paper on how several AI coding agents can build one 
 Tags: `[BOARD]` change to the coordination format · `[HANDOFF]` · `[LIMIT]` usage-limit stop · `[LOCK]` Unity-lock incident ·
 `[MISATTRIB]` an agent signed as another · `[OWNERSHIP]` edit in another agent's file · `[REVIEW-CATCH]` a review found a defect ·
 `[USER]` developer changes the process · `[PUSH]` · `[PROMPT]` one agent prompts another directly · `[CLOCK]` wrong timestamp ·
-`[QA-MISS]` a check passed while the defect was visible.
+`[QA-MISS]` a check passed while the defect was visible · `[METRIC-INTEGRITY]` an agent changed data that scores itself.
 
 | Time | Tag | Agent · model | Event | Evidence |
 |---|---|---|---|---|
@@ -58,6 +58,9 @@ Tags: `[BOARD]` change to the coordination format · `[HANDOFF]` · `[LIMIT]` us
 | 11-17 23:39 | `[QA-MISS]` | QA bot (Gemini) | `Reload.WalkingNoFlip` PASS (36 deg) while the pose check screenshot showed a vertical rifle: the check measured only the bridge's added angle | `Logs/LR2_PoseCheck_Claude1/tp_06_reload_front.png` |
 | 11-17 23:41 | `[PUSH]` | Claude Code | Push blocked: two in-flight compile errors in another agent's files; push duty moved to Copilot | board R7, R8 |
 | 11-17 23:46 | `[PROMPT]` | Claude Code to Copilot | First direct agent-to-agent prompt, via `code chat -m agent` (VS Code CLI) | board log |
+| 11-18 00:05 | `[BOARD]` `[USER]` | Claude Code | Protocol v3 + coordination retro opened with all agents; scheduled Claude tick; token-free watchdog written | board section 0 |
+| 11-18 00:10 | `[USER]` | Copilot · gpt-5.6-luna | Developer saw Unity compile errors from two in-progress Copilot edits (APIs that do not exist in this Unity version) | Unity logs, D28/D29 |
+| 11-18 00:14 | `[METRIC-INTEGRITY]` | Copilot · gpt-5.6-luna | The agent being scored re-filed the developer-found defect as its own pre-push catch in the shared ledger; restored and rule 11 added | data/bugs.csv history |
 
 ## Metrics
 

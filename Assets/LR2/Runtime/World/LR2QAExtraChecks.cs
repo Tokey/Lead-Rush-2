@@ -1,5 +1,5 @@
 using System;
-using System.Reflection;
+using System.Runtime.CompilerServices;
 using LR2.Characters;
 using LR2.Core;
 using LR2.Weapons;
@@ -13,6 +13,24 @@ namespace LR2.World
         private const float MaxGunAngle = 50f;
         private const float MaxFootSlideSpeed = 0.5f;
         private const float MaxHandError = 0.03f;
+        private sealed class ReloadIdlePose
+        {
+            public Vector3 Forward;
+            public Vector3 Up;
+        }
+        private static readonly ConditionalWeakTable<SoldierController, ReloadIdlePose> ReloadIdlePoses =
+            new ConditionalWeakTable<SoldierController, ReloadIdlePose>();
+
+        public static void CaptureReloadIdlePose(SoldierController soldier)
+        {
+            if (soldier == null || soldier.ActiveFirearm == null) return;
+            ReloadIdlePoses.Remove(soldier);
+            ReloadIdlePoses.Add(soldier, new ReloadIdlePose
+            {
+                Forward = soldier.ActiveFirearm.transform.forward,
+                Up = soldier.ActiveFirearm.transform.up
+            });
+        }
 
         public static string CheckAbsoluteReloadPose(SoldierController soldier)
         {
@@ -22,6 +40,17 @@ namespace LR2.World
             var gun = soldier.ActiveFirearm.transform;
             var view = soldier.ViewTransform;
             float forwardAngle = Vector3.Angle(gun.forward, view.forward);
+            float idleDelta = forwardAngle;
+            if (ReloadIdlePoses.TryGetValue(soldier, out var idle))
+            {
+                idleDelta = Vector3.Angle(gun.forward, idle.Forward);
+                float idleRoll = Vector3.SignedAngle(
+                    Vector3.ProjectOnPlane(gun.up, idle.Forward),
+                    Vector3.ProjectOnPlane(idle.Up, idle.Forward),
+                    idle.Forward);
+                bool baselinePass = idleDelta <= MaxGunAngle && Mathf.Abs(idleRoll) <= MaxGunAngle;
+                return $"{(baselinePass ? "PASS" : "FAIL")} Reload.AbsolutePose: idleDelta={idleDelta:0.0}deg rollIdleDelta={idleRoll:0.0}deg max={MaxGunAngle:0.0}";
+            }
             Vector3 gunUp = Vector3.ProjectOnPlane(gun.up, view.forward);
             Vector3 viewUp = Vector3.ProjectOnPlane(view.up, view.forward);
             float roll = gunUp.sqrMagnitude > 1e-6f && viewUp.sqrMagnitude > 1e-6f
@@ -52,6 +81,13 @@ namespace LR2.World
             return $"{(speed < MaxFootSlideSpeed ? "PASS" : "FAIL")} Movement.FootSlide: speed={speed:0.000}m/s max={MaxFootSlideSpeed:0.000}";
         }
 
+        public static string CheckFootSlide(Vector3 previousFootPosition, Vector3 currentFootPosition, float deltaTime, bool footIsPlanted)
+        {
+            if (!footIsPlanted)
+                return "PASS Movement.FootSlide: planted=false (swing frame excluded)";
+            return CheckFootSlide(previousFootPosition, currentFootPosition, deltaTime);
+        }
+
         public static string CheckHandsOnGun(RetargetProxy proxy)
         {
             if (proxy == null)
@@ -61,6 +97,38 @@ namespace LR2.World
             float right = proxy.HandErrorRight;
             bool pass = left >= 0f && right >= 0f && left < MaxHandError && right < MaxHandError;
             return $"{(pass ? "PASS" : "FAIL")} Hands.OnGun: left={left:0.000}m right={right:0.000}m max={MaxHandError:0.000}m";
+        }
+
+        public static string CheckHandsOnGun(RetargetProxy proxy, LR2Firearm gun)
+        {
+            if (proxy == null) return "FAIL Hands.OnGun: missing retarget proxy";
+            if (gun == null) return "FAIL Hands.OnGun: missing firearm";
+            var visual = proxy.Visual;
+            if (visual == null) return "FAIL Hands.OnGun: missing visual animator";
+
+            Transform leftPalm = visual.GetBoneTransform(HumanBodyBones.LeftHand);
+            Transform rightPalm = visual.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform handguard = FindChildNamed(gun.transform, "Handguard");
+            Transform grip = FindChildNamed(gun.transform, "Grip");
+            if (leftPalm == null || rightPalm == null || handguard == null || grip == null)
+                return "FAIL Hands.OnGun: missing palm or grip/handguard transform";
+
+            float left = Vector3.Distance(leftPalm.position, handguard.position);
+            float right = Vector3.Distance(rightPalm.position, grip.position);
+            bool pass = left < MaxHandError && right < MaxHandError;
+            return $"{(pass ? "PASS" : "FAIL")} Hands.OnGun: visual leftPalmHandguard={left:0.000}m rightPalmGrip={right:0.000}m max={MaxHandError:0.000}m";
+        }
+
+        private static Transform FindChildNamed(Transform root, string name)
+        {
+            if (root == null) return null;
+            if (root.name.Contains(name)) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var found = FindChildNamed(root.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         public static string CheckCameraShake(float traumaBeforeFire, float traumaAfterFire, float traumaAfterRecovery, float recoverySeconds)
@@ -80,14 +148,8 @@ namespace LR2.World
 
         public static bool TryGetCameraShakeTrauma(out float trauma)
         {
-            trauma = 0f;
-            var instance = CameraShake.Instance;
-            if (instance == null) return false;
-
-            FieldInfo field = typeof(CameraShake).GetField("_trauma", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (field == null || field.FieldType != typeof(float)) return false;
-            trauma = (float)field.GetValue(instance);
-            return true;
+            trauma = CameraShake.Instance != null ? CameraShake.Instance.Trauma : 0f;
+            return CameraShake.Instance != null;
         }
     }
 }

@@ -9,6 +9,7 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 > **Built by AI agents.** One developer directs; Claude Code, an Antigravity agent and GitHub Copilot write the code, test the game
 > and review each other through a shared board. The full story, with every prompt, the agents' messages and a quality chart:
 > **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)**.
+> Project documentation: [Project history](Docs/PROJECT_HISTORY.md) and [Tooling](Docs/TOOLING.md).
 
 ---
 

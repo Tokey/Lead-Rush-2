@@ -418,7 +418,8 @@ namespace LR2.World
                 ?? FindChildNamed(gun.transform, "Bolt")
                 ?? FindChildNamed(gun.transform, "Slider")) : null;
 
-            CheckExtra(LR2QAExtraChecks.CheckHandsOnGun(proxy));
+            CheckExtra(LR2QAExtraChecks.CheckHandsOnGun(proxy, gun));
+            LR2QAExtraChecks.CaptureReloadIdlePose(player);
 
             string worstAbsPose = LR2QAExtraChecks.CheckAbsoluteReloadPose(player);
             float worstAbsAng = 0f;
@@ -622,7 +623,7 @@ namespace LR2.World
             mv.Footstep -= OnStep;
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = bestYaw };
             if (footL != null && footR != null)
-                CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt));
+                CheckExtra(LR2QAExtraChecks.CheckFootSlide(minSlidePrev, minSlideCur, minSlideDt, true));
 
             float measuredStride = _footsteps > 0 ? _distAccum / _footsteps : 99f;
             float weaponGain = LR2Audio.CategoryVolume(AudioCategory.Weapons);

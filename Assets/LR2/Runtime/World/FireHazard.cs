@@ -2,6 +2,8 @@ using LR2.Characters;
 using LR2.Combat;
 using LR2.Core;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace LR2.World
 {
@@ -19,7 +21,7 @@ namespace LR2.World
         [SerializeField, Min(0f)] private float damageRadius = 1.8f;
 
         [Header("Presentation")]
-        [SerializeField, Min(0f)] private float lightIntensity = 2.8f;
+        [SerializeField, Min(0f)] private float lightIntensity = 1000f;
         [SerializeField, Min(0f)] private float lightRange = 5f;
         [SerializeField, Range(0f, 1f)] private float flickerAmount = 0.18f;
         [SerializeField, Range(0f, 1f)] private float smokeAmount = 0.7f;
@@ -86,11 +88,12 @@ namespace LR2.World
                 transform.position, damageRadius, _overlaps, LR2Layers.CharacterMask, QueryTriggerInteraction.Ignore);
 
             float amount = damagePerSecond * damageInterval;
+            var damaged = new System.Collections.Generic.HashSet<SoldierController>();
             for (int i = 0; i < count; i++)
             {
                 if (_overlaps[i] == null) continue;
                 var soldier = _overlaps[i].GetComponentInParent<SoldierController>();
-                if (soldier == null || soldier.IsDead || soldier.Health == null) continue;
+                if (soldier == null || soldier.IsDead || soldier.Health == null || !damaged.Add(soldier)) continue;
 
                 var combatant = soldier.Combatant;
                 Vector3 point = combatant != null ? combatant.ChestPosition : soldier.transform.position + Vector3.up * 1.2f;
@@ -124,12 +127,18 @@ namespace LR2.World
             _lightBaseIntensity = lightIntensity;
             _flameLight.intensity = _lightBaseIntensity;
             _flameLight.shadows = LightShadows.None;
+            _flameLight.lightUnit = LightUnit.Lumen;
+            _ = lightGo.GetComponent<HDAdditionalLightData>() ?? lightGo.AddComponent<HDAdditionalLightData>();
 
             _flameParticles = BuildParticles("Fire Flame", new Color(1f, 0.32f, 0.03f, 0.9f),
                 new Color(1f, 0.85f, 0.18f, 0.1f), 0.16f, 0.55f, 46f);
             _smokeParticles = BuildParticles("Fire Smoke", new Color(0.12f, 0.12f, 0.12f, 0.48f),
                 new Color(0.04f, 0.04f, 0.04f, 0f), 0.5f, 1.8f, 18f * smokeAmount);
 
+            if (crackleLoop == null)
+            {
+                crackleLoop = BuildFallbackCrackleClip();
+            }
             if (crackleLoop != null)
             {
                 var audioGo = new GameObject("Fire Crackle");
@@ -151,6 +160,34 @@ namespace LR2.World
             go.transform.SetParent(transform, false);
             go.transform.localPosition = Vector3.up * 0.05f;
             var particles = go.AddComponent<ParticleSystem>();
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                bool isFlame = !name.Contains("Smoke");
+                Material assetMat = UnityEngine.Resources.Load<Material>(isFlame ? "LR2/FX/M_FX_Spark" : "LR2/FX/M_FX_Smoke");
+                Shader shader = Shader.Find("LR2/ParticleSoft") ?? Shader.Find("HDRP/Unlit") ?? Shader.Find("Unlit/Color");
+                if (assetMat != null)
+                {
+                    renderer.sharedMaterial = assetMat;
+                }
+                else if (shader != null)
+                {
+                    var material = new Material(shader) { name = name + " HDRP Particle" };
+                    var tex = CreateSoftCircleTexture();
+                    if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", tex);
+                    if (material.HasProperty("_BaseColorMap")) material.SetTexture("_BaseColorMap", tex);
+                    if (material.HasProperty("_UnlitColorMap")) material.SetTexture("_UnlitColorMap", tex);
+                    if (material.HasProperty("_UnlitColor")) material.SetColor("_UnlitColor", startColor);
+                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", startColor);
+                    if (material.HasProperty("_Color")) material.SetColor("_Color", startColor);
+                    if (material.HasProperty("_SurfaceType")) material.SetFloat("_SurfaceType", 1f);
+                    if (material.HasProperty("_BlendMode")) material.SetFloat("_BlendMode", isFlame ? 1f : 0f);
+                    if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", isFlame ? 1f : 10f);
+                    if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", 5f);
+                    HDMaterial.ValidateMaterial(material);
+                    renderer.sharedMaterial = material;
+                }
+            }
             var main = particles.main;
             main.startLifetime = name.Contains("Smoke") ? 1.8f : 0.5f;
             main.startSpeed = name.Contains("Smoke") ? 0.8f : 1.1f;
@@ -171,6 +208,27 @@ namespace LR2.World
             color.enabled = true;
             color.color = new ParticleSystem.MinMaxGradient(startColor, endColor);
             return particles;
+        }
+
+        private static Texture2D _softCircle;
+        private static Texture2D CreateSoftCircleTexture()
+        {
+            if (_softCircle != null) return _softCircle;
+            const int S = 64;
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            var px = new Color[S * S];
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f, v = (y + 0.5f) / S * 2f - 1f;
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                a *= a;
+                px[y * S + x] = new Color(1f, 1f, 1f, a);
+            }
+            tex.SetPixels(px);
+            tex.Apply(false, true);
+            _softCircle = tex;
+            return _softCircle;
         }
 
         private void OnDrawGizmosSelected()
