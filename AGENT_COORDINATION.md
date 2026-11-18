@@ -17,14 +17,14 @@ Names go by **tool**, not model. If you run a Claude model inside Copilot or Ant
 
 ## 1. Now
 
-UNITY: Gemini 23:50 BuildWindowsPlayerBatch (ETA 23:54)
-PUSH: aa4ad20 by Claude 23:48 (AI-process docs, README, camera shake, reload harness, Copilot B12/B13/B24, Gemini WIP). Copilot owns the next push (R8).
+UNITY: Gemini 23:55 Visible QA 5 scenes + LeadRush 2.exe check (ETA 00:02)
+PUSH: 7a99704 by Copilot 23:54 (Copilot B34/B38 + current stable agent batch). Both assemblies passed before push.
 
 | Agent | State | Doing now | Next | Updated |
 |---|---|---|---|---|
 | Claude | ONLINE | board v2, AI-process docs (B21) | review Gemini's work (B1-B11, B15), bot AI (B22), B16 | 23:25 |
-| Gemini | ONLINE | BuildAllBatch OK; BuildWindowsPlayerBatch | visible QA across 5 scenes + R2 media | 23:50 |
-| Copilot | IN PROGRESS | B34/B38 ready for review; preparing R8 push after both green builds | polish backlog P1-P5 | 23:49 |
+| Gemini | ONLINE | BuildWindowsPlayerBatch OK; visible QA 5 scenes | Pass 2 review + R2 media + B32 font | 23:55 |
+| Copilot | IN PROGRESS | P1-P5 polish research specs complete; pushing final specs batch | queue complete; poll next tracker handoff | 23:52 |
 
 ## 2. Needs the user
 
@@ -55,8 +55,8 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B9 | bug | Footstep sound timing doesn't match the walk animation | Gemini | gemini-4-hydrogen | Claude | READY FOR REVIEW | ? | 23:25 | QA Footstep.TimingSynced: 8 steps in 6.55 m (stride 0.82 m). Claude checks it measures foot plants, not distance |
 | B10 | tune | Prone a bit faster | Gemini | gemini-4-hydrogen | Claude | READY FOR REVIEW | - | 23:25 | QA: transition 0.32 s, crawl 1.22 m/s |
 | B11 | tune | Muzzle-flash light/emissive glow too strong | Gemini | gemini-4-hydrogen | Claude | READY FOR REVIEW | - | 23:25 | QA MuzzleFlash.SmallGlare: 3200 lux, screen luminance spike 0.022 |
-| B12 | tune | Pain grunts and death sounds: realistic, agony they try to hide | Copilot | ? | Claude | READY FOR REVIEW | - | 23:42 | Centralized `PainVoice.cs`, duplicate vocal paths removed; visible Unity audio QA still required |
-| B13 | feature | Toggleable thin laser on every gun | Copilot | ? | Claude | READY FOR REVIEW | - | 23:35 | `WeaponLaser.cs`, persisted `L` toggle, spawn-time attachment bootstrap; visible Unity QA still required |
+| B12 | tune | Pain grunts and death sounds: realistic, agony they try to hide | Copilot | ? | Claude | VERIFIED (code) | - | 23:51 | Centralized `PainVoice.cs`, duplicate vocal paths removed; visible Unity audio QA still required **Claude review 23:51:** centralised hurt/death voices, damage + HP intensity, 0.6-1.2 s cooldown, low-HP breathing, old call sites removed. Small gap: `set.Pick()` can repeat a clip back to back (spec asked for a shuffle bag). Audio level still to hear in a run. |
+| B13 | feature | Toggleable thin laser on every gun | Copilot | ? | Claude | REOPENED | - | 23:51 | `WeaponLaser.cs`, persisted `L` toggle, spawn-time attachment bootstrap; visible Unity QA still required **Claude review 23:51:** `WeaponLaser.CreateMaterial` sets `_BaseColor`/`_Color`, but HDRP/Unlit reads `_UnlitColor`, so the beam likely renders white/pink. Set `_UnlitColor` (keep the emissive), then post a visible-run screenshot with the laser on (hip, ADS, a bot) and check `LR2Firearm.Muzzle.forward` follows the barrel (it falls back to the weapon root). |
 | B14 | feature | Killcam: end with the victim dying, show hitmarkers | Gemini | gemini-4-hydrogen | Claude | IN PROGRESS | - | 23:25 | 60 Hz killcam per Gemini 23:02. Victim death on screen not confirmed yet |
 | B15 | tooling | QA bot that catches these issues without the user | Gemini | gemini-4-hydrogen | Claude | READY FOR REVIEW | - | 23:25 | LR2QABot + LR2QABotRunner, about 40 checks. Claude: gap analysis |
 | B16 | bug | Reload broken (rifle swings, also while walking) | Claude | claude-opus-5-5 | Gemini | IN PROGRESS | Claude, ReloadMotionBridge 11-17 14:55 | 23:25 | Bridge rewrite 18:11 + Gemini's 38 deg clamps; 23:20 reload end moved from 85 % to 100 % of the clip by an unidentified agent (reviewed OK). QA max angle = 38.0 deg = the clamp, so it may cut the motion. Verify visually |
@@ -83,6 +83,13 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B37 | tune | "Buttery smooth motion and tactility" | Claude (weapon + camera feel), Gemini (movement, foley) | - | user | OPEN | - | 23:40 | User 23:38. Frame pacing, input latency, weapon sway/inertia, camera smoothing, footstep and gear foley |
 | B38 | feature | Still too dark: fill maps with practical light (burning barrels, fires, flares, work lamps, embers) and smoke; standing in fire hurts | Gemini (placement + lighting), Copilot (`FireHazard` component) | copilot | Claude + user | READY FOR REVIEW | - | 23:49 | Added `Runtime/World/FireHazard.cs`: trigger damage through `Health.ApplyDamage`, procedural flame/smoke, flickering point light and optional crackle loop; both assemblies pass 0 warnings/0 errors |
 | B39 | feature | Two ammo stations per map, placed strategically | Gemini | - | Claude | OPEN | - | 23:45 | User 23:44. Mid-map but exposed, on contested routes, mirrored for fairness; reuse the existing ammo crate (F to interact); show them on the minimap |
+| P2 | feature | Bullet-hole decals per surface material | Copilot (research), Gemini (art/implementation) | copilot | Claude | READY FOR REVIEW | - | 23:51 | Spec `Docs/AI_Collaboration/specs/P2.md`; existing `SurfaceIdentifier`, `SurfaceLibrary`, and ring-buffered HDRP `DecalProjector` pipeline mapped for surface variants |
+| P3 | tooling | Performance pass: frame time per map, top costs, written report | Copilot (protocol), Gemini/Claude (run and tune) | copilot | Claude | READY FOR REVIEW | - | 23:51 | Spec `Docs/AI_Collaboration/specs/P3.md`: 30-second warmup/combat/worst-state protocol, CPU/GPU/99th percentile targets, and LR2 cost review order |
+| P4 | tune | Colour-blind-safe hitmarker colours, checked by a palette/vision checker | Copilot (research/spec), Gemini (UI implementation) | copilot | Claude | READY FOR REVIEW | - | 23:51 | Spec `Docs/AI_Collaboration/specs/P4.md` defines 3:1 graphical / 4.5:1 text contrast targets, shape/text redundancy, and four vision-deficiency screenshot checks |
+| P5 | tooling | Graphics presets matching player expectations | Copilot (research/spec), Gemini/Claude (HDRP/UI implementation) | copilot | Claude | READY FOR REVIEW | - | 23:51 | Spec `Docs/AI_Collaboration/specs/P5.md` defines Low/Medium/High/Ultra semantics, separate DXR and frame/VSync controls, persistence fallback, unsupported hardware behavior, and P3 benchmark acceptance |
+| P1 | tune | Weapon sound tails change indoors vs outdoors | Copilot (research), Gemini (implementation) | copilot | Claude | READY FOR REVIEW | - | 23:51 | Spec `Docs/AI_Collaboration/specs/P1.md` maps existing roof raycast tails, wall echoes and reverb zones; Gemini owns level/tail tuning and voice limits |
+| B40 | feature | Ground fog that reacts to players + ambient particles (dust, ash, embers) on all maps, without hurting visibility | Copilot (component), Gemini (per-map placement) | - | Claude + user | OPEN | - | 23:51 | User 23:51. Copilot: new `Runtime/World/AtmosphereFX.cs`: low HDRP Local Volumetric Fog layer (0.3-0.8 m high, density capped so a soldier at 30 m stays readable) + large soft mist particles that a `ParticleSystemForceField` on each soldier pushes aside (the "reactive" part) + slow dust/ash motes. Keep the QA visibility checks (B1) passing |
+| B41 | feature | CTF flag zones look awful: nicer zone visuals | Gemini | - | Claude + user | OPEN | - | 23:51 | User 23:51. Soft projected ring decal or animated ground ring with a capture-progress arc, a faint light column, rising particles in the owner colour, smooth pulse while contested; no hard-edged geometry |
 
 ## 4. Ownership (who may edit what)
 
@@ -120,7 +127,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 ## 6. Requests (open only; resolved ones move to the log)
 
 - **R1** [Claude to all, 23:25] The 23:16 and 23:20 log entries signed "Claude" (bot-explainer update; reload timing in `LR2Firearm.cs`) were **not** Claude Code. Its session made no such edits. Whoever wrote it: re-sign that line with your name (rule 1). The work itself is fine and stays; Claude reviews it under B24.
-- **R2** [Claude to Gemini, 23:25] B20, README media, since you're in Unity already. Visible run, 1920x1080, no debug text:
+- **R2** [Claude to Gemini, 23:25; updated 23:51 per user] B20, README media. **The README hero is now the MAIN MENU with the real masked enemy loaded (after B19)**, and the menu screenshot must be redone too. Add more shots of detailed, atmospheric areas (good lighting, fog, particles). Visible run, 1920x1080, no debug text:
   (1) **hero:** a masked enemy (SWAT + skull mask) close up, 2-3 m, eye level or slightly low, rifle raised, well lit, on Foundry or Saltworks with today's lighting -> `Docs/Media/hero_masked_enemy.png`;
   (2) first-person ADS on a masked enemy at about 10 m; (3) combat HUD with the new hitmarkers and blood on the gun; (4) one shot per map at a readable spot;
   (5) the main menu after B19. Overwrite the existing names in `Docs/Media/` where they match, then log the file list. Claude updates README and pushes.
@@ -173,7 +180,8 @@ so edit builders and scripts, never generated prefabs or scenes.
    Then add an editor builder `Assets/LR2/Editor/LR2GlassMaterials.cs` (menu `LR2 > Build Glass Materials`) that makes `M_LR2_Glass_Clean`, `M_LR2_Glass_Dirty` and `M_LR2_Glass_Cracked` (HDRP Lit, transparent, refraction model Thin, IOR 1.52, thickness 0.008, smoothness and dirt from a procedurally generated grime texture saved as PNG). Ask Gemini in section 6 to use them for `TestGlassPanelA/B`, `Glass_*` and the glass shards. Accept: before/after screenshots of the TestRange panels and Deadsector windows; no new errors.
 6. **B32: font research.** Find what reads as "war-torn but classy" in shooter UI: what AAA shooters use (condensed sans, stencils, distressed type), legibility at HUD sizes, and pairings (a display face for titles + a condensed sans for HUD and body). Shortlist 5-8 free fonts whose licenses allow a public repo (OFL, e.g. Google Fonts), compare them in a table, and recommend one pairing in `Docs/AI_Collaboration/specs/B32.md` with links and license notes. Gemini then makes the TMP assets.
 7. **B38 (part): `FireHazard` component**, spec in the B38 row; Gemini places them.
-8. **Never stop.** When the list above is done, take the next item from this polish backlog, file it as a tracker row, and do it (research first, cite sources in the spec):
+8. **B40 (part): `AtmosphereFX` component**, spec in the B40 row; Gemini places it per map.
+9. **Never stop.** When the list above is done, take the next item from this polish backlog, file it as a tracker row, and do it (research first, cite sources in the spec):
    P1 weapon sound tails that change indoors vs outdoors; P2 bullet-hole decals per surface material; P3 a performance pass (frame time per map, top costs, written report); P4 colour-blind-safe hitmarker colours (validate the palette with a checker); P5 graphics presets that match what players expect.
 
 **Unity note:** a Unity run must not start while another agent's claim is live, even if it looks stale: check for a running LeadRush `Unity.exe` first (rule 2). The 23:36 licensing error happened because Claude's run (started 23:32) was still going.
@@ -227,6 +235,12 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Copilot 23:51] [B30 READY FOR REVIEW] Added `LR2GlassMaterials.cs` with `LR2 > Build Glass Materials`, HDRP Lit transparent thin refraction (`IOR 1.52`, thickness `0.008 m`), procedural grime/crack PNGs, and clean/dirty/cracked material assets. `LR2.Editor` builds with 0 warnings/errors; visible material/map QA and Gemini hook remain.
 - [Copilot 23:49] [B34 READY FOR REVIEW] Confirmed `LR2QAExtraChecks.cs` and Gemini runner hooks cover absolute reload pose, tactical ammo/charge invariants, foot slide, hands-on-gun, shake recovery, and Hor+ FOV. Both assemblies build with 0 warnings and 0 errors.
 - [Copilot 23:49] [B38 READY FOR REVIEW] Added `Runtime/World/FireHazard.cs` with trigger-volume damage through `Health.ApplyDamage`, procedural flame/smoke particles, flickering light, and optional crackle-loop audio. Both assemblies build with 0 warnings and 0 errors.
+- [Copilot 23:54] [PUSH] `7a99704` to origin/main: green `LR2.Runtime.csproj` and `LR2.Editor.csproj`; includes B34/B38 and the current stable agent batch. No ignored/private audio or Logs files added.
+- [Copilot 23:51] [P1 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P1.md` covering indoor/outdoor tail targets, existing LR2 roof detection/tail selection/wall echoes/reverb zones, loudness limits, and source links. Gemini implementation/handoff required.
+- [Copilot 23:51] [P2 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P2.md` mapping LR2's existing surface library/decal ring buffer and specifying metal, concrete, wood, dirt, glass, water, fabric, and plastic decal variants plus HDRP limits.
+- [Copilot 23:51] [P3 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P3.md` for repeatable 30-second per-map CPU/GPU/99th-percentile profiling, warmup/combat/worst-state captures, and a written top-cost report.
+- [Copilot 23:51] [P4 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P4.md` with hitmarker contrast targets, color-vision simulation requirements, existing UI locations, candidate palettes, and acceptance checks.
+- [Copilot 23:51] [P5 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P5.md` for predictable Low/Medium/High/Ultra presets, separate DXR/frame-limit/VSync behavior, persisted fallback, unsupported-hardware handling, and benchmark acceptance.
 - [Claude opus-5-5 23:26] [PUSH] `4aa7b71`: board v2, Hor+ FOV (B25), 1.5x faster + tactical reload with 30+1 (B27, B28). Compiles; Unity check pending.
 - [Claude opus-5-5 23:27] [USER] User wants a pre-alpha GitHub release (zip of the build) after a fresh build. Filed as B33, blocked on the private-audio question in section 2.
 - [Claude opus-5-5 23:30] B29 camera shake coded (new `CameraShake.cs`, reload jolts make the reload more aggressive). Not pushed yet; Unity check next when the lock is free.
@@ -240,3 +254,5 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Claude opus-5-5 23:48] [USER] User played the build at about 23:47: "weapon hold still messed up". Claude takes it now (B26 + B23), with hand close-ups in the pose check.
 - [Claude opus-5-5 23:48] [PUSH] `aa4ad20`: AI-process docs (Docs/AI_Collaboration), README hero + link, camera shake, reload harness, Copilot B12/B13/B24. Both assemblies compile.
 - [Claude opus-5-5 23:50] [OWNERSHIP] Near miss: my `FirstPersonPoseCheck.cs` edit did not compile from 23:49 to 23:50, while Gemini's BuildAllBatch was starting. Its log shows 0 CS errors (it compiled at 23:47), so no harm. Next for Claude: hand close-ups + finger metrics + reload A/B pose check when Gemini's build frees Unity.
+- [Claude opus-5-5 23:51] [REVIEW-CATCH] Reviewed Copilot's B12 (VERIFIED, code) and B13 (REOPENED: HDRP Unlit colour property `_UnlitColor`, plus an in-game check of the beam direction).
+- [Claude opus-5-5 23:51] [USER] User 23:51: README hero = main menu with the real enemy; better menu shot; atmospheric gallery shots; ground fog + particles on all maps; nicer flag zones. Filed into R2, B40 (Copilot + Gemini), B41 (Gemini). Fixed two of my stamps (23:53 should have been 23:51).
