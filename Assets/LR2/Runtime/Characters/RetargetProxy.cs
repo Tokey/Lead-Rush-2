@@ -379,8 +379,11 @@ namespace LR2.Characters
             Add(_lFingerIdx, leftGripCurl * (1f - reloadHand));
             Soft(_lProxIdx, new Vector2(-0.92f, lProxMax));
             Soft(_lFingerIdx, new Vector2(-0.94f, lDistMax));
-            Soft(_lThumbProxIdx, !pistol && LeftThumbBaseOverride.HasValue ? LeftThumbBaseOverride.Value : new Vector2(-0.35f, pistol ? -0.05f : Mathf.Lerp(0.05f, 0.14f, reloadHand)));
-            Soft(_lThumbDistIdx, !pistol && LeftThumbTipOverride.HasValue ? LeftThumbTipOverride.Value : new Vector2(-0.45f, pistol ? -0.14f : Mathf.Lerp(-0.04f, 0.08f, reloadHand)));
+            // B26: default rifle left thumb is tucked snugly beside the handguard so it doesn't poke up into first-person sights.
+            Vector2 rifleThumbBase = new Vector2(-1.25f, Mathf.Lerp(-0.85f, 0.14f, reloadHand));
+            Vector2 rifleThumbTip = new Vector2(-0.60f, Mathf.Lerp(-0.15f, 0.08f, reloadHand));
+            Soft(_lThumbProxIdx, !pistol && LeftThumbBaseOverride.HasValue ? LeftThumbBaseOverride.Value : (pistol ? new Vector2(-0.35f, -0.05f) : rifleThumbBase));
+            Soft(_lThumbDistIdx, !pistol && LeftThumbTipOverride.HasValue ? LeftThumbTipOverride.Value : (pistol ? new Vector2(-0.45f, -0.14f) : rifleThumbTip));
             Soft(_spreadIdx, new Vector2(-0.25f, IsHoldingPistol ? 0.06f : 0.14f)); // keep the compact spread (that part of the old clamp was fine)
         }
 
@@ -463,9 +466,12 @@ namespace LR2.Characters
         private void ApplyGripOffsets(Transform item, ref Vector3 lPos, ref Vector3 rPos)
         {
             if (item == null || IsHoldingPistol) return; // pistol hold was verified separately
+            var def = _soldier != null && _soldier.ActiveFirearm != null ? _soldier.ActiveFirearm.Definition : null;
+            Vector3 rOff = def != null ? def.rightGripOffset : rightGripOffset;
+            Vector3 lOff = def != null ? def.leftGripOffset : leftGripOffset;
             float leftW = 1f - (_bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f); // left hand is free while it handles the magazine
-            rPos += item.rotation * rightGripOffset;
-            lPos += item.rotation * (leftGripOffset * leftW);
+            rPos += item.rotation * rOff;
+            lPos += item.rotation * (lOff * leftW);
         }
 
         /// <summary>Keep wrist targets snug on the handguard/pistol grip, stepping outward cleanly during magazine removal/insertion.</summary>

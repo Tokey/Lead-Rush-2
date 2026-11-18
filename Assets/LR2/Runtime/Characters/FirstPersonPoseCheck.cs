@@ -50,6 +50,18 @@ namespace LR2.Characters
         private static void Boot()
         {
             if (!Requested || FindAnyObjectByType<FirstPersonPoseCheck>() != null) return;
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-lr2Weapon")
+                {
+                    string w = args[i + 1].Trim().ToLowerInvariant();
+                    if (w.Contains("74")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 1;
+                    else if (w.Contains("18")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 2;
+                    else if (w.Contains("fal")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 3;
+                    else LR2.Game.LR2Session.SelectedPrimaryWeapon = 0;
+                }
+            }
             var go = new GameObject("[LR2 PoseCheck]");
             DontDestroyOnLoad(go);
             go.AddComponent<FirstPersonPoseCheck>();
@@ -106,7 +118,15 @@ namespace LR2.Characters
             _cmd.absoluteLook = true;
             _cmd.aimYaw = OpenYaw();
             _cmd.aimPitch = 0f;
-            Note($"Local soldier '{_soldier.name}' at {_soldier.transform.position}, facing yaw {_cmd.aimYaw:0}");
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-lr2Weapon" && args[i + 1].Trim().ToLowerInvariant().Contains("mk23"))
+                {
+                    _cmd.weaponSlot = 1;
+                    yield return Wait(0.8f);
+                }
+            }
+            Note($"Local soldier '{_soldier.name}' weapon='{_soldier.ActiveFirearm?.DisplayName}' at {_soldier.transform.position}, facing yaw {_cmd.aimYaw:0}");
             yield return Wait(1.2f);
 
             LogDriverWeaponBones("idle");

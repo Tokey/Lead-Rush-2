@@ -17,7 +17,7 @@ namespace LR2.Characters
         [Tooltip("Overall strength (0 = disabled, uses crisp Kinemation FPSCameraController directly). Also scaled by the BODYCAM MOTION setting.")]
         [SerializeField, Range(0f, 2f)] private float intensity = 1f;
         [Tooltip("How much of the motion remains while aiming down sights (0 = none, 1 = all).")]
-        [SerializeField, Range(0f, 1f)] private float adsDamping = 0.65f;
+        [SerializeField, Range(0f, 1f)] private float adsDamping = 0.88f;
 
         [Header("Stride bob")]
         [SerializeField] private float strideLength = 1.55f;
@@ -26,6 +26,7 @@ namespace LR2.Characters
         [SerializeField] private float bobRoll = 2.1f;
         [SerializeField] private float bobPitch = 1.35f;
         [SerializeField] private float bobYaw = 0.8f;
+        [SerializeField] private float walkBobScale = 0.34f;
         [SerializeField] private float sprintMultiplier = 1.7f;
         [Tooltip("Small downward kick on every footfall (the camera is strapped to a body, not floating).")]
         [SerializeField] private float footfallKick = 0.9f;
@@ -98,9 +99,9 @@ namespace LR2.Characters
             float speed = move.IsGrounded ? move.Speed : 0f;
             bool sprinting = _soldier.IsSprinting;
 
-            // ---- stride bob: one full cycle = two steps
+            // ---- stride bob: B50 cuts walk bob to ~1/3 for BF6/CoD tactility while keeping sprint energetic & ADS steady
             _phase += speed / Mathf.Max(0.5f, strideLength) * Mathf.PI * dt;
-            float speed01 = Mathf.Clamp01(speed / 4f) * (sprinting ? sprintMultiplier : 1f);
+            float speed01 = Mathf.Clamp01(speed / 4f) * (sprinting ? sprintMultiplier : walkBobScale);
             float s = Mathf.Sin(_phase);
             float c = Mathf.Cos(_phase * 2f);
             float down = (1f - c) * 0.5f;                         // 0 at mid-stride, 1 at each footfall
@@ -110,7 +111,7 @@ namespace LR2.Characters
             float bobY = s * bobYaw * speed01;
 
             int step = Mathf.FloorToInt(_phase / Mathf.PI);       // footfall
-            if (step != _lastStep && speed > 1f) _kickVel -= footfallKick * (sprinting ? 1.5f : 1f) * 10f;
+            if (step != _lastStep && speed > 1f) _kickVel -= footfallKick * (sprinting ? 1.5f : 0.35f) * 10f;
             _lastStep = step;
             float kickAccel = -_kick * 260f - _kickVel * 22f;
             _kickVel += kickAccel * dt;

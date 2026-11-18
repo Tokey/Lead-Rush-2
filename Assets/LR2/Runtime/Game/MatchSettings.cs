@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LR2.Game
 {
-    public enum GameModeType { Duel, FreeForAll, TeamDeathmatch, CaptureTheFlag }
+    public enum GameModeType { Duel, FreeForAll, TeamDeathmatch, CaptureTheFlag, FreeForAllCaptureTheFlag }
 
     /// <summary>Per-mode customizable match rules stored persistently per GameModeType.</summary>
     [System.Serializable]
@@ -110,6 +110,7 @@ namespace LR2.Game
         [Min(5f)] public float orbSpawnInterval = 30f;
 
         public bool IsTeamMode => mode == GameModeType.TeamDeathmatch;
+        public bool IsFlagMode => mode == GameModeType.CaptureTheFlag || mode == GameModeType.FreeForAllCaptureTheFlag;
     }
 
     /// <summary>Carries the menu's choice into the map scene (and across restarts).</summary>

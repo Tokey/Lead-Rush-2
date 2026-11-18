@@ -14,6 +14,7 @@ namespace LR2.EditorTools
     {
         public static void RunBatch()
         {
+            AssetDatabase.DisallowAutoRefresh(); // R12: never recompile mid-PlayMode run
             string scenePath = LR2MapBuilder.ScenePath;
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)

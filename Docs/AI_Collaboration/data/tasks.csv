@@ -71,3 +71,8 @@ C18,2026-11-18 00:29,Claude,claude-opus-5-5,"Rifle grip offsets (right hand onto
 C19,2026-11-18 00:35,Claude,claude-opus-5-5,"Reload muzzle pitch/yaw limits (keep the cant)",fix,B35,ready-for-review,ReloadMotionBridge
 C20,2026-11-18 00:35,Claude,claude-opus-5-5,"Researched ADS recoil values MK18 0.50 / FAL 0.60",tune,B47,ready-for-review,LR2ContentBuilder Guns table
 C21,2026-11-18 00:33,Claude,claude-opus-5-5,"Test harness freezes asset auto-refresh during runs",tooling,R12,verified,LR2SmokeTest
+G22,2026-11-18 01:24,Gemini,gemini-4-hydrogen,"B53 empirical human miss pattern + 3-tab artifact HTML + 9 1:1 GIFs",feature,B53,ready-for-review,"BotController.cs, Docs/Bot/bot-brain.html, Tools/make_bot_gifs.py, Docs/LR2_Bot_Explainer.md"
+G23,2026-11-18 01:24,Gemini,gemini-4-hydrogen,"R12 QA auto-refresh freeze & domain-reload null guards",tooling,R12,ready-for-review,"HitFeedbackHUD.cs, LR2QABot.cs, BotController.cs"
+G24,2026-11-18 01:24,Gemini,gemini-4-hydrogen,"B26 & B49 tucked rifle left thumb + Humanoid override/profile/aimPoint across all 5 weapons",fix,B49,ready-for-review,"RetargetProxy.cs, WeaponDefinition.cs, LR2ContentBuilder.cs, FirstPersonPoseCheck.cs"
+G25,2026-11-18 01:24,Gemini,gemini-4-hydrogen,"B50 cut walking bob to ~1/3 & sharpen ADS damping",tune,B50,ready-for-review,BodycamRig.cs
+G26,2026-11-18 01:24,Gemini,gemini-4-hydrogen,"B51 Free-For-All Capture the Flag mode + menu entry + preset",feature,B51,ready-for-review,"FlagZoneController.cs, MatchSettings.cs, MatchManager.cs, MainMenuController.cs, LR2UIBuilder.cs"

@@ -44,6 +44,8 @@ namespace LR2.Game
         private float _nextPulseTime;
         private float _nextAutoAwardCooldown;
         private Combatant _leadingEnemy;
+        private readonly Dictionary<Combatant, float> _ffaProgress = new Dictionary<Combatant, float>(8);
+        public Combatant LeadingCombatant { get; private set; }
 
         // Visual rig
         private Transform _rigRoot;
@@ -160,6 +162,9 @@ namespace LR2.Game
 
             Progress = 0f;
             State = ZoneState.Idle;
+            _ffaProgress.Clear();
+            LeadingCombatant = null;
+            _leadingEnemy = null;
             _rotateAt = Time.time + StaleRotationSeconds;
 
             if (_rigRoot != null)
@@ -206,6 +211,14 @@ namespace LR2.Game
 
         private void EvaluateCapture(float dt)
         {
+            var mm = MatchManager.Instance;
+            bool isTeamMode = mm != null && mm.IsTeamMode;
+            if (!isTeamMode)
+            {
+                EvaluateFreeForAllCapture(dt, mm);
+                return;
+            }
+
             float playerForce = 0f;
             float bestEnemyForce = 0f;
             _leadingEnemy = null;
@@ -230,7 +243,6 @@ namespace LR2.Game
                 if (vert > 4.5f || planar > _outerRadius) continue;
                 float mult = ComputeProximitySpeedMultiplier(planar, _coreRadius, _outerRadius);
 
-                var mm = MatchManager.Instance;
                 var local = mm != null ? mm.LocalPlayer : null;
                 bool isFriendly = c.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, c));
                 if (isFriendly)
@@ -279,7 +291,6 @@ namespace LR2.Game
 
             if (Progress >= 0.999f)
             {
-                var mm = MatchManager.Instance;
                 if (_captureBurst != null) _captureBurst.Play();
                 if (mm != null && mm.LocalPlayer != null) mm.AwardFlagCapture(mm.LocalPlayer, ActiveSectorName);
                 _nextAutoAwardCooldown = Time.time + 1.5f;
@@ -287,9 +298,94 @@ namespace LR2.Game
             }
             else if (Progress <= -0.999f)
             {
-                var mm = MatchManager.Instance;
                 if (_captureBurst != null) _captureBurst.Play();
                 if (mm != null && _leadingEnemy != null) mm.AwardFlagCapture(_leadingEnemy, ActiveSectorName);
+                _nextAutoAwardCooldown = Time.time + 1.5f;
+                RotateToNextStrategicFlag();
+            }
+        }
+
+        /// <summary>B51: Free-For-All Capture the Flag tracks individual progress for every participant in the zone.</summary>
+        private void EvaluateFreeForAllCapture(float dt, MatchManager mm)
+        {
+            LocalPlayerDistance = 999f;
+            LocalPlayerSpeedMult = 0f;
+
+            Combatant top1 = null, top2 = null;
+            float f1 = 0f, f2 = 0f;
+            Combatant local = mm != null ? mm.LocalPlayer : null;
+
+            var list = Combatant.All;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var c = list[i];
+                if (c == null || !c.IsAlive || c.Team == TeamId.Hostile) continue;
+                float planar = Vector2.Distance(new Vector2(c.Position.x, c.Position.z), new Vector2(_activePos.x, _activePos.z));
+                float vert = Mathf.Abs(c.Position.y - _activePos.y);
+
+                if (c.IsLocalPlayer)
+                {
+                    LocalPlayerDistance = planar;
+                    LocalPlayerSpeedMult = vert <= 4.5f ? ComputeProximitySpeedMultiplier(planar, _coreRadius, _outerRadius) : 0f;
+                    local = c;
+                }
+                if (vert > 4.5f || planar > _outerRadius) continue;
+
+                float mult = ComputeProximitySpeedMultiplier(planar, _coreRadius, _outerRadius);
+                if (mult > f1) { f2 = f1; top2 = top1; f1 = mult; top1 = c; }
+                else if (mult > f2) { f2 = mult; top2 = c; }
+            }
+
+            bool contested = top1 != null && top2 != null && f2 > 0.05f && (f1 - f2) < 0.65f;
+            float baseRate = 1f / BaseCaptureSeconds;
+            Combatant capturer = null;
+
+            if (!contested)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var c = list[i];
+                    if (c == null || c.Team == TeamId.Hostile) continue;
+                    float cur = _ffaProgress.TryGetValue(c, out float v) ? v : 0f;
+                    if (c == top1 && f1 > 0.05f)
+                        cur = Mathf.Clamp01(cur + (f1 - f2) * baseRate * dt);
+                    else
+                        cur = Mathf.MoveTowards(cur, 0f, baseRate * (top1 != null ? 0.45f : 0.22f) * dt);
+                    _ffaProgress[c] = cur;
+                    if (cur >= 0.999f) capturer = c;
+                }
+            }
+
+            float localProg = local != null && _ffaProgress.TryGetValue(local, out float lp) ? lp : 0f;
+            float bestBotProg = 0f;
+            _leadingEnemy = null;
+            foreach (var kv in _ffaProgress)
+            {
+                if (kv.Key == null || kv.Key == local || !kv.Key.IsAlive) continue;
+                if (kv.Value > bestBotProg) { bestBotProg = kv.Value; _leadingEnemy = kv.Key; }
+            }
+
+            LeadingCombatant = top1;
+            Progress = localProg >= bestBotProg ? localProg : -bestBotProg;
+
+            if (contested) State = ZoneState.Contested;
+            else if (top1 == local && local != null && f1 > 0.05f)
+            {
+                State = ZoneState.Capturing;
+                if (LocalPlayerInside && Time.time >= _nextPulseTime)
+                {
+                    _nextPulseTime = Time.time + Mathf.Lerp(0.75f, 0.30f, Mathf.Clamp01(LocalPlayerSpeedMult / 2.25f));
+                    var s = LR2CommonSounds.Instance;
+                    if (s != null) LR2Audio.Play2D(s.countdownTick, 0.42f, 0.2f);
+                }
+            }
+            else if (top1 != null && f1 > 0.05f) State = ZoneState.Losing;
+            else State = ZoneState.Idle;
+
+            if (capturer != null)
+            {
+                if (_captureBurst != null) _captureBurst.Play();
+                if (mm != null) mm.AwardFlagCapture(capturer, ActiveSectorName);
                 _nextAutoAwardCooldown = Time.time + 1.5f;
                 RotateToNextStrategicFlag();
             }

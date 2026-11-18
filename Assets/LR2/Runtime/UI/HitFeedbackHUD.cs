@@ -249,6 +249,9 @@ namespace LR2.UI
 
         private void Update()
         {
+            if (_arms == null || _arms.Length < 4 || _arms[0] == null || _skullRT == null || _skull == null || _skullRim == null)
+                return;
+
             float now = Time.unscaledTime;
 
             float t = now - _hitTime;

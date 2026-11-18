@@ -97,7 +97,7 @@ namespace LR2.Game
             _teamScore[TeamId.Alpha] = 0;
             _teamScore[TeamId.Bravo] = 0;
             SpawnParticipants();
-            if (Settings.mode == GameModeType.CaptureTheFlag && FlagZoneController.Instance == null)
+            if (Settings.IsFlagMode && FlagZoneController.Instance == null)
                 new GameObject("[LR2 FlagZone]").AddComponent<FlagZoneController>();
             TimeRemaining = Settings.timeLimitSeconds;
             CountdownRemaining = Settings.countdownSeconds;

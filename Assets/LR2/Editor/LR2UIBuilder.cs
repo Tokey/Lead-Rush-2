@@ -716,17 +716,18 @@ namespace LR2.EditorTools
                 rt.anchoredPosition = new Vector2(320f, y);
                 return b;
             }
-            mm.duelButton = MenuBtn("1v1 Deathmatch", 214f, 54f);
-            mm.ctfButton = MenuBtn("Capture The Flag DM", 152f, 54f);
-            mm.ffaButton = MenuBtn("Free For All", 90f, 54f);
-            mm.tdmButton = MenuBtn("Team Deathmatch", 28f, 54f);
-            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -46f, 48f);
-            mm.settingsButton = MenuBtn("Settings", -102f, 48f);
-            mm.quitButton = MenuBtn("Quit", -158f, 48f);
+            mm.duelButton = MenuBtn("1v1 Deathmatch", 232f, 48f);
+            mm.ctfButton = MenuBtn("Capture The Flag DM", 178f, 48f);
+            mm.ffaCtfButton = MenuBtn("Free-For-All CTF", 124f, 48f);
+            mm.ffaButton = MenuBtn("Free For All", 70f, 48f);
+            mm.tdmButton = MenuBtn("Team Deathmatch", 16f, 48f);
+            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -50f, 44f);
+            mm.settingsButton = MenuBtn("Settings", -100f, 44f);
+            mm.quitButton = MenuBtn("Quit", -150f, 44f);
 
             // Bot difficulty roster selector (left/right stepper matching the Map Recon card; map dropdown removed)
-            Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -216f), new Vector2(455f, 24f), true, accent);
-            var diffRoster = Rect("BotDifficultyRoster", main, left, left, new Vector2(320f, -254f), new Vector2(455f, 48f));
+            Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -208f), new Vector2(455f, 24f), true, accent);
+            var diffRoster = Rect("BotDifficultyRoster", main, left, left, new Vector2(320f, -246f), new Vector2(455f, 48f));
             BuildStepper(diffRoster, 48f, out mm.difficultyPrevButton, out mm.difficultyNextButton, out mm.difficultyValueText, 22f, accent);
 
             // Right-hand Map Preview Card (kept clear of center Operator silhouette)
@@ -799,6 +800,7 @@ namespace LR2.EditorTools
 
             mm.duelSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_Duel.asset");
             mm.ctfSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_CTF.asset");
+            mm.ffaCtfSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_FFA_CTF.asset");
             mm.ffaSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_FFA.asset");
             mm.tdmSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_TDM.asset");
             SavePrefab(canvas.gameObject, PrefabDir + "/LR2_MainMenuUI.prefab");

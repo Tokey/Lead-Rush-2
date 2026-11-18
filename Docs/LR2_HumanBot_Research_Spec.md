@@ -90,6 +90,11 @@ When `LR2Settings.BotDifficulty == 4` (`"ADAPTIVE"`), bots refresh a dynamic run
 
 ---
 
+4. **Empirical Human Miss Pattern — ESTA / CSKnow / Aim Lab Telemetry (`B53`, `BotController.cs`):**
+   - **Visuomotor Velocity Lag (`125 ms`):** `_perceivedTargetVel` passes through a discrete low-pass filter (`dt / (0.125f + dt)`) before computing lead prediction (`0.055 s`), creating realistic trailing-edge misses on sudden `ADAD` reversals (*CSKnow*, Durst et al. 2022/2024; *Aim Lab*, Listman et al. 2021).
+   - **Anisotropic Flick Covariance & Calm Undershoot (`\sigma_{\parallel} / \sigma_{\perp} \approx 2.27`):** Longitudinal scatter along the 2D saccade vector is `2.27×` wider than perpendicular scatter, carrying a calm `-7.5%` primary undershoot bias (`Lerp(-0.075, +0.035, stress) * D`) (Meyer et al. 1988; van Beers et al. 2004).
+   - **1.55 : 1 Wrist-Yaw vs. Vertical-Arm Asymmetry & Late-Spray Horizontal Weave:** Perlin sway, SDN tremor (`1.15x` vs `0.74x`), and late-spray lateral oscillation (`sprayHeat > 0.25`) match pro demo horizontal placement variance (*ESTA*, Xenopoulos & Silva 2022).
+
 ### Primary References Cited
 1. Fitts, P. M. (1954). *The information capacity of the human motor system in controlling the amplitude of movement.* Journal of Experimental Psychology, 47(6), 381–391.
 2. MacKenzie, I. S. (1992). *Fitts' law as a research and design tool in human-computer interaction.* Human-Computer Interaction, 7(1), 91–139.
@@ -98,3 +103,7 @@ When `LR2Settings.BotDifficulty == 4` (`"ADAPTIVE"`), bots refresh a dynamic run
 5. Harris, C. M., & Wolpert, D. M. (1998). *Signal-dependent noise determines motor planning.* Nature, 394, 780–784.
 6. Todorov, E. (2004). *Optimality principles in sensorimotor control.* Nature Neuroscience, 7, 907–915.
 7. Schrum, J., Karpov, I. V., & Miikkulainen, R. (2011/2012). *$\text{UT}^2$: Human-like Behavior via Neuroevolution of Combat Behavior and Replay of Human Traces* (*Believable Bots*, Springer / IEEE CIG).
+8. van Beers, R. J., Haggard, P., & Wolpert, D. M. (2004). *The role of execution noise in movement variability.* Journal of Neurophysiology, 91(2), 1050–1063.
+9. Xenopoulos, P., & Silva, C. (2022). *ESTA: An Esports Trajectory and Action Dataset.* arXiv:2209.09861.
+10. Durst, D. B. et al. (2022/2024). *CSKnow: Learning Human-Like Movement and Aiming from Match Telemetry.*
+11. Listman, J. B., Tsay, J. S., Kim, H. E., Mackey, W. E., & Heeger, D. J. (2021). *Long-term motor learning in the "wild" with high-volume video game data.* PLOS ONE, 16(12), e0261361.

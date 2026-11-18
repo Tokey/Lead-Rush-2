@@ -587,6 +587,9 @@ namespace LR2.EditorTools
             public Vector2 kick = new Vector2(0.12f, 0.06f);
             // Kinemation demo recoil patterns climb 3-4 deg/shot; scale to ~1-1.3 deg (hip). ADS multiplies pattern + kick.
             public float pattern = 0.33f, patternH = 0.3f, adsRecoil = 0.55f, adsKick = 0.5f;
+            // B49: Per-gun hand offsets in weapon space (x right, y up, z forward).
+            public Vector3 rightGripOffset = new Vector3(0f, -0.01f, -0.075f);
+            public Vector3 leftGripOffset = new Vector3(0f, -0.03f, 0f);
         }
 
         /// <summary>Every gun comes from a Kinemation demo weapon (its own grip pose, ADS, reload and equip animations) made
@@ -598,15 +601,15 @@ namespace LR2.EditorTools
             new WeaponSpec { id = "Mk23", display = "MK23", source = DemoDir + "/Prefabs/Humanoid/Mk23Mod0_Scriptable_Humanoid.prefab", audio = "Pistol",
                              cls = WeaponClass.Pistol, rpm = 400f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 30f, mid = 25f, far = 18f,
                              head = 1.8f, range = 18f, hip = 1.6f, ads = 0.08f, adsTime = 0.18f, sprintToFire = 0.12f, adsFov = 0.82f, kick = new Vector2(0.4f, 0.1f),
-                             pattern = 1f, patternH = 1f },
+                             pattern = 1f, patternH = 1f, rightGripOffset = Vector3.zero, leftGripOffset = Vector3.zero },
             new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", rpm = 650f, near = 33f, mid = 28f, far = 23f,
-                             pattern = 0.36f },
+                             pattern = 0.36f, rightGripOffset = new Vector3(0f, -0.01f, -0.075f), leftGripOffset = new Vector3(0f, -0.03f, 0f) },
             new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4",
                              rpm = 850f, near = 30f, mid = 25f, far = 21f, range = 26f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
-                             pattern = 0.3f, adsRecoil = 0.50f }, // B47: 5.56 recoils less than 5.45 in ADS
+                             pattern = 0.3f, adsRecoil = 0.50f, rightGripOffset = new Vector3(0f, -0.01f, -0.075f), leftGripOffset = new Vector3(0f, -0.03f, 0f) }, // B47: 5.56 recoils less than 5.45 in ADS
             new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
                              near = 48f, mid = 42f, far = 36f, range = 45f, hip = 3.0f, adsTime = 0.32f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
-                             pattern = 0.5f, patternH = 0.4f, adsRecoil = 0.60f }, // B47: 7.62x51 stays harder in ADS
+                             pattern = 0.5f, patternH = 0.4f, adsRecoil = 0.60f, rightGripOffset = new Vector3(0f, -0.01f, -0.075f), leftGripOffset = new Vector3(0f, -0.03f, 0f) }, // B47: 7.62x51 stays harder in ADS
         };
 
         public static void BuildWeapons()
@@ -654,6 +657,8 @@ namespace LR2.EditorTools
             def.shellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/FX/FX_Shell_Rifle.prefab");
             def.muzzleFlashPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/FX/FX_MuzzleFlash.prefab");
             def.tracerEvery = 1;
+            def.rightGripOffset = spec.rightGripOffset;
+            def.leftGripOffset = spec.leftGripOffset;
             EditorUtility.SetDirty(def);
 
             string weaponSrc = UseKinemationDriver ? spec.source : SwatAk12;
@@ -735,6 +740,13 @@ namespace LR2.EditorTools
             BakeReloadRestPose(so, reloadAsset != null ? reloadAsset.clip : null, spec.id);
             var botTracerProp = so.FindProperty("botTracerEvery");
             if (botTracerProp != null) botTracerProp.intValue = 1;
+            // B49: Ensure every rifle/pistol weapon uses the Humanoid FPSAnimator controller (AK74N/Mk18/FAL came from Generic demo prefabs).
+            if (UseKinemationDriver)
+            {
+                var humCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(DemoDir + "/Animations/Locomotion/FPSAnimator_Humanoid.controller");
+                var ovProp = so.FindProperty("overrideController");
+                if (ovProp != null && humCtrl != null) ovProp.objectReferenceValue = humCtrl;
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
 
             // Muzzle + ejection port from mesh bounds (longest axis = barrel, always pointing away from rear AimPoint).
@@ -742,6 +754,28 @@ namespace LR2.EditorTools
             int axis = bounds.size.x > bounds.size.y ? (bounds.size.x > bounds.size.z ? 0 : 2) : (bounds.size.y > bounds.size.z ? 1 : 2);
             float sign = Mathf.Abs(bounds.max[axis]) >= Mathf.Abs(bounds.min[axis]) ? 1f : -1f;
             var entity = go.GetComponent<FPSAnimatorEntity>();
+            if (entity != null)
+            {
+                string profPath = spec.cls == WeaponClass.Pistol
+                    ? DemoDir + "/AnimatorProfiles/AnimatorProfile_Pistol_Humanoid.asset"
+                    : DemoDir + "/AnimatorProfiles/AnimatorProfile_Rifle_Humanoid.asset";
+                var humProfile = AssetDatabase.LoadAssetAtPath<FPSAnimatorProfile>(profPath);
+                if (humProfile != null && (entity.animatorProfile == null || !entity.animatorProfile.name.Contains("Humanoid")))
+                    entity.animatorProfile = humProfile;
+                if (entity.defaultAimPoint == null)
+                {
+                    entity.defaultAimPoint = go.GetComponentsInChildren<Transform>(true)
+                        .FirstOrDefault(t => t.name == "AimPoint" || t.name == "DefaultAimPoint" || t.name == "PointAim");
+                    if (entity.defaultAimPoint == null)
+                    {
+                        var ap = new GameObject("AimPoint").transform;
+                        ap.SetParent(go.transform, false);
+                        ap.localPosition = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+                        entity.defaultAimPoint = ap;
+                    }
+                }
+                EditorUtility.SetDirty(entity);
+            }
             if (entity != null && entity.defaultAimPoint != null)
             {
                 Vector3 aimLoc = go.transform.InverseTransformPoint(entity.defaultAimPoint.position);
@@ -2028,6 +2062,7 @@ namespace LR2.EditorTools
             }
             Match("MatchSettings_Duel", "1v1 Deathmatch", "1v1 Deathmatch against an adaptive enemy operator. First to 15 kills.", GameModeType.Duel, 15, 480f, 0, 1);
             Match("MatchSettings_CTF", "Capture The Flag DM", "Rotating strategic flag Deathmatch. BF6 radius: close core captures 2.25x faster.", GameModeType.CaptureTheFlag, 25, 480f, 0, 3);
+            Match("MatchSettings_FFA_CTF", "Free-For-All CTF", "Every operator competes individually for rotating strategic flags. Close core captures 2.25x faster.", GameModeType.FreeForAllCaptureTheFlag, 25, 480f, 0, 4);
             Match("MatchSettings_FFA", "Free For All", "You against three bots. First to 20 kills.", GameModeType.FreeForAll, 20, 600f, 0, 3);
             Match("MatchSettings_TDM", "Team Deathmatch", "You and a bot squadmate against two bots. First team to 40.", GameModeType.TeamDeathmatch, 40, 600f, 1, 2);
 

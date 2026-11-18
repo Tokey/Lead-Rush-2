@@ -16,12 +16,14 @@ namespace LR2.UI
         [Header("Modes")]
         public MatchSettings duelSettings;
         public MatchSettings ctfSettings;
+        public MatchSettings ffaCtfSettings;
         public MatchSettings ffaSettings;
         public MatchSettings tdmSettings;
 
         [Header("Buttons")]
         public Button duelButton;
         public Button ctfButton;
+        public Button ffaCtfButton;
         public Button ffaButton;
         public Button tdmButton;
         public Button modeRulesButton;
@@ -132,6 +134,7 @@ namespace LR2.UI
 
         private string _duelBaseLabel;
         private string _ctfBaseLabel;
+        private string _ffaCtfBaseLabel;
         private string _ffaBaseLabel;
         private string _tdmBaseLabel;
 
@@ -157,6 +160,7 @@ namespace LR2.UI
 
             if (duelButton != null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
             if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
+            if (ffaCtfButton != null) ffaCtfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAllCaptureTheFlag, ffaCtfSettings));
             if (ffaButton != null) ffaButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAll, ffaSettings));
             if (tdmButton != null) tdmButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.TeamDeathmatch, tdmSettings));
             if (modeRulesButton != null) modeRulesButton.onClick.AddListener(() => OpenModeRules(_editingMode));
@@ -332,6 +336,7 @@ namespace LR2.UI
         private MatchSettings SettingsFor(GameModeType mode) => mode switch
         {
             GameModeType.CaptureTheFlag => ctfSettings,
+            GameModeType.FreeForAllCaptureTheFlag => ffaCtfSettings ?? ctfSettings,
             GameModeType.FreeForAll => ffaSettings,
             GameModeType.TeamDeathmatch => tdmSettings,
             _ => duelSettings,
@@ -341,6 +346,7 @@ namespace LR2.UI
         {
             _duelBaseLabel = ReadButtonLabel(duelButton, "1V1 DEATHMATCH");
             _ctfBaseLabel = ReadButtonLabel(ctfButton, "CAPTURE THE FLAG DM");
+            _ffaCtfBaseLabel = ReadButtonLabel(ffaCtfButton, "FREE-FOR-ALL CTF");
             _ffaBaseLabel = ReadButtonLabel(ffaButton, "FREE FOR ALL");
             _tdmBaseLabel = ReadButtonLabel(tdmButton, "TEAM DEATHMATCH");
         }
@@ -363,6 +369,7 @@ namespace LR2.UI
         {
             SetButtonLabel(duelButton, _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ctfButton, _ctfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.CaptureTheFlag) ? "  [CUSTOM]" : ""));
+            SetButtonLabel(ffaCtfButton, _ffaCtfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAllCaptureTheFlag) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ffaButton, _ffaBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAll) ? "  [CUSTOM]" : ""));
             SetButtonLabel(tdmButton, _tdmBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.TeamDeathmatch) ? "  [CUSTOM]" : ""));
             RefreshPreviewStatus();
@@ -377,6 +384,7 @@ namespace LR2.UI
             string modeLabel = _editingMode switch
             {
                 GameModeType.CaptureTheFlag => "CTF DM",
+                GameModeType.FreeForAllCaptureTheFlag => "FFA CTF",
                 GameModeType.FreeForAll => "FFA",
                 GameModeType.TeamDeathmatch => "TDM",
                 _ => "1V1 DM",
@@ -449,6 +457,7 @@ namespace LR2.UI
                 deployModeTitleText.text = mode switch
                 {
                     GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DEATHMATCH",
+                    GameModeType.FreeForAllCaptureTheFlag => "FREE-FOR-ALL CAPTURE THE FLAG",
                     GameModeType.FreeForAll => "FREE FOR ALL  ·  STAGING",
                     GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD STAGING",
                     _ => "1V1 DEATHMATCH  ·  STAGING",
@@ -459,6 +468,7 @@ namespace LR2.UI
                 deployModeDescText.text = mode switch
                 {
                     GameModeType.CaptureTheFlag => "Strategic rotating flags with Battlefield-6 proximity capture speed: close core captures 2.25x fast; perimeter edge slows to 0.28x.",
+                    GameModeType.FreeForAllCaptureTheFlag => "Every player and bot is on their own team racing individually for the rotating strategic flag zone.",
                     GameModeType.FreeForAll => "Every operator for themselves. Outshoot hostile fighters across dynamic weather and destructible cover.",
                     GameModeType.TeamDeathmatch => "Squad coordination against enemy fireteams. Support your teammate or push objective lanes.",
                     _ => "Head-to-head 1v1 tactical duel against a responsive human-input enemy bot.",
@@ -577,7 +587,7 @@ namespace LR2.UI
             _editingRules = LR2Session.LoadModeRules(SettingsFor(mode));
 
             HighlightTab(modeRulesDuelTab, mode == GameModeType.Duel);
-            HighlightTab(modeRulesCtfTab, mode == GameModeType.CaptureTheFlag);
+            HighlightTab(modeRulesCtfTab, mode == GameModeType.CaptureTheFlag || mode == GameModeType.FreeForAllCaptureTheFlag);
             HighlightTab(modeRulesFfaTab, mode == GameModeType.FreeForAll);
             HighlightTab(modeRulesTdmTab, mode == GameModeType.TeamDeathmatch);
 
@@ -586,6 +596,7 @@ namespace LR2.UI
                 string label = mode switch
                 {
                     GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DM  ·  STRATEGIC RADIUS RULES",
+                    GameModeType.FreeForAllCaptureTheFlag => "FREE-FOR-ALL CTF  ·  SOLO ZONE RULES",
                     GameModeType.FreeForAll => "FREE FOR ALL  ·  SOLO ARENA RULES",
                     GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD RULES",
                     _ => "1V1 DEATHMATCH  ·  COMPETITIVE RULES",

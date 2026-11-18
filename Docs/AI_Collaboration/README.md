@@ -21,6 +21,10 @@ This page tells that story with the real prompts, the real messages the agents l
 
 ## The team
 
+![How AI agents collaborate through AGENT_COORDINATION.md](../Media/bot/ai-multiagent-workflow.gif)
+
+> **Interactive Lab:** Open [`Docs/Bot/bot-brain.html`](../Bot/bot-brain.html) (Tab 3: *How AI Built LR2 & Research Lab*) for the animated coordination graph, live Protocol v1 -> v2 -> v3 timeline, interactive ledger chart, and filterable research spec explorer.
+
 ```mermaid
 flowchart LR
     Dev(["Developer<br/>prompts, playtests, decisions"])
@@ -250,14 +254,14 @@ at review.
 
 | Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
 |---|---|---|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 45.1 | 16 | 6 / 1 | 10 / 2 | 5.7 (8) | 3.6 | 1 | 1 |
-| Copilot · gpt-5.6-luna | 3.0 | 16 | 1 / 0 | 0 / 0 | 2.0 (2) | 1.2 | 4 | 0 |
+| Claude · claude-opus-5-5 | 55.1 | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 1 | 2 |
+| Copilot · gpt-5.6-luna | 18.0 | 30 | 2 / 0 | 0 / 0 | 2.0 (2) | 0.7 | 6 | 0 |
 | Gemini · claude-opus-5-5-high | 3.0 | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · gemini-4-hydrogen | -0.8 | 16 | 1 / 0 | 0 / 0 | 3.9 (5) | 2.4 | 2 | 0 |
 | Gemini · argon/hydrogen | -1.2 | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
-| Gemini · argon | -2.7 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 1 | 1 |
-| Gemini · gemini-4-hydrogen | -7.3 | 8 | 0 / 0 | 0 / 0 | 3.9 (5) | 4.9 | 1 | 0 |
+| Gemini · argon | -3.2 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
-**Read these numbers with care** (as of 2026-11-18 00:15; regenerate for the latest):
+**Read these numbers with care** (as of 2026-11-18 01:08; regenerate for the latest):
 - **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
   Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.

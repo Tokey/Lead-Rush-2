@@ -2,8 +2,8 @@
 | Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
 |---|---|---|---|---|---|---|---|---|
 | Claude · claude-opus-5-5 | 55.1 | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 1 | 2 |
-| Copilot · gpt-5.6-luna | 11.5 | 22 | 1 / 0 | 0 / 0 | 2.0 (2) | 0.9 | 5 | 0 |
+| Copilot · gpt-5.6-luna | 18.0 | 30 | 2 / 0 | 0 / 0 | 2.0 (2) | 0.7 | 6 | 0 |
 | Gemini · claude-opus-5-5-high | 3.0 | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · gemini-4-hydrogen | 1.7 | 21 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.9 | 2 | 0 |
 | Gemini · argon/hydrogen | -1.2 | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
 | Gemini · argon | -3.2 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
-| Gemini · gemini-4-hydrogen | -3.3 | 16 | 0 / 0 | 0 / 0 | 3.9 (5) | 2.4 | 1 | 0 |
