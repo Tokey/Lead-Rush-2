@@ -8,16 +8,16 @@
 
 | Asset / Folder | Concrete Opportunity in LR2 | Status / Notes |
 |---|---|---|
-| `Assets/KinemationDemo/Meshes/Attachments/` (`HoloSight.prefab`, `Reddot_Mesh.prefab`, `Trijicon.prefab`, `1P29.prefab`, `SniperScope.prefab`) | Optic sights (`HoloSight`, `Reddot`, `ACOG+RMR`) are already modeled with mount meshes and prefabs — currently rifles default to iron sights. | Immediate drop-in upgrade for AK-12, AK-74N, Mk18, FAL (`ScopeGroups`). |
-| `Assets/KinemationDemo/Meshes/Attachments/Grips/` (`RK-2.fbx`, `AngledGripMount_45.fbx`, `GripMount.fbx`) & Suppressors (`AKHexagonSuppressor.prefab`, `Supperssor_Mk18.fbx`, `Pistol_Silencer.fbx`) | Vertical/angled foregrips and rifle suppressors exist in-repo and are not mounted on the default LR2 weapons. | Improves first-person silhouettes and recoil-attenuation feel. |
-| `Assets/KinemationDemo/Animations/Locomotion/Humanoid/` (`C_Sliding_Humanoid.fbx`, `C_Rifle_Crouch_*_Humanoid.fbx`, `C_Prone_TurnRight_Humanoid.fbx`) | Full 8-way Humanoid crouch-walk and tactical slide clips sit unused or partially bound in the locomotion controller. | Pair directly with `B37` smooth motion & `B50` walk-bob polish. |
+| `Assets/KinemationDemo/Meshes/Attachments/` (`Holosight/HoloSight.prefab`, `Reddot/Mesh/Reddot_Mesh.prefab`, `Acog/Trijicon.prefab`, `1P29/1P29.prefab`, `LongRangeScope/SniperScope.prefab`) | Optic sights (`HoloSight`, `Reddot`, `ACOG+RMR`) are already modeled with mount meshes and prefabs — currently rifles default to iron sights. | Immediate drop-in upgrade for AK-12, AK-74N, Mk18, FAL (`ScopeGroups`). |
+| `Assets/KinemationDemo/Meshes/Attachments/Grips/` (`RK-2.fbx`, `AngledGripMount_45.fbx`, `GripMount.fbx`) & Suppressors (`HexagonSuppressor/AKHexagonSuppressor.prefab`, `Suppressor_Mk18/Supperssor_Mk18.fbx`) | Vertical/angled foregrips and rifle suppressors exist in-repo and are not mounted on the default LR2 weapons. | Improves first-person silhouettes and recoil-attenuation feel. |
+| `Assets/KinemationDemo/Animations/Locomotion/Humanoid/UnarmedSet/` (`C_Sliding_Humanoid.fbx`) | Humanoid tactical slide clip is available under the `UnarmedSet` subfolder; other crouch/prone candidates require separate path verification. | Pair directly with `B37` smooth motion & `B50` walk-bob polish. |
 | `Assets/LeartesStudios/`, `Assets/ScansFactory/`, `Assets/UnityTechnologies/`, `Assets/AllSkyFree/`, `Assets/Polyart/` | Rich industrial, forest, HDRI sky, and rock meshes already imported into the local gitignored `Assets/` tree. | Reuse more hero props (`LeartesStudios` barrels/crates/fences) + `UnityTechnologies` HDRI packs to address `B1`/`B42`. |
 
 ---
 
 ## Tier 2 — Downloaded `.unitypackage` Packs in Local Unity Cache (`%AppData%\Unity\Asset Store-5.x\`)
 
-Observed directly in `C:\Users\soulr\AppData\Roaming\Unity\Asset Store-5.x\`:
+Observed directly in vendor subfolders under `C:\Users\soulr\AppData\Roaming\Unity\Asset Store-5.x\`:
 
 | Package File | Size | Category | Why Better for LeadRush 2 |
 |---|---|---|---|
