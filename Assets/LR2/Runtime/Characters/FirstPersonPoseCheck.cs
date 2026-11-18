@@ -43,6 +43,8 @@ namespace LR2.Characters
         private int _errors;
         private bool _done;
         private readonly StringBuilder _log = new StringBuilder();
+        private readonly StringBuilder _motionCsv = new StringBuilder(
+            "time,label,state,stance,moveSpeed,locoSpeed,leftFootY,rightFootY,leftFootSlide,rightFootSlide,handErrorLeft,handErrorRight,rawHipDelta,rawHeadDelta,cameraYaw,cameraPitch\n");
         private readonly Queue<Shot> _pending = new Queue<Shot>();
         private GameObject _marker, _eyeMarker;
 
@@ -56,8 +58,8 @@ namespace LR2.Characters
                 if (args[i] == "-lr2Weapon")
                 {
                     string w = args[i + 1].Trim().ToLowerInvariant();
-                    if (w.Contains("74")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 1;
-                    else if (w.Contains("18")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 2;
+                    if (w.Contains("12")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 1;
+                    else if (w.Contains("74")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 2;
                     else if (w.Contains("fal")) LR2.Game.LR2Session.SelectedPrimaryWeapon = 3;
                     else LR2.Game.LR2Session.SelectedPrimaryWeapon = 0;
                 }
@@ -78,6 +80,13 @@ namespace LR2.Characters
         }
 
         private void Note(string s) => _log.AppendLine($"[{Time.time,7:0.00}] {s}");
+        private static string Csv(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n"))
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return value;
+        }
 
         private void OnLog(string msg, string stack, LogType type)
         {
@@ -414,11 +423,21 @@ namespace LR2.Characters
                     {
                         move /= vm;
                         float ground = _soldier.transform.position.y;
-                        hl.Add(lf.position.y - ground); sl.Add(Vector3.Dot((lf.position - pl) / dt, move));
-                        hr.Add(rf.position.y - ground); sr.Add(Vector3.Dot((rf.position - pr) / dt, move));
+                        float leftSlide = Vector3.Dot((lf.position - pl) / dt, move);
+                        float rightSlide = Vector3.Dot((rf.position - pr) / dt, move);
+                        hl.Add(lf.position.y - ground); sl.Add(leftSlide);
+                        hr.Add(rf.position.y - ground); sr.Add(rightSlide);
                         speed += vm;
                         loco += drv.GetFloat("LocoSpeed");
                         n++;
+                        var cam = _soldier.ViewCamera;
+                        _motionCsv.Append(
+                            $"{Time.time:0.000},{Csv(label)},{_soldier.Movement.State},{_soldier.Movement.Stance}," +
+                            $"{vm:0.000},{drv.GetFloat("LocoSpeed"):0.000},{lf.position.y - ground:0.000},{rf.position.y - ground:0.000}," +
+                            $"{leftSlide:0.000},{rightSlide:0.000},{(_proxy != null ? _proxy.HandErrorLeft : -1f):0.000}," +
+                            $"{(_proxy != null ? _proxy.HandErrorRight : -1f):0.000},{(_proxy != null ? _proxy.RawHipsDelta : -1f):0.000}," +
+                            $"{(_proxy != null ? _proxy.RawHeadDelta.magnitude : -1f):0.000}," +
+                            $"{(cam != null ? cam.transform.eulerAngles.y : 0f):0.000},{(cam != null ? cam.transform.eulerAngles.x : 0f):0.000}\n");
                     }
                 }
                 pl = lf.position;
@@ -791,6 +810,7 @@ namespace LR2.Characters
             sb.AppendLine($"Errors (game): {_errors}");
             sb.Append(_log);
             File.WriteAllText(Path.Combine(_outDir, "report.txt"), sb.ToString());
+            File.WriteAllText(Path.Combine(_outDir, "motion_baseline.csv"), _motionCsv.ToString());
             Debug.Log($"[LR2] PoseCheck finished: {_outDir} (errors {_errors})");
         }
 

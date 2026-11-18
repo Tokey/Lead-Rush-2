@@ -170,5 +170,42 @@ namespace LR2.World
             trauma = CameraShake.Instance != null ? CameraShake.Instance.Trauma : 0f;
             return CameraShake.Instance != null;
         }
+
+        public static string CheckMotionPoseJump(float poseJumpDegrees, float maxPoseJumpDegrees)
+        {
+            bool pass = poseJumpDegrees >= 0f && poseJumpDegrees <= maxPoseJumpDegrees;
+            return $"{(pass ? "PASS" : "FAIL")} Motion.PoseJump: jump={poseJumpDegrees:0.00}deg max={maxPoseJumpDegrees:0.00}deg";
+        }
+
+        public static string CheckMotionTrajectoryMatch(float currentVelocityCost, float futurePositionCost, float futureFacingCost, float maxCost)
+        {
+            bool pass = currentVelocityCost <= maxCost && futurePositionCost <= maxCost && futureFacingCost <= maxCost;
+            return $"{(pass ? "PASS" : "FAIL")} Motion.TrajectoryMatch: velocity={currentVelocityCost:0.000} futurePosition={futurePositionCost:0.000} futureFacing={futureFacingCost:0.000} max={maxCost:0.000}";
+        }
+
+        public static string CheckMotionSelectionStability(int clipChanges, float seconds, int maxChangesPerTenSeconds)
+        {
+            float normalized = seconds > 0f ? clipChanges * 10f / seconds : float.PositiveInfinity;
+            bool pass = normalized <= maxChangesPerTenSeconds;
+            return $"{(pass ? "PASS" : "FAIL")} Motion.SelectionStability: changes={clipChanges}/{seconds:0.00}s normalized={normalized:0.0}/10s max={maxChangesPerTenSeconds}/10s";
+        }
+
+        public static string CheckMotionQueryBudget(float averageMilliseconds, float p99Milliseconds)
+        {
+            bool pass = averageMilliseconds >= 0f && p99Milliseconds >= 0f &&
+                        averageMilliseconds <= 0.10f && p99Milliseconds <= 0.25f;
+            return $"{(pass ? "PASS" : "FAIL")} Motion.QueryBudget: average={averageMilliseconds:0.000}ms p99={p99Milliseconds:0.000}ms limits=0.100/0.250ms";
+        }
+
+        public static string[] CheckMotionMatchingKnownBadFixtures()
+        {
+            return new[]
+            {
+                CheckMotionPoseJump(18f, 8f),
+                CheckMotionTrajectoryMatch(0.40f, 0.80f, 0.20f, 0.50f),
+                CheckMotionSelectionStability(14, 10f, 10),
+                CheckMotionQueryBudget(0.14f, 0.31f)
+            };
+        }
     }
 }
