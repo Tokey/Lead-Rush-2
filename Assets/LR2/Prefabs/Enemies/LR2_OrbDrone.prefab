@@ -137,6 +137,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LR2.Runtime::LR2.Combat.Health
   maxHealth: 60
+  maxArmor: 0
+  environmentBypassesArmor: 1
   regenerate: 0
   regenDelay: 4
   regenPerSecond: 55

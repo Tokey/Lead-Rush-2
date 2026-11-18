@@ -140,6 +140,7 @@ namespace LR2.Characters
 
             LogDriverWeaponBones("idle");
             yield return Capture("fp_01_idle", "idle");
+            Note(LiveGunLine("hip"));
             // B26 left-thumb A/B: tucked thumb vs the C-clamp default
             RetargetProxy.LeftThumbBaseOverride = new Vector2(-1.25f, -0.85f);
             RetargetProxy.LeftThumbTipOverride = new Vector2(-0.6f, -0.15f);
@@ -176,6 +177,7 @@ namespace LR2.Characters
             _cmd.aim = true;
             yield return Wait(1.0f);
             yield return Capture("fp_04_ads", "ADS rifle");
+            Note(LiveGunLine("ads"));
             // B26 left-thumb A/B: tucked thumb vs the C-clamp default
             RetargetProxy.LeftThumbBaseOverride = new Vector2(-1.25f, -0.85f);
             RetargetProxy.LeftThumbTipOverride = new Vector2(-0.6f, -0.15f);
@@ -225,6 +227,48 @@ namespace LR2.Characters
                 float end = Time.time + timeout;
                 while (Time.time < end && f != null && f.IsReloading) { SampleReloadParts(); yield return null; }
             }
+            // B16/D40 "the gun jumps at the end of the reload": per-frame change of the gun's camera-relative pose.
+            var jumpLog = new List<Vector3>(); // (time, deg this frame, cm this frame)
+            Quaternion prevRel = Quaternion.identity;
+            Vector3 prevRelPos = Vector3.zero;
+            bool hasPrevRel = false;
+            void SampleGunRel()
+            {
+                var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+                var cam = _soldier.ViewCamera;
+                if (item == null || cam == null) { hasPrevRel = false; return; }
+                Quaternion rel = Quaternion.Inverse(cam.transform.rotation) * item.rotation;
+                Vector3 relPos = cam.transform.InverseTransformPoint(item.position);
+                if (hasPrevRel) jumpLog.Add(new Vector3(Time.time, Quaternion.Angle(prevRel, rel), (relPos - prevRelPos).magnitude * 100f));
+                prevRel = rel;
+                prevRelPos = relPos;
+                hasPrevRel = true;
+            }
+            IEnumerator WaitReloadDoneMeasured(LR2.Weapons.LR2Firearm f, float timeout, string label)
+            {
+                jumpLog.Clear();
+                hasPrevRel = false;
+                float end = Time.time + timeout;
+                while (Time.time < end && f != null && f.IsReloading) { SampleReloadParts(); SampleGunRel(); yield return null; }
+                float tEnd = Time.time;
+                float post = Time.time + 0.35f;
+                while (Time.time < post) { SampleGunRel(); yield return null; }
+                float maxDeg = 0f, maxCm = 0f, tDeg = 0f, tCm = 0f, maxJerk = 0f, prevDeg = -1f;
+                var degs = new List<float>();
+                foreach (var smp in jumpLog)
+                {
+                    if (smp.x < tEnd - 0.4f) continue;
+                    degs.Add(smp.y);
+                    if (prevDeg >= 0f) maxJerk = Mathf.Max(maxJerk, Mathf.Abs(smp.y - prevDeg));
+                    prevDeg = smp.y;
+                    if (smp.y > maxDeg) { maxDeg = smp.y; tDeg = smp.x - tEnd; }
+                    if (smp.z > maxCm) { maxCm = smp.z; tCm = smp.x - tEnd; }
+                }
+                degs.Sort();
+                float med = degs.Count > 0 ? degs[degs.Count / 2] : 0f;
+                Note($"RELOAD-END-JUMP [{label}] maxRot={maxDeg:0.00} deg/frame at {tDeg:+0.00;-0.00}s maxMove={maxCm:0.00} cm/frame at {tCm:+0.00;-0.00}s " +
+                     $"medianRot={med:0.00} deg/frame maxJerk={maxJerk:0.00} deg/frame^2 frames={degs.Count} (smooth: maxJerk < 1.0 and maxRot < 2.5)");
+            }
             var fa = _soldier.ActiveFirearm;
             void LogReloadAngles(string label)
             {
@@ -238,15 +282,17 @@ namespace LR2.Characters
             }
             LogReloadAngles("idle reference");
 
-            // (0) B35 A/B: OLD behaviour (bridge adds the full clip motion on top of Kinemation's own weapon-bone motion).
-            ReloadMotionBridge.WeaponBoneOverlap = 0f;
+            // (0) B35 A/B: the alternative WeaponBoneOverlap first, then every measured reload runs on the game default
+            // (0 since 11-18 04:19: Kinemation does not move the weapon bone on this rig, so the bridge adds the clip motion).
+            float defaultOverlap = ReloadMotionBridge.WeaponBoneOverlap;
+            ReloadMotionBridge.WeaponBoneOverlap = defaultOverlap > 0.5f ? 0f : 1f;
             _cmd.reload = true;
             yield return WaitAndSample(0.05f);
             yield return WaitReloadProgress(fa, 0.4f, 4f);
-            LogReloadAngles("OLD tactical ~40%");
-            yield return Capture("tp_06a_reload_front_OLD", null, View.Front, true);
+            LogReloadAngles("ALT tactical ~40%");
+            yield return Capture("tp_06a_reload_front_ALT", null, View.Front, true);
             yield return WaitReloadDone(fa, 5f);
-            ReloadMotionBridge.WeaponBoneOverlap = 1f;
+            ReloadMotionBridge.WeaponBoneOverlap = defaultOverlap;
             _cmd.fire = true;
             yield return Wait(0.2f);
             _cmd.fire = false;
@@ -260,11 +306,11 @@ namespace LR2.Characters
             float tacT0 = Time.time;
             DiagnoseReload("tactical start");
             yield return WaitReloadProgress(fa, 0.4f, 4f);
-            LogReloadAngles("NEW tactical ~40%");
+            LogReloadAngles("DEFAULT tactical ~40%");
             yield return Capture("fp_05_reload_a", "tactical reload, mag out (~40 %)");
             yield return Capture("tp_06_reload_front", null, View.Front, true);
             LogDriverWeaponBones("tactical reload ~40%");
-            yield return WaitReloadDone(fa, 5f);
+            yield return WaitReloadDoneMeasured(fa, 5f, "tactical");
             float tacDur = Time.time - tacT0;
             Note($"RELOAD-TACTICAL started={tacStarted} duration={tacDur:0.00}s ammo={(fa != null ? fa.AmmoInMagazine : -1)}/{(fa != null ? fa.MagazineSize : -1)} " +
                  $"magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect tactical, ammo = mag+1, mag>=0.05m, charge<0.02m)");
@@ -286,7 +332,7 @@ namespace LR2.Characters
             LogReloadAngles("empty ~85%");
             yield return Capture("fp_06_reload_b", "empty reload, charge rack (~85 %)");
             DiagnoseReload("empty ~85%");
-            yield return WaitReloadDone(fa, 5f);
+            yield return WaitReloadDoneMeasured(fa, 5f, "empty");
             Note($"RELOAD-EMPTY duration={Time.time - emptyT0:0.00}s ammo={(fa != null ? fa.AmmoInMagazine : -1)}/{(fa != null ? fa.MagazineSize : -1)} " +
                  $"magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect ammo = mag, mag>=0.05m, charge>=0.02m)");
             if (magTf != null && maxMagDisp < 0.05f) Note("ERROR [PoseCheck] Mag did not detach during the empty reload!");
@@ -330,7 +376,7 @@ namespace LR2.Characters
                 LogReloadAngles("walking tactical ~45%");
                 yield return Capture("fp_11b_walk_reload", "tactical reload while walking (~45 %)");
                 yield return Capture("tp_08b_walk_reload_side", null, View.Side, true);
-                yield return WaitReloadDone(wfa, 5f);
+                yield return WaitReloadDoneMeasured(wfa, 5f, "walking tactical");
                 Note($"RELOAD-WALK ammo={(wfa != null ? wfa.AmmoInMagazine : -1)}/{(wfa != null ? wfa.MagazineSize : -1)}");
             }
             _cmd.sprint = true;
@@ -338,6 +384,25 @@ namespace LR2.Characters
             yield return MeasureGait("sprint", 1.6f);
             yield return Capture("fp_12_sprint", "sprint");
             yield return Capture("tp_09_sprint_side", null, View.Side, true);
+
+            // (4) D40: reload while sprinting (user 04:10: "badly broken while walking or sprinting")
+            {
+                var sfa = _soldier.ActiveFirearm;
+                _cmd.sprint = false;
+                _cmd.fire = true;
+                yield return Wait(0.15f);
+                _cmd.fire = false;
+                _cmd.sprint = true;
+                yield return Wait(0.6f);
+                _cmd.reload = true;
+                yield return WaitAndSample(0.05f);
+                yield return WaitReloadProgress(sfa, 0.45f, 4f);
+                LogReloadAngles("sprinting tactical ~45%");
+                yield return Capture("fp_12b_sprint_reload", "tactical reload while sprinting (~45 %)");
+                yield return Capture("tp_09b_sprint_reload_side", null, View.Side, true);
+                yield return WaitReloadDoneMeasured(sfa, 5f, "sprinting tactical");
+                Note($"RELOAD-SPRINT stillSprinting={_soldier.IsSprinting} ammo={(sfa != null ? sfa.AmmoInMagazine : -1)}/{(sfa != null ? sfa.MagazineSize : -1)}");
+            }
             _cmd.sprint = false;
             _cmd.move = Vector2.zero;
             yield return Wait(0.8f);
@@ -390,7 +455,177 @@ namespace LR2.Characters
                     Note($"ENEMY proxy rawHipsDelta={ep.RawHipsDelta:0.000} rawHeadDelta={ep.RawHeadDelta.magnitude:0.000} shift={ep.AppliedShift} " +
                          $"handErr L={ep.HandErrorLeft:0.000} R={ep.HandErrorRight:0.000} firstPerson={ep.FirstPersonActive}");
             }
+
+            // (K) B14.1 killcam evidence: a hostile bot ADSes and shoots the player dead; capture the replay it produces.
+            yield return KillcamCheck();
             Finish();
+        }
+
+        /// <summary>Scripted bot input: absolute aim at the target's chest, ADS held, trigger on demand.</summary>
+        private sealed class ScriptedShooter : ISoldierInputSource
+        {
+            public SoldierController target;
+            public bool fire;
+
+            public void GetInput(SoldierController s, ref SoldierInput input)
+            {
+                input = SoldierInput.Empty;
+                input.absoluteLook = true;
+                if (target != null)
+                {
+                    Vector3 eye = s.ViewTransform != null ? s.ViewTransform.position : s.transform.position + Vector3.up * 1.6f;
+                    Vector3 d = target.transform.position + Vector3.up * 1.3f - eye;
+                    input.aimYaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                    input.aimPitch = -Mathf.Atan2(d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg;
+                }
+                input.aim = true;
+                input.fire = fire;
+            }
+        }
+
+        private IEnumerator KillcamCheck()
+        {
+            var kd = LR2.World.KillcamDirector.Instance;
+            if (kd == null) { Note("KILLCAM skipped: no KillcamDirector in scene"); yield break; }
+            SoldierController killer = null;
+            foreach (var c in Combatant.All)
+            {
+                if (c == null || c.gameObject == _soldier.gameObject) continue;
+                var sc = c.GetComponent<SoldierController>();
+                if (sc != null && !sc.IsDead && _soldier.Combatant != null && TeamUtil.AreHostile(c, _soldier.Combatant)) { killer = sc; break; }
+            }
+            if (killer == null) { Note("KILLCAM skipped: no hostile soldier"); yield break; }
+
+            // face each other 8 m apart on the open lane; the player stands still and watches the killer
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), OpenYaw());
+            _cmd = SoldierInput.Empty;
+            _cmd.absoluteLook = true;
+            _cmd.aimYaw = OpenYaw();
+            yield return Wait(0.3f);
+            Vector3 fwd = Quaternion.Euler(0f, _cmd.aimYaw, 0f) * Vector3.forward;
+            killer.Teleport(_soldier.transform.position + fwd * 8f, _cmd.aimYaw + 180f);
+            var shooter = new ScriptedShooter { target = _soldier };
+            killer.InputSource = shooter;
+            killer.ControlsEnabled = true;
+            yield return Wait(1.4f); // ADS settles
+
+            // Which eye point frames the bot's gun like the player's own view? Render both with the head hidden.
+            var kp = killer.GetComponent<RetargetProxy>();
+            var kCam = killer.ViewCamera;
+            if (kCam != null && kp != null && killer.ActiveFirearm != null)
+            {
+                Quaternion aim = Quaternion.Euler(killer.Pitch, killer.Yaw, 0f);
+                float vfov = _soldier.ViewCamera != null ? _soldier.ViewCamera.fieldOfView : 60f;
+                Vector3 drv = kCam.transform.position, vis = kp.VisualEyePosition;
+                Vector3 dl = Quaternion.Inverse(aim) * (vis - drv);
+                Note($"KILLCAM-EYE driverCam={drv} visualEye={vis} |d|={(vis - drv).magnitude:0.000} m (aim-local right={dl.x:0.000} up={dl.y:0.000} fwd={dl.z:0.000}) camRotVsAim={Quaternion.Angle(kCam.transform.rotation, aim):0.0} deg");
+                killer.SetHeadHidden(true);
+                yield return RenderFrom(drv, aim, vfov, "kc_00a_killer_from_driverCam", killer.ActiveFirearm.gameObject);
+                yield return RenderFrom(vis, aim, vfov, "kc_00b_killer_from_visualEye", killer.ActiveFirearm.gameObject);
+                killer.SetHeadHidden(false);
+            }
+
+            shooter.fire = true;
+            float until = Time.time + 9f;
+            while (!_soldier.IsDead && Time.time < until) yield return null;
+            shooter.fire = false;
+            killer.ControlsEnabled = false;
+            Note($"KILLCAM-SETUP killer={killer.name} weapon={killer.ActiveFirearm?.DisplayName} playerDead={_soldier.IsDead} armour={(_soldier.Health != null ? _soldier.Health.Armor : -1f):0}");
+            if (!_soldier.IsDead) { Note("KILLCAM skipped: player not killed within 9 s"); yield break; }
+
+            until = Time.time + 3f;
+            while (!LR2.World.KillcamDirector.IsPlaying && Time.time < until) yield return null;
+            if (!LR2.World.KillcamDirector.IsPlaying) { Note("KILLCAM did not start within 3 s of the kill"); yield break; }
+            float start = Time.time, dur = kd.Duration;
+            float[] marks = { 0.06f, 0.30f, 0.50f, 0.60f, 0.68f, 0.76f, 0.86f, 0.97f };
+            for (int i = 0; i < marks.Length; i++)
+            {
+                while (Time.time < start + marks[i] * dur && LR2.World.KillcamDirector.IsPlaying) yield return null;
+                if (!LR2.World.KillcamDirector.IsPlaying) { Note($"KILLCAM ended before mark {marks[i]:0.00}"); break; }
+                KillcamMetrics($"{marks[i]:0.00}");
+                yield return Capture($"kc_{i + 1:00}_replay_{Mathf.RoundToInt(marks[i] * 100f):00}pct", null);
+            }
+        }
+
+        private IEnumerator RenderFrom(Vector3 pos, Quaternion rot, float vfov, string name, GameObject gun)
+        {
+            yield return new WaitForEndOfFrame();
+            var go = new GameObject("PoseCheckKillcamProbe");
+            try
+            {
+                go.transform.SetPositionAndRotation(pos, rot);
+                var cam = go.AddComponent<Camera>();
+                cam.fieldOfView = vfov;
+                cam.nearClipPlane = 0.02f;
+                go.AddComponent<HDAdditionalCameraData>();
+                var sb = new StringBuilder($"KILLCAM-PROBE [{name}]");
+                AppendViewport(sb, "gun", cam, gun);
+                Note(sb.ToString());
+                RenderCamera(cam, name);
+            }
+            finally { Destroy(go); }
+        }
+
+        private string LiveGunLine(string label)
+        {
+            var sb = new StringBuilder($"LIVE-GUN [{label}]");
+            var cam = _soldier != null ? _soldier.ViewCamera : null;
+            if (cam != null && _soldier.ActiveFirearm != null) AppendViewport(sb, "gun", cam, _soldier.ActiveFirearm.gameObject);
+            if (cam != null && _proxy != null)
+            {
+                Quaternion aim = cam.transform.rotation;
+                Vector3 dl = Quaternion.Inverse(aim) * (_proxy.VisualEyePosition - cam.transform.position);
+                sb.Append($" visualEye-lens aim-local=({dl.x:0.000},{dl.y:0.000},{dl.z:0.000})");
+            }
+            return sb.ToString();
+        }
+
+        private void KillcamMetrics(string label)
+        {
+            var kd = LR2.World.KillcamDirector.Instance;
+            var cam = _soldier.ViewCamera;
+            if (kd == null || cam == null) return;
+            var sb = new StringBuilder($"KILLCAM [{label}] t-kill={kd.DebugSampleTime - kd.DebugKillTime:+0.00;-0.00} puppets={kd.DebugPuppets} " +
+                                      $"shots={kd.DebugReplayShots} hits={kd.DebugReplayHits} vFov={cam.fieldOfView:0.0} cam={cam.transform.position}");
+            AppendViewport(sb, "gun", cam, kd.DebugKillerGunPuppet);
+            AppendViewport(sb, "victim", cam, kd.DebugVictimPuppet);
+            var puppet = kd.DebugKillerPuppet;
+            if (puppet != null)
+            {
+                // renderers of the killer's own body the lens sits in or within 4 cm of (they draw across the screen)
+                var hidden = new List<string>();
+                foreach (var r in puppet.GetComponentsInChildren<Renderer>())
+                    if (r.enabled && r.shadowCastingMode == ShadowCastingMode.ShadowsOnly) hidden.Add(r.name);
+                sb.Append($" killerFirstPersonHidden=[{string.Join(",", hidden)}] (empty = killer head drawn across the lens)");
+            }
+            Note(sb.ToString());
+        }
+
+        /// <summary>Viewport centre and extent of a GameObject's visible (non shadow-only, non particle) renderers.</summary>
+        private static void AppendViewport(StringBuilder sb, string tag, Camera cam, GameObject go)
+        {
+            if (go == null) { sb.Append($" {tag}=none"); return; }
+            Bounds b = default;
+            bool any = false;
+            foreach (var r in go.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled || !r.gameObject.activeInHierarchy || r.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
+                if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                if (r.name.IndexOf("LaserDot", StringComparison.OrdinalIgnoreCase) >= 0) continue; // metres away, not the gun
+                if (!any) { b = r.bounds; any = true; }
+                else b.Encapsulate(r.bounds);
+            }
+            if (!any) { sb.Append($" {tag}=no-visible-renderers"); return; }
+            Vector3 c = cam.WorldToViewportPoint(b.center);
+            float x0 = float.MaxValue, x1 = float.MinValue, y0 = float.MaxValue, y1 = float.MinValue;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                Vector3 v = cam.WorldToViewportPoint(corner);
+                if (v.z <= 0f) continue;
+                x0 = Mathf.Min(x0, v.x); x1 = Mathf.Max(x1, v.x); y0 = Mathf.Min(y0, v.y); y1 = Mathf.Max(y1, v.y);
+            }
+            sb.Append($" {tag}VP=({c.x:0.00},{c.y:0.00}) depth={c.z:0.00} ext=[x {x0:0.00}..{x1:0.00}, y {y0:0.00}..{y1:0.00}]");
         }
 
         /// <summary>
@@ -528,7 +763,7 @@ namespace LR2.Characters
             if (root.name == name) return root;
             foreach (Transform c in root)
             {
-                if (c.name.StartsWith("SWAT_Visual")) continue;
+                if (c.name.StartsWith("SWAT_Visual") || !c.gameObject.activeSelf) continue; // hidden duplicates never move
                 var r = FindDeep(c, name);
                 if (r != null) return r;
             }

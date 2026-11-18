@@ -20,7 +20,7 @@ namespace LR2.AI
     }
 
     /// <summary>What the tactical layer decided to do this moment.</summary>
-    public enum BotGoal { Idle, Patrol, Investigate, Hunt, Engage, TakeCover, Retreat, Flank, FollowLeader, HoldPosition, MoveTo }
+    public enum BotGoal { Idle, Patrol, Investigate, Hunt, Engage, TakeCover, Retreat, Flank, FollowLeader, HoldPosition, MoveTo, Resupply }
 
     /// <summary>Output of a brain tick, consumed by the motor/aim layer in BotController.</summary>
     public struct BotIntent
@@ -61,8 +61,13 @@ namespace LR2.AI
         public Vector3 position;
         public float yaw;
         public float health01;
+        public bool hasArmor;
+        public float armor01;
+        public bool armorBroken;
         public float ammo01;
         public int ammoInMagazine;
+        public int reserveAmmo;
+        public bool lowAmmo;
         public bool isReloading;
         public bool recentlyDamaged;
         public float lastDamageTime;
@@ -95,7 +100,9 @@ namespace LR2.AI
         {
             public string goal;
             public float health;
+            public float armor;
             public float ammo;
+            public int reserveAmmo;
             public bool reloading;
             public bool underFire;
             public string target;
@@ -115,7 +122,9 @@ namespace LR2.AI
             {
                 goal = currentGoal.ToString(),
                 health = Mathf.Round(health01 * 100f),
+                armor = Mathf.Round(armor01 * 50f),
                 ammo = Mathf.Round(ammo01 * 100f),
+                reserveAmmo = reserveAmmo,
                 reloading = isReloading,
                 underFire = underFire,
                 target = target != null ? target.DisplayName : "",

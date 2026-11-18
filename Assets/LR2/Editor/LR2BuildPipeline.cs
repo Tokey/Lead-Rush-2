@@ -16,8 +16,14 @@ namespace LR2.EditorTools
         [InitializeOnLoadMethod]
         private static void ScheduleAutoRebuildOnScriptReload()
         {
-            if (!Application.isBatchMode) EnsureMainMenuPlayModeStart();
-            if (Application.isBatchMode) return;
+            var args = Environment.GetCommandLineArgs();
+            bool automatedRun = Application.isBatchMode
+                || Array.IndexOf(args, "-executeMethod") >= 0
+                || Array.IndexOf(args, "-lr2PoseCheck") >= 0
+                || Array.IndexOf(args, "-lr2QaBot") >= 0
+                || Array.IndexOf(args, "-lr2CaptureMedia") >= 0;
+            if (!automatedRun) EnsureMainMenuPlayModeStart();
+            if (automatedRun) return;
             if (File.Exists(StampPath) && File.ReadAllText(StampPath).Trim() == AutoBuildVersion) return;
             EditorApplication.delayCall += RunAutoRebuildIfReady;
         }
@@ -26,7 +32,7 @@ namespace LR2.EditorTools
         public static void EnsureMainMenuPlayModeStart()
         {
             if (Application.isBatchMode || Application.isPlaying) return;
-            if (SessionState.GetBool("LR2Smoke.Active", false) || SessionState.GetBool("LR2GeminiVerify.Active", false)) return;
+            if (SessionState.GetBool("LR2Smoke.Active", false) || SessionState.GetBool("LR2GeminiVerify.Active", false) || SessionState.GetBool("LR2ReadmeMedia.Active", false)) return;
             var menuAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(LR2MapBuilder.MenuScenePath);
             if (menuAsset != null && EditorSceneManager.playModeStartScene != menuAsset)
                 EditorSceneManager.playModeStartScene = menuAsset;
@@ -153,7 +159,7 @@ namespace LR2.EditorTools
         [MenuItem("LR2/Configure Build Icon & Version", priority = 35)]
         public static void ConfigureBuildIdentity()
         {
-            PlayerSettings.bundleVersion = "11.17.26";
+            PlayerSettings.bundleVersion = "11.18.26.2";
             const string iconPath = "Assets/LR2/UI/Icons/LR2_AppIcon.png";
             Directory.CreateDirectory(Path.GetDirectoryName(iconPath));
             if (!File.Exists(iconPath))

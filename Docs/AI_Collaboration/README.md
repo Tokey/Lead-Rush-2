@@ -209,6 +209,32 @@ The same hour also showed the cost of parallelism: three read-only review runs (
 limit with no output, two agents launched Unity within minutes of each other, and two in-flight edits broke compilation right
 before a planned push (caught by the push rule: never push a tree that doesn't compile).
 
+### 9. Four agents, three usage limits, one evidence harness (2026-11-18 04:10 to 09:45)
+
+**Codex** (`gpt-6`) joined at 02:50. Within two hours every other agent hit a wall: Copilot its monthly limit (02:40), Gemini
+an account quota that resets in 157 hours (its existing conversation refused every prompt), and Claude its 5-hour limit
+(04:30 to 09:10, the scheduled ticks queued up). The fallback in the protocol worked: a *new* Antigravity conversation on
+`gemini-4-hydrogen-high` accepted work, and Gemini delivered two reviewed rows within 15 minutes of being prompted.
+
+The developer's top priorities were the killcam and the animations. Instead of reading code, Claude added a killcam stage
+to the pose-check harness: a hostile bot aims down sights and kills the player, and the harness photographs and measures
+eight moments of the replay. The first run found five separate causes the code review had missed (lens 10 cm above the
+eye socket, killer head at the lens, double recoil, the victim sinking through the floor, the dead player's red grade
+leaking into the replay); the second run showed each one gone (`specs/killcam_diag.md`).
+
+The same runs caught two defects in Claude's **own** probes, the "check the check" rule applied to the checker:
+
+> "MK18 mag and charging handle never move" was a false alarm. The probe found the hidden duplicate magazine under an inactive
+> copy of the gun. With inactive parts skipped the magazine moves 0.43 m. (D43)
+
+> The reload A/B switched a setting for its comparison and never switched it back, so every later reload number measured the
+> non-default setting. (D44)
+
+A new metric turned the developer's "the gun jumps at the end of the reload" into numbers (17 degrees in one frame while
+walking), which located the cause in minutes (`specs/reload_diag.md`). The morning also produced a new lock lesson: Gemini
+started a build in its *parallel worker* copy 12 seconds before Claude started a pose check; separate projects, but the
+worker writes into the shared Assets folder, and Claude's process check only looked for the main project.
+
 ## Who did what
 
 | Agent | Model | When | Main contributions |
@@ -228,57 +254,54 @@ Every finished item and every defect goes into two ledgers, [`data/tasks.csv`](d
 needs matplotlib). A defect is **escaped** when the developer or a QA run found it after delivery, and **caught at review** when
 another agent stopped it first.
 
-**Contribution score.** The developer's rule: *tools that find new bugs and suggest meaningful features should score best.* So each
-agent and model gets +3 per defect it finds in another agent's work before the developer sees it, +2 per defect it finds in its own
-work, +3 per adopted suggestion ([`data/suggestions.csv`](data/suggestions.csv)), +1 per pending suggestion, +1 per verified task,
-+0.5 per task ready for review, -2 per escaped defect (confidence-weighted), -1 per pre-push break and -0.5 per own defect caught
-at review.
+**Contribution score.** The developer's rule: *tools that find new bugs and suggest meaningful features should score best.* The raw score gives +3 per defect found in another agent's work before the developer sees it, +2 per defect found in its own work, +3 per adopted suggestion, +1 per pending suggestion, +1 per verified task, +0.5 per task ready for review, -2 per escaped defect (confidence-weighted), -1 per pre-push break and -0.5 per own defect caught at review.
 
-**Endurance-normalized score.** Because models differ drastically in session length and quota availability (for example, `Gemini · gemini-4-hydrogen` ran continuously for ~11.5+ active hours with 0 lockouts while shorter burst agents hit multiple quota stops), [`analysis/analyze.py`](analysis/analyze.py) also reports **`Score / Hr`** and **`Endurance Score = Score + 1.5 * ActiveHrs - 3.0 * QuotaStops`** alongside the raw quality score.
+**Task difficulty.** Research on coding-agent tasks finds that edit spread and repository structure predict difficulty better overall than prompt length; prompt clarity matters more for mid-range tasks. Three independent reviewers retrospectively rated the 99 existing task definitions using scope/integration, uncertainty, and verification burden; the median rubric total sets each band. Reviewers were instructed to ignore implementer/model, outcome, and implementation. Six records were flagged as under-specified by a majority. These ratings estimate requested scope, not actual effort. Small tasks count 0.75x, standard 1x, and hard 1.25x toward verified or ready-for-review task credit; other score terms stay unchanged, and unrated work is neutral at 1x. Raw score remains for comparison. Future tasks should be rated before work starts. See the [B66 rating method](specs/B66_Task_Difficulty.md), [review votes](data/task_difficulty_reviews.csv), and [ESEM 2026 study](https://drops.dagstuhl.net/entities/document/10.4230/LIPIcs.ESEM.2026.3).
+
+**Time-adjusted score.** The chart starts with the difficulty-adjusted contribution score, adds 1.5 points per recorded work hour, and subtracts 3 points per recorded quota stop. Higher is better. The table also preserves the raw contribution score for comparison.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/contribution_score_dark.png">
-  <img alt="Bar chart: contribution score per agent and model" src="figures/contribution_score_light.png">
+  <img alt="Bar chart: difficulty-adjusted contribution score per agent and model; higher is better" src="figures/contribution_score_light.png">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/normalized_score_dark.png">
-  <img alt="Bar chart: runtime and quota-endurance normalized score per agent and model" src="figures/normalized_score_light.png">
+  <img alt="Bar chart: contribution score adjusted for recorded work time and quota stops; higher is better" src="figures/normalized_score_light.png">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/escaped_per_10_tasks_dark.png">
-  <img alt="Bar chart: defects that reached the developer per 10 delivered tasks, by agent and model" src="figures/escaped_per_10_tasks_light.png">
+  <img alt="Bar chart: bugs found after delivery per 10 tasks; lower is better" src="figures/escaped_per_10_tasks_light.png">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/review_catches_per_10_tasks_dark.png">
-  <img alt="Bar chart: defects caught by another agent's review per 10 tasks, by agent and model" src="figures/review_catches_per_10_tasks_light.png">
+  <img alt="Bar chart: bugs caught in peer review per 10 tasks; higher is better" src="figures/review_catches_per_10_tasks_light.png">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/tasks_delivered_dark.png">
-  <img alt="Bar chart: tasks delivered per agent and model" src="figures/tasks_delivered_light.png">
+  <img alt="Bar chart: completed task count per agent and model" src="figures/tasks_delivered_light.png">
 </picture>
 
-| Agent / model | Score | Active Hrs | Quota Stops | Score / Hr | Endurance Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 54.1 | 4.8h | 6 | 11.3 | **43.3** | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
-| Copilot · gpt-5.6-luna | 32.5 | 3.5h | 1 | 9.3 | **34.8** | 35 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
-| Gemini · gemini-4-hydrogen | 5.2 | 11.5h | 0 | 0.5 | **22.4** | 30 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
-| Codex · gpt-6 | 4.0 | 1.0h | 0 | 4.0 | **5.5** | 2 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · claude-opus-5-5-high | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · argon/hydrogen | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
-| Gemini · argon | -3.2 | 1.5h | 1 | -2.1 | **-4.0** | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
+| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Difficulty-rated tasks | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Claude · claude-opus-5-5 | 54.1 | 54.1 | 4.8h | 6 | 11.3 | **43.3** | 21 | 0 | 9.00 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
+| Copilot · gpt-5.6-luna | 32.5 | 32.5 | 3.5h | 1 | 9.3 | **34.8** | 35 | 0 | 21.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
+| Gemini · gemini-4-hydrogen | 5.2 | 5.2 | 11.5h | 0 | 0.5 | **22.4** | 30 | 0 | 12.00 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
+| Codex · gpt-6 | 7.0 | 7.0 | 1.0h | 0 | 7.0 | **8.5** | 8 | 0 | 4.00 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · claude-opus-5-5-high | 3.0 | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · argon/hydrogen | -1.2 | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 0 | 0.00 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
+| Gemini · argon | -3.2 | -3.2 | 1.5h | 1 | -2.1 | **-4.0** | 3 | 0 | 1.00 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
-**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 02:45):
+**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 04:18):
 - **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
   Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
 - **Time at risk differs.** Copilot's work is minutes old and not yet playtested: its 0 escaped defects means "none found yet",
   and its review catches show the defects exist. Older work has had more playtests to reveal problems.
-- **Tasks differ in size and difficulty.** Claude Code built the original game and the hardest animation code; the Antigravity
-  agent's night shift was broad. A task-size weight is a planned improvement.
+- **Historic task ratings are retrospective peer estimates.** Plot counts show tasks with independent scope ratings; all existing ratings come from the task request/spec, not observed effort. The raw score appears beside the adjusted score, and future work should be rated before implementation.
 - **Attribution before the tracker is reconstructed** from timing and prompts, so it carries a confidence weight. From 2026-11-17
   23:25 on, agents log model and cause as they work, which makes later data much more reliable.
 - **Models are named as the tools report them.** "argon" is the developer's name for `gemini-pro-orchestrator-g1-pro` with
@@ -331,6 +354,28 @@ Every recorded task in [data/tasks.csv](data/tasks.csv) now carries an explicit 
 
 **Key takeaway from multi-agent token behavior:** Parallel fan-outs of 8–9 sub-agents quickly exhausted Claude Code's rolling window (`18:13`, `23:14`), whereas **single-stream compaction + Plan/Execute separation** (`Antigravity`) and **targeted file/diff review + R8 gate batching** (`Copilot` / `Codex`) sustained continuous multi-hour throughput when handoffs stayed serialized in `AGENT_COORDINATION.md`.
 
+### Did the protocol changes help?
+
+The board changed three times: v1 (no review), v2 (names by tool, model and cause columns, cross-review; 2026-11-17 23:25) and v3 (check the check, compile gates, clock times, priority lanes, auto-prompting; 2026-11-18 00:05). Each bug is counted in the period when the task that caused it was done.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/protocol_escaped_per_10_tasks_dark.png">
+  <img alt="Bar chart: bugs found after delivery per 10 tasks, by protocol version" src="figures/protocol_escaped_per_10_tasks_light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/protocol_caught_per_10_tasks_dark.png">
+  <img alt="Bar chart: bugs stopped before the developer per 10 tasks, by protocol version" src="figures/protocol_caught_per_10_tasks_light.png">
+</picture>
+
+| Protocol period | Tasks | Bugs after delivery (weighted) | per 10 tasks | Caught before the developer (review + pre-push) | per 10 tasks |
+|---|---|---|---|---|---|
+| v1: before 11-17 23:25 | 23 | 13.8 | 6.0 | 1 | 0.4 |
+| v2: 11-17 23:25 to 11-18 00:05 | 15 | 2.0 | 1.3 | 8 | 5.3 |
+| v3: after 11-18 00:05 | 73 | 0.9 | 0.1 | 17 | 2.3 |
+
+Read with care: later periods have had less playtest time (their after-delivery count will rise as the developer plays), and the task mix differs between periods. Generated by `analysis/analyze.py` into `figures/protocol_periods.md`.
+
 ## What worked, and what didn't
 
 **Worked**
@@ -342,6 +387,9 @@ Every recorded task in [data/tasks.csv](data/tasks.csv) now carries an explicit 
 - **Reviewer is never the implementer.** Review catches so far: an agent wired a fix but not its trigger; a deprecated API in fresh
   code; a reload check that passed while the rifle stood vertical (the check measured the wrong angle).
 - **Evidence over claims.** The QA bot and the pose check turn "looks fixed" into numbers and screenshots.
+- **Photograph the result, not the code.** A harness that kills the player and captures the replay found five killcam causes
+  that two code reviews had missed.
+- **Usage-limit fallbacks.** A fresh conversation on another model (Gemini on Hydrogen-high) kept a quota-blocked agent working.
 
 **Didn't work (yet)**
 - **Identity.** Two different tools running the same model signed as the same agent, twice. Naming by tool fixed it both times.
@@ -350,6 +398,9 @@ Every recorded task in [data/tasks.csv](data/tasks.csv) now carries an explicit 
 - **Status drift and board bloat.** Implementers forgot to update rows, and v1 grew superseded sections until it was hard to read.
 - **Sub-agent fan-outs at the usage limit.** Three times a batch of sub-agents died at the limit with nothing to show.
 - **Pushing mid-edit.** With three agents editing, the tree is often mid-change; the push rule now requires a green build first.
+- **Probes are code too.** Two of the checker's own probes were wrong this morning (a hidden duplicate part, a setting left switched);
+  only looking at the frames exposed them.
+- **Locks with a parallel worker.** A worker copy that shares Assets must count in the lock check.
 
 ## Files
 

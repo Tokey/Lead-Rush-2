@@ -44,6 +44,11 @@ namespace LR2.UI
         public Image damageVignette;
         public Image lowHealthOverlay;
 
+        [Header("Armour (B74; built at runtime above the health bar when left empty)")]
+        public Image armorFill;
+        public TMP_Text armorText;
+        public Color armorColor = new Color(0.62f, 0.84f, 1f, 0.95f);
+
         [Header("Damage direction")]
         public RectTransform damageIndicatorRoot;
         public Image damageIndicatorTemplate;
@@ -147,11 +152,26 @@ namespace LR2.UI
         private HitFeedbackHUD _hitFeedback;
 
         /// <summary>Draws killcam/replay hitmarker &amp; kill skull and plays the rugged hit confirm sound even if HUD is hidden.</summary>
-        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default) =>
-            HitFeedbackHUD.ShowReplayHit(headshot, kill, worldPoint);
+        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default, bool armorHit = false, bool armorBroke = false) =>
+            HitFeedbackHUD.ShowReplayHit(headshot, kill, worldPoint, armorHit, armorBroke);
+
+        private static HUDController _instance;
+        private static Sprite _shieldSprite;
+        private Image _armorBack, _armorIcon;
+        private float _armorFlash, _lastArmor = -1f;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetArmorStatics() { _instance = null; _shieldSprite = null; }
+
+        /// <summary>Shows a short popup line for the local player (ammo-station resupply etc.). No-op without a HUD.</summary>
+        public static void Notify(string text)
+        {
+            if (_instance != null) _instance.AddPopup(text);
+        }
 
         private void OnEnable()
         {
+            _instance = this;
             GameEvents.Hit += OnHit;
             GameEvents.Killed += OnKilled;
             GameEvents.ScoreAwarded += OnScore;
@@ -161,6 +181,7 @@ namespace LR2.UI
 
         private void OnDisable()
         {
+            if (_instance == this) _instance = null;
             GameEvents.Hit -= OnHit;
             GameEvents.Killed -= OnKilled;
             GameEvents.ScoreAwarded -= OnScore;
@@ -335,6 +356,115 @@ namespace LR2.UI
             }
         }
 
+        // ------------------------------------------------------------------ armour (B74)
+        private void UpdateArmor(Health health, bool alive, float dt)
+        {
+            bool show = health != null && health.HasArmor;
+            if (show) EnsureArmorWidgets();
+            if (armorFill == null) return;
+
+            float vis = show && alive ? 1f : 0f;
+            float armor = show ? health.Armor : 0f;
+            if (show && alive && _lastArmor > 0.001f && armor <= 0.001f) _armorFlash = 1f; // plate just broke
+            _lastArmor = show && alive ? armor : -1f;
+            _armorFlash = Mathf.MoveTowards(_armorFlash, 0f, dt * 2.2f);
+
+            float n = show ? health.ArmorNormalized : 0f;
+            armorFill.fillAmount = Mathf.MoveTowards(armorFill.fillAmount, n, dt * 3f);
+            var c = Color.Lerp(armorColor, Color.white, _armorFlash * 0.6f);
+            c.a = armorColor.a * vis;
+            armorFill.color = c;
+            if (_armorBack != null)
+                _armorBack.color = Color.Lerp(new Color(0f, 0f, 0f, 0.45f * vis), new Color(0.85f, 0.12f, 0.08f, 0.75f * vis), _armorFlash);
+
+            var tc = n > 0.001f ? new Color(armorColor.r, armorColor.g, armorColor.b, vis) : new Color(1f, 1f, 1f, 0.35f * vis);
+            tc = Color.Lerp(tc, new Color(1f, 0.25f, 0.18f, vis), _armorFlash);
+            if (armorText != null)
+            {
+                armorText.text = Mathf.CeilToInt(armor).ToString();
+                armorText.color = tc;
+                float shake = _armorFlash * _armorFlash * 4f;
+                armorText.rectTransform.anchoredPosition = new Vector2(82f + Mathf.Sin(Time.unscaledTime * 90f) * shake, 0f);
+            }
+            if (_armorIcon != null) _armorIcon.color = tc;
+        }
+
+        private void EnsureArmorWidgets()
+        {
+            if (armorFill != null || healthFill == null) return;
+            var hr = healthFill.rectTransform;
+            var white = healthFill.sprite;
+
+            // Bar sits 3.5 px above the health bar and stretches with it; a divider marks the two 25-point plates.
+            _armorBack = MakeHudImage("ArmorBack", hr, white, new Color(0f, 0f, 0f, 0.45f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 3.5f), new Vector2(0f, 5f));
+            armorFill = MakeHudImage("ArmorFill", hr, white, armorColor, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 3.5f), new Vector2(0f, 5f));
+            armorFill.type = Image.Type.Filled;
+            armorFill.fillMethod = Image.FillMethod.Horizontal;
+            armorFill.fillAmount = 1f;
+            MakeHudImage("ArmorPlateDivider", hr, white, new Color(0f, 0f, 0f, 0.85f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 3.5f), new Vector2(3f, 5f));
+
+            if (healthText != null)
+            {
+                var ht = healthText.rectTransform;
+                ht.anchoredPosition += new Vector2(0f, 8f); // make room for the armour bar
+                armorText = Instantiate(healthText, ht); // clone first so the copy carries the same font/shadow and no icon
+                armorText.name = "ArmorText";
+                _armorIcon = MakeHudImage("ArmorIcon", ht, ShieldSprite(), armorColor, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(64f, 3f), new Vector2(14f, 17f));
+                var at = armorText.rectTransform;
+                at.anchorMin = at.anchorMax = Vector2.zero;
+                at.pivot = Vector2.zero;
+                at.sizeDelta = new Vector2(80f, 28f);
+                at.anchoredPosition = new Vector2(82f, 0f);
+                armorText.fontSize = healthText.fontSize * 0.62f;
+                armorText.alignment = TextAlignmentOptions.BottomLeft;
+                armorText.text = "50";
+            }
+        }
+
+        private static Image MakeHudImage(string name, Transform parent, Sprite sprite, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.pivot = pivot;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.color = color;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        /// <summary>Procedural plate/shield glyph (flat crown, tapered point, lighter core) so no font glyph is needed.</summary>
+        private static Sprite ShieldSprite()
+        {
+            if (_shieldSprite != null) return _shieldSprite;
+            const int W = 32, H = 38;
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "LR2_ArmorShield" };
+            var px = new Color32[W * H];
+            float aa = 2f / W;
+            for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                float u = (x + 0.5f) / W * 2f - 1f;
+                float v = (y + 0.5f) / H * 2f - 1f;
+                float half = v > 0.05f ? 0.86f : 0.86f * Mathf.Sqrt(Mathf.Clamp01((v + 1f) / 1.05f));
+                float top = 0.9f - 0.08f * u * u;
+                float d = Mathf.Max(Mathf.Abs(u) - half, v - top);
+                float a = Mathf.Clamp01(0.5f - d / aa);
+                float core = Mathf.Clamp01(0.5f - (d + 0.18f) / aa);
+                byte g = (byte)Mathf.RoundToInt(Mathf.Lerp(165f, 255f, core));
+                px[y * W + x] = new Color32(g, g, g, (byte)Mathf.RoundToInt(a * 255f));
+            }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            _shieldSprite = Sprite.Create(tex, new Rect(0f, 0f, W, H), new Vector2(0.5f, 0.5f), 100f);
+            return _shieldSprite;
+        }
+
         private void UpdateHealth(float dt)
         {
             var health = _player != null ? _player.Health : null;
@@ -352,6 +482,8 @@ namespace LR2.UI
                     ? Color.Lerp(Enemy, Color.white, 0.25f + 0.25f * Mathf.Sin(Time.unscaledTime * 7f))
                     : Color.white;
             }
+
+            UpdateArmor(health, alive, dt);
 
             _damageFlash = Mathf.MoveTowards(_damageFlash, 0f, dt * 1.6f);
             float low = alive ? Mathf.Clamp01((0.55f - n) / 0.55f) : 0f;

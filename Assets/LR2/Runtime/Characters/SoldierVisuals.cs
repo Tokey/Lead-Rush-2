@@ -20,12 +20,20 @@ namespace LR2.Characters
         [SerializeField] private Material friendlyUniform;
         [Tooltip("Uniform for the opposing side.")]
         [SerializeField] private Material enemyUniform;
-        [Tooltip("Full face mask (balaclava + goggles look): no visible face on anyone.")]
+        [Tooltip("Full face mask for allied forces (balaclava + skull look).")]
         [SerializeField] private Material faceMask;
+        [Tooltip("Distinct face mask for hostile forces (dark red Marauder visor/balaclava).")]
+        [SerializeField] private Material enemyFaceMask;
         private bool _uniformApplied;
 
         public Material FriendlyMarkerMaterial { get => friendlyMarkerMaterial; set => friendlyMarkerMaterial = value; }
-        public void SetGear(Material friendly, Material enemy, Material mask) { friendlyUniform = friendly; enemyUniform = enemy; faceMask = mask; }
+        public void SetGear(Material friendly, Material enemy, Material mask, Material enemyMask = null)
+        {
+            friendlyUniform = friendly;
+            enemyUniform = enemy;
+            faceMask = mask;
+            if (enemyMask != null) enemyFaceMask = enemyMask;
+        }
 
         private void Awake() => _combatant = GetComponent<Combatant>();
 
@@ -47,6 +55,7 @@ namespace LR2.Characters
         public void ApplyMaterialsNow(bool friendly)
         {
             var uniform = friendly ? friendlyUniform : enemyUniform;
+            var mask = friendly ? faceMask : (enemyFaceMask != null ? enemyFaceMask : faceMask);
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 var mats = r.sharedMaterials;
@@ -55,7 +64,7 @@ namespace LR2.Characters
                 {
                     if (mats[i] == null) continue;
                     string n = mats[i].name.ToLowerInvariant();
-                    if (n.Contains("head") && faceMask != null) { mats[i] = faceMask; changed = true; }
+                    if ((n.Contains("head") || n.Contains("mask")) && mask != null) { mats[i] = mask; changed = true; }
                     else if ((n.Contains("body") || n.Contains("uniform")) && uniform != null) { mats[i] = uniform; changed = true; }
                 }
                 if (changed) r.sharedMaterials = mats;

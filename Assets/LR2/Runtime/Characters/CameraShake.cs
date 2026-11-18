@@ -130,13 +130,25 @@ namespace LR2.Characters
             if (!IsLocal(e.shooter)) return;
             var soldier = FindLocal();
             var gun = soldier != null ? soldier.ActiveFirearm : null;
-            bool pistol = gun != null && gun.Definition != null && gun.Definition.weaponClass == LR2.Weapons.WeaponClass.Pistol;
+            AddTrauma(ShotTrauma(gun != null ? gun.Definition : null, soldier != null && soldier.IsAiming, e.suppressed));
+        }
+
+        /// <summary>Per-shot trauma the live player gets; the killcam calls it for replayed shots so both feel the same.</summary>
+        private float ShotTrauma(LR2.Weapons.WeaponDefinition def, bool aiming, bool suppressed)
+        {
+            bool pistol = def != null && def.weaponClass == LR2.Weapons.WeaponClass.Pistol;
             float t = pistol ? pistolShot : rifleShot;
-            if (gun != null && gun.Definition != null)
-                t *= Mathf.Clamp(gun.Definition.cameraKick.magnitude / 0.14f, 0.6f, 1.8f); // heavier kick = more shake
-            if (soldier != null && soldier.IsAiming) t *= adsShotMultiplier;
-            if (e.suppressed) t *= 0.85f;
-            AddTrauma(t);
+            if (def != null) t *= Mathf.Clamp(def.cameraKick.magnitude / 0.14f, 0.6f, 1.8f); // heavier kick = more shake
+            if (aiming) t *= adsShotMultiplier;
+            if (suppressed) t *= 0.85f;
+            return t;
+        }
+
+        /// <summary>Killcam: the same shot shake as the live player for a replayed shot of <paramref name="def"/>.</summary>
+        public static void ReplayShot(LR2.Weapons.WeaponDefinition def, bool aiming)
+        {
+            if (Instance == null) return;
+            AddTrauma(Instance.ShotTrauma(def, aiming, def != null && def.suppressed));
         }
 
         private void OnHit(HitEvent e)

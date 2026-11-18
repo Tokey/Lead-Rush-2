@@ -885,6 +885,16 @@ namespace LR2.World
             bool tailRollbackOk = LR2Audio.VerifyTailReservationRollback(out int resBefore, out int resAfter);
             Check(tailRollbackOk, "Audio.TailReservationRollback", $"reserved={resBefore} afterCancel={resAfter}");
 
+            // B74b: Verify bot resupply goal is strictly suppressed mid-fight and enabled when disengaged.
+            var bbMidFight = new LR2.AI.BotBlackboard { time = 10f, targetVisible = true, targetLastSeenTime = 10f };
+            var bbEngageGoal = new LR2.AI.BotBlackboard { time = 10f, targetVisible = false, targetLastSeenTime = -999f };
+            var bbDisengaged = new LR2.AI.BotBlackboard { time = 10f, targetVisible = false, targetLastSeenTime = -999f };
+            bool resupplySuppressedMidFight = !LR2.AI.BotController.IsDisengagedForResupply(bbMidFight, new LR2.AI.BotIntent { goal = LR2.AI.BotGoal.Patrol })
+                && !LR2.AI.BotController.IsDisengagedForResupply(bbEngageGoal, new LR2.AI.BotIntent { goal = LR2.AI.BotGoal.Engage });
+            bool resupplyAllowedDisengaged = LR2.AI.BotController.IsDisengagedForResupply(bbDisengaged, new LR2.AI.BotIntent { goal = LR2.AI.BotGoal.Patrol });
+            Check(resupplySuppressedMidFight && resupplyAllowedDisengaged, "BotAI.DisengagedResupplyGate",
+                $"suppressedMidFight={resupplySuppressedMidFight} allowedDisengaged={resupplyAllowedDisengaged}");
+
             // B57 / R18: Known-bad & known-good contract fixtures.
             foreach (string line in LR2QAExtraChecks.CheckB57KnownBadFixtures())
                 CheckExtra(line);

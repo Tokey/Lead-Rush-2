@@ -370,9 +370,9 @@ namespace LR2.UI
         private void RefreshModeButtons()
         {
             SetButtonLabel(duelButton, _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
-            SetButtonLabel(ctfButton, _ctfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.CaptureTheFlag) ? "  [CUSTOM]" : ""));
+            SetButtonLabel(ctfButton, _ctfBaseLabel);
             SetButtonLabel(ffaButton, _ffaBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAll) ? "  [CUSTOM]" : ""));
-            SetButtonLabel(tdmButton, _tdmBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.TeamDeathmatch) ? "  [CUSTOM]" : ""));
+            SetButtonLabel(tdmButton, _tdmBaseLabel);
             RefreshPreviewStatus();
         }
 
@@ -386,14 +386,30 @@ namespace LR2.UI
             {
                 GameModeType.CaptureTheFlag => LR2Settings.BotTeamMode == 1 ? "CTF · FFA"
                     : (LR2Settings.BotTeamMode == 2 ? "CTF · PACK"
-                    : (LR2Settings.BotTeamMode == 3 ? "CTF · CO-OP" : "CTF · SQUADS")),
+                    : (LR2Settings.BotTeamMode == 3 ? "CTF · CO-OP"
+                    : (LR2Settings.BotTeamMode == 4 ? "CTF · HALF & HALF" : "CTF · SQUADS"))),
                 GameModeType.FreeForAll => "FFA",
                 GameModeType.TeamDeathmatch => "TDM",
                 _ => "1V1 DM",
             };
-            string bots = _editingMode == GameModeType.TeamDeathmatch || (_editingMode == GameModeType.CaptureTheFlag && LR2Settings.BotTeamMode == 0)
-                ? $"{Mathf.Max(1, cfg.friendlyBots) + 1}V{cfg.enemyBots}"
-                : _editingMode == GameModeType.Duel ? "1V1" : $"1V{cfg.enemyBots}";
+            string bots;
+            if (_editingMode == GameModeType.Duel)
+            {
+                bots = "1V1";
+            }
+            else if (LR2Settings.BotTeamMode == (int)BotTeamAlignment.HalfAndHalf)
+            {
+                MatchSettings.SplitHalfAndHalf(cfg.enemyBots, out int ha, out int he);
+                bots = $"{ha + 1}V{he}";
+            }
+            else if (_editingMode == GameModeType.TeamDeathmatch || (_editingMode == GameModeType.CaptureTheFlag && LR2Settings.BotTeamMode == 0))
+            {
+                bots = $"{Mathf.Max(1, cfg.friendlyBots) + 1}V{cfg.enemyBots}";
+            }
+            else
+            {
+                bots = $"1V{cfg.enemyBots}";
+            }
             string drones = cfg.spawnOrbs ? $"DRONES ON ({cfg.maxOrbs})" : "DRONES OFF";
             mapPreviewStatusText.text = $"{modeLabel} RULES  ·  {bots}  ·  FIRST TO {cfg.scoreLimit}  ·  {mins} MIN  ·  {cfg.respawnDelay:0.0}S RESPAWN  ·  {drones}";
         }
@@ -481,7 +497,7 @@ namespace LR2.UI
             {
                 deployModeDescText.text = mode switch
                 {
-                    GameModeType.CaptureTheFlag => "Unified rotating strategic flags with Battlefield-6 proximity capture speed (2.25x inside 2.6m core; 0.28x edge) & configurable bot teams (Squads / FFA / Pack / Co-op).",
+                    GameModeType.CaptureTheFlag => "Unified rotating strategic flags with proximity capture boost & team modes (Half & Half 50/50, Squads, FFA, Pack, Co-op).",
                     GameModeType.FreeForAll => "Every operator for themselves. Outshoot hostile fighters across dynamic weather and destructible cover.",
                     GameModeType.TeamDeathmatch => "Squad coordination against enemy fireteams. Support your teammate or push objective lanes.",
                     _ => "Head-to-head 1v1 tactical duel against a responsive human-input enemy bot.",
@@ -519,7 +535,22 @@ namespace LR2.UI
             if (deployScoreValueText != null) deployScoreValueText.text = $"{_editingRules.scoreLimit} PTS";
             bool canEditBots = _deployMode != GameModeType.Duel;
             if (deployBotsSlider != null) deployBotsSlider.interactable = canEditBots;
-            if (deployBotsValueText != null) deployBotsValueText.text = canEditBots ? $"{_editingRules.enemyBots} BOTS" : "1 (1V1)";
+            if (deployBotsValueText != null)
+            {
+                if (!canEditBots)
+                {
+                    deployBotsValueText.text = "1 (1V1)";
+                }
+                else if (LR2Settings.BotTeamMode == (int)BotTeamAlignment.HalfAndHalf)
+                {
+                    MatchSettings.SplitHalfAndHalf(_editingRules.enemyBots, out int halfAllies, out int halfEnemies);
+                    deployBotsValueText.text = $"{halfAllies} ALLY / {halfEnemies} ENEMY";
+                }
+                else
+                {
+                    deployBotsValueText.text = $"{_editingRules.enemyBots} BOTS";
+                }
+            }
         }
 
         private void OpenModeRules(GameModeType mode)

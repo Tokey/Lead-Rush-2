@@ -677,8 +677,11 @@ namespace LR2.Characters
             }
         }
 
+        /// <summary>First-person body pull-back behind the lens (m); the killcam replays the same alignment.</summary>
+        public float FirstPersonBodyBack => firstPersonBodyBack;
+
         /// <summary>Analytic two-bone IK (same maths as Animation Rigging's TwoBoneIK, keeps the current bend plane).</summary>
-        private static void Solve(Transform a, Transform b, Transform c, Vector3 target, Quaternion targetRot, float weight)
+        internal static void Solve(Transform a, Transform b, Transform c, Vector3 target, Quaternion targetRot, float weight)
         {
             if (a == null || b == null || c == null) return;
             Vector3 aPos = a.position, bPos = b.position, cPos = c.position;

@@ -6,13 +6,18 @@ using UnityEngine.InputSystem;
 
 namespace LR2.Game
 {
-    /// <summary>Mid-map strategic resupply station: walk-over or press [F] nearby to refill reserve ammo, tracked on minimap (B39).</summary>
+    /// <summary>
+    /// Mid-map strategic resupply station: walk-over or press [F] nearby to refill reserve ammo and armour plates,
+    /// tracked on minimap (B39 ammo, B74 armour). One shared cooldown per station, so holding it is worth a fight.
+    /// </summary>
     [RequireComponent(typeof(Collider))]
     public class AmmoCrate : MonoBehaviour
     {
         public static readonly List<AmmoCrate> All = new List<AmmoCrate>(8);
 
         [SerializeField] private int rounds = 120;
+        [Tooltip("Armour restored per use (soldiers carry 50 max).")]
+        [SerializeField] private float armor = 50f;
         [SerializeField] private float cooldown = 20f;
         [SerializeField] private Light indicator;
         [SerializeField] private Renderer indicatorRenderer;
@@ -61,10 +66,24 @@ namespace LR2.Game
 
         private void TryResupply(SoldierController soldier)
         {
-            if (soldier.AddReserveAmmo(rounds) <= 0) return;
+            int ammo = soldier.AddReserveAmmo(rounds);
+            float plates = soldier.Health != null ? soldier.Health.AddArmor(armor) : 0f;
+            if (ammo <= 0 && plates <= 0f) return;
             _readyAt = Time.time + cooldown;
             var s = LR2CommonSounds.Instance;
-            if (s != null) LR2Audio.PlayAt(s.ammoPickup, transform.position);
+            if (s != null)
+            {
+                LR2Audio.PlayAt(s.ammoPickup, transform.position);
+                if (plates > 0f && s.hitmarkerArmor.IsValid) LR2Audio.PlayAt(s.hitmarkerArmor, transform.position, 0.7f);
+            }
+
+            var local = Combat.Combatant.FindLocalPlayer();
+            if (local != null && local.gameObject == soldier.gameObject)
+            {
+                string msg = ammo > 0 && plates > 0f ? $"+{ammo} AMMO   +{Mathf.CeilToInt(plates)} ARMOR"
+                           : plates > 0f ? $"+{Mathf.CeilToInt(plates)} ARMOR" : $"+{ammo} AMMO";
+                UI.HUDController.Notify(msg);
+            }
         }
     }
 }

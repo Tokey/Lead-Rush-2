@@ -1,6 +1,7 @@
 using LR2.Characters;
 using LR2.Combat;
 using LR2.Core;
+using LR2.Game;
 using LR2.Weapons;
 using UnityEngine;
 using UnityEngine.AI;
@@ -80,6 +81,16 @@ namespace LR2.AI
         private float _burstPauseUntil;
         private LR2Firearm _subscribedGun;
 
+        // resupply (B74b: disengaged-only AmmoCrate seeking on broken armour or low reserve ammo)
+        private Health _subscribedHealth;
+        private bool _armorBroken;
+        private AmmoCrate _resupplyCrate;
+        private Vector3 _resupplyDestination;
+        private float _nextCrateScanAt;
+
+        public bool NeedsResupply => Blackboard.armorBroken || Blackboard.lowAmmo;
+        public AmmoCrate TargetResupplyCrate => _resupplyCrate;
+
         // movement
         private Vector3 _lastDestination;
         private Vector3 _lastSteer;
@@ -138,6 +149,7 @@ namespace LR2.AI
             Perception ??= new BotPerception(this);
             Brain ??= new TacticalBotBrain();
             Brain.Initialize(this);
+            EnsureHealthSubscription();
             if (Soldier != null) Soldier.Respawned += OnRespawned;
         }
 
@@ -148,6 +160,13 @@ namespace LR2.AI
             Perception = null;
             if (_subscribedGun != null) _subscribedGun.Fired -= OnGunFired;
             _subscribedGun = null;
+            if (_subscribedHealth != null)
+            {
+                _subscribedHealth.ArmorBroken -= OnArmorBroken;
+                _subscribedHealth.ArmorRestored -= OnArmorRestored;
+            }
+            _subscribedHealth = null;
+            _resupplyCrate = null;
         }
 
         private void OnRespawned(SoldierController s)
@@ -155,6 +174,10 @@ namespace LR2.AI
             Perception?.Clear();
             Brain?.Reset();
             _intent = default;
+            _armorBroken = s != null && s.Health != null && s.Health.HasArmor && s.Health.Armor <= 0.001f;
+            _resupplyCrate = null;
+            _resupplyDestination = Vector3.zero;
+            _nextCrateScanAt = 0f;
             _lastTarget = null;
             _perceivedTargetVel = Vector3.zero;
             _wasVisible = false;
@@ -210,13 +233,25 @@ namespace LR2.AI
             float now = Time.time;
             RefreshAdaptiveProfile(now);
             EnsureGunSubscription();
+            EnsureHealthSubscription();
             Perception.Tick(dt);
             UpdateBlackboard(now);
             PollDirective(now);
 
+            // Abort resupply immediately on the same frame if combat resumes or the targeted crate goes on cooldown.
+            if (_intent.goal == BotGoal.Resupply &&
+                (Blackboard.targetVisible || Blackboard.underFire || Blackboard.recentlyDamaged ||
+                 _resupplyCrate == null || !_resupplyCrate.isActiveAndEnabled || !_resupplyCrate.IsReady ||
+                 (!Blackboard.armorBroken && !Blackboard.lowAmmo)))
+            {
+                _resupplyCrate = null;
+                _nextThink = 0f;
+            }
+
             if (now >= _nextThink)
             {
                 _intent = Brain.Think(Blackboard, now - _lastThink);
+                TryApplyDisengagedResupplyGoal(ref _intent, now);
                 _lastThink = now;
                 _nextThink = now + thinkInterval * Random.Range(0.85f, 1.15f);
             }
@@ -245,8 +280,18 @@ namespace LR2.AI
             bb.yaw = Soldier.Yaw;
             bb.difficulty = ActiveDifficulty;
             bb.health01 = health != null ? health.Normalized : 1f;
+            bool hasArmor = health != null && health.HasArmor;
+            if (hasArmor && health.Armor > 0.001f) _armorBroken = false;
+            else if (hasArmor && health.Armor <= 0.001f) _armorBroken = true;
+            bb.hasArmor = hasArmor;
+            bb.armor01 = health != null ? health.ArmorNormalized : 0f;
+            bb.armorBroken = hasArmor && _armorBroken;
             bb.ammoInMagazine = gun != null ? gun.AmmoInMagazine : 0;
             bb.ammo01 = gun != null ? (float)gun.AmmoInMagazine / Mathf.Max(1, gun.MagazineSize) : 0f;
+            bb.reserveAmmo = gun != null ? gun.ReserveAmmo : 0;
+            int lowAmmoCutoff = gun != null ? Mathf.Max(12, gun.MagazineSize) : 0;
+            int maxCarry = gun != null && gun.Definition != null ? gun.MagazineSize + gun.Definition.startingReserve : 0;
+            bb.lowAmmo = gun != null && gun.ReserveAmmo <= lowAmmoCutoff && (gun.AmmoInMagazine + gun.ReserveAmmo < maxCarry);
             bb.isReloading = gun != null && gun.IsReloading;
             bb.effectiveRange = gun != null && gun.Definition != null ? gun.Definition.effectiveRange : 30f;
             bb.lastDamageTime = health != null ? health.LastDamageTime : -999f;
@@ -687,6 +732,129 @@ namespace LR2.AI
             if (_subscribedGun != null) _subscribedGun.Fired -= OnGunFired;
             _subscribedGun = gun;
             if (gun != null) gun.Fired += OnGunFired;
+        }
+
+        private void EnsureHealthSubscription()
+        {
+            var health = Soldier != null ? Soldier.Health : null;
+            if (health == _subscribedHealth) return;
+            if (_subscribedHealth != null)
+            {
+                _subscribedHealth.ArmorBroken -= OnArmorBroken;
+                _subscribedHealth.ArmorRestored -= OnArmorRestored;
+            }
+            _subscribedHealth = health;
+            if (health != null)
+            {
+                health.ArmorBroken += OnArmorBroken;
+                health.ArmorRestored += OnArmorRestored;
+                _armorBroken = health.HasArmor && health.Armor <= 0.001f;
+            }
+            else
+            {
+                _armorBroken = false;
+            }
+        }
+
+        private void OnArmorBroken(DamageInfo _) => _armorBroken = true;
+
+        private void OnArmorRestored(float _)
+        {
+            if (_subscribedHealth != null && _subscribedHealth.Armor > 0.001f)
+                _armorBroken = false;
+        }
+
+        /// <summary>True only when the bot is completely out of combat and not handling an urgent objective.</summary>
+        public static bool IsDisengagedForResupply(BotBlackboard bb, BotIntent brainIntent, Combatant self = null)
+        {
+            if (bb == null) return false;
+            if (bb.targetVisible || bb.underFire || bb.recentlyDamaged) return false;
+            if (bb.target != null && bb.TimeSinceSeen <= 2.5f) return false;
+            if (bb.hasDirective && bb.directive.order != BotOrder.None && bb.directive.order != BotOrder.FreeRoam) return false;
+            switch (brainIntent.goal)
+            {
+                case BotGoal.Idle:
+                case BotGoal.Patrol:
+                case BotGoal.FollowLeader:
+                    return true;
+                case BotGoal.MoveTo:
+                    var flag = FlagZoneController.Instance;
+                    if (flag != null && (flag.State == FlagZoneController.ZoneState.Contested ||
+                        (self != null && flag.IsHostileCapturingOrContesting(self, out float urgency) && urgency >= 0.35f)))
+                        return false;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void TryApplyDisengagedResupplyGoal(ref BotIntent intent, float now)
+        {
+            var bb = Blackboard;
+            if ((!bb.armorBroken && !bb.lowAmmo) || !IsDisengagedForResupply(bb, intent, Combatant))
+            {
+                _resupplyCrate = null;
+                return;
+            }
+
+            if (_resupplyCrate != null && (!_resupplyCrate.isActiveAndEnabled || !_resupplyCrate.IsReady))
+                _resupplyCrate = null;
+
+            if (_resupplyCrate == null && now >= _nextCrateScanAt)
+            {
+                _nextCrateScanAt = now + 0.8f;
+                if (!TryPickReadyAmmoCrate(out _resupplyCrate, out _resupplyDestination))
+                    return;
+            }
+
+            if (_resupplyCrate == null) return;
+
+            intent.goal = BotGoal.Resupply;
+            intent.hasDestination = true;
+            intent.destination = _resupplyDestination;
+            intent.allowSprint = Vector3.Distance(bb.position, _resupplyDestination) > 6f;
+            intent.crouch = false;
+            intent.allowFire = true;
+            intent.target = null;
+        }
+
+        private bool TryPickReadyAmmoCrate(out AmmoCrate chosen, out Vector3 destination)
+        {
+            chosen = null;
+            destination = Vector3.zero;
+            float bestDist = 85f;
+            Vector3 myPos = transform.position;
+
+            for (int i = 0; i < AmmoCrate.All.Count; i++)
+            {
+                var crate = AmmoCrate.All[i];
+                if (crate == null || !crate.isActiveAndEnabled || !crate.IsReady) continue;
+
+                Vector3 cratePos = crate.transform.position;
+                float dist = Vector3.Distance(myPos, cratePos);
+                if (dist > bestDist) continue;
+
+                Vector3 sampled = cratePos;
+                if (NavMesh.SamplePosition(cratePos, out var centerHit, 0.85f, NavMesh.AllAreas))
+                {
+                    sampled = centerHit.position;
+                }
+                else
+                {
+                    Vector3 toBot = myPos - cratePos;
+                    toBot.y = 0f;
+                    Vector3 side = toBot.sqrMagnitude > 0.01f ? toBot.normalized * 0.6f : Vector3.forward * 0.6f;
+                    if (!NavMesh.SamplePosition(cratePos + side, out var sideHit, 1.0f, NavMesh.AllAreas))
+                        continue;
+                    sampled = sideHit.position;
+                }
+
+                bestDist = dist;
+                chosen = crate;
+                destination = sampled;
+            }
+
+            return chosen != null;
         }
 
         private void OnGunFired()

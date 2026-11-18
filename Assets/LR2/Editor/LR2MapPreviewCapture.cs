@@ -869,4 +869,301 @@ namespace LR2.EditorTools
             }
         }
     }
+
+    /// <summary>
+    /// Captures fresh 16:9 README hero/gallery screenshots (Main Menu Hero, Half &amp; Half CTF Deploy screen,
+    /// MK18 iron-sight ADS, barrel overheat red glow + smoke, player green vs enemy red lasers/tracers/uniforms,
+    /// plus sequential combat frames for Docs/Media/gameplay_combat.gif).
+    /// </summary>
+    [InitializeOnLoad]
+    public static class LR2ReadmeMediaRunner
+    {
+        private const string KeyActive = "LR2ReadmeMedia.Active";
+        private static string MediaDir
+        {
+            get
+            {
+                var args = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i < args.Length - 1; i++)
+                    if (args[i] == "-lr2MediaDir" && !string.IsNullOrWhiteSpace(args[i + 1])) return args[i + 1];
+                return "Docs/Media";
+            }
+        }
+        private static string GifDir
+        {
+            get
+            {
+                var args = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i < args.Length - 1; i++)
+                    if (args[i] == "-lr2GifDir" && !string.IsNullOrWhiteSpace(args[i + 1])) return args[i + 1];
+                return "Temp/GifFrames";
+            }
+        }
+        private static int _savedBotTeam = -1;
+        private static int _savedWeapon = -1;
+        private static int _savedMap = -1;
+        private static float _savedBodycam = -1f;
+
+        static LR2ReadmeMediaRunner()
+        {
+            if (!SessionState.GetBool(KeyActive, false)) return;
+            EnsureProbe();
+        }
+
+        [MenuItem("LR2/Media/Capture README Gallery", priority = 223)]
+        public static void CaptureReadmeMediaInteractive() => Begin(autoExit: false);
+
+        public static void CaptureReadmeMediaBatch() => Begin(autoExit: true);
+
+        private static void Begin(bool autoExit)
+        {
+            if (EditorApplication.isPlaying) return;
+            AssetDatabase.DisallowAutoRefresh();
+            Directory.CreateDirectory(MediaDir);
+            Directory.CreateDirectory(GifDir);
+            foreach (string old in Directory.GetFiles(GifDir, "*.png")) File.Delete(old);
+
+            _savedBotTeam = LR2Settings.BotTeamMode;
+            _savedWeapon = LR2Session.SelectedPrimaryWeapon;
+            _savedMap = LR2Session.SelectedMapIndex;
+            _savedBodycam = LR2Settings.BodycamMotion;
+
+            SessionState.SetBool(KeyActive, true);
+            SessionState.SetBool("LR2ReadmeMedia.AutoExit", autoExit);
+            EditorSceneManager.playModeStartScene = null;
+            EditorSceneManager.OpenScene("Assets/LR2/Scenes/LR2_MainMenu.unity", OpenSceneMode.Single);
+            EditorApplication.ExecuteMenuItem("Window/General/Game");
+            EditorApplication.isPlaying = true;
+            EditorApplication.delayCall += EnsureProbe;
+        }
+
+        private static void EnsureProbe()
+        {
+            if (!EditorApplication.isPlaying || Object.FindAnyObjectByType<ReadmeMediaProbe>() != null) return;
+            var go = new GameObject("[LR2 ReadmeMediaProbe]");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<ReadmeMediaProbe>();
+        }
+
+        private static void Finish(int errors)
+        {
+            if (_savedBotTeam >= 0) LR2Settings.BotTeamMode = _savedBotTeam;
+            if (_savedWeapon >= 0) LR2Session.SelectedPrimaryWeapon = _savedWeapon;
+            if (_savedMap >= 0) LR2Session.SelectedMapIndex = _savedMap;
+            if (_savedBodycam >= 0f) LR2Settings.BodycamMotion = _savedBodycam;
+            LR2Session.ResetModeRules(GameModeType.CaptureTheFlag);
+            LR2Settings.Save();
+
+            SessionState.SetBool(KeyActive, false);
+            bool autoExit = SessionState.GetBool("LR2ReadmeMedia.AutoExit", false)
+                || System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2AutoExit") >= 0;
+            if (autoExit)
+            {
+                if (File.Exists(LR2MapBuilder.MenuScenePath))
+                {
+                    string setupPath = Path.Combine(Directory.GetCurrentDirectory(), "Library", "LastSceneManagerSetup.txt");
+                    File.WriteAllText(setupPath,
+                        "sceneSetups:\n- path: " + LR2MapBuilder.MenuScenePath.Replace('\\', '/') + "\n  isLoaded: 1\n  isActive: 1\n  isSubScene: 0\n");
+                }
+                EditorApplication.playModeStateChanged += state =>
+                {
+                    if (state == PlayModeStateChange.EnteredEditMode)
+                        EditorApplication.Exit(errors > 0 ? 1 : 0);
+                };
+            }
+            EditorApplication.isPlaying = false;
+        }
+
+        private class ReadmeMediaProbe : MonoBehaviour, ISoldierInputSource
+        {
+            private SoldierInput _cmd = SoldierInput.Empty;
+            private int _errors;
+
+            public void GetInput(SoldierController soldier, ref SoldierInput input)
+            {
+                input = _cmd;
+                _cmd.reload = false;
+                _cmd.prone = false;
+                _cmd.crouch = false;
+                _cmd.jump = false;
+                _cmd.weaponSlot = -1;
+            }
+
+            private void OnLog(string msg, string stack, LogType type)
+            {
+                if ((type == LogType.Error || type == LogType.Exception) && !msg.Contains("PlasticSCM"))
+                    _errors++;
+            }
+
+            private System.Collections.IEnumerator Start()
+            {
+                Application.logMessageReceived += OnLog;
+                try
+                {
+                    // 1. Main Menu Hero screenshot
+                    float t0 = Time.realtimeSinceStartup;
+                    MainMenuController mm = null;
+                    while (mm == null && Time.realtimeSinceStartup - t0 < 8f)
+                    {
+                        mm = Object.FindAnyObjectByType<MainMenuController>();
+                        yield return null;
+                    }
+                    if (mm != null)
+                    {
+                        LR2Session.SelectedPrimaryWeapon = 0; // MK18
+                        mm.SelectMap(0); // Saltworks
+                        LR2Settings.LaserEnabled = true;
+                        LR2Settings.BodycamMotion = 0f;
+                        yield return new WaitForSecondsRealtime(1.1f);
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "menu_main.png"));
+
+                        // 2. Capture The Flag Deploy Staging with Half & Half (3 Ally / 3 Enemy)
+                        if (mm.ctfButton != null) mm.ctfButton.onClick.Invoke();
+                        yield return new WaitForSecondsRealtime(0.45f);
+                        for (int step = 0; step < LR2Session.BotTeamModeLabels.Length && LR2Settings.BotTeamMode != (int)BotTeamAlignment.HalfAndHalf; step++)
+                        {
+                            if (mm.deployBotTeamNextButton != null) mm.deployBotTeamNextButton.onClick.Invoke();
+                            yield return null;
+                        }
+                        if (mm.deployBotsSlider != null) mm.deployBotsSlider.value = 6f;
+                        yield return new WaitForSecondsRealtime(0.35f);
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "menu_deploy.png"));
+
+                        // 3. Deploy directly into Saltworks in CTF Half & Half
+                        if (mm.deployStartButton != null) mm.deployStartButton.onClick.Invoke();
+                    }
+
+                    // Wait for Saltworks active play
+                    float waitPlay = Time.realtimeSinceStartup;
+                    while (Time.realtimeSinceStartup - waitPlay < 20f)
+                    {
+                        var match = MatchManager.Instance;
+                        if (SceneManager.GetActiveScene().name == "LR2_Saltworks"
+                            && match != null && match.State == MatchState.Playing
+                            && Combatant.FindLocalPlayer() != null)
+                            break;
+                        yield return null;
+                    }
+                    yield return new WaitForSecondsRealtime(1.2f);
+
+                    var local = Combatant.FindLocalPlayer();
+                    var soldier = local != null ? local.GetComponent<SoldierController>() : null;
+                    if (soldier == null)
+                    {
+                        Debug.LogError("[LR2 ReadmeMedia] Failed to enter Saltworks play state.");
+                        yield break;
+                    }
+
+                    var pis = soldier.GetComponent<PlayerInputSource>();
+                    if (pis != null) pis.enabled = false;
+                    soldier.InputSource = this;
+
+                    // Pick open lane on Saltworks and stage an Allied SWAT (green laser) + Hostile OpFor (red laser, desert/crimson uniform)
+                    Combatant ally = null, enemy = null;
+                    foreach (var c in Combatant.All)
+                    {
+                        if (c == null || c == local) continue;
+                        if (!TeamUtil.AreHostile(local, c) && ally == null) ally = c;
+                        else if (TeamUtil.AreHostile(local, c) && enemy == null) enemy = c;
+                    }
+
+                    Vector3 origin = GroundAt(new Vector3(0f, 3f, -5.5f));
+                    Vector3 aimTarget = GroundAt(new Vector3(1.2f, 3f, 5.5f)) + Vector3.up * 1.38f;
+                    soldier.Movement.Teleport(origin);
+                    Vector3 flat = aimTarget - (origin + Vector3.up * 1.55f);
+                    float yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
+                    _cmd = new SoldierInput { absoluteLook = true, aimYaw = yaw, aimPitch = -1.5f };
+                    yield return null;
+
+                    if (ally != null)
+                    {
+                        var ac = ally.GetComponent<SoldierController>();
+                        Vector3 ap = GroundAt(new Vector3(-2.3f, 3f, 1.2f));
+                        ac.Movement.Teleport(ap);
+                        ac.transform.LookAt(new Vector3(aimTarget.x, ap.y, aimTarget.z));
+                        ally.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(true);
+                        var ab = ally.GetComponent<LR2.AI.BotController>();
+                        if (ab != null) ab.enabled = false;
+                    }
+                    if (enemy != null)
+                    {
+                        var ec = enemy.GetComponent<SoldierController>();
+                        Vector3 ep = GroundAt(new Vector3(1.9f, 3f, 4.8f));
+                        ec.Movement.Teleport(ep);
+                        ec.transform.LookAt(new Vector3(origin.x, ep.y, origin.z));
+                        enemy.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(false);
+                        var eb = enemy.GetComponent<LR2.AI.BotController>();
+                        if (eb != null) eb.enabled = false;
+                    }
+
+                    yield return new WaitForSecondsRealtime(0.8f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "lasers_green_vs_red.png"));
+
+                    // ADS iron sight shot
+                    _cmd.aim = true;
+                    _cmd.aimYaw = yaw + 1.2f;
+                    yield return new WaitForSecondsRealtime(0.45f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "mk18_ironsight_ads.png"));
+
+                    // Sustained fire to build barrel red glow + rising barrel heat smoke + green tracers
+                    _cmd.aim = false;
+                    _cmd.fire = true;
+                    for (int shotFrame = 0; shotFrame < 50; shotFrame++)
+                    {
+                        if (soldier.ActiveFirearm != null && soldier.ActiveFirearm.AmmoInMagazine < 8)
+                            soldier.ActiveFirearm.RefillAmmo();
+                        yield return new WaitForSecondsRealtime(0.045f);
+                    }
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "mk18_overheat_smoke.png"));
+
+                    // Dynamic combat shot + sequential GIF frames (firing, overheat smoke, green vs red tracers)
+                    _cmd.aim = true;
+                    if (enemy != null)
+                    {
+                        var eb = enemy.GetComponent<LR2.AI.BotController>();
+                        if (eb != null) eb.enabled = true;
+                    }
+                    yield return new WaitForSecondsRealtime(0.15f);
+                    yield return SaveScreenPng(Path.Combine(MediaDir, "gameplay_saltworks.png"));
+
+                    for (int gf = 0; gf < 24; gf++)
+                    {
+                        _cmd.aim = gf >= 8 && gf < 18;
+                        _cmd.fire = gf < 18;
+                        _cmd.aimYaw = yaw + Mathf.Sin(gf * 0.28f) * 4.5f;
+                        if (soldier.ActiveFirearm != null && soldier.ActiveFirearm.AmmoInMagazine < 6)
+                            soldier.ActiveFirearm.RefillAmmo();
+                        yield return new WaitForSecondsRealtime(0.055f);
+                        yield return SaveScreenPng(Path.Combine(GifDir, $"frame_{gf:00}.png"));
+                    }
+                    _cmd.fire = false;
+                    _cmd.aim = false;
+                }
+                finally
+                {
+                    Application.logMessageReceived -= OnLog;
+                    Finish(_errors);
+                    Destroy(gameObject);
+                }
+            }
+
+            private static Vector3 GroundAt(Vector3 probe)
+            {
+                if (Physics.Raycast(probe + Vector3.up * 6f, Vector3.down, out var hit, 14f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                    return hit.point + Vector3.up * 0.05f;
+                return probe;
+            }
+
+            private static System.Collections.IEnumerator SaveScreenPng(string path)
+            {
+                yield return new WaitForEndOfFrame();
+                Texture2D tex = ScreenCapture.CaptureScreenshotAsTexture();
+                if (tex != null)
+                {
+                    File.WriteAllBytes(path, tex.EncodeToPNG());
+                    Object.Destroy(tex);
+                }
+            }
+        }
+    }
 }

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using KINEMATION.FPSAnimationFramework.Runtime.Camera;
+using KINEMATION.Shared.KAnimationCore.Runtime.Core;
 using LR2.Audio;
 using LR2.Characters;
 using LR2.Combat;
@@ -15,9 +17,11 @@ using UnityEngine.UI;
 namespace LR2.World
 {
     /// <summary>
-    /// CoD-style killcam: records a rolling 5s trajectory buffer for every soldier at 30 Hz.
-    /// When the local player is killed, after a brief death pause it cuts back 2.0s before the fatal shot
-    /// and replays the killer's recorded aim, movement, gunshots and tracers up to the kill moment.
+    /// CoD-style killcam: records every soldier's full visual pose, gun pose, driver eye socket and aim at 60 Hz (and the
+    /// victim's ragdoll for 1.6 s after death). When the local player is killed it cuts back 2.0 s before the fatal shot
+    /// and replays the killer through its own eyes exactly as the live first-person player sees itself (B14.1): lens on the
+    /// driver eye socket, first-person head hidden, body aligned to the lens with the hands re-solved onto the gun, the real
+    /// recorded recoil plus the live camera shake, the live ADS FOV, then the victim's real ragdoll death and hitmarkers.
     /// </summary>
     [DefaultExecutionOrder(300)]
     public class KillcamDirector : MonoBehaviour
@@ -27,7 +31,7 @@ namespace LR2.World
 
         [SerializeField] private bool killcamEnabled = true;
         [Tooltip("Seconds of death cam before cutting to the killcam replay.")]
-        [SerializeField, Min(0f)] private float startDelay = 0.65f;
+        [SerializeField, Min(0f)] private float startDelay = 1.0f;
         [SerializeField, Min(0.5f)] private float duration = 3.2f;
         [SerializeField, Min(0.5f)] private float preKillWindow = 2.0f;
         [SerializeField, Min(0f)] private float postKillWindow = 0.95f;
@@ -35,6 +39,17 @@ namespace LR2.World
 
         public float PreKillWindow => preKillWindow;
         public float PostKillWindow => postKillWindow;
+        public float Duration => duration;
+
+        // ---- read-only surface for the pose-check harness (B14.1 evidence: frames + numbers per replay moment)
+        public float DebugSampleTime { get; private set; }
+        public float DebugKillTime => _killTime;
+        public bool DebugPuppets => _puppets;
+        public int DebugReplayShots => _replayShots.Count;
+        public int DebugReplayHits => _replayHits.Count;
+        public GameObject DebugKillerPuppet => _killerPuppet;
+        public GameObject DebugKillerGunPuppet => _killerGunPuppet;
+        public GameObject DebugVictimPuppet => _victimPuppet;
 
         private struct Snapshot
         {
@@ -48,6 +63,7 @@ namespace LR2.World
             public float yaw;
             public float aimBlend;
             public bool localPlayer;
+            public Vector3 visEyePos; // the SWAT model's own eye estimate (for the first-person body alignment)
         }
 
         private struct RecordedShot
@@ -67,10 +83,13 @@ namespace LR2.World
             public Vector3 direction;
             public bool headshot;
             public bool killed;
+            public bool armorHit;
+            public bool armorBroken;
             public bool played;
         }
 
         private const int MaxSamplesPerSoldier = 330;
+        private const float RecordAfterDeath = 1.6f; // keep recording the ragdoll and dropped gun this long
 
         // ---- full-body replay: every visual bone of every soldier, 60 Hz ring buffer (no per-frame allocations)
         private class PoseSample
@@ -127,11 +146,14 @@ namespace LR2.World
         private Canvas _canvas;
         private TMP_Text _title, _info;
 
-        // First-person procedural killcam recoil (B14: exact player feel & visible weapon kick/climb)
-        private Vector3 _gunRecoilPos;
-        private Vector3 _gunRecoilEuler;
-        private Vector2 _camRecoilKick;
-        private float _camRollKick;
+        // B14.1 live-player camera feel: Kinemation per-shot camera shake replayed on the recorded shots (the synthetic
+        // gun/camera kick of B14 is gone: the recording already holds the real recoil animation and view kick)
+        private FPSCameraShake _shakeAsset;
+        private Vector3 _shake, _shakeTarget;
+        private float _shakePlayback;
+        private LR2.Weapons.WeaponDefinition _killerGunDef;
+        private float _killerBodyBack;
+        private Transform[] _kArm; // puppet L upper/lower/hand, R upper/lower/hand
 
         /// <summary>Extra respawn time so the killcam can play out before the player is put back in.</summary>
         public static float ExtraRespawnDelay(in KillEvent e, float baseDelay)
@@ -140,8 +162,11 @@ namespace LR2.World
             if (e.victim == null || !e.victim.IsLocalPlayer) return 0f;
             if (e.killer == null || e.killer == e.victim) return 0f;
             if (e.killer.GetComponent<SoldierController>() == null) return 0f;
-            return Mathf.Max(0f, (Instance.startDelay + Instance.duration) - baseDelay);
+            return Mathf.Max(0f, (Instance.EffectiveStartDelay + Instance.duration) - baseDelay);
         }
+
+        /// <summary>The replay starts only after the post-kill window has been recorded (the victim's real death).</summary>
+        private float EffectiveStartDelay => Mathf.Max(startDelay, postKillWindow + 0.05f);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
@@ -187,6 +212,8 @@ namespace LR2.World
                 direction = e.direction,
                 headshot = e.zone == HitZone.Head,
                 killed = e.killed,
+                armorHit = e.armorDamage > 0f,
+                armorBroken = e.armorBroken,
                 played = false
             });
             float cutoff = Time.time - 6f;
@@ -210,7 +237,8 @@ namespace LR2.World
             for (int i = 0; i < all.Count; i++)
             {
                 var c = all[i];
-                if (c == null || !c.IsAlive) continue;
+                if (c == null) continue;
+                if (!c.IsAlive && Time.time - c.LastDeathTime > RecordAfterDeath) continue; // ragdoll recorded briefly
                 var sc = c.GetComponent<SoldierController>();
                 if (sc == null) continue;
                 if (!_histories.TryGetValue(sc, out var list))
@@ -220,9 +248,10 @@ namespace LR2.World
                 }
                 var proxy = sc.GetComponent<RetargetProxy>();
                 bool hasLiveCam = sc.ViewCamera != null && sc.ViewCamera.isActiveAndEnabled;
-                Vector3 eye = hasLiveCam
-                    ? sc.ViewCamera.transform.position
-                    : (proxy != null ? proxy.VisualEyePosition : (sc.ViewTransform != null ? sc.ViewTransform.position : c.HeadPosition));
+                // The camera transform is a child of the driver's Head bone for every soldier (inactive on bots, but it still
+                // follows the head): it is the exact eye socket the live player looks through and Kinemation aims the sights at.
+                Vector3 visEye = proxy != null ? proxy.VisualEyePosition : (sc.ViewTransform != null ? sc.ViewTransform.position : c.HeadPosition);
+                Vector3 eye = sc.ViewCamera != null ? sc.ViewCamera.transform.position : visEye;
                 Quaternion eyeRot = hasLiveCam
                     ? sc.ViewCamera.transform.rotation
                     : Quaternion.Euler(sc.Pitch, sc.Yaw, 0f);
@@ -241,7 +270,8 @@ namespace LR2.World
                     pitch = sc.Pitch,
                     yaw = sc.Yaw,
                     aimBlend = sc.AimBlend,
-                    localPlayer = sc.IsLocalPlayer
+                    localPlayer = sc.IsLocalPlayer,
+                    visEyePos = visEye
                 });
                 while (list.Count > MaxSamplesPerSoldier || (list.Count > 0 && list[0].time < cutoff))
                     list.RemoveAt(0);
@@ -280,11 +310,12 @@ namespace LR2.World
                 smp.localRot[b] = t.localRotation;
             }
             var gun = sc.ActiveFirearm;
-            smp.hasWeapon = gun != null;
-            if (gun != null)
+            Transform gunTf = sc.IsDead ? (sc.DroppedWeapon != null ? sc.DroppedWeapon.transform : null) : (gun != null ? gun.transform : null);
+            smp.hasWeapon = gunTf != null;
+            if (gunTf != null)
             {
-                smp.weaponPos = gun.transform.position;
-                smp.weaponRot = gun.transform.rotation;
+                smp.weaponPos = gunTf.position;
+                smp.weaponRot = gunTf.rotation;
             }
         }
 
@@ -314,11 +345,7 @@ namespace LR2.World
             _killTime = Time.time;
             _replayStartTime = _killTime - preKillWindow;
             _replayEndTime = _killTime + postKillWindow;
-
-            CopyWindow(killer, _replayStartTime, _replayEndTime, _killerReplay);
-            CopyWindow(victim, _replayStartTime, _replayEndTime, _victimReplay);
-            CopyPoseWindow(killer, _replayStartTime, _replayEndTime, _killerPoseReplay);
-            CopyPoseWindow(victim, _replayStartTime, _replayEndTime, _victimPoseReplay);
+            // Body/aim windows are copied in Begin(), after the post-kill window (the victim's ragdoll) has been recorded.
 
             _replayShots.Clear();
             for (int i = 0; i < _shotLog.Count; i++)
@@ -352,6 +379,8 @@ namespace LR2.World
                     direction = deathPush,
                     headshot = e.headshot,
                     killed = true,
+                    armorHit = false,
+                    armorBroken = false,
                     played = false
                 });
             }
@@ -359,7 +388,7 @@ namespace LR2.World
             _victimDeathDir = deathPush.sqrMagnitude > 0.01f ? deathPush.normalized : killer.transform.forward;
 
             _pending = true;
-            _startAt = Time.time + startDelay;
+            _startAt = Time.time + EffectiveStartDelay;
         }
 
         private void CopyWindow(SoldierController sc, float tMin, float tMax, List<Snapshot> dst)
@@ -415,46 +444,30 @@ namespace LR2.World
 
             float norm = 1f - Mathf.Clamp01((_endAt - Time.time) / duration);
             float sampleTime = Mathf.Lerp(_replayStartTime, _replayEndTime, norm);
+            DebugSampleTime = sampleTime;
             Snapshot kSnap = Evaluate(_killerReplay, sampleTime);
 
             Quaternion aimRot = Quaternion.Euler(kSnap.pitch, kSnap.yaw, 0f);
             Quaternion recordedYawRot = Quaternion.Euler(0f, kSnap.yaw, 0f);
             if (_puppets)
             {
-                float rDamp = LR2Math.Damp(14f, Time.deltaTime);
-                _gunRecoilPos = Vector3.Lerp(_gunRecoilPos, Vector3.zero, rDamp);
-                _gunRecoilEuler = Vector3.Lerp(_gunRecoilEuler, Vector3.zero, rDamp);
-                _camRecoilKick = Vector2.Lerp(_camRecoilKick, Vector2.zero, LR2Math.Damp(11f, Time.deltaTime));
-                _camRollKick = Mathf.Lerp(_camRollKick, 0f, LR2Math.Damp(12f, Time.deltaTime));
-
-                Quaternion camRecoilRot = kSnap.eyeRot * Quaternion.Euler(_camRecoilKick.y, _camRecoilKick.x, _camRollKick);
                 ApplyPose(_killerPuppet, _killerPuppetBones, _killerGunPuppet, _killerPoseReplay, sampleTime);
                 ApplyPose(_victimPuppet, _victimPuppetBones, _victimGunPuppet, _victimPoseReplay, sampleTime);
-                if (sampleTime >= _killTime)
+                // The victim's real ragdoll death is in the recording; the procedural collapse is only a fallback.
+                bool victimDeathRecorded = _victimPoseReplay.Count > 0 && _victimPoseReplay[_victimPoseReplay.Count - 1].time > _killTime + 0.15f;
+                if (sampleTime >= _killTime && !victimDeathRecorded)
                     ApplyVictimCollapse(_victimPuppet, _victimGunPuppet, Mathf.Clamp01((sampleTime - _killTime) / Mathf.Max(0.25f, postKillWindow * 0.72f)), _victimDeathDir);
-                // Match first-person camera-back separation identically while applying crisp camera & weapon recoil kick
-                if (!kSnap.localPlayer)
-                {
-                    Vector3 bodyBack = -(recordedYawRot * Vector3.forward) * 0.025f;
-                    if (_killerPuppet != null) _killerPuppet.transform.position += bodyBack;
-                    if (_killerGunPuppet != null) _killerGunPuppet.transform.position += bodyBack;
-                }
-                if (_killerGunPuppet != null)
-                {
-                    Vector3 gunKick = camRecoilRot * _gunRecoilPos;
-                    if (_killerPuppet != null) _killerPuppet.transform.position += gunKick * 0.42f;
-                    _killerGunPuppet.transform.position += gunKick;
-                    _killerGunPuppet.transform.rotation = Quaternion.AngleAxis(_gunRecoilEuler.x, camRecoilRot * Vector3.right)
-                        * Quaternion.AngleAxis(_gunRecoilEuler.y, camRecoilRot * Vector3.up)
-                        * Quaternion.AngleAxis(_gunRecoilEuler.z, camRecoilRot * Vector3.forward)
-                        * _killerGunPuppet.transform.rotation;
-                }
+                if (!kSnap.localPlayer) AlignKillerToLens(kSnap);
+
+                // Lens: the recorded driver eye socket, stabilised aim (it already holds the real per-shot view kick and the
+                // killer's own pull-down), plus the live Kinemation camera shake on each replayed shot.
+                UpdateReplayShake(Time.deltaTime);
+                Quaternion aim = kSnap.localPlayer ? kSnap.eyeRot : Quaternion.Euler(kSnap.pitch, kSnap.yaw, 0f);
+                Quaternion camRot = aim * Quaternion.Euler(_shake);
                 var fpCam = _victim.ViewCamera;
-                float hipFov = LR2Settings.VerticalFov(LR2Settings.FieldOfView, fpCam.aspect);
-                float adsFov = Mathf.Lerp(hipFov, hipFov * 0.72f, kSnap.aimBlend);
-                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, camRecoilRot);
-                fpCam.fieldOfView = kSnap.fov > 10f ? kSnap.fov : adsFov;
-                ReplayShots(sampleTime, camRecoilRot, kSnap.aimBlend);
+                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, camRot);
+                fpCam.fieldOfView = kSnap.localPlayer && kSnap.fov > 10f ? kSnap.fov : ReplayFov(fpCam.aspect, kSnap.aimBlend);
+                ReplayShots(sampleTime, camRot, kSnap.aimBlend);
                 ReplayHits(sampleTime);
                 if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
                 return;
@@ -498,16 +511,16 @@ namespace LR2.World
                 s.played = true;
                 _replayShots[i] = s;
 
-                float adsScale = Mathf.Lerp(1f, 0.58f, aimBlend);
-                _gunRecoilPos = Vector3.ClampMagnitude(_gunRecoilPos + new Vector3(Random.Range(-0.004f, 0.004f), 0.009f, -0.055f) * adsScale, 0.11f);
-                _gunRecoilEuler = Vector3.ClampMagnitude(_gunRecoilEuler + new Vector3(-7.4f, Random.Range(-1.8f, 1.8f), Random.Range(-3.2f, 3.2f)) * adsScale, 16f);
-                _camRecoilKick += new Vector2(Random.Range(-0.45f, 0.45f), -1.65f) * adsScale;
-                _camRollKick = Mathf.Clamp(_camRollKick + Random.Range(-0.95f, 0.95f) * adsScale, -3.5f, 3.5f);
-                CameraShake.AddTrauma(0.11f * adsScale);
-                CameraShake.AddJolt(new Vector3(-16f, Random.Range(-7f, 7f), Random.Range(-10f, 10f)) * adsScale);
+                // The gun's recoil animation and the view kick are already in the recording (Kinemation RecoilAnimation runs
+                // on bots, AddViewKick feeds their pitch/yaw). Add only what the live player's camera gets on top.
+                PlayReplayShake();
+                CameraShake.ReplayShot(_killerGunDef, aimBlend > 0.5f);
 
                 Vector3 muzzle = _puppetMuzzle != null ? _puppetMuzzle.position : s.origin + aimRot * new Vector3(0.15f, -0.10f, 0.55f);
-                TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f);
+                Combatant killerCombatant = _killer != null ? _killer.Combatant : null;
+                Combatant local = Combatant.FindLocalPlayer();
+                bool killerFriendly = killerCombatant != null && (killerCombatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, killerCombatant)));
+                TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f, killerFriendly);
                 if (_puppetMuzzleFlashes != null)
                 {
                     for (int m = 0; m < _puppetMuzzleFlashes.Length; m++)
@@ -527,8 +540,86 @@ namespace LR2.World
                 if (h.played || sampleTime < h.time) continue;
                 h.played = true;
                 _replayHits[i] = h;
-                HUDController.ShowReplayHit(h.headshot, h.killed, h.point);
+                HUDController.ShowReplayHit(h.headshot, h.killed, h.point, h.armorHit, h.armorBroken);
             }
+        }
+
+        /// <summary>Kinemation FPSCameraController.PlayCameraShake, mirrored for the replay camera.</summary>
+        private void PlayReplayShake()
+        {
+            if (_shakeAsset == null) return;
+            _shakePlayback = 0f;
+            _shakeTarget = new Vector3(FPSCameraShake.GetTarget(_shakeAsset.pitch), FPSCameraShake.GetTarget(_shakeAsset.yaw), FPSCameraShake.GetTarget(_shakeAsset.roll));
+        }
+
+        /// <summary>Kinemation FPSCameraController.UpdateCameraShake, mirrored (same curve, targets and smoothing).</summary>
+        private void UpdateReplayShake(float dt)
+        {
+            if (_shakeAsset == null) { _shake = Vector3.zero; return; }
+            float length = _shakeAsset.shakeCurve.GetCurveLength();
+            _shakePlayback = Mathf.Clamp(_shakePlayback + dt * _shakeAsset.playRate, 0f, length);
+            float alpha = KMath.ExpDecayAlpha(_shakeAsset.smoothSpeed, dt);
+            if (!KAnimationMath.IsWeightRelevant(alpha)) alpha = 1f;
+            Vector3 target = _shakeAsset.shakeCurve.GetValue(_shakePlayback);
+            target.x *= _shakeTarget.x;
+            target.y *= _shakeTarget.y;
+            target.z *= _shakeTarget.z;
+            _shake = Vector3.Lerp(_shake, target, alpha);
+        }
+
+        /// <summary>The live player's FOV: settings hip FOV (Hor+) x the weapon's ADS multiplier, eased by the aim blend.</summary>
+        private float ReplayFov(float aspect, float aimBlend)
+        {
+            float hip = LR2Settings.VerticalFov(LR2Settings.FieldOfView, aspect);
+            float mult = _killerGunDef != null ? _killerGunDef.adsFovMultiplier : 0.8f;
+            float e = Mathf.Clamp01(aimBlend);
+            e = e * e * (3f - 2f * e);
+            return Mathf.Lerp(hip, hip * mult, e);
+        }
+
+        /// <summary>
+        /// RetargetProxy.AlignBody's first-person eye lock for the killer puppet: the model's eye onto the lens, the body
+        /// pulled back by the same amount, then both arms re-solved onto the recorded holds so the hands stay on the gun.
+        /// </summary>
+        private void AlignKillerToLens(Snapshot k)
+        {
+            if (_killerPuppet == null || _kArm == null) return;
+            Vector3 fwd = Quaternion.Euler(0f, k.yaw, 0f) * Vector3.forward;
+            Vector3 shift = k.eyePos - k.visEyePos - fwd * _killerBodyBack;
+            if (shift.sqrMagnitude < 1e-8f || shift.sqrMagnitude > 0.25f * 0.25f) return; // nothing to do / teleport guard
+            Vector3 lp = _kArm[2].position, rp = _kArm[5].position;
+            Quaternion lr = _kArm[2].rotation, rr = _kArm[5].rotation;
+            _killerPuppet.transform.position += shift;
+            RetargetProxy.Solve(_kArm[0], _kArm[1], _kArm[2], lp, lr, 1f);
+            RetargetProxy.Solve(_kArm[3], _kArm[4], _kArm[5], rp, rr, 1f);
+        }
+
+        private static Transform[] MapArmBones(Animator liveVisual, Transform liveRoot, Transform puppetRoot)
+        {
+            if (liveVisual == null || liveRoot == null || puppetRoot == null || !liveVisual.isHuman) return null;
+            var ids = new[] { HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand,
+                              HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand };
+            var map = new Transform[ids.Length];
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var live = liveVisual.GetBoneTransform(ids[i]);
+                if (live == null) return null;
+                string path = RelativePath(liveRoot, live);
+                map[i] = path == null ? null : (path.Length == 0 ? puppetRoot : puppetRoot.Find(path));
+                if (map[i] == null) return null;
+            }
+            return map;
+        }
+
+        private static string RelativePath(Transform root, Transform t)
+        {
+            var parts = new List<string>();
+            for (var c = t; c != null; c = c.parent)
+            {
+                if (c == root) { parts.Reverse(); return string.Join("/", parts); }
+                parts.Add(c.name);
+            }
+            return null;
         }
 
         private static void ApplyVictimCollapse(GameObject victimPuppet, GameObject gunPuppet, float progress, Vector3 deathDir)
@@ -582,10 +673,13 @@ namespace LR2.World
         }
 
         /// <summary>Render-only copy (no colliders, physics, scripts, animators) of a soldier's SWAT body or weapon; preserves MuzzleFlash if requested.</summary>
-        private static GameObject MakePuppet(GameObject source, string name, bool hideHead, bool keepMuzzleFlash = false, bool isPlayerTeamLaser = false)
+        private static GameObject MakePuppet(GameObject source, string name, bool keepShadowsOnly, bool keepMuzzleFlash = false, bool isPlayerTeamLaser = false)
         {
             if (source == null) return null;
-            var p = Instantiate(source);
+            // Copy under an inactive holder so no copied gameplay script runs Awake/OnEnable before it is stripped.
+            var holder = new GameObject("KillcamPuppetHolder");
+            holder.SetActive(false);
+            var p = Instantiate(source, holder.transform);
             p.name = name;
             bool hasWeaponLaser = source.GetComponentInChildren<WeaponLaser>(true) != null;
             foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true))
@@ -616,10 +710,20 @@ namespace LR2.World
             {
                 // B14.1: Keep disabled attachments, sights, and laser helper renderers off instead of illuminating inactive parts.
                 if (!r.enabled) continue;
-                bool head = r.name.ToLowerInvariant().Contains("head");
-                r.shadowCastingMode = hideHead && head ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
+                // B14.1: the killer keeps the live first-person head hiding (shadow only, like the player's own view);
+                // everything else, and the whole victim, renders normally.
+                if (!(keepShadowsOnly && r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly))
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
             }
+            // The copied laser beam and dot keep their last world positions (frozen second beam, floating dot): remove them.
+            foreach (var lr in p.GetComponentsInChildren<LineRenderer>(true)) DestroyImmediate(lr);
+            foreach (var t in p.GetComponentsInChildren<Transform>(true))
+                if (t != null && t != p.transform && t.name == "LaserDot") DestroyImmediate(t.gameObject);
+
+            p.transform.SetParent(null, true);
+            Destroy(holder);
+            p.SetActive(true);
             if (hasWeaponLaser)
             {
                 Transform muzzle = null;
@@ -627,11 +731,10 @@ namespace LR2.World
                     if (t.name == "Muzzle") { muzzle = t; break; }
                 if (muzzle != null)
                 {
-                    var wl = p.GetComponent<WeaponLaser>() ?? p.AddComponent<WeaponLaser>();
+                    var wl = p.AddComponent<WeaponLaser>();
                     wl.SetExternalMuzzle(muzzle, p.transform, isPlayerTeamLaser);
                 }
             }
-            p.SetActive(true);
             return p;
         }
 
@@ -641,12 +744,20 @@ namespace LR2.World
             var kRoot = VisualRoot(_killer);
             var vRoot = VisualRoot(_victim);
             if (kRoot == null || vRoot == null || _killerPoseReplay.Count == 0 || _victimPoseReplay.Count == 0) return;
-            _killerPuppet = MakePuppet(kRoot.gameObject, "KillcamPuppet_Killer", false);
+            // copy the killer with its first-person renderers in their live first-person state (shadow only)
+            _killer.SetHeadHidden(true);
+            _killerPuppet = MakePuppet(kRoot.gameObject, "KillcamPuppet_Killer", true);
+            _killer.SetHeadHidden(false);
             _victimPuppet = MakePuppet(vRoot.gameObject, "KillcamPuppet_Victim", false);
+            var kProxy = _killer.GetComponent<RetargetProxy>();
+            _kArm = kProxy != null ? MapArmBones(kProxy.Visual, kRoot, _killerPuppet.transform) : null;
+            _killerBodyBack = kProxy != null ? kProxy.FirstPersonBodyBack : 0.02f;
             _killerPuppetBones = _killerPuppet.GetComponentsInChildren<Transform>(true);
             _victimPuppetBones = _victimPuppet.GetComponentsInChildren<Transform>(true);
             var kGun = _killer.ActiveFirearm;
             var vGun = _victim.ActiveFirearm;
+            _killerGunDef = kGun != null ? kGun.Definition : null;
+            _shakeAsset = kGun != null ? kGun.CameraShakeAsset : null;
             var local = Combat.Combatant.FindLocalPlayer();
             bool IsGreen(SoldierController sc)
             {
@@ -684,6 +795,9 @@ namespace LR2.World
             _killerPuppetBones = _victimPuppetBones = null;
             _puppetMuzzle = null;
             _puppetMuzzleFlashes = null;
+            _kArm = null;
+            _shakeAsset = null;
+            _killerGunDef = null;
             _puppets = false;
         }
 
@@ -709,7 +823,8 @@ namespace LR2.World
                         pitch = Mathf.LerpAngle(a.pitch, b.pitch, t),
                         yaw = Mathf.LerpAngle(a.yaw, b.yaw, t),
                         aimBlend = Mathf.Lerp(a.aimBlend, b.aimBlend, t),
-                        localPlayer = a.localPlayer
+                        localPlayer = a.localPlayer,
+                        visEyePos = Vector3.Lerp(a.visEyePos, b.visEyePos, t)
                     };
                 }
             }
@@ -722,10 +837,13 @@ namespace LR2.World
             _playing = true;
             _endAt = Time.time + duration;
             _savedFov = _victim.ViewCamera.fieldOfView;
-            _gunRecoilPos = Vector3.zero;
-            _gunRecoilEuler = Vector3.zero;
-            _camRecoilKick = Vector2.zero;
-            _camRollKick = 0f;
+            _shake = _shakeTarget = Vector3.zero;
+            _shakePlayback = 0f;
+
+            CopyWindow(_killer, _replayStartTime, _replayEndTime, _killerReplay);
+            CopyWindow(_victim, _replayStartTime, _replayEndTime, _victimReplay);
+            CopyPoseWindow(_killer, _replayStartTime, _replayEndTime, _killerPoseReplay);
+            CopyPoseWindow(_victim, _replayStartTime, _replayEndTime, _victimPoseReplay);
 
             BuildPuppets();
             if (!_puppets)

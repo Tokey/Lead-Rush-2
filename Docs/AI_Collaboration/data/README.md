@@ -18,6 +18,15 @@ developer's prompts, the board archive and git; their `source` says so.
 | `board_id` | Tracker ID (B.., P..) if any |
 | `outcome` | verified, reopened, ready-for-review, open, delivered (pre-tracker work that shipped without review) |
 | `source` | Where the row comes from (board row, log time, prompt time, reconstruction) |
+| `difficulty` | `small`, `standard`, `hard`, or `unrated` |
+| `difficulty_timing` | `retrospective-peer-consensus` for the audited historic rows; `pre-work-peer-consensus` for future ratings made before implementation |
+| `difficulty_basis` | Consensus score and short evidence note based on scope/integration, uncertainty, and verification burden |
+
+Difficulty ratings use the rubric in [`../specs/B66_Task_Difficulty.md`](../specs/B66_Task_Difficulty.md). At the developer's request, three independent peer reviews rated the existing task definitions retrospectively; the median total sets the band. [`task_difficulty_reviews.csv`](task_difficulty_reviews.csv) preserves their dimension scores and consensus. These ratings estimate requested scope, not actual effort. Future tasks should be rated before implementation. Any missing or `unrated` value receives the standard 1x multiplier.
+
+## task_difficulty_reviews.csv
+
+One row per existing task, with the three independent reviewers' scope, uncertainty, and verification scores; their total/band; and the median-total consensus used by `tasks.csv`. `underspecified_votes` records how many reviewers flagged the surviving task request as incomplete. Reviewer labels A/B/C do not identify implementers.
 
 ## bugs.csv
 

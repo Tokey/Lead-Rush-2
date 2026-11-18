@@ -42,6 +42,8 @@ namespace LR2.UI
         private readonly Image[] _arms = new Image[4];
         private Image _skull, _skullRim, _hitPip;
         private TMP_Text _zoneLabel;
+        [Tooltip("COD-style hit vibration: pixel amplitude of the marker shake on each hit (scaled up for headshots and kills).")]
+        [SerializeField, Range(0f, 12f)] private float vibrationPixels = 4f;
         private float _hitTime = -10f, _killTime = -10f, _pipTime = -10f;
         private Color _color;
         private float _scale = 1f, _thick = 1f;
@@ -58,7 +60,9 @@ namespace LR2.UI
         public bool IsShowingWorldImpactPip => _hasWorldPoint && (Time.unscaledTime - _pipTime) < 0.36f;
 
         private static SurfaceLibrary _surfaceLib;
-        private static AudioClip _bodyPunch, _headCrack, _killSlam, _killStamp;
+        private static AudioClip _bodyPunch, _headCrack, _killSlam, _killStamp, _armorBreak;
+        /// <summary>Armour-hit tint for the hitmarker arms (cool steel blue, Warzone-style).</summary>
+        public Color armorColor = new Color(0.62f, 0.84f, 1f, 1f);
         private static Sprite _skullSprite, _skullRimSprite, _pipSprite;
 
         public static HitFeedbackHUD Create(Transform parent)
@@ -71,13 +75,13 @@ namespace LR2.UI
         /// <summary>
         /// Triggers hitmarker visuals and rugged impact/kill sounds from killcam replays even when main HUD is hidden.
         /// </summary>
-        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default)
+        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default, bool armorHit = false, bool armorBroke = false)
         {
             HitFeedbackHUD target = Instance;
             if (target == null || !IsVisibleForReplay(target.transform))
                 target = EnsureReplayOverlay();
             if (target == null) return;
-            target.TriggerFeedback(headshot, kill, worldPoint);
+            target.TriggerFeedback(headshot, kill, worldPoint, HitZone.Generic, armorHit, armorBroke);
         }
 
         private static bool IsVisibleForReplay(Transform t)
@@ -202,11 +206,19 @@ namespace LR2.UI
         private void OnHit(HitEvent e)
         {
             if (_player == null) _player = Combatant.FindLocalPlayer();
-            if (_player == null || e.attacker != _player || e.victim == _player || e.damage <= 0f) return;
-            TriggerFeedback(e.zone == HitZone.Head, e.killed, e.point, e.zone);
+            if (_player == null) return;
+            // B74: the victim hears its own plate shatter (duller, closer) regardless of the hitmarker-sound toggle.
+            if (e.victim == _player && e.armorBroken && !e.killed)
+            {
+                EnsureClips();
+                PlayRaw(_armorBreak, 0.95f * volume, Random.Range(0.80f, 0.86f), 0f);
+                return;
+            }
+            if (e.attacker != _player || e.victim == _player || e.damage <= 0f) return;
+            TriggerFeedback(e.zone == HitZone.Head, e.killed, e.point, e.zone, e.armorDamage > 0f, e.armorBroken);
         }
 
-        private void TriggerFeedback(bool head, bool killed, Vector3 worldPoint, HitZone zone = HitZone.Generic)
+        private void TriggerFeedback(bool head, bool killed, Vector3 worldPoint, HitZone zone = HitZone.Generic, bool armorHit = false, bool armorBroke = false)
         {
             float now = Time.unscaledTime;
             _streak = now - _hitTime < 0.25f ? Mathf.Min(_streak + 1, 6) : 0;
@@ -215,13 +227,13 @@ namespace LR2.UI
             Color bCol = cb ? HitmarkerPalette.Body : bodyColor;
             Color hCol = cb ? HitmarkerPalette.Head : headColor;
             Color kCol = cb ? HitmarkerPalette.Kill : killColor;
-            _color = killed ? kCol : head ? hCol : bCol;
-            _scale = killed ? 1.45f : head ? 1.18f : 1f + _streak * 0.03f;
+            _color = killed ? kCol : head ? hCol : armorHit && !cb ? armorColor : bCol;
+            _scale = killed ? 1.45f : armorBroke ? 1.32f : head ? 1.18f : 1f + _streak * 0.03f;
             _thick = killed ? 1.5f : head ? 1.2f : 1f;
             _lastHitWorld = worldPoint;
             _hasWorldPoint = worldPoint != Vector3.zero;
             if (_hasWorldPoint) _pipTime = now;
-            _lastZoneText = FormatZoneLabel(zone, head, killed);
+            _lastZoneText = armorBroke && !killed ? "ARMOR BROKEN" : FormatZoneLabel(zone, head, killed);
             if (_zoneLabel != null) _zoneLabel.text = _lastZoneText;
             if (killed)
             {
@@ -230,7 +242,7 @@ namespace LR2.UI
                 _skullRim.color = head ? new Color(1f, 0.72f, 0.2f, 1f) : new Color(0f, 0f, 0f, 0f);
             }
 
-            if (LR2Settings.HitmarkerSound) PlaySounds(head, killed);
+            if (LR2Settings.HitmarkerSound) PlaySounds(head, killed, armorHit, armorBroke);
         }
 
         private static string FormatZoneLabel(HitZone z, bool head, bool killed)
@@ -257,6 +269,9 @@ namespace LR2.UI
             float t = now - _hitTime;
             float a = t < holdTime ? 1f : 1f - Mathf.Clamp01((t - holdTime) / fadeTime);
             float punch = 1f + 0.55f * Mathf.Exp(-t * 28f);
+            // COD-style hit vibration (user 11-18 04:20): the whole marker shakes a few pixels and settles in ~0.12 s
+            float vib = vibrationPixels * _scale * Mathf.Exp(-t * 26f);
+            if (_xRoot != null) _xRoot.anchoredPosition = vib > 0.05f ? new Vector2(Mathf.Sin(t * 230f) * vib, Mathf.Cos(t * 190f) * vib * 0.8f) : Vector2.zero;
             float gap = armGap * _scale * (1f + 0.35f * Mathf.Exp(-t * 20f));
             float len = armLength * _scale * punch;
             float thick = armThickness * _thick;
@@ -327,9 +342,16 @@ namespace LR2.UI
         }
 
         // ------------------------------------------------------------------ rugged layered combat SFX
-        private void PlaySounds(bool head, bool killed)
+        private void PlaySounds(bool head, bool killed, bool armorHit = false, bool armorBroke = false)
         {
             EnsureClips();
+            // B74 armour layer on top of the normal confirm: a plate "tink" while armour soaks, a ceramic shatter when it breaks.
+            if (armorBroke && !killed) PlayRaw(_armorBreak, 1.0f * volume, Random.Range(0.97f, 1.03f), 0f);
+            else if (armorHit && !killed && !head)
+            {
+                var cs = LR2CommonSounds.Instance;
+                if (cs != null && cs.hitmarkerArmor.IsValid) PlaySet(cs.hitmarkerArmor, 0.6f * volume, Random.Range(1.02f, 1.08f), 0f);
+            }
             var common = LR2CommonSounds.Instance;
             if (_surfaceLib == null) _surfaceLib = Resources.Load<SurfaceLibrary>("LR2/SurfaceLibrary");
 
@@ -389,7 +411,7 @@ namespace LR2.UI
 
         private static void EnsureClips()
         {
-            if (_bodyPunch != null && _headCrack != null && _killSlam != null && _killStamp != null) return;
+            if (_bodyPunch != null && _headCrack != null && _killSlam != null && _killStamp != null && _armorBreak != null) return;
             const int sr = 44100;
             var rng = new System.Random(1337);
 
@@ -434,6 +456,35 @@ namespace LR2.UI
                 float mid = (Mathf.Sin(2f * Mathf.PI * 620f * t) + 0.4f * Mathf.Sin(2f * Mathf.PI * 930f * t)) * Mathf.Exp(-t * 28f) * 0.42f;
                 float bite = n * Mathf.Exp(-t * 260f) * 0.35f;
                 return (float)System.Math.Tanh((low + mid + bite) * 1.35f);
+            });
+
+            _armorBreak = SynthArmorBreak(sr);
+        }
+
+        // B74 armour plate shatter: broadband ceramic crack, a second split ~45 ms later, inharmonic plate ring,
+        // decaying debris crackle and a short low body thump. Deterministic seed so every build sounds the same.
+        private static AudioClip SynthArmorBreak(int sr)
+        {
+            var rng = new System.Random(4242);
+            float prevNoise = 0f, crackle = 0f;
+            return Synth("LR2_HF_ArmorBreak", 0.42f, sr, t =>
+            {
+                float n = (float)(rng.NextDouble() * 2.0 - 1.0);
+                float hp = n - prevNoise; // first difference = crude high-pass, keeps the crack bright
+                prevNoise = n;
+                float crack = hp * Mathf.Exp(-t * 95f) * 0.85f;
+                float split = t > 0.045f ? hp * Mathf.Exp(-(t - 0.045f) * 120f) * 0.6f : 0f;
+                float ring = (Mathf.Sin(2f * Mathf.PI * 1730f * t) * 0.20f
+                            + Mathf.Sin(2f * Mathf.PI * 2610f * t) * 0.17f
+                            + Mathf.Sin(2f * Mathf.PI * 3890f * t) * 0.14f
+                            + Mathf.Sin(2f * Mathf.PI * 5270f * t) * 0.10f
+                            + Mathf.Sin(2f * Mathf.PI * 7020f * t) * 0.07f) * Mathf.Exp(-t * 22f);
+                if (rng.NextDouble() < 0.0035 * Mathf.Exp(-t * 7f)) crackle = 0.45f + (float)rng.NextDouble() * 0.55f;
+                crackle *= 0.93f;
+                float debris = n * crackle * 0.55f;
+                float f = Mathf.Lerp(150f, 55f, Mathf.Clamp01(t * 14f));
+                float thump = (float)System.Math.Tanh(Mathf.Sin(2f * Mathf.PI * f * t) * 1.8f) * Mathf.Exp(-t * 30f) * 0.55f;
+                return (float)System.Math.Tanh((crack + split + ring + debris + thump) * 1.25f);
             });
         }
 
@@ -546,7 +597,7 @@ namespace LR2.UI
             Instance = null;
             _replayOverlay = null;
             _surfaceLib = null;
-            _bodyPunch = _headCrack = _killSlam = _killStamp = null;
+            _bodyPunch = _headCrack = _killSlam = _killStamp = _armorBreak = null;
             _skullSprite = _skullRimSprite = _pipSprite = null;
         }
     }

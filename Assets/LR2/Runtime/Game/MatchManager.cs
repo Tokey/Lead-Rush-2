@@ -187,6 +187,17 @@ namespace LR2.Game
             {
                 for (int i = 0; i < enemies; i++) Spawn(botPrefab, TeamId.Bravo, NextName(), false);
             }
+            else if (align == BotTeamAlignment.HalfAndHalf)
+            {
+                MatchSettings.SplitHalfAndHalf(enemies, out int halfAllies, out int halfEnemies);
+                for (int i = 0; i < halfAllies; i++)
+                {
+                    var bot = Spawn(botPrefab, TeamId.Alpha, NextName(), false);
+                    var bc = bot != null ? bot.GetComponent<BotController>() : null;
+                    if (bc != null && LocalPlayer != null) bc.SetSquadLeader(LocalPlayer);
+                }
+                for (int i = 0; i < halfEnemies; i++) Spawn(botPrefab, TeamId.Bravo, NextName(), false);
+            }
             else
             {
                 int allies = Settings.IsFlagMode ? Mathf.Max(1, Settings.friendlyBots) : Settings.friendlyBots;

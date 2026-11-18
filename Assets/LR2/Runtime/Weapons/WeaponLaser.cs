@@ -9,7 +9,8 @@ namespace LR2.Weapons
     public sealed class WeaponLaser : MonoBehaviour
     {
         private const float MaxDistance = 120f;
-        private const float BeamWidth = 0.0015f;
+        // Wider than a physically thin beam so the faction color remains readable in a busy HDRP scene.
+        private const float BeamWidth = 0.0055f;
         private static readonly RaycastHit[] Hits = new RaycastHit[16];
 
         private LR2Firearm _firearm;
@@ -24,18 +25,22 @@ namespace LR2.Weapons
         private bool _appliedColorValid;
         private bool _appliedIsPlayer;
 
-        private static readonly Color PlayerBeamColor = new Color(0.05f, 1f, 0.22f, 0.72f);
+        private static readonly Color PlayerBeamColor = new Color(0.05f, 1f, 0.22f, 0.96f);
         private static readonly Color PlayerDotColor = new Color(0.08f, 1f, 0.28f, 0.95f);
-        private static readonly Color EnemyBeamColor = new Color(1f, 0.08f, 0.025f, 0.65f);
+        private static readonly Color EnemyBeamColor = new Color(1f, 0.08f, 0.025f, 0.94f);
         private static readonly Color EnemyDotColor = new Color(1f, 0.04f, 0.01f, 0.92f);
 
         private void Awake()
         {
             _firearm = GetComponent<LR2Firearm>();
-            _beam = gameObject.AddComponent<LineRenderer>();
+            var beamObject = new GameObject("LaserBeam");
+            beamObject.transform.SetParent(transform, false);
+            _beam = beamObject.AddComponent<LineRenderer>();
             _beam.positionCount = 2;
             _beam.startWidth = BeamWidth;
-            _beam.endWidth = BeamWidth * 0.65f;
+            _beam.endWidth = BeamWidth * 0.78f;
+            _beam.numCapVertices = 2;
+            _beam.numCornerVertices = 2;
             _beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _beam.receiveShadows = false;
             _beamMaterial = CreateMaterial(EnemyBeamColor);
@@ -44,7 +49,7 @@ namespace LR2.Weapons
             var dotObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             dotObject.name = "LaserDot";
             dotObject.transform.SetParent(transform, false);
-            dotObject.transform.localScale = Vector3.one * 0.018f;
+            dotObject.transform.localScale = Vector3.one * 0.03f;
             var collider = dotObject.GetComponent<Collider>();
             if (collider != null) Destroy(collider);
             _dot = dotObject.transform;
@@ -94,7 +99,7 @@ namespace LR2.Weapons
             if (material.HasProperty("_UnlitColor")) material.SetColor("_UnlitColor", color);
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (material.HasProperty("_Color")) material.SetColor("_Color", color);
-            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 2.5f);
+            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 5f);
         }
 
         private void LateUpdate()
@@ -163,8 +168,8 @@ namespace LR2.Weapons
             if (material.HasProperty("_UnlitColor")) material.SetColor("_UnlitColor", color);
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (material.HasProperty("_Color")) material.SetColor("_Color", color);
-            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 2f);
-            if (material.HasProperty("_EmissiveIntensity")) material.SetFloat("_EmissiveIntensity", 2f);
+            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 4f);
+            if (material.HasProperty("_EmissiveIntensity")) material.SetFloat("_EmissiveIntensity", 4f);
             return material;
         }
     }

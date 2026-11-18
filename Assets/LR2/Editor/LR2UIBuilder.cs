@@ -845,7 +845,7 @@ namespace LR2.EditorTools
             SelectorColRow(t, "BOT DIFFICULTY", leftCol, y, out mm.deployDiffPrevButton, out mm.deployDiffNextButton, out mm.deployDiffValueText); y -= step;
             SelectorColRow(t, "BOT TEAM MODE", leftCol, y, out mm.deployBotTeamPrevButton, out mm.deployBotTeamNextButton, out mm.deployBotTeamValueText); y -= step;
             mm.deployScoreSlider = SliderColRow(t, "SCORE LIMIT", leftCol, y, out mm.deployScoreValueText); y -= step;
-            mm.deployBotsSlider = SliderColRow(t, "ENEMY BOTS", leftCol, y, out mm.deployBotsValueText);
+            mm.deployBotsSlider = SliderColRow(t, "BOT COUNT", leftCol, y, out mm.deployBotsValueText);
 
             var rightCenter = topC;
             var previewLbl = Txt("PreviewLbl", t, "LIVE SECTOR RECON", 18f, TextAlignmentOptions.MidlineLeft, rightCenter, new Vector2(58f, -254f), new Vector2(500f, 26f), true, accent);

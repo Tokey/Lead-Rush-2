@@ -1,6 +1,7 @@
 using LR2.Characters;
 using LR2.Combat;
 using LR2.Core;
+using LR2.FX;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
@@ -134,6 +135,12 @@ namespace LR2.World
                 new Color(1f, 0.85f, 0.18f, 0.1f), 0.16f, 0.55f, 46f);
             _smokeParticles = BuildParticles("Fire Smoke", new Color(0.12f, 0.12f, 0.12f, 0.48f),
                 new Color(0.04f, 0.04f, 0.04f, 0f), 0.5f, 1.8f, 18f * smokeAmount);
+
+            var hazeGo = new GameObject("Fire Heat Haze");
+            hazeGo.transform.SetParent(transform, false);
+            hazeGo.transform.localPosition = Vector3.up * Mathf.Max(0.25f, damageRadius * 0.28f);
+            hazeGo.AddComponent<HeatHazeEmitter>().Configure(
+                new Vector2(Mathf.Max(0.35f, damageRadius * 0.38f), Mathf.Max(0.8f, damageRadius * 1.5f)), 0.22f);
 
             if (crackleLoop == null)
             {

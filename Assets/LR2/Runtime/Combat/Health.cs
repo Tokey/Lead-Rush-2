@@ -5,14 +5,21 @@ using UnityEngine;
 namespace LR2.Combat
 {
     /// <summary>
-    /// Call-of-Duty style health: 100 HP, no armour, fast full regeneration after a short delay without damage,
-    /// brief spawn protection that ends as soon as the owner fires.
+    /// Call-of-Duty style health: 100 HP with fast full regeneration after a short delay without damage, plus an
+    /// optional armour layer (soldiers: 50) that soaks damage first, never regenerates, cracks audibly when it breaks
+    /// and is refilled at ammo stations (B74). Brief spawn protection ends as soon as the owner fires.
     /// </summary>
     [DisallowMultipleComponent]
     public class Health : MonoBehaviour, IDamageable
     {
         [Header("Health")]
         [SerializeField, Min(1f)] private float maxHealth = 100f;
+
+        [Header("Armour (B74: soaks damage first, no regen, refilled at ammo stations)")]
+        [Tooltip("0 = no armour (drones, props). Soldiers use 50: 100 HP + 50 armour = 150 effective (the user's 1.5x health request, 11-18 04:30, without a 150 readout).")]
+        [SerializeField, Min(0f)] private float maxArmor = 0f;
+        [Tooltip("Fire, falls and suicide skip the armour and hit health directly.")]
+        [SerializeField] private bool environmentBypassesArmor = true;
 
         [Header("Regeneration")]
         [SerializeField] private bool regenerate = true;
@@ -30,10 +37,23 @@ namespace LR2.Combat
         public event Action<DamageInfo> Damaged;
         public event Action<DamageInfo> Died;
         public event Action Revived;
+        /// <summary>Raised once when a hit takes the armour from above zero to zero.</summary>
+        public event Action<DamageInfo> ArmorBroken;
+        /// <summary>Raised when armour is refilled (argument: amount added).</summary>
+        public event Action<float> ArmorRestored;
 
         public float Current { get; private set; }
         public float Max => maxHealth;
         public float Normalized => maxHealth > 0f ? Current / maxHealth : 0f;
+        public float Armor { get; private set; }
+        public bool HasArmor => maxArmor > 0f;
+        public float ArmorNormalized => maxArmor > 0f ? Armor / maxArmor : 0f;
+
+        public float MaxArmor
+        {
+            get => maxArmor;
+            set { maxArmor = Mathf.Max(0f, value); Armor = Mathf.Min(Armor, maxArmor); }
+        }
         public bool IsAlive { get; private set; } = true;
         public bool IsInvulnerable => Time.time < _invulnerableUntil;
         public float LastDamageTime { get; private set; } = -999f;
@@ -55,6 +75,7 @@ namespace LR2.Combat
         {
             Owner = GetComponent<Combatant>();
             Current = maxHealth;
+            Armor = maxArmor;
         }
 
         private void Update()
@@ -83,21 +104,38 @@ namespace LR2.Combat
             }
 
             info.victim = Owner;
-            float applied = Mathf.Min(Current, info.amount);
-            Current -= info.amount;
+
+            // Armour soaks first; overflow from the breaking hit carries into health (Warzone-style plates).
+            float incoming = info.amount;
+            float toArmor = 0f;
+            bool armorBroke = false;
+            if (Armor > 0f && !(environmental && environmentBypassesArmor))
+            {
+                toArmor = Mathf.Min(Armor, incoming);
+                Armor -= toArmor;
+                incoming -= toArmor;
+                if (Armor <= 0.001f) { Armor = 0f; armorBroke = true; }
+            }
+
+            float applied = Mathf.Min(Current, incoming);
+            Current -= incoming;
             LastDamageTime = Time.time;
             LastDamage = info;
 
             bool killed = Current <= 0.001f;
+            float total = applied + toArmor;
             if (info.attacker != null && info.attacker != Owner)
-                info.attacker.stats.damageDealt += applied;
+                info.attacker.stats.damageDealt += total;
 
             Damaged?.Invoke(info);
+            if (armorBroke) ArmorBroken?.Invoke(info);
             GameEvents.RaiseHit(new HitEvent
             {
                 attacker = info.attacker,
                 victim = Owner,
-                damage = applied,
+                damage = total,
+                armorDamage = toArmor,
+                armorBroken = armorBroke,
                 zone = info.zone,
                 type = info.type,
                 killed = killed,
@@ -106,7 +144,7 @@ namespace LR2.Combat
             });
 
             if (killed) Die(info);
-            return applied;
+            return total;
         }
 
         public void Die(DamageInfo info)
@@ -144,9 +182,21 @@ namespace LR2.Combat
             Current = Mathf.Min(maxHealth, Current + Mathf.Max(0f, amount));
         }
 
+        /// <summary>Refills armour (ammo stations). Returns the amount actually added (0 when full, dead or unarmoured).</summary>
+        public float AddArmor(float amount)
+        {
+            if (!IsAlive || maxArmor <= 0f || amount <= 0f) return 0f;
+            float before = Armor;
+            Armor = Mathf.Min(maxArmor, Armor + amount);
+            float added = Armor - before;
+            if (added > 0.001f) ArmorRestored?.Invoke(added);
+            return added;
+        }
+
         public void Revive()
         {
             Current = maxHealth;
+            Armor = maxArmor;
             IsAlive = true;
             LastDamageTime = -999f;
             _invulnerableUntil = Time.time + spawnProtection;

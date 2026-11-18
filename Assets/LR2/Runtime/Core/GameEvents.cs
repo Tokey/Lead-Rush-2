@@ -13,7 +13,9 @@ namespace LR2.Core
     {
         public Combatant attacker;
         public Combatant victim;
-        public float damage;
+        public float damage;          // total soaked by armour + health
+        public float armorDamage;     // part of damage the armour absorbed (B74)
+        public bool armorBroken;      // this hit took the victim's armour to zero
         public HitZone zone;
         public DamageType type;
         public bool killed;

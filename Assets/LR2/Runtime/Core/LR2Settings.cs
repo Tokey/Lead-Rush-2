@@ -52,8 +52,8 @@ namespace LR2.Core
         /// <summary>Weapon laser sight. Lasers are enabled for every firearm by default; L or the settings toggle can disable them.</summary>
         public static bool LaserEnabled { get => GetB("v4.LaserEnabled", true); set => SetB("v4.LaserEnabled", value); }
         public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 4)); }
-        /// <summary>Bot team alignment in CTF/multi-bot modes: 0 Squads (Allies vs Enemies), 1 Free-For-All, 2 All Bots Same Team, 3 All Bots On Player Team.</summary>
-        public static int BotTeamMode { get => Mathf.Clamp(GetI("v3.BotTeamMode", 0), 0, 3); set => SetI("v3.BotTeamMode", Mathf.Clamp(value, 0, 3)); }
+        /// <summary>Bot team alignment in CTF/multi-bot modes: 0 Squads (Allies vs Enemies), 1 Free-For-All, 2 All Bots Same Team, 3 All Bots On Player Team, 4 Half & Half (50/50 Split).</summary>
+        public static int BotTeamMode { get => Mathf.Clamp(GetI("v3.BotTeamMode", 0), 0, 4); set => SetI("v3.BotTeamMode", Mathf.Clamp(value, 0, 4)); }
         /// <summary>Bodycam lens look (distortion, grain, aberration, grade).</summary>
         public static bool BodycamLook { get => GetB("v2.BodycamLook", false); set => SetB("v2.BodycamLook", value); }
         /// <summary>Bodycam camera motion (head bob, inertia sway, handheld shake). On by default (user asked for visible bodycam motion);

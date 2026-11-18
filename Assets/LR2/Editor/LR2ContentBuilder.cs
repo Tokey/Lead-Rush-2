@@ -175,7 +175,7 @@ namespace LR2.EditorTools
             var mSmoke = SaveMaterial(NewParticle(puff, new Color(0.3f, 0.3f, 0.3f, 0.6f), 1f, false), matDir + "/M_FX_Smoke.mat");
             var mBlood = SaveMaterial(NewParticle(puff, new Color(0.75f, 0.03f, 0.03f, 0.94f), 1f, false), matDir + "/M_FX_Blood.mat");
             var mBloodDrop = SaveMaterial(NewParticle(softDot, new Color(0.45f, 0.01f, 0.01f, 1f), 1f, false), matDir + "/M_FX_BloodDrop.mat");
-            var mTracer = SaveMaterial(NewParticle(tracerTex, new Color(1f, 0.86f, 0.45f), 45f, true), matDir + "/M_FX_Tracer.mat");
+            var mTracer = SaveMaterial(NewParticle(tracerTex, Color.white, 44f, true), matDir + "/M_FX_Tracer.mat");
             var mMarker = SaveMaterial(NewParticle(chevron, TeamUtil.FriendlyColor, 2.5f, false), matDir + "/M_FriendlyMarker.mat");
             var mBrass = SaveMaterial(NewLit(new Color(0.78f, 0.58f, 0.25f), 0.82f, 1f), matDir + "/M_Brass.mat");
             var dHole = SaveMaterial(NewDecal(hole, Color.white), matDir + "/M_Decal_BulletHole.mat");
@@ -824,6 +824,8 @@ namespace LR2.EditorTools
             BakeReloadRestPose(so, reloadAsset != null ? reloadAsset.clip : null, spec.id);
             var botTracerProp = so.FindProperty("botTracerEvery");
             if (botTracerProp != null) botTracerProp.intValue = 1;
+            var tacEndProp = so.FindProperty("tacticalEndAfterMagIn");
+            if (tacEndProp != null) tacEndProp.floatValue = 0.03f;
             // B49: Ensure every rifle/pistol weapon uses the Humanoid FPSAnimator controller (AK74N/Mk18/FAL came from Generic demo prefabs).
             if (UseKinemationDriver)
             {
@@ -1672,9 +1674,10 @@ namespace LR2.EditorTools
             var head = AssetDatabase.LoadAssetAtPath<Material>(SwatMatDir + "/Soldier_head6.mat");
             _gear = new[]
             {
-                DyeUniform(body, dir, "Uniform_Woodland", new Color(0.36f, 0.42f, 0.27f)),
-                DyeUniform(body, dir, "Uniform_Desert", new Color(0.68f, 0.57f, 0.4f)),
-                SkullMask(head, dir),
+                DyeUniform(body, dir, "Uniform_Allied_NavyBlue", new Color(0.11f, 0.30f, 0.72f), Color.clear, Color.clear, false),
+                DyeUniform(body, dir, "Uniform_Enemy_DesertCrimson", new Color(0.86f, 0.70f, 0.44f), new Color(0.64f, 0.48f, 0.27f), new Color(0.56f, 0.11f, 0.09f), true),
+                SkullMask(head, dir, "FaceMask_GhostSkull", new Color(0.82f, 0.80f, 0.73f)),
+                SkullMask(head, dir, "FaceMask_EnemyMarauder", new Color(0.82f, 0.16f, 0.12f)),
             };
             return _gear;
         }
@@ -1733,7 +1736,7 @@ namespace LR2.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        private static Material DyeUniform(Material body, string dir, string name, Color dye)
+        private static Material DyeUniform(Material body, string dir, string name, Color clothA, Color clothB, Color vestTint, bool hostileFaction)
         {
             if (body == null) return null;
             var m = new Material(body) { name = name };
@@ -1741,16 +1744,45 @@ namespace LR2.EditorTools
             if (src != null)
             {
                 var tex = ReadableCopy(src, 2048);
+                int w = tex.width, h = tex.height;
                 var px = tex.GetPixels();
-                for (int i = 0; i < px.Length; i++)
+                for (int y = 0; y < h; y++)
                 {
-                    var c = px[i];
-                    float blue = Mathf.Clamp01((c.b - Mathf.Max(c.r, c.g) - 0.015f) * 8f); // only the navy cloth
-                    if (blue <= 0f) continue;
-                    float l = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
-                    float shade = Mathf.Clamp(l * 2.3f, 0.12f, 1.2f);                   // keep folds and seams
-                    var dyed = new Color(dye.r * shade, dye.g * shade, dye.b * shade, c.a);
-                    px[i] = Color.Lerp(c, dyed, blue);
+                    float v = y / (float)(h - 1);
+                    for (int x = 0; x < w; x++)
+                    {
+                        float u = x / (float)(w - 1);
+                        int i = y * w + x;
+                        var c = px[i];
+                        float l = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                        float blue = Mathf.Clamp01((c.b - Mathf.Max(c.r, c.g) - 0.010f) * 9f);
+                        float shade = Mathf.Clamp(l * 2.35f, 0.14f, 1.32f);
+                        if (blue > 0.01f)
+                        {
+                            Color cloth = clothA;
+                            if (clothB.a > 0.01f)
+                            {
+                                float camo = Mathf.PerlinNoise(u * 22f + 1.3f, v * 22f + 3.7f);
+                                cloth = camo > 0.52f ? clothB : clothA;
+                            }
+                            var dyed = new Color(cloth.r * shade, cloth.g * shade, cloth.b * shade, c.a);
+                            px[i] = Color.Lerp(c, dyed, blue);
+                        }
+                        else if (hostileFaction)
+                        {
+                            // Transform dark plate carrier / pouches / helmet trim into crimson tactical OpFor gear & replace white "SWAT" back stencil
+                            bool isSwatStencil = u >= 0.70f && u <= 0.78f && v >= 0.57f && v <= 0.80f && c.r > 0.55f && c.g > 0.55f && c.b > 0.55f;
+                            if (isSwatStencil)
+                            {
+                                px[i] = new Color(0.46f, 0.08f, 0.07f, c.a);
+                            }
+                            else if (vestTint.a > 0.01f && l > 0.09f && l < 0.76f)
+                            {
+                                var rig = new Color(vestTint.r * shade, vestTint.g * shade, vestTint.b * shade, c.a);
+                                px[i] = Color.Lerp(c, rig, 0.68f);
+                            }
+                        }
+                    }
                 }
                 tex.SetPixels(px);
                 tex.Apply();
@@ -1760,11 +1792,11 @@ namespace LR2.EditorTools
             return SaveMaterial(m, $"{dir}/M_{name}.mat");
         }
 
-        /// <summary>Balaclava + skull print painted in the SWAT head UV layout (face centred, eyes ~33%, mouth ~47% from the top).</summary>
-        private static Material SkullMask(Material head, string dir)
+        /// <summary>Balaclava + faction skull print painted in the SWAT head UV layout (bone-white for allies, crimson Marauder for enemies).</summary>
+        private static Material SkullMask(Material head, string dir, string matName, Color printColor)
         {
             if (head == null) return null;
-            var m = new Material(head) { name = "FaceMask_GhostSkull" };
+            var m = new Material(head) { name = matName };
             var src = head.GetTexture("_BaseColorMap");
             if (src != null)
             {
@@ -1795,7 +1827,7 @@ namespace LR2.EditorTools
                         Color outc = fabric;
                         if ((cranium || jaw) && v > 0.18f && v < 0.6f)
                         {
-                            Color bone = new Color(0.8f, 0.78f, 0.71f) * (0.82f + l * 0.3f);
+                            Color bone = printColor * (0.82f + l * 0.3f);
                             if (hollow < 1f) bone *= Mathf.Lerp(0.55f, 1f, hollow);
                             float wear = Mathf.PerlinNoise(u * 38f, v * 38f);
                             bone = Color.Lerp(bone, fabric, Mathf.Clamp01((0.3f - wear) * 4f) * 0.75f); // printed, worn
@@ -1808,11 +1840,11 @@ namespace LR2.EditorTools
                     }
                 tex.SetPixels(px);
                 tex.Apply();
-                m.SetTexture("_BaseColorMap", SaveColorTexture(tex, $"{dir}/T_FaceMask_GhostSkull.png"));
+                m.SetTexture("_BaseColorMap", SaveColorTexture(tex, $"{dir}/T_{matName}.png"));
             }
             m.SetColor("_BaseColor", Color.white);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.18f);
-            return SaveMaterial(m, $"{dir}/M_FaceMask_GhostSkull.mat");
+            return SaveMaterial(m, $"{dir}/M_{matName}.mat");
         }
 
         public static void BuildSoldiers()
@@ -1936,6 +1968,8 @@ namespace LR2.EditorTools
 
                 var combatant = go.AddComponent<Combatant>();
                 var health = go.AddComponent<Health>();
+                health.MaxHealth = 100f;
+                health.MaxArmor = 50f; // B74 (user 11-18 04:30): 100 HP + 50 armour = 1.5x effective health, readout stays 100
                 var ctrl = go.AddComponent<SoldierController>();
                 if (soldierSettings != null) SetField(ctrl, "settings", soldierSettings);
 
@@ -1975,7 +2009,7 @@ namespace LR2.EditorTools
                 var visuals = go.AddComponent<SoldierVisuals>();
                 visuals.FriendlyMarkerMaterial = markerMat;
                 var gear = MakeGear();
-                visuals.SetGear(gear[0], gear[1], gear[2]);
+                visuals.SetGear(gear[0], gear[1], gear[2], gear[3]);
                 visuals.ApplyMaterialsNow(player); // Pre-bake uniform & balaclava texture onto prefab so frame 0 never flashes old model textures
 
                 var head = bodyAnim.GetBoneTransform(HumanBodyBones.Head);
@@ -2195,7 +2229,7 @@ namespace LR2.EditorTools
                 EditorUtility.SetDirty(m);
             }
             Match("MatchSettings_Duel", "1v1 Deathmatch", "1v1 Deathmatch against an adaptive enemy operator. First to 15 kills.", GameModeType.Duel, 15, 480f, 0, 1);
-            Match("MatchSettings_CTF", "Capture The Flag", "Rotating strategic flag mode with BF6 proximity capture (2.25x in 2.6m core) and configurable bot teams (Squads / FFA / Pack / Co-op).", GameModeType.CaptureTheFlag, 25, 480f, 1, 3);
+            Match("MatchSettings_CTF", "Capture The Flag", "Rotating strategic flag mode with proximity capture boost and team options (Half & Half 50/50, Squads, FFA, Pack, Co-op).", GameModeType.CaptureTheFlag, 25, 480f, 1, 3);
             Match("MatchSettings_FFA", "Free For All", "You against three bots. First to 20 kills.", GameModeType.FreeForAll, 20, 600f, 0, 3);
             Match("MatchSettings_TDM", "Team Deathmatch", "You and a bot squadmate against two bots. First team to 40.", GameModeType.TeamDeathmatch, 40, 600f, 1, 2);
 
@@ -2311,6 +2345,51 @@ namespace LR2.EditorTools
             box.transform.localScale = new Vector3(0.95f, 0.54f, 0.52f);
             box.GetComponent<Renderer>().sharedMaterial = crateMat;
             box.layer = LR2Layers.Default;
+            // B75: Replace primitive box visual with the Leartes crate mesh while keeping exact BoxCollider & strip alignment.
+            var cratePackPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LeartesStudios/Art/Prefabs/SM_Crate_01.prefab");
+            if (cratePackPrefab != null)
+            {
+                var visual = (GameObject)PrefabUtility.InstantiatePrefab(cratePackPrefab, crate.transform);
+                visual.name = "CrateMesh";
+                foreach (var col in visual.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(col);
+                var mfs = visual.GetComponentsInChildren<MeshFilter>(true);
+                if (mfs.Length > 0)
+                {
+                    Bounds local = default;
+                    bool has = false;
+                    Matrix4x4 inv = visual.transform.worldToLocalMatrix;
+                    foreach (var mf in mfs)
+                    {
+                        if (mf.sharedMesh == null) continue;
+                        Bounds sb = mf.sharedMesh.bounds;
+                        Matrix4x4 m = inv * mf.transform.localToWorldMatrix;
+                        Vector3 sc = sb.center, se = sb.extents;
+                        for (int sx = -1; sx <= 1; sx += 2)
+                        for (int sy = -1; sy <= 1; sy += 2)
+                        for (int sz = -1; sz <= 1; sz += 2)
+                        {
+                            Vector3 pt = m.MultiplyPoint3x4(sc + new Vector3(se.x * sx, se.y * sy, se.z * sz));
+                            if (!has) { local = new Bounds(pt, Vector3.zero); has = true; }
+                            else local.Encapsulate(pt);
+                        }
+                    }
+                    if (has)
+                    {
+                        Vector3 target = new Vector3(0.95f, 0.54f, 0.52f);
+                        Vector3 s = new Vector3(
+                            target.x / Mathf.Max(0.05f, local.size.x),
+                            target.y / Mathf.Max(0.05f, local.size.y),
+                            target.z / Mathf.Max(0.05f, local.size.z));
+                        visual.transform.localScale = s;
+                        visual.transform.localPosition = new Vector3(
+                            -local.center.x * s.x,
+                            -local.min.y * s.y,
+                            -local.center.z * s.z);
+                        var boxRenderer = box.GetComponent<Renderer>();
+                        if (boxRenderer != null) boxRenderer.enabled = false;
+                    }
+                }
+            }
             var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Object.DestroyImmediate(strip.GetComponent<Collider>());
             strip.name = "Strip";

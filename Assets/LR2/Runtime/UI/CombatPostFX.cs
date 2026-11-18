@@ -86,6 +86,13 @@ namespace LR2.UI
             float health = _player != null && _player.Health != null ? _player.Health.Normalized : 1f;
             bool alive = _player == null || _player.IsAlive;
             float low = alive ? Mathf.Clamp01((0.5f - health) / 0.5f) : 1f;
+            if (LR2.World.KillcamDirector.IsPlaying)
+            {
+                // B14.1: the replay is the killer's healthy view; the dead victim's red/grey low-health grade must not leak in
+                low = 0f;
+                _hit = 0f;
+                _suppression = 0f;
+            }
 
             _vignette.active = false;
             _aberration.active = false;

@@ -248,7 +248,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5a06c111b47a25e4a8b86ecfbdd4a824, type: 2}
+  - {fileID: 2100000, guid: 6dc7ea9c33ba02b4483593f41b1c934c, type: 2}
   - {fileID: 2100000, guid: be01c6750352845459637bbcefefb9c7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -2018,7 +2018,8 @@ MonoBehaviour:
   noiseProne: 1.5
   fallDamageSpeed: 13
   fallDamagePerMs: 9
-  walkAnimReferenceSpeed: 2.25
+  sprintClipNaturalSpeed: 4.75
+  walkSprintBlendMax: 0.56
   sprintAnimReferenceSpeed: 4.75
   crouchAnimReferenceSpeed: 2.1
   proneAnimReferenceSpeed: 0.8
@@ -2077,6 +2078,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LR2.Runtime::LR2.Combat.Health
   maxHealth: 100
+  maxArmor: 50
+  environmentBypassesArmor: 1
   regenerate: 1
   regenDelay: 4
   regenPerSecond: 55
@@ -2131,6 +2134,7 @@ MonoBehaviour:
   eyeForward: 0.095
   firstPersonBodyBack: 0.02
   replantFeet: 1
+  footPlantLock: 1
   logAlignment: 1
   rightGripCurl: -0.18
   triggerCurl: -0.05
@@ -2226,9 +2230,10 @@ MonoBehaviour:
   markerHeight: 2.15
   markerSize: 0.22
   maxMarkerDistance: 60
-  friendlyUniform: {fileID: 2100000, guid: 5a06c111b47a25e4a8b86ecfbdd4a824, type: 2}
-  enemyUniform: {fileID: 2100000, guid: 955f9196c1fa84e4faea39239a3b6708, type: 2}
+  friendlyUniform: {fileID: 2100000, guid: 6dc7ea9c33ba02b4483593f41b1c934c, type: 2}
+  enemyUniform: {fileID: 2100000, guid: f7ede2986ccbaf347bcc0c1f3334e603, type: 2}
   faceMask: {fileID: 2100000, guid: be01c6750352845459637bbcefefb9c7, type: 2}
+  enemyFaceMask: {fileID: 2100000, guid: 9c136da27c4558c40ad324f1406ed38e, type: 2}
 --- !u!114 &7229544153123429870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4183,7 +4188,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5a06c111b47a25e4a8b86ecfbdd4a824, type: 2}
+  - {fileID: 2100000, guid: 6dc7ea9c33ba02b4483593f41b1c934c, type: 2}
   - {fileID: 2100000, guid: b5ae1eb354dd24490b2608a1a5fa1ffe, type: 2}
   - {fileID: 2100000, guid: 4e768f218e154254381b0a6baeb8d9a0, type: 2}
   m_StaticBatchInfo:
@@ -5606,7 +5611,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5a06c111b47a25e4a8b86ecfbdd4a824, type: 2}
+  - {fileID: 2100000, guid: 6dc7ea9c33ba02b4483593f41b1c934c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

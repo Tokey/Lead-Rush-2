@@ -123,9 +123,28 @@ namespace LR2.Characters
         private static readonly int SprintingHash = Animator.StringToHash("Sprinting");
         private static readonly int LocoSpeedHash = Animator.StringToHash("LocoSpeed");
 
-        [Header("Animation cadence")]
-        [Tooltip("Ground speed (m/s) the walk/run cycle was authored for. Lower values prevent slow-mo leg skating.")]
-        [SerializeField] private float walkAnimReferenceSpeed = 2.25f;
+        // Animation cadence: walkAnimReferenceSpeed (2.25) was replaced by stride matching below (11-18 04:25).
+        [Header("Stride matching (B23/B50: feet must not skate)")]
+        [Tooltip("Ground speed the SPRINT clips cover at playback 1 (~4.75 m/s).")]
+        [SerializeField] private float sprintClipNaturalSpeed = 4.75f;
+        [Tooltip("Largest share of the sprint stride blended into standing walk at full walk speed (a jog). Pose checks at 3.5 m/s: 0.20 -> 1.92 m/s foot slide (C7), 0.35 -> 0.69 m/s (C8); playback is capped at 1.5x, so zero slide needs ~0.55.")]
+        [SerializeField, Range(0f, 0.6f)] private float walkSprintBlendMax = 0.56f;
+        // Ground speed the walk+sprint blend covers at playback 1, measured by the pose-check GAIT probe at 3.5 m/s:
+        // blend 0.20 -> 1.06 m/s (C7), 0.35 -> 1.89 (C8), 0.56 -> 2.58 (C9); blend 0 (slow walk) estimated.
+        private static readonly float[] StrideBlend = { 0f, 0.20f, 0.35f, 0.56f };
+        private static readonly float[] StrideSpeed = { 0.90f, 1.06f, 1.89f, 2.58f };
+
+        private float WalkStrideAt(float blend)
+        {
+            blend = Mathf.Clamp01(blend);
+            for (int i = 1; i < StrideBlend.Length; i++)
+                if (blend <= StrideBlend[i])
+                    return Mathf.Lerp(StrideSpeed[i - 1], StrideSpeed[i], Mathf.InverseLerp(StrideBlend[i - 1], StrideBlend[i], blend));
+            // beyond the last measurement: continue the last slope toward the sprint clip's own stride
+            int n = StrideBlend.Length - 1;
+            float slope = (StrideSpeed[n] - StrideSpeed[n - 1]) / (StrideBlend[n] - StrideBlend[n - 1]);
+            return Mathf.Min(sprintClipNaturalSpeed, StrideSpeed[n] + slope * (blend - StrideBlend[n]));
+        }
         [SerializeField] private float sprintAnimReferenceSpeed = 4.75f;
         [SerializeField] private float crouchAnimReferenceSpeed = 2.1f;
         [SerializeField] private float proneAnimReferenceSpeed = 0.8f;
@@ -574,7 +593,7 @@ namespace LR2.Characters
             // without pulling the rifle down off-screen into sprint carry.
             float targetSprint = State == SoldierMoveState.Sprinting ? 1f
                 : (Stance == SoldierStance.Standing && _inputDirection.y > 0.35f && planar > 1.8f
-                    ? Mathf.Clamp01((planar - 1.8f) / 1.7f) * 0.20f
+                    ? Mathf.Clamp01((planar - 1.8f) / 1.7f) * walkSprintBlendMax
                     : 0f);
             sprintWeight = Mathf.Lerp(sprintWeight, targetSprint, t);
             _animator.SetFloat(SprintingHash, sprintWeight);
@@ -582,7 +601,7 @@ namespace LR2.Characters
             float reference = Stance == SoldierStance.Prone ? proneAnimReferenceSpeed
                 : Stance == SoldierStance.Crouching ? crouchAnimReferenceSpeed
                 : State == SoldierMoveState.Sprinting ? sprintAnimReferenceSpeed
-                : walkAnimReferenceSpeed;
+                : WalkStrideAt(sprintWeight); // measured stride of the walk+sprint blend (no skating)
             float targetLoco = planar > 0.3f ? Mathf.Clamp(planar / Mathf.Max(0.1f, reference), 0.72f, 1.50f) : 1f;
             _locoSpeed = Mathf.Lerp(_locoSpeed, targetLoco, KMath.ExpDecayAlpha(8f, Time.deltaTime));
             _animator.SetFloat(LocoSpeedHash, _locoSpeed);

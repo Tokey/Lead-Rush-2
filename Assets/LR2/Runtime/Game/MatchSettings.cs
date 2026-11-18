@@ -6,7 +6,7 @@ namespace LR2.Game
     public enum GameModeType { Duel, FreeForAll, TeamDeathmatch, CaptureTheFlag, FreeForAllCaptureTheFlag }
 
     /// <summary>Configurable bot team allegiance in multi-bot modes (especially unified Capture The Flag).</summary>
-    public enum BotTeamAlignment { SquadsWithAllies = 0, FreeForAll = 1, BotsSameTeamVsPlayer = 2, AllBotsPlayerTeam = 3 }
+    public enum BotTeamAlignment { SquadsWithAllies = 0, FreeForAll = 1, BotsSameTeamVsPlayer = 2, AllBotsPlayerTeam = 3, HalfAndHalf = 4 }
 
     /// <summary>Per-mode customizable match rules stored persistently per GameModeType.</summary>
     [System.Serializable]
@@ -117,12 +117,21 @@ namespace LR2.Game
         {
             GameModeType.Duel => BotTeamAlignment.BotsSameTeamVsPlayer,
             GameModeType.FreeForAll => LR2Settings.BotTeamMode == 2 ? BotTeamAlignment.BotsSameTeamVsPlayer
-                : (LR2Settings.BotTeamMode == 3 ? BotTeamAlignment.AllBotsPlayerTeam : BotTeamAlignment.FreeForAll),
+                : (LR2Settings.BotTeamMode == 3 ? BotTeamAlignment.AllBotsPlayerTeam
+                : (LR2Settings.BotTeamMode == 4 ? BotTeamAlignment.HalfAndHalf : BotTeamAlignment.FreeForAll)),
             GameModeType.TeamDeathmatch => LR2Settings.BotTeamMode == 1 ? BotTeamAlignment.FreeForAll
-                : (BotTeamAlignment.SquadsWithAllies),
-            GameModeType.CaptureTheFlag => (BotTeamAlignment)LR2Settings.BotTeamMode,
+                : (LR2Settings.BotTeamMode == 4 ? BotTeamAlignment.HalfAndHalf : BotTeamAlignment.SquadsWithAllies),
+            GameModeType.CaptureTheFlag => (BotTeamAlignment)Mathf.Clamp(LR2Settings.BotTeamMode, 0, 4),
             _ => BotTeamAlignment.FreeForAll
         };
+
+        /// <summary>Splits a configured bot count 50/50 between allied bots (player team) and enemy bots.</summary>
+        public static void SplitHalfAndHalf(int configuredBots, out int allies, out int enemies)
+        {
+            int total = Mathf.Max(2, configuredBots);
+            allies = Mathf.Max(1, total / 2);
+            enemies = Mathf.Max(1, total - allies);
+        }
 
         public bool IsTeamMode => EffectiveBotTeamAlignment != BotTeamAlignment.FreeForAll && mode != GameModeType.Duel;
         public bool IsFlagMode => mode == GameModeType.CaptureTheFlag;
@@ -166,7 +175,8 @@ namespace LR2.Game
             "SQUADS (ALLIES VS ENEMIES)",
             "FREE-FOR-ALL (EVERY BOT SOLO)",
             "ALL BOTS SAME TEAM (SOLO VS PACK)",
-            "ALL BOTS ON PLAYER TEAM (CO-OP)"
+            "ALL BOTS ON PLAYER TEAM (CO-OP)",
+            "HALF & HALF (50/50 TEAM SPLIT)"
         };
         private static MatchSettings _runtimeCopy;
 

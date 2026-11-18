@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: MatchSettings_CTF
   m_EditorClassIdentifier: LR2.Runtime::LR2.Game.MatchSettings
   displayName: Capture The Flag
-  description: Rotating strategic flag mode with BF6 proximity capture (2.25x in
-    2.6m core) and configurable bot teams (Squads / FFA / Pack / Co-op).
+  description: Rotating strategic flag mode with proximity capture boost and team
+    options (Half & Half 50/50, Squads, FFA, Pack, Co-op).
   mode: 3
   scoreLimit: 25
   timeLimitSeconds: 480

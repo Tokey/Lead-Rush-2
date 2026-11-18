@@ -3,15 +3,18 @@
 Quality of AI work per agent and model on LeadRush 2.
 
 Reads ../data/tasks.csv and ../data/bugs.csv (see ../data/README.md for the columns) and writes, to ../figures/:
-  - escaped_per_10_tasks_{light,dark}.png   defects that reached the developer, per 10 delivered tasks
-  - review_catches_per_10_tasks_{light,dark}.png   defects another agent caught at review, per 10 tasks
-  - tasks_delivered_{light,dark}.png   delivered tasks per agent and model (the denominator)
+  - contribution_score_{light,dark}.png   contribution score with peer-rated task-difficulty weighting
+  - normalized_score_{light,dark}.png   peer-rated score plus recorded work-time adjustments
+  - escaped_per_10_tasks_{light,dark}.png   bugs found after delivery, per 10 tasks
+  - review_catches_per_10_tasks_{light,dark}.png   bugs another agent caught at review, per 10 tasks
+  - tasks_delivered_{light,dark}.png   completed task count per agent and model
   - summary.md   the same numbers as a table (embedded in ../README.md)
 
 Run:  python Docs/AI_Collaboration/analysis/analyze.py      (needs matplotlib: pip install matplotlib)
 
 Definitions
   task       a delivered item in tasks.csv (every outcome except "open")
+  difficulty a peer-rated band (small / standard / hard); unrated work receives the neutral standard weight
   escaped    a defect found after delivery (developer playtest or QA run), weighted by how sure the attribution is:
              high 1.0, medium 0.6, low 0.3
   review     a defect another agent caught before the developer saw it
@@ -33,6 +36,7 @@ DATA = os.path.join(ROOT, "data")
 FIG = os.path.join(ROOT, "figures")
 
 WEIGHT = {"high": 1.0, "medium": 0.6, "low": 0.3}
+DIFFICULTY_WEIGHT = {"small": 0.75, "standard": 1.0, "hard": 1.25}
 # Observed active runtime hours & hard usage-limit stops per (Agent · model) from session logs & B56 telemetry.
 SESSION_RUNTIME = {
     "Claude · claude-opus-5-5": dict(hours=4.8, stops=6),
@@ -66,7 +70,9 @@ def compute():
     def row(k):
         if k not in stats:
             stats[k] = dict(tasks=0, escaped=0.0, escaped_n=0, review=0, prepush=0, verified=0, ready=0,
-                            finds_others=0, finds_own=0, sugg_yes=0, sugg_pending=0)
+                            finds_others=0, finds_own=0, sugg_yes=0, sugg_pending=0,
+                            raw_task_credit=0.0, difficulty_task_credit=0.0, difficulty_rated=0,
+                            difficulty_retro=0, difficulty_prework=0)
         return stats[k]
 
     for t in tasks:
@@ -76,6 +82,15 @@ def compute():
             r["tasks"] += 1
             r["verified"] += outcome == "verified"
             r["ready"] += outcome == "ready-for-review"
+            completion_credit = 1.0 if outcome == "verified" else (0.5 if outcome == "ready-for-review" else 0.0)
+            difficulty = (t.get("difficulty") or "unrated").strip().lower()
+            multiplier = DIFFICULTY_WEIGHT.get(difficulty, 1.0)
+            r["raw_task_credit"] += completion_credit
+            r["difficulty_task_credit"] += completion_credit * multiplier
+            r["difficulty_rated"] += difficulty in DIFFICULTY_WEIGHT
+            timing = (t.get("difficulty_timing") or "").strip().lower()
+            r["difficulty_retro"] += difficulty in DIFFICULTY_WEIGHT and timing == "retrospective-peer-consensus"
+            r["difficulty_prework"] += difficulty in DIFFICULTY_WEIGHT and timing == "pre-work-peer-consensus"
     for b in bugs:
         cause_agent = (b.get("caused_by_agent") or "").strip()
         cause_model = (b.get("caused_by_model") or "").strip()
@@ -105,8 +120,10 @@ def compute():
         r["sugg_pending"] += adopted == "pending"
     for k, r in stats.items():
         # The developer's rule: finding new bugs and suggesting meaningful features score best.
-        r["score"] = (3 * r["finds_others"] + 2 * r["finds_own"] + 3 * r["sugg_yes"] + 1 * r["sugg_pending"]
-                      + 1 * r["verified"] + 0.5 * r["ready"] - 2 * r["escaped"] - 1 * r["prepush"] - 0.5 * r["review"])
+        other_score = (3 * r["finds_others"] + 2 * r["finds_own"] + 3 * r["sugg_yes"] + 1 * r["sugg_pending"]
+                       - 2 * r["escaped"] - 1 * r["prepush"] - 0.5 * r["review"])
+        r["raw_score"] = other_score + r["raw_task_credit"]
+        r["score"] = other_score + r["difficulty_task_credit"]
         rt = SESSION_RUNTIME.get(k, dict(hours=max(0.5, r["tasks"] * 0.15), stops=0))
         r["hours"] = rt["hours"]
         r["stops"] = rt["stops"]
@@ -119,10 +136,13 @@ def compute():
     return stats
 
 
-def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
+def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}", show_rated=False):
     items = [(k, v) for k, v in stats.items() if v["tasks"] > 0 or metric == "score"]
     items.sort(key=lambda kv: kv[1][metric])
-    names = [f"{k}  (n={v['tasks']})" for k, v in items]
+    if show_rated:
+        names = [f"{k}  (n={v['tasks']}, peer-rated={v['difficulty_rated']})" for k, v in items]
+    else:
+        names = [f"{k}  (n={v['tasks']})" for k, v in items]
     vals = [v[metric] for _, v in items]
     vmax = max([abs(v) for v in vals] + [1e-6])
     vmin = min(vals + [0.0])
@@ -158,11 +178,12 @@ def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}"):
 
 def summary(stats):
     lines = [
-        "| Agent · model | Score | Active Hrs | Quota Stops | Score / Hr | Endurance Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["norm_score"]):
-        lines.append(f"| {k} | {r['score']:.1f} | {r['hours']:.1f}h | {r['stops']} | {r['score_per_hr']:.1f} | **{r['norm_score']:.1f}** | {r['tasks']} | {r['finds_others']} / {r['finds_own']} | "
+        rated = f"{r['difficulty_rated']} ({r['difficulty_retro']} / {r['difficulty_prework']})"
+        lines.append(f"| {k} | {r['raw_score']:.1f} | {r['score']:.1f} | {r['hours']:.1f}h | {r['stops']} | {r['score_per_hr']:.1f} | **{r['norm_score']:.1f}** | {r['tasks']} | {rated} | {r['difficulty_task_credit']:.2f} | {r['finds_others']} / {r['finds_own']} | "
                      f"{r['sugg_yes']} / {r['sugg_pending']} | {r['escaped']:.1f} ({r['escaped_n']}) | {r['escaped_per10']:.1f} | "
                      f"{r['review']} | {r['prepush']} |")
     return "\n".join(lines)
@@ -174,42 +195,132 @@ def task_log_markdown(tasks):
 
     lines = [
         "<!-- generated by analysis/analyze.py from data/tasks.csv; shows the explicit origin/source of every task -->",
-        "| ID | When (ET) | Agent · Model | Board | Kind | Outcome | Task | Source (Prompt / Board / Evidence) |",
-        "|---|---|---|---|---|---|---|---|",
+        "| ID | When (ET) | Agent / model | Board | Kind | Outcome | Difficulty | Rating timing | Rating basis | Task | Source (Prompt / Board / Evidence) |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for t in reversed(tasks):
         lines.append(
-            f"| `{esc(t.get('id'))}` | {esc(t.get('when'))} | {esc(t.get('agent'))} · `{esc(t.get('model'))}` | "
+            f"| `{esc(t.get('id'))}` | {esc(t.get('when'))} | {esc(t.get('agent'))} / `{esc(t.get('model'))}` | "
             f"{esc(t.get('board_id')) or '-'} | {esc(t.get('kind'))} | {esc(t.get('outcome'))} | "
+            f"{esc(t.get('difficulty') or 'unrated')} | {esc(t.get('difficulty_timing')) or '-'} | {esc(t.get('difficulty_basis')) or '-'} | "
             f"{esc(t.get('title'))} | {esc(t.get('source'))} |"
         )
     return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------- protocol periods (v3 retro check)
+PERIODS = [
+    ("v1: before 11-17 23:25", None, "2026-11-17 23:25"),
+    ("v2: 11-17 23:25 to 11-18 00:05", "2026-11-17 23:25", "2026-11-18 00:05"),
+    ("v3: after 11-18 00:05", "2026-11-18 00:05", None),
+]
+
+
+def period_of(ts):
+    ts = (ts or "").strip()[:16]
+    for name, start, end in PERIODS:
+        if (start is None or ts >= start) and (end is None or ts < end):
+            return name
+    return PERIODS[-1][0]
+
+
+def period_stats():
+    """Quality per protocol version: escaped defects are counted in the period when the CAUSING task was done."""
+    weight = globals().get("WEIGHT", {"high": 1.0, "medium": 0.6, "low": 0.3})
+    tasks, bugs = read("tasks.csv"), read("bugs.csv")
+    when = {t["id"].strip(): t.get("when", "") for t in tasks}
+    st = OrderedDict((p[0], dict(tasks=0, escaped=0.0, review=0, prepush=0)) for p in PERIODS)
+    for t in tasks:
+        if (t.get("outcome") or "").strip() != "open":
+            st[period_of(t.get("when"))]["tasks"] += 1
+    for b in bugs:
+        stage = (b.get("stage") or "").strip()
+        if stage == "escaped":
+            cause = (b.get("caused_by_task") or "").strip()
+            st[period_of(when.get(cause) or b.get("found"))]["escaped"] += weight.get((b.get("confidence") or "").strip(), 0.3)
+        elif stage == "review":
+            st[period_of(b.get("found"))]["review"] += 1
+        elif stage == "pre-push":
+            st[period_of(b.get("found"))]["prepush"] += 1
+    for v in st.values():
+        n = max(1, v["tasks"])
+        v["escaped_per10"] = 10.0 * v["escaped"] / n
+        v["caught_per10"] = 10.0 * (v["review"] + v["prepush"]) / n
+    return st
+
+
+def period_chart(st, metric, title, subtitle, xlabel, fname):
+    names = [f"{k}  (n={v['tasks']})" for k, v in st.items()][::-1]  # chronological top to bottom
+    vals = [v[metric] for v in st.values()][::-1]
+    vmax = max(vals + [1e-6])
+    for theme, c in THEMES.items():
+        fig, ax = plt.subplots(figsize=(8.6, 0.55 * len(vals) + 2.0), dpi=150)
+        fig.patch.set_facecolor(c["surface"])
+        ax.set_facecolor(c["surface"])
+        ax.barh(names, vals, height=0.5, color=c["bar"])
+        for i, v in enumerate(vals):
+            ax.text(v + vmax * 0.015, i, f"{v:.1f}", va="center", ha="left", color=c["ink"], fontsize=9)
+        ax.set_xlim(0, vmax * 1.2)
+        ax.xaxis.grid(True, color=c["grid"], linewidth=0.8)
+        ax.set_axisbelow(True)
+        for side in ("top", "right", "left"):
+            ax.spines[side].set_visible(False)
+        ax.spines["bottom"].set_color(c["grid"])
+        ax.tick_params(colors=c["ink2"], labelsize=9, length=0)
+        for lbl in ax.get_yticklabels():
+            lbl.set_color(c["ink"])
+        ax.set_xlabel(xlabel, color=c["ink2"], fontsize=9)
+        ax.set_title(title, loc="left", color=c["ink"], fontsize=12, fontweight="bold", pad=24)
+        ax.text(0, 1.02, subtitle, transform=ax.transAxes, color=c["ink2"], fontsize=8.5, va="bottom")
+        fig.tight_layout()
+        fig.savefig(os.path.join(FIG, f"{fname}_{theme}.png"), facecolor=c["surface"])
+        plt.close(fig)
+
+
+def period_table(st):
+    lines = ["| Protocol period | Tasks | Bugs after delivery (weighted) | per 10 tasks | Caught before the developer (review + pre-push) | per 10 tasks |",
+             "|---|---|---|---|---|---|"]
+    for k, v in st.items():
+        lines.append(f"| {k} | {v['tasks']} | {v['escaped']:.1f} | {v['escaped_per10']:.1f} | {v['review'] + v['prepush']} | {v['caught_per10']:.1f} |")
+    return "\n".join(lines)
 
 
 def main():
     os.makedirs(FIG, exist_ok=True)
     tasks = read("tasks.csv")
     stats = compute()
+    pst = period_stats()
+    period_chart(pst, "escaped_per10",
+                 "Bugs found after delivery per 10 tasks, by protocol version (lower is better)",
+                 "Each bug counts in the period when the task that caused it was done; confidence-weighted. v2/v3 tasks have had less time to be playtested.",
+                 "after-delivery bugs per 10 tasks (lower is better)", "protocol_escaped_per_10_tasks")
+    period_chart(pst, "caught_per10",
+                 "Bugs stopped before the developer per 10 tasks, by protocol version (higher is better)",
+                 "Peer-review catches plus pre-push build breaks. Cross-review started 11-17 18:07; v3 added check-the-check and compile gates.",
+                 "bugs caught per 10 tasks (higher is better)", "protocol_caught_per_10_tasks")
+    with open(os.path.join(FIG, "protocol_periods.md"), "w", encoding="utf-8") as f:
+        f.write("<!-- generated by analysis/analyze.py; do not edit by hand -->\n" + period_table(pst) + "\n")
+    print(period_table(pst))
     bar_chart(stats, "score",
-              "Contribution score per agent and model",
-              "Finding bugs (+3 others, +2 own) and adopted suggestions (+3) count most; escaped defects -2. Higher is better.",
-              "score", "contribution_score")
+              "Difficulty-adjusted contribution score (higher is better)",
+              "n = scored tasks; peer-rated = median of 3 request-scope reviews. Historic ratings are retrospective estimates; unrated tasks get 1x.",
+              "adjusted contribution points (higher is better)", "contribution_score", show_rated=True)
     bar_chart(stats, "norm_score",
-              "Runtime & quota-endurance normalized score",
-              "Adjusts quality score for continuous unthrottled runtime (+1.5/active hr) and hard quota stops (-3.0/stop).",
-              "endurance-normalized score", "normalized_score")
+              "Score adjusted for recorded work time (higher is better)",
+              "Starts with difficulty-adjusted score, adds 1.5 per work hour, and subtracts 3 per quota stop. Labels show total and peer-rated tasks.",
+              "adjusted points (higher is better)", "normalized_score", show_rated=True)
     bar_chart(stats, "escaped_per10",
-              "Defects that reached the developer, per 10 delivered tasks",
-              "Weighted by attribution confidence (high 1, medium 0.6, low 0.3). Lower is better.",
-              "escaped defects per 10 tasks", "escaped_per_10_tasks")
+              "Bugs found after delivery per 10 tasks (lower is better)",
+              "Counts defects found by QA or the developer. Higher-confidence attributions count more.",
+              "after-delivery bugs per 10 tasks (lower is better)", "escaped_per_10_tasks")
     bar_chart(stats, "review_per10",
-              "Defects caught by another agent's review, per 10 tasks",
-              "Stopped before the developer saw them. Cross-review started 2026-11-17 18:07.",
-              "review catches per 10 tasks", "review_catches_per_10_tasks")
+              "Bugs caught in peer review per 10 tasks (higher is better)",
+              "Counts defects another agent caught before delivery. More catches mean more issues were stopped early.",
+              "bugs caught per 10 tasks (higher is better)", "review_catches_per_10_tasks")
     bar_chart(stats, "tasks",
-              "Tasks delivered",
-              "Finished items per agent and model, 2026-11-16 to 18 (work before 23:25 on 11-17 is reconstructed).",
-              "tasks", "tasks_delivered", fmt="{:.0f}")
+              "Completed task count",
+              "Counts recorded tasks that are no longer open; n is the task count for each agent and model.",
+              "completed tasks", "tasks_delivered", fmt="{:.0f}")
     table = summary(stats)
     with open(os.path.join(FIG, "summary.md"), "w", encoding="utf-8") as f:
         f.write("<!-- generated by analysis/analyze.py from data/*.csv; do not edit by hand -->\n" + table + "\n")

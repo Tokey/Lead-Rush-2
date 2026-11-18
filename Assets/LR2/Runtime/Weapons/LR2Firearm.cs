@@ -3,6 +3,7 @@
 // gunplay: ammo, hitscan ballistics, spread/bloom, layered audio, muzzle flash, casings, tracers and AI noise.
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Demo.Scripts.Runtime.AttachmentSystem;
 using KINEMATION.FPSAnimationFramework.Runtime.Camera;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
@@ -15,6 +16,7 @@ using LR2.Characters;
 using LR2.Core;
 using LR2.FX;
 using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace LR2.Weapons
 {
@@ -31,7 +33,7 @@ namespace LR2.Weapons
         [Tooltip("Tactical reload: with a round still chambered, the empty-reload clip is cut shortly after the new magazine seats (no charging handle).")]
         [SerializeField] private bool tacticalReload = true;
         [Tooltip("How long after the mag-in cue (fraction of the full clip) a tactical reload ends and blends back to ready.")]
-        [SerializeField, Range(0f, 0.3f)] private float tacticalEndAfterMagIn = 0.08f;
+        [SerializeField, Range(0f, 0.3f)] private float tacticalEndAfterMagIn = 0.03f;
         [Tooltip("A tactical reload keeps the chambered round, so the gun holds magazine + 1 (30+1).")]
         [SerializeField] private bool chamberedRoundBonus = true;
         private FPSAnimationAsset _reloadRuntime;
@@ -138,13 +140,19 @@ namespace LR2.Weapons
         private bool _dryFiredThisPress;
         private bool _indoors;
         private float _barrelHeat;
+        private float _lastHeatShotTime = -10f;
+        private int _consecutiveHeatShots;
+        private bool _heatFxUnlocked;
         private ParticleSystem _barrelSmoke;
         private ParticleSystem.EmissionModule _barrelSmokeEmission;
+        private Material _barrelSmokeMaterial;
         private Renderer _barrelGlowRenderer;
         private Material _barrelGlowMat;
-        private Light _barrelGlowLight;
+        private HeatHazeEmitter _muzzleHeatHaze;
         private bool _heatFxBuilt;
         public float BarrelHeat => _barrelHeat;
+        private static readonly FieldInfo CameraFovSpeedField = typeof(FPSCameraController).GetField(
+            "fovSpeed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         // Reload
         private float _reloadStart;
@@ -254,8 +262,7 @@ namespace LR2.Weapons
         public override void OnUnEquip()
         {
             CancelActions();
-            _barrelHeat = 0f;
-            UpdateBarrelHeatFX();
+            ClearBarrelHeat();
             if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(unEquipMotion);
         }
 
@@ -303,6 +310,9 @@ namespace LR2.Weapons
             if (scope != null && scope.aimPoint != null) _entity.defaultAimPoint = scope.aimPoint;
         }
 
+        /// <summary>Kinemation per-shot camera shake asset (the killcam replays it on the recorded shots).</summary>
+        public FPSCameraShake CameraShakeAsset => cameraShake;
+
         public override void UpdateFieldOfView(bool aiming)
         {
             // Settings and fieldOfView are HORIZONTAL degrees (CoD/BF convention); Unity cameras take the vertical angle.
@@ -324,7 +334,14 @@ namespace LR2.Weapons
                 }
             }
             if (_userInput != null) _userInput.SetValue("SensitivityMultiplier", sens);
-            if (_cameraController != null) _cameraController.UpdateTargetFOV(fov);
+            if (_cameraController != null)
+            {
+                // FPSCameraController advances its cubic FOV curve by deltaTime * fovSpeed.
+                // Match that duration to the weapon's authored ADS transition so the zoom does not finish first.
+                float adsDuration = definition != null ? Mathf.Max(0.05f, definition.adsTime) : 0.25f;
+                if (CameraFovSpeedField != null) CameraFovSpeedField.SetValue(_cameraController, 1f / adsDuration);
+                _cameraController.UpdateTargetFOV(fov);
+            }
         }
 
         public override bool OnAimPressed()
@@ -448,17 +465,36 @@ namespace LR2.Weapons
             // Semi/burst: release recoil after one cycle like the Kinemation demo.
             if (_recoilActive && (!_triggerHeld || _fireMode != FireMode.Auto) && Time.time >= _nextShotTime) StopRecoil();
 
+            float shotInterval = definition != null ? definition.SecondsBetweenShots : 0.1f;
+            if (_consecutiveHeatShots > 0 && Time.time - _lastHeatShotTime > Mathf.Max(0.18f, shotInterval * 2.1f))
+                _consecutiveHeatShots = 0;
+
             if (_barrelHeat > 0f && Time.time - _lastShotTime > 0.30f)
             {
                 _barrelHeat = Mathf.MoveTowards(_barrelHeat, 0f, deltaTime * 0.13f);
-                UpdateBarrelHeatFX();
             }
+            if (_barrelHeat <= 0.001f)
+            {
+                _barrelHeat = 0f;
+                _heatFxUnlocked = false;
+                _consecutiveHeatShots = 0;
+            }
+            UpdateBarrelHeatFX();
         }
 
         private void Shoot()
         {
             EnsureHeatFX();
+            float shotInterval = definition != null ? definition.SecondsBetweenShots : 0.1f;
+            if (Time.time - _lastHeatShotTime > Mathf.Max(0.18f, shotInterval * 2.1f))
+                _consecutiveHeatShots = 0;
+            _lastHeatShotTime = Time.time;
+            _consecutiveHeatShots++;
+            if (_consecutiveHeatShots >= 20) _heatFxUnlocked = true;
             _barrelHeat = Mathf.Clamp01(_barrelHeat + 0.042f);
+            if (_heatFxUnlocked && _barrelSmoke != null &&
+                (_consecutiveHeatShots == 20 || _consecutiveHeatShots % 3 == 0))
+                _barrelSmoke.Emit(1);
             UpdateBarrelHeatFX();
             AmmoInMagazine--;
             _shotCounter++;
@@ -569,96 +605,187 @@ namespace LR2.Weapons
             _heatFxBuilt = true;
             Transform m = Muzzle;
 
-            // Persistent rising barrel smoke wisps after sustained fire.
+            // Sparse, soft masked wisps replace the opaque quads that read as blocks.
             var smokeGo = new GameObject("BarrelHeatSmoke");
             smokeGo.transform.SetParent(m, false);
             _barrelSmoke = smokeGo.AddComponent<ParticleSystem>();
             var main = _barrelSmoke.main;
-            main.playOnAwake = true;
+            main.playOnAwake = false;
             main.loop = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.85f, 1.55f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.28f, 0.65f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.024f, 0.058f);
-            main.startColor = new Color(0.82f, 0.84f, 0.88f, 0.34f);
-            main.gravityModifier = -0.22f;
-            main.maxParticles = 48;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.22f, 0.40f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.045f, 0.12f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.022f, 0.045f);
+            main.startColor = new Color(0.76f, 0.78f, 0.82f, 0.20f);
+            main.gravityModifier = -0.025f;
+            main.maxParticles = 8;
             var shape = _barrelSmoke.shape;
             shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 12f;
-            shape.radius = 0.012f;
+            shape.angle = 5f;
+            shape.radius = 0.004f;
             var sol = _barrelSmoke.sizeOverLifetime;
             sol.enabled = true;
-            sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 2.2f));
+            sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.35f, 1f, 1.6f));
+            var colorLife = _barrelSmoke.colorOverLifetime;
+            colorLife.enabled = true;
+            var alpha = new Gradient();
+            alpha.SetKeys(
+                new[] { new GradientColorKey(new Color(0.82f, 0.84f, 0.88f), 0f), new GradientColorKey(new Color(0.75f, 0.77f, 0.81f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.26f, 0.18f), new GradientAlphaKey(0f, 1f) });
+            colorLife.color = new ParticleSystem.MinMaxGradient(alpha);
+            var noise = _barrelSmoke.noise;
+            noise.enabled = true;
+            noise.strength = 0.035f;
+            noise.frequency = 0.8f;
+            noise.scrollSpeed = 0.15f;
             var pr = smokeGo.GetComponent<ParticleSystemRenderer>();
             if (pr != null)
             {
-                Shader sh = Shader.Find("HDRP/Unlit") ?? Shader.Find("Particles/Standard Unlit");
+                Shader sh = Shader.Find("HDRP/Unlit");
                 if (sh != null)
                 {
-                    var smat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
-                    if (smat.HasProperty("_UnlitColor")) smat.SetColor("_UnlitColor", new Color(0.76f, 0.79f, 0.84f, 0.28f));
-                    if (smat.HasProperty("_BaseColor")) smat.SetColor("_BaseColor", new Color(0.76f, 0.79f, 0.84f, 0.28f));
+                    var smat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave, name = "LR2 Soft Thermal Smoke" };
+                    if (smat.HasProperty("_UnlitColorMap")) smat.SetTexture("_UnlitColorMap", CreateSoftSmokeTexture());
+                    if (smat.HasProperty("_UnlitColor")) smat.SetColor("_UnlitColor", Color.white);
+                    if (smat.HasProperty("_SurfaceType")) smat.SetFloat("_SurfaceType", 1f);
+                    if (smat.HasProperty("_BlendMode")) smat.SetFloat("_BlendMode", 0f);
+                    HDMaterial.ValidateMaterial(smat);
+                    _barrelSmokeMaterial = smat;
                     pr.sharedMaterial = smat;
                 }
                 pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                pr.receiveShadows = false;
+                pr.renderMode = ParticleSystemRenderMode.Billboard;
+                pr.alignment = ParticleSystemRenderSpace.View;
             }
             _barrelSmokeEmission = _barrelSmoke.emission;
             _barrelSmokeEmission.rateOverTime = 0f;
+            _barrelSmoke.Play();
 
-            // Cherry-red glowing barrel sleeve just behind the muzzle brake/gas block.
-            var glowGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            glowGo.name = "BarrelHeatGlow";
+            // Diffuse red billboard at the muzzle; no sleeve mesh covers the gun.
+            var glowGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            glowGo.name = "MuzzleHeatGlow";
             var col = glowGo.GetComponent<Collider>();
             if (col != null) Destroy(col);
             glowGo.transform.SetParent(m, false);
-            glowGo.transform.localPosition = new Vector3(0f, 0f, -0.15f);
-            glowGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            glowGo.transform.localScale = new Vector3(0.024f, 0.11f, 0.024f);
+            glowGo.transform.localPosition = Vector3.back * 0.018f;
+            glowGo.transform.localScale = new Vector3(0.075f, 0.075f, 1f);
             _barrelGlowRenderer = glowGo.GetComponent<Renderer>();
             if (_barrelGlowRenderer != null)
             {
-                Shader sh = Shader.Find("HDRP/Unlit") ?? Shader.Find("HDRP/Lit");
-                _barrelGlowMat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
-                _barrelGlowRenderer.sharedMaterial = _barrelGlowMat;
+                Shader sh = Shader.Find("HDRP/Unlit");
+                if (sh != null)
+                {
+                    _barrelGlowMat = new Material(sh) { hideFlags = HideFlags.HideAndDontSave, name = "LR2 Diffuse Muzzle Heat" };
+                    if (_barrelGlowMat.HasProperty("_UnlitColorMap")) _barrelGlowMat.SetTexture("_UnlitColorMap", CreateGlowTexture());
+                    if (_barrelGlowMat.HasProperty("_SurfaceType")) _barrelGlowMat.SetFloat("_SurfaceType", 1f);
+                    if (_barrelGlowMat.HasProperty("_BlendMode")) _barrelGlowMat.SetFloat("_BlendMode", 0f);
+                    HDMaterial.ValidateMaterial(_barrelGlowMat);
+                    _barrelGlowRenderer.sharedMaterial = _barrelGlowMat;
+                }
                 _barrelGlowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _barrelGlowRenderer.receiveShadows = false;
                 _barrelGlowRenderer.enabled = false;
             }
-            var lightGo = new GameObject("BarrelHeatLight");
-            lightGo.transform.SetParent(glowGo.transform, false);
-            _barrelGlowLight = lightGo.AddComponent<Light>();
-            _barrelGlowLight.type = LightType.Point;
-            _barrelGlowLight.color = new Color(1f, 0.26f, 0.04f);
-            _barrelGlowLight.range = 0.45f;
-            _barrelGlowLight.intensity = 0f;
-            _barrelGlowLight.enabled = false;
+
+            var hazeGo = new GameObject("Muzzle Heat Haze");
+            hazeGo.transform.SetParent(m, false);
+            hazeGo.transform.localPosition = new Vector3(0f, 0.015f, 0.005f);
+            _muzzleHeatHaze = hazeGo.AddComponent<HeatHazeEmitter>();
+            _muzzleHeatHaze.Configure(new Vector2(0.045f, 0.13f), 0f);
         }
 
         private void UpdateBarrelHeatFX()
         {
             if (!_heatFxBuilt) return;
-            float smokeRate = _barrelHeat > 0.26f ? Mathf.Lerp(2f, 24f, (_barrelHeat - 0.26f) / 0.74f) : 0f;
-            if (_barrelSmoke != null) _barrelSmokeEmission.rateOverTime = smokeRate;
-
-            float glowT = Mathf.Clamp01((_barrelHeat - 0.34f) / 0.66f);
-            bool glowActive = glowT > 0.01f;
+            float glowT = _heatFxUnlocked ? Mathf.Clamp01(_barrelHeat) : 0f;
+            bool glowActive = glowT > 0.025f;
             if (_barrelGlowRenderer != null)
             {
                 _barrelGlowRenderer.enabled = glowActive;
+                Camera view = Camera.main;
+                if (glowActive && view != null)
+                    _barrelGlowRenderer.transform.rotation = Quaternion.LookRotation(
+                        view.transform.position - _barrelGlowRenderer.transform.position, view.transform.up);
                 if (glowActive && _barrelGlowMat != null)
                 {
-                    Color hot = Color.Lerp(new Color(0.55f, 0.05f, 0.01f, 0.45f), new Color(1f, 0.24f, 0.03f, 0.92f), glowT);
-                    Color hdr = hot * Mathf.Lerp(1.8f, 16f, glowT * glowT);
-                    if (_barrelGlowMat.HasProperty("_UnlitColor")) _barrelGlowMat.SetColor("_UnlitColor", hdr);
-                    if (_barrelGlowMat.HasProperty("_BaseColor")) _barrelGlowMat.SetColor("_BaseColor", hot);
-                    if (_barrelGlowMat.HasProperty("_EmissiveColor")) _barrelGlowMat.SetColor("_EmissiveColor", hdr);
+                    float intensity = Mathf.Lerp(0.04f, 0.22f, glowT);
+                    if (_barrelGlowMat.HasProperty("_UnlitColor"))
+                        _barrelGlowMat.SetColor("_UnlitColor", new Color(1f, 0.12f, 0.015f, intensity));
+                    if (_barrelGlowMat.HasProperty("_EmissiveColor"))
+                        _barrelGlowMat.SetColor("_EmissiveColor", new Color(0.8f, 0.07f, 0.008f, 1f) * (glowT * 0.35f));
                 }
             }
-            if (_barrelGlowLight != null)
+            if (_muzzleHeatHaze != null) _muzzleHeatHaze.SetStrength(glowActive ? glowT * 0.22f : 0f);
+        }
+
+        private void ClearBarrelHeat()
+        {
+            _barrelHeat = 0f;
+            _consecutiveHeatShots = 0;
+            _lastHeatShotTime = -10f;
+            _heatFxUnlocked = false;
+            if (_barrelSmoke != null) _barrelSmoke.Clear(true);
+            UpdateBarrelHeatFX();
+        }
+
+        private static Texture2D _softSmokeTexture;
+        private static Texture2D CreateSoftSmokeTexture()
+        {
+            if (_softSmokeTexture != null) return _softSmokeTexture;
+            const int size = 64;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
-                _barrelGlowLight.enabled = glowActive;
-                _barrelGlowLight.intensity = glowT * glowT * 10f;
+                name = "LR2 Soft Thermal Smoke Mask", wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave
+            };
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = ((x + 0.5f) / size) * 2f - 1f;
+                float v = ((y + 0.5f) / size) * 2f - 1f;
+                float edge = Mathf.Clamp01((1f - Mathf.Sqrt(u * u + v * v)) * 1.8f);
+                float n1 = Mathf.PerlinNoise(x * 0.105f + 0.3f, y * 0.105f + 0.8f);
+                float n2 = Mathf.PerlinNoise(x * 0.26f + 5.1f, y * 0.26f + 1.7f);
+                float noise = Mathf.Lerp(0.38f, 1f, n1 * 0.72f + n2 * 0.28f);
+                pixels[y * size + x] = new Color(1f, 1f, 1f, edge * edge * noise);
             }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            _softSmokeTexture = texture;
+            return texture;
+        }
+
+        private static Texture2D _glowTexture;
+        private static Texture2D CreateGlowTexture()
+        {
+            if (_glowTexture != null) return _glowTexture;
+            const int size = 64;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "LR2 Diffuse Muzzle Glow Mask", wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave
+            };
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = ((x + 0.5f) / size) * 2f - 1f;
+                float v = ((y + 0.5f) / size) * 2f - 1f;
+                float alpha = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v)), 2.4f);
+                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            _glowTexture = texture;
+            return texture;
+        }
+
+        private void OnDestroy()
+        {
+            if (_barrelSmokeMaterial != null) Destroy(_barrelSmokeMaterial);
+            if (_barrelGlowMat != null) Destroy(_barrelGlowMat);
         }
 
         private static readonly RaycastHit[] EchoHits = new RaycastHit[1];
@@ -691,6 +818,7 @@ namespace LR2.Weapons
         {
             if (IsReloading || AmmoInMagazine >= ReloadCapacity || ReserveAmmo <= 0 || Time.time < _equipReadyAt) return false;
 
+            ClearBarrelHeat();
             _reloadEmpty = AmmoInMagazine == 0;
             bool hasClip = FPSAnimationAsset.IsValid(reloadClip);
             if (hasClip && _reloadRuntime == null)
@@ -751,13 +879,45 @@ namespace LR2.Weapons
             IsReloading = false;
             if (tactical)
             {
-                // Cut before the charging-handle part of the clip and blend the arms back to ready.
-                if (_playables != null) _playables.StopAnimation(0.2f);
+                // Cut before the charging-handle part of the clip and blend the arms back to ready
+                // (0.3 s, with ReloadMotionBridge's 0.35 s ease-out: no end-of-reload jump, B16/D40).
+                if (_playables != null) _playables.StopAnimation(0.3f);
                 if (_weaponAnimator != null) { _weaponAnimator.Rebind(); _weaponAnimator.Play("Empty", 0, 0f); _weaponAnimator.Update(0f); }
             }
             if (_weaponAnimator != null) _weaponAnimator.speed = 1f;
             AmmoChanged?.Invoke();
             ReloadFinished?.Invoke();
+        }
+
+        /// <summary>
+        /// Sprinting interrupts a reload like Call of Duty (B16/D40): once the new magazine has seated (mag-in cue) the
+        /// rounds count, otherwise the magazine is unchanged; the arms ease back to ready instead of reloading off-screen.
+        /// </summary>
+        public void InterruptReload()
+        {
+            if (!IsReloading) return;
+            var a = definition != null ? definition.audio : null;
+            bool seated = a != null && ReloadProgress >= a.magInAt;
+            if (seated)
+            {
+                int take = Mathf.Min(ReloadCapacity - AmmoInMagazine, ReserveAmmo);
+                AmmoInMagazine += take;
+                ReserveAmmo -= take;
+            }
+            IsReloading = false;
+            if (_playables != null) _playables.StopAnimation(0.3f);
+            if (_weaponAnimator != null)
+            {
+                _weaponAnimator.speed = 1f;
+                _weaponAnimator.Rebind();
+                _weaponAnimator.Play("Empty", 0, 0f);
+                _weaponAnimator.Update(0f);
+            }
+            if (seated)
+            {
+                AmmoChanged?.Invoke();
+                ReloadFinished?.Invoke();
+            }
         }
 
         public override void CancelActions()

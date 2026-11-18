@@ -42,6 +42,8 @@ namespace LR2.EditorTools
         private static MapBuildConfig _cfg;
         private static System.Random _rnd;
         private static readonly Dictionary<string, Mesh> _procMeshes = new Dictionary<string, Mesh>();
+        private static readonly Dictionary<string, GameObject> _prefabCache = new Dictionary<string, GameObject>();
+        private static Texture2D _detailMap;
 
         private class Mats
         {
@@ -84,9 +86,9 @@ namespace LR2.EditorTools
             BuildMidYard();
             BuildBoundary();
             if (_cfg.backgroundDressing) BuildBackground();
-            if (_cfg.decals) PlaceDecals();
             BuildLighting();
             BuildGameplay();
+            if (_cfg.decals) { PlaceDecals(); PlaceTargetedWearDecals(); }
             MarkStatic(env);
             BuildNature();   // after MarkStatic: swaying plants must stay dynamic
 
@@ -121,7 +123,7 @@ namespace LR2.EditorTools
                 roof = PhotoMat("M_LR2_Roof", "T_TileRust_BC", "T_TileRust_N", "T_TileRust_ORM", false, 0.4f, new Color(0.78f, 0.78f, 0.78f)),
                 wood = PhotoMat("M_LR2_Wood", "T_Planks01_B", "T_Planks01_N", "T_Planks01_ORM", false, 0.7f, new Color(0.75f, 0.72f, 0.68f)),
                 salt = PhotoMat("M_LR2_Gravel", "T_Mud_BC", "T_Mud_N", "T_Mud_ARD", true, 0.45f, new Color(0.8f, 0.78f, 0.72f)),
-                curb = SaveMaterial(NewLit(new Color(0.45f, 0.42f, 0.18f), 0.2f), MatDir + "/M_LR2_SafetyYellow.mat"),
+                curb = PhotoMat("M_LR2_SafetyYellow", "T_Concrete_BC", "T_Concrete_N", "T_Concrete_ORM", false, 0.45f, new Color(0.76f, 0.63f, 0.20f)),
                 darkMetal = PhotoMat("M_LR2_DarkMetal", "T_Steel_BC", "T_Steel_N", "T_Steel_ORM", false, 0.9f, new Color(0.22f, 0.23f, 0.24f)),
                 steelGrate = PhotoMat("M_LR2_Grate", "T_Metalplane_BC", "T_Metalplane_N", "T_Metalplane_ORM", false, 0.8f, new Color(0.6f, 0.6f, 0.6f)),
                 glass = dirtyGlass,
@@ -196,6 +198,63 @@ namespace LR2.EditorTools
 
         private static Shader _hdrpLit;
 
+        /// <summary>Tileable HDRP detail map (R albedo grain, G normal Y, B smoothness mod, A normal X) for close-range surface breakup (B75/B42).</summary>
+        private static Texture2D GetOrBuildDetailMap()
+        {
+            if (_detailMap != null) return _detailMap;
+            string outPath = $"{MatDir}/Masks/T_LR2_Surface_Detail.png";
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(outPath);
+            if (existing != null) { _detailMap = existing; return _detailMap; }
+
+            const int S = 256;
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, true, true);
+            var px = new Color32[S * S];
+            float TileNoise(float u, float v, float freq, float seed)
+            {
+                // Seamless periodic blend across [0,1)
+                float n00 = Mathf.PerlinNoise(u * freq + seed, v * freq + seed);
+                float n10 = Mathf.PerlinNoise((u - 1f) * freq + seed, v * freq + seed);
+                float n01 = Mathf.PerlinNoise(u * freq + seed, (v - 1f) * freq + seed);
+                float n11 = Mathf.PerlinNoise((u - 1f) * freq + seed, (v - 1f) * freq + seed);
+                float bx = Mathf.SmoothStep(0f, 1f, u);
+                float by = Mathf.SmoothStep(0f, 1f, v);
+                return Mathf.Lerp(Mathf.Lerp(n00, n10, bx), Mathf.Lerp(n01, n11, bx), by);
+            }
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                float u = x / (float)S;
+                float v = y / (float)S;
+                float nCoarse = TileNoise(u, v, 6f, 3.7f);
+                float nFine = TileNoise(u, v, 18f, 11.3f);
+                float grain = nCoarse * 0.6f + nFine * 0.4f;
+                float d = 1f / S;
+                float gx = (TileNoise((u + d) % 1f, v, 14f, 7.1f) - TileNoise((u - d + 1f) % 1f, v, 14f, 7.1f)) * 1.4f;
+                float gy = (TileNoise(u, (v + d) % 1f, 14f, 7.1f) - TileNoise(u, (v - d + 1f) % 1f, 14f, 7.1f)) * 1.4f;
+                byte r = (byte)Mathf.Clamp(Mathf.RoundToInt((0.5f + (grain - 0.5f) * 0.55f) * 255f), 0, 255);
+                byte g = (byte)Mathf.Clamp(Mathf.RoundToInt((0.5f + gy * 0.45f) * 255f), 0, 255);
+                byte b = (byte)Mathf.Clamp(Mathf.RoundToInt((0.5f + (0.5f - grain) * 0.5f) * 255f), 0, 255);
+                byte a = (byte)Mathf.Clamp(Mathf.RoundToInt((0.5f + gx * 0.45f) * 255f), 0, 255);
+                px[y * S + x] = new Color32(r, g, b, a);
+            }
+            tex.SetPixels32(px);
+            tex.Apply(true, false);
+            EnsureFolder(Path.GetDirectoryName(outPath).Replace('\\', '/'));
+            File.WriteAllBytes(outPath, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(outPath, ImportAssetOptions.ForceUpdate);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(outPath);
+            if (imp != null)
+            {
+                imp.sRGBTexture = false;
+                imp.mipmapEnabled = true;
+                imp.wrapMode = TextureWrapMode.Repeat;
+                imp.SaveAndReimport();
+            }
+            _detailMap = AssetDatabase.LoadAssetAtPath<Texture2D>(outPath);
+            return _detailMap;
+        }
+
         /// <summary>HDRP/Lit triplanar material from a photoscan texture set. altBase: base colour if it lives under another name.</summary>
         private static Material PhotoMat(string outName, string baseName, string normalName, string maskName, bool ard, float worldScale, Color tint, string altBase = null)
         {
@@ -204,6 +263,7 @@ namespace LR2.EditorTools
             if (baseTex == null && altBase != null) baseTex = FindTex(baseName.Replace("_N", "_BC"));
             var normal = FindTex(normalName);
             var mask = MakeMask(FindTex(maskName), ard, $"{MatDir}/Masks/{maskName}_HDRPMask.png");
+            var detail = GetOrBuildDetailMap();
             if (baseTex == null) Debug.LogWarning($"[LR2] Texture not found for {outName}: {altBase ?? baseName}");
             var m = new Material(_hdrpLit);
             m.SetColor("_BaseColor", tint);
@@ -211,19 +271,27 @@ namespace LR2.EditorTools
             if (normal != null)
             {
                 m.SetTexture("_NormalMap", normal);
-                m.SetFloat("_NormalScale", 1.25f);
+                m.SetFloat("_NormalScale", 1.45f);
             }
             if (mask != null)
             {
                 m.SetTexture("_MaskMap", mask);
                 m.SetFloat("_MetallicRemapMin", 0f);
                 m.SetFloat("_MetallicRemapMax", 1f);
-                m.SetFloat("_AORemapMin", 0.1f);
+                m.SetFloat("_AORemapMin", 0.08f);
                 m.SetFloat("_AORemapMax", 1f);
                 m.SetFloat("_SmoothnessRemapMin", 0f);
-                m.SetFloat("_SmoothnessRemapMax", 0.8f);
+                m.SetFloat("_SmoothnessRemapMax", 0.85f);
             }
             else m.SetFloat("_Smoothness", 0.22f);
+            if (detail != null)
+            {
+                m.SetTexture("_DetailMap", detail);
+                m.SetFloat("_UVDetail", 5f);
+                m.SetFloat("_DetailAlbedoScale", 0.26f);
+                m.SetFloat("_DetailNormalScale", 0.42f);
+                m.SetFloat("_DetailSmoothnessScale", 0.24f);
+            }
             m.SetFloat("_UVBase", 5f);             // triplanar world mapping: no stretching on scaled blocks
             m.SetFloat("_TexWorldScale", worldScale);
             HDMaterial.ValidateMaterial(m);
@@ -788,19 +856,42 @@ namespace LR2.EditorTools
             return c;
         }
 
-        /// <summary>Instantiates a Leartes prefab by name, grounds it, ensures a collider. Returns null if not found.</summary>
-        private static GameObject Prop(string prefabName, Transform parent, Vector3 pos, float yaw, float scale = 1f, bool addCollider = true)
+        private static GameObject FindPackPrefab(string prefabName)
         {
-            GameObject prefab = null;
-            foreach (var g in AssetDatabase.FindAssets(prefabName + " t:Prefab", new[] { "Assets/LeartesStudios" }))
+            if (string.IsNullOrEmpty(prefabName)) return null;
+            if (_prefabCache.TryGetValue(prefabName, out var cached) && cached != null) return cached;
+            foreach (var root in new[] { "Assets/LeartesStudios", "Assets/ScansFactory", "Assets/Polyart", "Assets/LR2/Prefabs" })
             {
-                var p = AssetDatabase.GUIDToAssetPath(g);
-                if (Path.GetFileNameWithoutExtension(p) == prefabName)
+                if (!AssetDatabase.IsValidFolder(root)) continue;
+                foreach (var g in AssetDatabase.FindAssets(prefabName + " t:Prefab", new[] { root }))
                 {
-                    prefab = AssetDatabase.LoadAssetAtPath<GameObject>(p);
-                    break;
+                    var p = AssetDatabase.GUIDToAssetPath(g);
+                    if (Path.GetFileNameWithoutExtension(p) == prefabName)
+                    {
+                        var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(p);
+                        if (loaded != null) { _prefabCache[prefabName] = loaded; return loaded; }
+                    }
                 }
             }
+            return null;
+        }
+
+        private static SurfaceType InferSurfaceType(string prefabName)
+        {
+            string l = (prefabName ?? "").ToLowerInvariant();
+            if (l.Contains("wood") || l.Contains("crate") || l.Contains("pallet") || l.Contains("table") ||
+                l.Contains("chair") || l.Contains("plank") || l.Contains("cart")) return SurfaceType.Wood;
+            if (l.Contains("plastic") || l.Contains("cone") || l.Contains("tire") || l.Contains("trash"))
+                return SurfaceType.Plastic;
+            if (l.Contains("jersey") || l.Contains("rubble") || l.Contains("rock") || l.Contains("stone") || l.Contains("concrete"))
+                return SurfaceType.Concrete;
+            return SurfaceType.Metal;
+        }
+
+        /// <summary>Instantiates a pack prefab by name, grounds it, ensures a collider and SurfaceIdentifier. Returns null if not found.</summary>
+        private static GameObject Prop(string prefabName, Transform parent, Vector3 pos, float yaw, float scale = 1f, bool addCollider = true, SurfaceType? surfaceOverride = null)
+        {
+            GameObject prefab = FindPackPrefab(prefabName);
             if (prefab == null) return null;
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             go.transform.position = pos;
@@ -820,7 +911,100 @@ namespace LR2.EditorTools
                 Vector3 ls = go.transform.lossyScale;
                 bc.size = new Vector3(b.size.x / Mathf.Max(0.001f, ls.x), b.size.y / Mathf.Max(0.001f, ls.y), b.size.z / Mathf.Max(0.001f, ls.z));
             }
+            if (addCollider && go.GetComponent<SurfaceIdentifier>() == null)
+                go.AddComponent<SurfaceIdentifier>().surface = surfaceOverride ?? InferSurfaceType(prefabName);
             return go;
+        }
+
+        private static GameObject PropOrBox(string prefabName, string fallbackName, Transform parent, Vector3 pos, float yaw, float scale, Vector3 fallbackSize, Material fallbackMat, SurfaceType surface)
+        {
+            var p = Prop(prefabName, parent, pos, yaw, scale, true, surface);
+            if (p != null) return p;
+            return Box(fallbackName, parent, pos + Vector3.up * (fallbackSize.y * 0.5f), fallbackSize, fallbackMat, LR2Layers.Default, surface, yaw);
+        }
+
+        /// <summary>
+        /// Replaces a primitive box/cylinder with an in-repo pack prefab scaled to preserve exact cover height,
+        /// footprint, BoxCollider, and SurfaceIdentifier (B75). Falls back to Box() if the pack prefab is missing.
+        /// </summary>
+        private static GameObject FittedPackProp(string name, string prefabName, Transform parent, Vector3 center, Vector3 targetSize,
+            float yaw, SurfaceType surface, int layer = LR2Layers.Default, Material overrideMat = null, bool addCollider = true)
+        {
+            var prefab = FindPackPrefab(prefabName);
+            if (prefab == null)
+                return Box(name, parent, center, targetSize, overrideMat ?? _m.concrete, layer, surface, yaw);
+
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = center;
+            root.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            root.layer = layer;
+            if (addCollider)
+            {
+                var bc = root.AddComponent<BoxCollider>();
+                bc.size = targetSize;
+            }
+            root.AddComponent<SurfaceIdentifier>().surface = surface;
+
+            var vis = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
+            vis.name = "Mesh";
+            foreach (var col in vis.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(col);
+            foreach (var tr in vis.GetComponentsInChildren<Transform>(true)) tr.gameObject.layer = layer;
+            if (overrideMat != null)
+            {
+                foreach (var r in vis.GetComponentsInChildren<Renderer>(true))
+                    if (!(r is ParticleSystemRenderer)) r.sharedMaterial = overrideMat;
+            }
+
+            var mfs = vis.GetComponentsInChildren<MeshFilter>(true);
+            Bounds local = default;
+            bool has = false;
+            Matrix4x4 inv = vis.transform.worldToLocalMatrix;
+            foreach (var mf in mfs)
+            {
+                if (mf.sharedMesh == null) continue;
+                Bounds sb = mf.sharedMesh.bounds;
+                Matrix4x4 m = inv * mf.transform.localToWorldMatrix;
+                Vector3 sc = sb.center, se = sb.extents;
+                for (int sx = -1; sx <= 1; sx += 2)
+                for (int sy = -1; sy <= 1; sy += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    Vector3 pt = m.MultiplyPoint3x4(sc + new Vector3(se.x * sx, se.y * sy, se.z * sz));
+                    if (!has) { local = new Bounds(pt, Vector3.zero); has = true; }
+                    else local.Encapsulate(pt);
+                }
+            }
+
+            if (has)
+            {
+                bool targetWideX = targetSize.x >= targetSize.z;
+                bool meshWideX = local.size.x >= local.size.z;
+                bool rotate90 = Mathf.Max(targetSize.x, targetSize.z) > 1.3f * Mathf.Min(targetSize.x, targetSize.z)
+                                && Mathf.Max(local.size.x, local.size.z) > 1.3f * Mathf.Min(local.size.x, local.size.z)
+                                && targetWideX != meshWideX;
+                if (rotate90)
+                {
+                    vis.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                    float mx = Mathf.Max(0.05f, local.size.z);
+                    float my = Mathf.Max(0.05f, local.size.y);
+                    float mz = Mathf.Max(0.05f, local.size.x);
+                    Vector3 s = new Vector3(targetSize.x / mx, targetSize.y / my, targetSize.z / mz);
+                    vis.transform.localScale = new Vector3(s.z, s.y, s.x);
+                    Vector3 rotatedCenter = Quaternion.Euler(0f, 90f, 0f) * new Vector3(local.center.x * s.z, local.center.y * s.y, local.center.z * s.x);
+                    vis.transform.localPosition = -rotatedCenter;
+                }
+                else
+                {
+                    Vector3 s = new Vector3(
+                        targetSize.x / Mathf.Max(0.05f, local.size.x),
+                        targetSize.y / Mathf.Max(0.05f, local.size.y),
+                        targetSize.z / Mathf.Max(0.05f, local.size.z));
+                    vis.transform.localScale = s;
+                    vis.transform.localPosition = -Vector3.Scale(local.center, s);
+                }
+            }
+            return root;
         }
 
         private static float R(float a, float b) => (float)(a + _rnd.NextDouble() * (b - a));
@@ -1011,13 +1195,15 @@ namespace LR2.EditorTools
             Stairs("Stairs", h, new Vector3(5.6f, 0f, -2.45f), new Vector3(-1.4f, py, -2.45f), 1.3f, _m.steelGrate);
             Box("Landing", h, new Vector3(-2.75f, py - 0.05f, -2.38f), new Vector3(2.7f, 0.1f, 1.44f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
             Railing(h, new Vector3(-4.1f, py, -3.1f), new Vector3(-1.4f, py, -3.1f));
-            // Roof clutter: AC unit + vent (cover on the power position)
-            Box("ACUnit", h, new Vector3(2.2f, py + 0.55f, 3.6f), new Vector3(1.8f, 1.1f, 1.2f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
-            Box("Vent", h, new Vector3(-2.4f, py + 0.4f, 4.2f), new Vector3(0.9f, 0.8f, 0.9f), _m.rust, LR2Layers.Default, SurfaceType.Metal);
-            // Interior: desk + lockers + crates
-            Box("Desk", h, new Vector3(-2.6f, 0.4f, 4.4f), new Vector3(2.2f, 0.8f, 0.9f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-            Box("Lockers", h, new Vector3(3.9f, 1.0f, 4.6f), new Vector3(0.6f, 2.0f, 1.6f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
-            Box("Crate", h, new Vector3(1.2f, 0.45f, 0.2f), new Vector3(0.9f, 0.9f, 0.9f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
+            // Roof clutter: AC unit + vent + pipework stacks (cover on the power position)
+            FittedPackProp("ACUnit", "SM_ConcreteColum2", h, new Vector3(2.2f, py + 0.55f, 3.6f), new Vector3(1.8f, 1.1f, 1.2f), 0f, SurfaceType.Metal);
+            PropOrBox("SM_Smallpipe2", "Vent", h, new Vector3(-2.4f, py, 4.2f), 90f, 1f, new Vector3(0.9f, 0.8f, 0.9f), _m.rust, SurfaceType.Metal);
+            // Interior: desk + lockers + detailed crate & industrial chair
+            FittedPackProp("Desk", "SM_Table_01", h, new Vector3(-2.6f, 0.5f, 4.4f), new Vector3(2.2f, 0.8f, 0.9f), 0f, SurfaceType.Wood);
+            FittedPackProp("Lockers", "SM_Crate_02", h, new Vector3(3.9f, 1.05f, 4.6f), new Vector3(0.6f, 1.9f, 1.6f), 90f, SurfaceType.Wood);
+            PropOrBox("SM_Crate_01", "Crate", h, new Vector3(1.2f, 0.1f, 0.2f), 14f, 0.95f, new Vector3(0.9f, 0.9f, 0.9f), _m.wood, SurfaceType.Wood);
+            Prop("SM_Chair_01", h, new Vector3(-2.4f, 0.1f, 3.3f), 195f, 1f, true, SurfaceType.Wood);
+            Prop("SM_Lantern_01", h, new Vector3(-2.6f, 0.81f, 4.4f), 0f, 0.9f, false);
             // Windows glass (thin, bullets penetrate)
             foreach (var (pos, rotY) in new[] { (new Vector3(-2f, 1.55f, z1), 0f), (new Vector3(2f, 1.55f, z1), 0f), (new Vector3(-1.5f, 1.55f, z0), 0f), (new Vector3(2.5f, 1.55f, z0), 0f) })
                 Box("Glass", h, pos, new Vector3(1.6f, 1.1f, 0.03f), _m.glass, LR2Layers.Default, SurfaceType.Glass, rotY);
@@ -1040,10 +1226,14 @@ namespace LR2.EditorTools
             Stairs("InteriorStairs", w, new Vector3(-25.2f, 0f, -6.4f), new Vector3(-25.2f, 3.6f, 0.9f), 1.3f, _m.wood, false);
             Railing(w, new Vector3(-24.4f, 3.6f, -6.5f), new Vector3(-24.4f, 3.6f, 1.0f));
             Box("Roof", w, new Vector3(-21f, hgt + 0.1f, -2f), new Vector3(10.6f, 0.2f, 12.6f), _m.roof, LR2Layers.Default, SurfaceType.Metal);
-            // Upstairs: sandbag-ish cover at the east window + workbench
-            Box("WindowCover", w, new Vector3(-16.9f, 4.05f, -2f), new Vector3(0.6f, 0.9f, 2.6f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-            Box("Workbench", w, new Vector3(-22f, 0.45f, 3.2f), new Vector3(3f, 0.9f, 0.9f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-            Box("ToolRack", w, new Vector3(-16.35f, 1.1f, 2.2f), new Vector3(0.4f, 2.2f, 2.5f), _m.metal, LR2Layers.Default, SurfaceType.Metal); // against east wall, clear of InteriorStairs
+            // Upstairs: pallet barricade at the east window + workbench + tool rack (B75 pack meshes)
+            FittedPackProp("WindowCover", "SM_Woodpallet_1", w, new Vector3(-16.9f, 4.05f, -2f), new Vector3(0.6f, 0.9f, 2.6f), 90f, SurfaceType.Wood);
+            FittedPackProp("Workbench", "SM_Table_02", w, new Vector3(-22f, 0.55f, 3.2f), new Vector3(3f, 0.9f, 0.9f), 0f, SurfaceType.Wood);
+            Prop("SM_fireextinguisher", w, new Vector3(-20.2f, 0.1f, 3.1f), 0f);
+            FittedPackProp("ToolRack", "SM_Grid1", w, new Vector3(-16.35f, 1.15f, 2.2f), new Vector3(0.4f, 2.1f, 2.5f), 90f, SurfaceType.Metal); // against east wall, clear of InteriorStairs
+            Prop("SM_Gascylender", w, new Vector3(-17.4f, 0.1f, -6.6f), 25f, 1f, true, SurfaceType.Metal);
+            Prop("SM_Barrel_02", w, new Vector3(-19.5f, 0.1f, -6.5f), 0f, 1f, true, SurfaceType.Metal);
+            Prop("SM_Crate_02", w, new Vector3(-19.2f, 0.1f, 2.4f), 8f, 0.95f, true, SurfaceType.Wood);
         }
 
         private static void BuildWarehouse()
@@ -1067,7 +1257,8 @@ namespace LR2.EditorTools
                     Box("Shelf", rack, c + Vector3.up * (0.35f + lvl * 1.1f), new Vector3(len, 0.08f, 1.1f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
                 for (int s = 0; s <= 2; s++)
                     Box("Upright", rack, c + new Vector3((s - 1) * len * 0.5f, 1.3f, 0f), new Vector3(0.08f, 2.6f, 1.1f), _m.curb, LR2Layers.Default, SurfaceType.Metal);
-                Box("Goods", rack, c + Vector3.up * 0.75f, new Vector3(len * 0.85f, 0.7f, 0.95f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
+                FittedPackProp("Goods", "SM_Crate_01", rack, c + new Vector3(-len * 0.2f, 0.78f, 0f), new Vector3(len * 0.36f, 0.72f, 0.9f), 0f, SurfaceType.Wood);
+                FittedPackProp("GoodsPallet", "SM_Crate_02", rack, c + new Vector3(len * 0.2f, 1.88f, 0f), new Vector3(len * 0.34f, 0.72f, 0.9f), 10f, SurfaceType.Wood);
             }
             Rack(new Vector3(-8f, 0f, -19.5f), 6f);
             Rack(new Vector3(1f, 0f, -19.5f), 6f);
@@ -1135,14 +1326,12 @@ namespace LR2.EditorTools
             Box("Curb", q, new Vector3(0f, 0.15f, 22.9f), new Vector3(60f, 0.3f, 0.4f), _m.curb, LR2Layers.Default, SurfaceType.Concrete);
             for (float x = -24f; x <= 24f; x += 6f)
             {
-                var b = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                b.name = "Bollard";
-                b.transform.SetParent(q, false);
-                b.transform.localPosition = new Vector3(x, 0.35f, 22.4f);
-                b.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
-                b.GetComponent<Renderer>().sharedMaterial = _m.darkMetal;
-                b.AddComponent<SurfaceIdentifier>().surface = SurfaceType.Metal;
+                PropOrBox("SM_Tire", "Bollard", q, new Vector3(x, 0.05f, 22.4f), R(0f, 90f), 1f, new Vector3(0.55f, 0.45f, 0.55f), _m.darkMetal, SurfaceType.Plastic);
+                if (Mathf.RoundToInt(x) % 12 == 0)
+                    Prop("SM_Docks_Rope_01", q, new Vector3(x + 1.2f, 0.05f, 22.3f), R(0f, 360f), 0.9f, false);
             }
+            Prop("SM_Lantern_Pole", q, new Vector3(-14f, 0.05f, 22.1f), 180f, 1f, true, SurfaceType.Metal);
+            Prop("SM_Lantern_Pole", q, new Vector3(14f, 0.05f, 22.1f), 180f, 1f, true, SurfaceType.Metal);
         }
 
         private static void BuildMidYard()
@@ -1174,12 +1363,21 @@ namespace LR2.EditorTools
             }
             RubbleCluster("SM_Rubble_01_01", new Vector3(-9f, 0f, -4.5f), 25f, 1.15f);
             RubbleCluster("SM_Rubble_02_01", new Vector3(9.5f, 0f, 6.5f), -40f, 1.15f);
-            Prop("SM_Jersey", _props, G(new Vector3(-9.5f, 0f, -2.5f)), 25f);
-            Prop("SM_Jersey", _props, G(new Vector3(9f, 0f, 4.5f)), -35f);
+            Prop("SM_Jersey", _props, G(new Vector3(-9.5f, 0f, -2.5f)), 25f, 1f, true, SurfaceType.Concrete);
+            Prop("SM_Jersey", _props, G(new Vector3(9f, 0f, 4.5f)), -35f, 1f, true, SurfaceType.Concrete);
+            int yardIdx = 0;
             void Block(Vector3 p, float yaw)
             {
-                var blk = Box("ConcreteBlock", y, G(p, 0.44f), new Vector3(1.6f, 0.9f, 0.8f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, yaw + R(-3f, 3f));
-                ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(Mathf.RoundToInt(p.x * 13 + p.z), true, 0.16f, 0.038f));
+                yardIdx++;
+                Vector3 gp = G(p);
+                string pref = yardIdx % 3 == 0 ? "SM_Cablespool" : (yardIdx % 2 == 0 ? "SM_Crate_01" : "SM_Jersey");
+                SurfaceType surf = pref == "SM_Jersey" ? SurfaceType.Concrete : (pref == "SM_Crate_01" ? SurfaceType.Wood : SurfaceType.Metal);
+                var go = Prop(pref, _props, gp, yaw + R(-4f, 4f), pref == "SM_Crate_01" ? 1.05f : 1f, true, surf);
+                if (go == null)
+                {
+                    var blk = Box("ConcreteBlock", y, G(p, 0.44f), new Vector3(1.6f, 0.9f, 0.8f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, yaw + R(-3f, 3f));
+                    ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(Mathf.RoundToInt(p.x * 13 + p.z), true, 0.16f, 0.038f));
+                }
             }
             Block(new Vector3(-4f, 0f, -8f), 0f);
             Block(new Vector3(6f, 0f, -6.5f), 15f);
@@ -1245,18 +1443,54 @@ namespace LR2.EditorTools
             P("SM_MainBuilding7", new Vector3(50f, 0f, 12f), -90f, 1f);
             P("SM_Boat", new Vector3(2f, -1.3f, 44f), 75f, 1f);
             P("SM_Ship_Part_01", new Vector3(-30f, -1.3f, 58f), 10f, 1f);
-            // Procedural silhouettes behind the walls (always present)
-            Box("WarehouseFar", bg, G(new Vector3(-6f, 0f, -46f), 5f), new Vector3(40f, 12f, 14f), _m.corrugated);
-            Box("WarehouseWest", bg, G(new Vector3(-40f, 0f, -2f), 4f), new Vector3(14f, 10f, 30f), _m.corrugated);
-            Box("WarehouseEast", bg, G(new Vector3(42f, 0f, -6f), 6f), new Vector3(16f, 14f, 34f), _m.wallPlaster);
+            // Pack industrial building silhouettes replacing primitive background blocks (B75)
+            P("SM_MainBuilding2", new Vector3(-6f, 0f, -46f), 0f, 1.25f);
+            P("SM_MainBuilding4", new Vector3(16f, 0f, -45f), 180f, 1.15f);
+            P("SM_MainBuilding6", new Vector3(-40f, 0f, -2f), 90f, 1.2f);
+            P("SM_Building", new Vector3(42f, 0f, -6f), -90f, 1.15f);
             Debug.Log($"[LR2] Background: {found} Leartes set pieces placed.");
         }
 
         private static void PlaceDecals()
         {
-            string[] names = { "M_CrackDecal", "M_CrackDecal_2", "M_LeakDecal", "M_RustDecal", "M_GraffittiDecal", "M_Decal_Puddle_A_MIC", "M_Decal_Salt", "M_LeakDecal_2", "M_RustDecal_2" };
-            int placed = PlaceProjectedDecals(PlayMin, PlayMax, 220, names);
+            string[] names =
+            {
+                "M_CrackDecal", "M_CrackDecal_2", "M_CrackDecal_3", "M_CrackDecal_4",
+                "M_LeakDecal", "M_LeakDecal_2", "M_LeakDecal_3", "M_LeakDecal_4",
+                "M_RustDecal", "M_RustDecal_2", "M_RustDecal_3", "M_RustDecal_4",
+                "M_GraffittiDecal", "M_GraffittiDecal_2", "M_Puddle", "M_Decal_Puddle_A_MIC", "M_Decal_Salt"
+            };
+            int placed = PlaceProjectedDecals(PlayMin, PlayMax, 240, names);
             Debug.Log($"[LR2] Decals placed: {placed}");
+        }
+
+        private static void PlaceTargetedWearDecals()
+        {
+            if (_decals == null) return;
+            var rust = FindLeartes("M_RustDecal_3") ?? FindLeartes("M_RustDecal");
+            var leak = FindLeartes("M_LeakDecal_2") ?? FindLeartes("M_LeakDecal");
+            var crack = FindLeartes("M_CrackDecal_3") ?? FindLeartes("M_CrackDecal");
+            Material[] seamPool = { rust, leak, crack };
+            int placed = 0;
+
+            if (_props != null)
+            {
+                for (int i = 0; i < _props.childCount && placed < 48; i++)
+                {
+                    var ch = _props.GetChild(i);
+                    if (ch == null) continue;
+                    var mat = seamPool[i % seamPool.Length];
+                    if (mat == null) continue;
+                    Vector3 origin = ch.position + Vector3.up * 0.6f;
+                    if (Physics.Raycast(origin, Vector3.down, out var hit, 2.5f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)
+                        && hit.normal.y > 0.75f)
+                    {
+                        CreateDecal(mat, hit.point, hit.normal, R(1.1f, 2.0f), true);
+                        placed++;
+                    }
+                }
+            }
+            Debug.Log($"[LR2] Targeted seam/wear decals placed: {placed}");
         }
 
         private static int PlaceProjectedDecals(Vector2 playMin, Vector2 playMax, int tries, string[] matNames)
@@ -1344,11 +1578,11 @@ namespace LR2.EditorTools
             var profile = NewProfile(LightDir + "/LR2_Saltworks_Profile.asset");
             var ve = profile.Add<VisualEnvironment>(true);
             ve.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
-            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 10.2f, rotationDeg: 38f);
+            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 11.6f, rotationDeg: 38f);
             // Global indirect/sky visibility floor so dark shadows & sheltered walls keep clear enemy silhouettes
             var ilcGlobal = profile.Add<IndirectLightingController>(true);
-            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.65f);
-            ilcGlobal.reflectionLightingMultiplier.Override(1.22f);
+            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.95f);
+            ilcGlobal.reflectionLightingMultiplier.Override(1.30f);
             var fog = profile.Add<Fog>(true);
             fog.enabled.Override(true);
             fog.meanFreePath.Override(_cfg.fogMeanFreePath);
@@ -1361,9 +1595,9 @@ namespace LR2.EditorTools
             fog.maxFogDistance.Override(3000f);
             var exposure = profile.Add<Exposure>(true);
             exposure.mode.Override(ExposureMode.AutomaticHistogram);
-            exposure.compensation.Override(Mathf.Max(_cfg.exposureCompensation, 0.10f));
-            exposure.limitMin.Override(Mathf.Min(_cfg.exposureLimitMin, 4.6f));
-            exposure.limitMax.Override(Mathf.Min(_cfg.exposureLimitMax, 11.4f));
+            exposure.compensation.Override(Mathf.Max(_cfg.exposureCompensation, 0.25f));
+            exposure.limitMin.Override(Mathf.Min(_cfg.exposureLimitMin, 2.6f));
+            exposure.limitMax.Override(Mathf.Min(_cfg.exposureLimitMax, 12.2f));
             exposure.adaptationMode.Override(AdaptationMode.Progressive);
             exposure.adaptationSpeedDarkToLight.Override(2.8f);
             exposure.adaptationSpeedLightToDark.Override(1.8f);
@@ -1381,22 +1615,23 @@ namespace LR2.EditorTools
             var wb = profile.Add<WhiteBalance>(true);
             wb.temperature.Override(_cfg.temperature);
             var smh = profile.Add<ShadowsMidtonesHighlights>(true);
-            smh.shadows.Override(new Vector4(0.97f, 0.99f, 1.02f, 0.015f));
-            smh.highlights.Override(new Vector4(1.03f, 1f, 0.96f, 0.02f));
+            smh.shadows.Override(new Vector4(0.96f, 0.99f, 1.03f, 0.015f));
+            smh.highlights.Override(new Vector4(1.04f, 1.00f, 0.94f, 0.02f));
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(_cfg.vignette);
             vig.smoothness.Override(0.45f);
             var ao = profile.Add<ScreenSpaceAmbientOcclusion>(true);
-            ao.intensity.Override(0.65f);
-            ao.radius.Override(1.5f);
-            ao.directLightingStrength.Override(0.2f);
+            ao.intensity.Override(0.78f);
+            ao.radius.Override(1.45f);
+            ao.directLightingStrength.Override(0.24f);
             var ssr = profile.Add<ScreenSpaceReflection>(true);
             ssr.enabled.Override(true);
             var gi = profile.Add<GlobalIllumination>(true);
             gi.enable.Override(false); // controllable via LR2RayTracingController DXR toggle at runtime
             var contact = profile.Add<ContactShadows>(true);
             contact.enable.Override(true);
-            contact.length.Override(0.22f);
+            contact.length.Override(0.34f);
+            contact.opacity.Override(0.90f);
             var micro = profile.Add<MicroShadowing>(true);
             micro.enable.Override(true);
             var shadows = profile.Add<HDShadowSettings>(true);
@@ -1469,6 +1704,7 @@ namespace LR2.EditorTools
                 pole.position = G(poles[i]);
                 Box("Pole", pole, new Vector3(0f, 4f, 0f), new Vector3(0.18f, 8f, 0.18f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 Box("Arm", pole, new Vector3(0.6f, 7.9f, 0f), new Vector3(1.3f, 0.12f, 0.25f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+                Prop("SM_Lantern_01", pole, new Vector3(1.2f, 7.62f, 0f), 0f, 1.25f, false);
                 AddLight(pole, "Sodium", new Vector3(1.2f, 7.75f, 0f), Quaternion.Euler(90f, 0f, 0f), LightType.Spot, 2100f, 9000f, 22f, 115f, i < 2);
             }
             Vector3[] whLights = { new Vector3(-9f, 7.0f, -17f), new Vector3(-3f, 7.0f, -17f), new Vector3(3f, 7.0f, -17f), new Vector3(9f, 7.0f, -17f) };
@@ -2354,8 +2590,12 @@ namespace LR2.EditorTools
             Container(set, "BackA", new Vector3(-1.5f, 0f, 4.2f), 0f, 0);
             Container(set, "BackB", new Vector3(-1.5f, 2.59f, 4.2f), 0f, 3);
             Container(set, "Side", new Vector3(5.2f, 0f, 1.5f), 70f, 1);
-            Box("Crate", set, new Vector3(1.6f, 0.45f, 1.4f), new Vector3(0.9f, 0.9f, 0.9f), _m.wood);
-            Box("Crate2", set, new Vector3(1.9f, 1.25f, 1.5f), new Vector3(0.7f, 0.7f, 0.7f), _m.wood, LR2Layers.Default, null, 20f);
+            PropOrBox("SM_Crate_01", "Crate", set, new Vector3(1.6f, 0f, 1.4f), 12f, 1f, new Vector3(0.9f, 0.9f, 0.9f), _m.wood, SurfaceType.Wood);
+            PropOrBox("SM_Cablespool", "Crate2", set, new Vector3(2.55f, 0f, 1.9f), -22f, 0.95f, new Vector3(0.7f, 0.7f, 0.7f), _m.wood, SurfaceType.Metal);
+            Prop("SM_Barrel_01", set, new Vector3(-1.35f, 0f, 2.4f), 35f, 1f, false);
+            Prop("SM_Gascylender", set, new Vector3(-1.9f, 0f, 2.75f), 15f, 1f, false);
+            Prop("SM_Woodpallet_1", set, new Vector3(0.6f, 0f, 3.1f), 40f, 1f, false);
+            Prop("SM_Lantern_01", set, new Vector3(1.6f, 0.92f, 1.4f), 0f, 1f, false);
 
             var bot = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LR2/Prefabs/Characters/LR2_Soldier_Bot.prefab");
             if (bot != null)
@@ -2372,15 +2612,18 @@ namespace LR2.EditorTools
                 {
                     c.DisplayName = "OPERATOR";
                     c.IsLocalPlayer = false;
+                    c.IsBot = false;
+                    c.Team = TeamId.Alpha;
                 }
-                var woodland = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Woodland.mat");
-                var desert = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Desert.mat");
+                var alliedUniform = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Allied_NavyBlue.mat");
+                var enemyUniform = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_Uniform_Enemy_DesertCrimson.mat");
                 var skullMask = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_FaceMask_GhostSkull.mat");
+                var enemyMask = AssetDatabase.LoadAssetAtPath<Material>("Assets/LR2/Materials/Characters/M_FaceMask_EnemyMarauder.mat");
                 var sv = hero.GetComponent<SoldierVisuals>();
                 if (sv != null)
                 {
-                    sv.SetGear(woodland, desert, skullMask);
-                    sv.ApplyMaterialsNow(false);
+                    sv.SetGear(alliedUniform, enemyUniform, skullMask, enemyMask);
+                    sv.ApplyMaterialsNow(true);
                 }
                 var swatVis = hero.transform.Find("SWAT_Visual");
                 foreach (var r in hero.GetComponentsInChildren<Renderer>(true))
@@ -2404,9 +2647,9 @@ namespace LR2.EditorTools
                             mats[mi] = skullMask;
                             changed = true;
                         }
-                        else if ((mn.Contains("body") || mn.Contains("uniform")) && desert != null)
+                        else if ((mn.Contains("body") || mn.Contains("uniform")) && alliedUniform != null)
                         {
-                            mats[mi] = desert;
+                            mats[mi] = alliedUniform;
                             changed = true;
                         }
                     }
@@ -2477,8 +2720,14 @@ namespace LR2.EditorTools
             dof.nearFocusEnd.Override(0.4f);
             dof.farFocusStart.Override(4.5f);
             dof.farFocusEnd.Override(12f);
-            profile.Add<ScreenSpaceAmbientOcclusion>(true).intensity.Override(0.6f);
-            profile.Add<ContactShadows>(true).enable.Override(true);
+            var menuAo = profile.Add<ScreenSpaceAmbientOcclusion>(true);
+            menuAo.intensity.Override(0.78f);
+            menuAo.radius.Override(1.45f);
+            menuAo.directLightingStrength.Override(0.24f);
+            var menuCs = profile.Add<ContactShadows>(true);
+            menuCs.enable.Override(true);
+            menuCs.length.Override(0.34f);
+            menuCs.opacity.Override(0.90f);
             DisableMotionBlur(profile);
             SaveProfile(profile);
             var vol = new GameObject("Volume").AddComponent<Volume>();

@@ -106,6 +106,7 @@ namespace LR2.Characters
         private int _activeIndex;
         private bool _isAiming;
         private bool _firePressed;
+        private bool _prevSprintInput;
         private bool _switching;
         private int _pendingIndex = -1;
         private float _switchAt;
@@ -430,7 +431,12 @@ namespace LR2.Characters
             }
 
             Movement.SetMoveInput(_input.move);
-            Movement.SetSprintRequested(_input.sprint && !_input.fire && !_input.aim && !busySwitch);
+            // B16/D40 (COD): the last press wins. Pressing sprint during a reload interrupts it (the player; bots finish
+            // their reloads, as a human would); a reload started while sprinting drops the sprint until it is done.
+            bool sprintPressed = _input.sprint && !_prevSprintInput;
+            _prevSprintInput = _input.sprint;
+            if (sprintPressed && IsReloading && IsLocalPlayer) ActiveFirearm.InterruptReload();
+            Movement.SetSprintRequested(_input.sprint && !_input.fire && !_input.aim && !busySwitch && !IsReloading);
             if (_input.jump) Movement.RequestJump();
             if (_input.crouch) Movement.RequestCrouchToggle();
             if (_input.prone) Movement.RequestProneToggle();
@@ -564,6 +570,8 @@ namespace LR2.Characters
 
         private void OnSprintStarted()
         {
+            // B16/D40: sprint interrupts the reload (COD); before this the reload kept running hidden in the sprint carry.
+            if (ActiveFirearm != null && ActiveFirearm.IsReloading) ActiveFirearm.InterruptReload();
             if (_firePressed && ActiveItem != null)
             {
                 _firePressed = false;

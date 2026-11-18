@@ -164,7 +164,12 @@ namespace LR2.Weapons
             }
 
             ProcessNearMisses(shooter, origin, result.endPoint);
-            if (spawnTracer) TracerSystem.Spawn(visualMuzzle, result.endPoint);
+            if (spawnTracer)
+            {
+                Combatant local = Combatant.FindLocalPlayer();
+                bool friendlyTracer = shooter == null || shooter.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, shooter));
+                TracerSystem.Spawn(visualMuzzle, result.endPoint, friendlyTracer);
+            }
             return result;
         }
 

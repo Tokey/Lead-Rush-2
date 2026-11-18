@@ -3,6 +3,7 @@ using LR2.AI;
 using LR2.Audio;
 using LR2.Combat;
 using LR2.Core;
+using LR2.FX;
 using LR2.Game;
 using LR2.World;
 using UnityEditor;
@@ -88,10 +89,11 @@ namespace LR2.EditorTools
                 Parapet("ParapetS", new Vector3(cx, hgt + 0.62f, z0 + 0.1f), w * 0.96f, 0f);
                 Parapet("ParapetW", new Vector3(x0 + 0.1f, hgt + 0.58f, cz), d * 0.92f, 90f);
                 Parapet("ParapetE", new Vector3(x1 - 0.1f, hgt + 0.58f, cz), d * 0.92f, 90f);
-                // Interior destructible cover props + warm interior emergency bulb
-                Box("Desk", b, new Vector3(cx - 1.5f, 0.54f, cz + 1.2f), new Vector3(2.0f, 0.8f, 0.85f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-                Box("Crate", b, new Vector3(cx + 1.8f, 0.59f, cz - 1.4f), new Vector3(0.95f, 0.9f, 0.95f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
-                Box("Lockers", b, new Vector3(cx - 2.2f, 1.14f, cz - 2.0f), new Vector3(0.6f, 2.0f, 1.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+                // Interior destructible cover props + warm interior emergency bulb (B75 pack meshes)
+                FittedPackProp("Desk", "SM_Table_01", b, new Vector3(cx - 1.5f, 0.54f, cz + 1.2f), new Vector3(2.0f, 0.8f, 0.85f), 0f, SurfaceType.Wood);
+                PropOrBox("SM_Crate_01", "Crate", b, new Vector3(cx + 1.8f, 0.14f, cz - 1.4f), 18f, 0.95f, new Vector3(0.95f, 0.9f, 0.95f), _m.wood, SurfaceType.Wood);
+                Prop("SM_Chair_01", b, new Vector3(cx - 1.5f, 0.14f, cz + 0.25f), 175f, 1f, true, SurfaceType.Wood);
+                FittedPackProp("Lockers", "SM_Crate_02", b, new Vector3(cx - 2.2f, 1.14f, cz - 2.0f), new Vector3(0.6f, 2.0f, 1.6f), 90f, SurfaceType.Wood);
                 AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3600f, 3800f, 16f, 0f, false);
                 AddLight(_lighting, "OpeningBounce_" + name, new Vector3(cx - Mathf.Sign(cx) * 3.6f, 2.8f, cz - Mathf.Sign(cz) * 5.2f), Quaternion.identity, LightType.Point, 5000f, 2800f, 15f, 0f, false);
             }
@@ -103,9 +105,11 @@ namespace LR2.EditorTools
             // Central checkpoint ruined bus/container + crossroad cover
             Container(_structures, "CheckpointContA", new Vector3(-2.5f, 0f, 2.5f), 22f, 2);
             Container(_structures, "CheckpointContB", new Vector3(3.2f, 0f, -3.5f), -68f, 0);
-            // B46: waist-high street crossing cover ~10m out along main street
-            Box("StreetCoverN", _structures, new Vector3(-1.2f, 0.52f, 9.5f), new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, 8f);
-            Box("StreetCoverS", _structures, new Vector3(1.2f, 0.52f, -9.5f), new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, -8f);
+            // B46: street crossing Jersey barriers + cones + cable spools (~10m out along main street)
+            PropOrBox("SM_Jersey", "StreetCoverN", _structures, new Vector3(-1.2f, 0f, 9.5f), 8f, 1f, new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, SurfaceType.Concrete);
+            PropOrBox("SM_Jersey", "StreetCoverS", _structures, new Vector3(1.2f, 0f, -9.5f), -8f, 1f, new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, SurfaceType.Concrete);
+            Prop("SM_Conebarrier", _props, new Vector3(-3.0f, 0f, 9.6f), 12f, 1f, true, SurfaceType.Plastic);
+            Prop("SM_Conebarrier", _props, new Vector3(3.0f, 0f, -9.6f), -12f, 1f, true, SurfaceType.Plastic);
 
             // Perimeter walls (broken masonry silhouettes with protruding rebar & base rubble) + Clip + War-torn city skyline
             var bnd = Child(_structures, "Boundary");
@@ -149,6 +153,9 @@ namespace LR2.EditorTools
             }
             Prop("SM_Crane_01", _background, new Vector3(-35f, 0f, 36f), 35f, 1f, false);
             Prop("SM_Crane_02", _background, new Vector3(36f, 0f, -35f), -45f, 1f, false);
+            Prop("SM_MainBuilding4", _background, new Vector3(-44f, 0f, 0f), 90f, 1f, false);
+            Prop("SM_MainBuilding6", _background, new Vector3(44f, 0f, 0f), -90f, 1f, false);
+            Prop("SM_MainBuilding8", _background, new Vector3(0f, 0f, 44f), 180f, 1f, false);
 
             // Grungy war-torn street cover & props (every prop placed deliberately in clear road/plaza spaces)
             foreach (var (pos, yaw) in new[]
@@ -262,11 +269,13 @@ namespace LR2.EditorTools
                 AddLight(_lighting, $"Overhead_{(oz < 0 ? "S" : "N")}",
                     new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 4700f, 4400f, 24f, 0f, false);
             BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 20000f, sunTemp: 4300f,
-                fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.15f, contrast: 14f, saturation: -14f,
-                rainDefaultPreset: 2, evMin: 4.8f, evMax: 11.4f,
-                hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", skyExposure: 10.2f);
+                fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.28f, contrast: 14f, saturation: -14f,
+                rainDefaultPreset: 2, evMin: 2.6f, evMax: 12.2f,
+                hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", skyExposure: 11.6f,
+                shadowsTint: new Vector4(0.94f, 0.98f, 1.04f, 0.015f), highlightsTint: new Vector4(1.05f, 0.99f, 0.92f, 0.02f));
             PlaceEnvironmentRealism(new Color(0.58f, 0.62f, 0.65f, 1f), new Color(0.56f, 0.44f, 0.34f, 1f), 0.16f, 20f);
             PlaceMapDecals(pMin, pMax, 140);
+            PlaceTargetedWearDecals();
             AddMatchSystems(40f);
             MarkStatic(env);
 
@@ -338,10 +347,10 @@ namespace LR2.EditorTools
                 WallWithFloor("WallW", h, new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), hgt, t, _m.corrugated, 0f, new Vector4(4.5f, 2.8f, 0f, 3.2f));
                 WallWithFloor("WallE", h, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), hgt, t, _m.corrugated, 0f, new Vector4(4.5f, 2.8f, 0f, 3.2f));
                 Box("Roof", h, new Vector3(0f, hgt + 0.1f, zCenter), new Vector3(26.6f, 0.2f, 9.6f), _m.roof, LR2Layers.Default, SurfaceType.Metal);
-                // Interior generators + destructible consoles
-                Box("GeneratorW", h, new Vector3(-6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
-                Box("GeneratorE", h, new Vector3(6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
-                Box("ControlConsole", h, new Vector3(0f, 0.6f, zCenter), new Vector3(2.4f, 1.2f, 0.9f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
+                // Interior generators + destructible consoles (B75 pack meshes)
+                FittedPackProp("GeneratorW", "SM_PipeMadule3", h, new Vector3(-6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), 0f, SurfaceType.Metal);
+                FittedPackProp("GeneratorE", "SM_PipeMadule3", h, new Vector3(6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), 180f, SurfaceType.Metal);
+                FittedPackProp("ControlConsole", "SM_ConcreteColum2", h, new Vector3(0f, 0.6f, zCenter), new Vector3(2.4f, 1.2f, 0.9f), 0f, SurfaceType.Metal);
                 AddLight(_lighting, "HallLamp_" + name, new Vector3(0f, 5.2f, zCenter), Quaternion.identity, LightType.Point, 4200f, 4800f, 20f, 0f, false);
                 AddLight(_lighting, "HallBayW_" + name, new Vector3(-6.5f, 3.6f, zCenter), Quaternion.identity, LightType.Point, 5000f, 2800f, 16f, 0f, false);
                 AddLight(_lighting, "HallBayE_" + name, new Vector3(6.5f, 3.6f, zCenter), Quaternion.identity, LightType.Point, 5000f, 2800f, 16f, 0f, false);
@@ -358,11 +367,16 @@ namespace LR2.EditorTools
             Stairs("CatStairsS", cat, new Vector3(17.5f, 0f, -14.5f), new Vector3(17.5f, 3.02f, -10.0f), 2.2f, _m.steelGrate);
             Railing(cat, new Vector3(15.75f, 3.02f, -10f), new Vector3(15.75f, 3.02f, -2.5f));
             Railing(cat, new Vector3(15.75f, 3.02f, 2.5f), new Vector3(15.75f, 3.02f, 10f));
-            Box("CatCoverCrate", cat, new Vector3(16.6f, 3.47f, 0f), new Vector3(0.9f, 0.9f, 1.8f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
+            PropOrBox("SM_Crate_01", "CatCoverCrate", cat, new Vector3(16.6f, 3.02f, 0f), 0f, 1.05f, new Vector3(0.9f, 0.9f, 1.8f), _m.wood, SurfaceType.Wood);
+            Prop("SM_BigPipe", cat, new Vector3(19.5f, 0f, 7f), 90f, 1f, false);
+            Prop("SM_PipeMadule1", _structures, new Vector3(0f, 3.35f, 7.5f), 0f, 1f, false);
+            Prop("SM_PipeMadule2", _structures, new Vector3(0f, 3.35f, -7.5f), 180f, 1f, false);
+            Prop("SM_fireextinguisher", _props, new Vector3(15.2f, 0f, 12.8f), 0f, 1f, true, SurfaceType.Plastic);
+            Prop("SM_Conebarrier", _props, new Vector3(14.5f, 0f, -12.5f), 25f, 1f, true, SurfaceType.Plastic);
             // B46: upper catwalk sightline occluder + safe stair landing pockets
             Box("CatwalkOccluderS", cat, new Vector3(15.75f, 3.85f, -5.8f), new Vector3(0.18f, 1.5f, 3.8f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
-            Box("StairPocketN", cat, new Vector3(15.8f, 0.55f, 15.2f), new Vector3(1.8f, 1.1f, 0.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
-            Box("StairPocketS", cat, new Vector3(15.8f, 0.55f, -15.2f), new Vector3(1.8f, 1.1f, 0.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+            FittedPackProp("StairPocketN", "SM_Jersey", cat, new Vector3(15.8f, 0.55f, 15.2f), new Vector3(1.8f, 1.1f, 0.6f), 0f, SurfaceType.Concrete);
+            FittedPackProp("StairPocketS", "SM_Jersey", cat, new Vector3(15.8f, 0.55f, -15.2f), new Vector3(1.8f, 1.1f, 0.6f), 0f, SurfaceType.Concrete);
 
             // West Container Maze
             var wYard = Child(_structures, "WestContainers");
@@ -451,11 +465,14 @@ namespace LR2.EditorTools
             AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
             BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 24000f, sunTemp: 4300f,
-                fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: 0.08f, contrast: 16f, saturation: -6f,
-                rainDefaultPreset: 0, evMin: 4.8f, evMax: 11.4f,
-                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.2f);
+                fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: 0.25f, contrast: 16f, saturation: -6f,
+                rainDefaultPreset: 0, evMin: 2.6f, evMax: 12.2f,
+                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 11.6f,
+                shadowsTint: new Vector4(0.95f, 0.99f, 1.03f, 0.015f), highlightsTint: new Vector4(1.05f, 1.00f, 0.93f, 0.02f));
             PlaceEnvironmentRealism(new Color(0.64f, 0.68f, 0.70f, 1f), new Color(0.65f, 0.52f, 0.35f, 1f), 0.14f, 19f);
+            PlaceEnvironmentRealism(new Color(0.70f, 0.74f, 0.76f, 1f), new Color(0.70f, 0.55f, 0.32f, 1f), 0.16f, 12f, new Vector3(0f, -1.48f, 0f), "FoundryTrenchMist");
             PlaceMapDecals(pMin, pMax, 130);
+            PlaceTargetedWearDecals();
             AddMatchSystems(38f);
             MarkStatic(env);
 
@@ -500,11 +517,19 @@ namespace LR2.EditorTools
             Box("WallS", bnd, new Vector3(0f, 2.25f, -30.25f), new Vector3(61f, 4.5f, 0.5f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
             Box("WallW", bnd, new Vector3(-30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 60f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
             Box("WallE", bnd, new Vector3(30.25f, 2.25f, 0f), new Vector3(0.5f, 4.5f, 60f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
-            foreach (var (tx, tz) in new[] { (-32f, 32f), (32f, 32f), (-32f, -32f), (32f, -32f) })
-                Box("CornerTower", _background, new Vector3(tx, 5f, tz), new Vector3(5f, 10f, 5f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
+            foreach (var (tx, tz, pn, yaw) in new[] {
+                (-33f, 33f, "SM_Silo", 0f), (33f, 33f, "SM_Slio1", 90f),
+                (-33f, -33f, "SM_CylenderBuilding", 45f), (33f, -33f, "SM_MainBuilding2", -90f)
+            })
+            {
+                if (Prop(pn, _background, new Vector3(tx, 0f, tz), yaw, 1.15f, false) == null)
+                    Box("CornerTower", _background, new Vector3(tx, 5f, tz), new Vector3(5f, 10f, 5f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
+            }
+            Prop("SM_Crane_01", _background, new Vector3(-24f, 0f, 38f), 85f, 1f, false);
+            Prop("SM_Crane_02", _background, new Vector3(24f, 0f, -38f), -95f, 1f, false);
             AddPlayerClipBox(pMin, pMax, 10f);
 
-            // ---- LANE 1 (Center): Symmetrical low crouch cover + tall LOS pillars
+            // ---- LANE 1 (Center): Symmetrical low Jersey/spool crouch cover + tall concrete pillars
             var center = Child(_structures, "CenterLane");
             int tb = 0;
             foreach (var (x, z, w, h, d) in new[]
@@ -519,18 +544,38 @@ namespace LR2.EditorTools
                 (-2.4f, -18.5f, 2.4f, 1.95f, 0.75f), (2.4f, 18.5f, 2.4f, 1.95f, 0.75f),
             })
             {
-                var blk = Box("TacticalBlock", center, new Vector3(x, h * 0.5f, z), new Vector3(w, h, d), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
-                ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(400 + tb++, false, 0.08f, 0.024f));
+                tb++;
+                bool tall = h > 1.5f;
+                string pref = tall ? "SM_ConcreteColumn" : (tb % 3 == 0 ? "SM_Cablespool" : "SM_Jersey");
+                float yawCov = tall ? 0f : (Mathf.Abs(x) < 3.5f ? 0f : (x < 0f ? 22f : -22f));
+                if (Prop(pref, _props, new Vector3(x, 0f, z), yawCov, tall ? 0.85f : 1f, true, SurfaceType.Concrete) == null)
+                {
+                    var blk = Box("TacticalBlock", center, new Vector3(x, h * 0.5f, z), new Vector3(w, h, d), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
+                    ApplyMeshKeepBoxCollider(blk, GetWarpedWallMesh(400 + tb, false, 0.08f, 0.024f));
+                }
             }
 
-            // ---- LANE 2 (West): 1.6m elevated overwatch platform + ramps + 0.85m mantle step box
+            // ---- LANE 2 (West): 1.6m elevated overwatch platform + ramps + pack crate mantle step
             var west = Child(_structures, "WestElevationLane");
             Box("OverwatchDeck", west, new Vector3(-18f, 1.52f, 0f), new Vector3(6f, 0.16f, 12f), _m.steelGrate, LR2Layers.Default, SurfaceType.Metal);
             Box("DeckSupport", west, new Vector3(-18f, 0.72f, 0f), new Vector3(5.4f, 1.44f, 11.4f), _m.wallPlaster, LR2Layers.Default, SurfaceType.Concrete);
             Stairs("WestRampN", west, new Vector3(-18f, 0f, 10.5f), new Vector3(-18f, 1.6f, 6f), 2.8f, _m.steelGrate, false);
             Stairs("WestRampS", west, new Vector3(-18f, 0f, -10.5f), new Vector3(-18f, 1.6f, -6f), 2.8f, _m.steelGrate, false);
             Box("DeckParapet", west, new Vector3(-15.2f, 2.05f, 0f), new Vector3(0.45f, 0.9f, 5.2f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);
-            Box("MantleTestBox", west, new Vector3(-12.5f, 0.425f, 0f), new Vector3(1.6f, 0.85f, 2.4f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
+            FittedPackProp("MantleTestBox", "SM_Crate_01", west, new Vector3(-12.5f, 0.425f, 0f), new Vector3(1.6f, 0.85f, 2.4f), 0f, SurfaceType.Wood);
+            Prop("SM_Woodpallet_2", _props, new Vector3(-12.5f, 0f, 1.9f), 15f, 1f, true, SurfaceType.Wood);
+            Prop("SM_BigPipe", _props, new Vector3(-26.5f, 0f, -8f), 90f, 1f, false);
+            Prop("SM_BigPipe", _props, new Vector3(-26.5f, 0f, 8f), 90f, 1f, false);
+            Prop("SM_Conebarrier", _props, new Vector3(-14.2f, 0f, 10.5f), 0f, 1f, true, SurfaceType.Plastic);
+            Prop("SM_Conebarrier", _props, new Vector3(-14.2f, 0f, -10.5f), 0f, 1f, true, SurfaceType.Plastic);
+            Prop("SM_fireextinguisher", _props, new Vector3(-15.2f, 1.6f, -2.5f), 0f, 1f, false);
+            Prop("SM_Tire", _props, new Vector3(23f, 0f, -8f), 20f, 1f, true, SurfaceType.Plastic);
+            Prop("SM_Tire", _props, new Vector3(23f, 0f, 8f), -25f, 1f, true, SurfaceType.Plastic);
+            foreach (float fz in new[] { -22f, -10f, 10f, 22f })
+            {
+                Prop("SM_Grass1", _props, new Vector3(-28.4f, 0f, fz), R(0f, 360f), 1.2f, false);
+                Prop("SM_Grass2", _props, new Vector3(28.4f, 0f, fz + 1.5f), R(0f, 360f), 1.2f, false);
+            }
 
             // ---- LANE 3 (East): Destructible cover, breakable glass & explosive barrel test lane
             void FramedTestGlass(string gName, string frameTag, float gz)
@@ -583,10 +628,13 @@ namespace LR2.EditorTools
             foreach (var tbp in new[] { new Vector3(-10.5f, 0f, 10.5f), new Vector3(10.5f, 0f, -10.5f) })
                 SpawnBurningBarrel(_lighting, _props, tbp);
             BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 28000f, sunTemp: 6200f,
-                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: 0.15f, contrast: 12f, saturation: -2f,
-                rainDefaultPreset: -1, evMin: 5.2f, evMax: 11.4f,
-                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 10.0f);
-            PlaceEnvironmentRealism(new Color(0.74f, 0.78f, 0.80f, 1f), new Color(0.55f, 0.52f, 0.45f, 1f), 0.10f, 24f);
+                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: 0.28f, contrast: 12f, saturation: -2f,
+                rainDefaultPreset: -1, evMin: 2.8f, evMax: 12.2f,
+                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 11.8f,
+                shadowsTint: new Vector4(0.98f, 0.99f, 1.01f, 0.015f), highlightsTint: new Vector4(1.02f, 1.01f, 0.98f, 0.02f));
+            PlaceEnvironmentRealism(new Color(0.74f, 0.78f, 0.80f, 1f), new Color(0.55f, 0.52f, 0.45f, 1f), 0.12f, 24f);
+            PlaceMapDecals(pMin, pMax, 130);
+            PlaceTargetedWearDecals();
             AddMatchSystems(30f);
             MarkStatic(env);
 
@@ -636,11 +684,12 @@ namespace LR2.EditorTools
             return root;
         }
 
-        private static void PlaceEnvironmentRealism(Color mistColor, Color dustColor, float mistOpacity, float radius)
+        private static void PlaceEnvironmentRealism(Color mistColor, Color dustColor, float mistOpacity, float radius, Vector3? localPos = null, string name = "EnvironmentRealism")
         {
             if (_lighting == null) return;
-            var go = new GameObject("EnvironmentRealism");
+            var go = new GameObject(name);
             go.transform.SetParent(_lighting, false);
+            if (localPos.HasValue) go.transform.localPosition = localPos.Value;
             var afx = go.AddComponent<AtmosphereFX>();
             var so = new SerializedObject(afx);
             so.FindProperty("mistColor").colorValue = mistColor;
@@ -653,6 +702,9 @@ namespace LR2.EditorTools
         private static void SpawnBurningBarrel(Transform lightsParent, Transform propsParent, Vector3 pos)
         {
             var barrel = Prop("SM_Barrel_04", propsParent, pos, R(0f, 360f));
+            var scorch = FindLeartes("M_RustDecal_3") ?? FindLeartes("M_CrackDecal_3");
+            if (scorch != null && _decals != null)
+                CreateDecal(scorch, new Vector3(pos.x, pos.y + 0.02f, pos.z), Vector3.up, 1.9f, true);
             var fireHolder = new GameObject("BurningBarrelFX");
             fireHolder.transform.SetParent(barrel != null ? barrel.transform : lightsParent, false);
             fireHolder.transform.position = (barrel != null ? barrel.transform.position : pos) + Vector3.up * 0.85f;
@@ -669,6 +721,10 @@ namespace LR2.EditorTools
 
             var l = AddLight(fireHolder.transform, "FireGlow", Vector3.up * 0.35f, Quaternion.identity, LightType.Point, 2400f, 3600f, 14f, 0f, false);
             l.gameObject.AddComponent<LightFlicker>().Configure(0.08f, 4.5f, 0f);
+            var hazeGo = new GameObject("FireHeatHaze");
+            hazeGo.transform.SetParent(fireHolder.transform, false);
+            hazeGo.transform.localPosition = Vector3.up * 0.55f;
+            hazeGo.AddComponent<HeatHazeEmitter>().Configure(new Vector2(0.48f, 0.96f), 0.68f);
         }
 
         private static void SanitizeParticleSystems(GameObject go)
@@ -698,7 +754,8 @@ namespace LR2.EditorTools
         private static void BuildCustomLighting(string profileName, float sunElev, float sunAz, float sunLux, float sunTemp,
             float fogMfp, Color fogColor, float exposureComp, float contrast, float saturation, int rainDefaultPreset,
             float evMin = 6.5f, float evMax = 12.8f,
-            string hdriAssetPath = "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", float skyExposure = 12.2f)
+            string hdriAssetPath = "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", float skyExposure = 12.2f,
+            Vector4? shadowsTint = null, Vector4? highlightsTint = null)
         {
             var sunGo = new GameObject("Sun");
             sunGo.transform.SetParent(_lighting, false);
@@ -723,8 +780,8 @@ namespace LR2.EditorTools
             ApplyHdriSky(ve, profile, hdriAssetPath, skyExposure, rotationDeg: sunAz * 0.4f);
             // Global indirect/sky visibility floor so dark cover & interiors never swallow enemy silhouettes
             var ilcGlobal = profile.Add<IndirectLightingController>(true);
-            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.65f);
-            ilcGlobal.reflectionLightingMultiplier.Override(1.22f);
+            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.95f);
+            ilcGlobal.reflectionLightingMultiplier.Override(1.30f);
             var fog = profile.Add<Fog>(true);
             fog.enabled.Override(rainDefaultPreset >= 0);
             fog.meanFreePath.Override(fogMfp);
@@ -754,15 +811,20 @@ namespace LR2.EditorTools
             color.contrast.Override(contrast);
             color.saturation.Override(saturation);
             var smh = profile.Add<ShadowsMidtonesHighlights>(true);
-            smh.shadows.Override(new Vector4(0.97f, 0.99f, 1.02f, 0.015f));
+            smh.shadows.Override(shadowsTint ?? new Vector4(0.97f, 0.99f, 1.02f, 0.015f));
+            if (highlightsTint.HasValue) smh.highlights.Override(highlightsTint.Value);
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(rainDefaultPreset >= 0 ? 0.25f : 0.14f);
             var ao = profile.Add<ScreenSpaceAmbientOcclusion>(true);
-            ao.intensity.Override(0.65f);
-            ao.radius.Override(1.4f);
+            ao.intensity.Override(0.78f);
+            ao.radius.Override(1.45f);
+            ao.directLightingStrength.Override(0.24f);
             profile.Add<ScreenSpaceReflection>(true).enabled.Override(true);
             profile.Add<GlobalIllumination>(true).enable.Override(false);
-            profile.Add<ContactShadows>(true).enable.Override(true);
+            var contact = profile.Add<ContactShadows>(true);
+            contact.enable.Override(true);
+            contact.length.Override(0.34f);
+            contact.opacity.Override(0.90f);
             profile.Add<MicroShadowing>(true).enable.Override(true);
             var shadows = profile.Add<HDShadowSettings>(true);
             shadows.maxShadowDistance.Override(95f);
@@ -900,7 +962,13 @@ namespace LR2.EditorTools
 
         private static void PlaceMapDecals(Vector2 playMin, Vector2 playMax, int tries)
         {
-            string[] names = { "M_CrackDecal", "M_CrackDecal_2", "M_LeakDecal", "M_RustDecal", "M_GraffittiDecal", "M_Decal_Puddle_A_MIC" };
+            string[] names =
+            {
+                "M_CrackDecal", "M_CrackDecal_2", "M_CrackDecal_3", "M_CrackDecal_4",
+                "M_LeakDecal", "M_LeakDecal_2", "M_LeakDecal_3", "M_LeakDecal_4",
+                "M_RustDecal", "M_RustDecal_2", "M_RustDecal_3", "M_RustDecal_4",
+                "M_GraffittiDecal", "M_GraffittiDecal_2", "M_Puddle", "M_Decal_Puddle_A_MIC"
+            };
             PlaceProjectedDecals(playMin, playMax, tries, names);
         }
     }
