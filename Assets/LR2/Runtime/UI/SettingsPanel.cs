@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using LR2.Core;
+using LR2.Game;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,6 +47,8 @@ namespace LR2.UI
         [Header("Gameplay & Accessibility")]
         public Button botDifficultyPrev, botDifficultyNext;
         public TMP_Text botDifficultyValue;
+        public Button botTeamModePrev, botTeamModeNext;
+        public TMP_Text botTeamModeValue;
         public Button colorBlindPrev, colorBlindNext;
         public TMP_Text colorBlindValue;
         public Toggle laserSight;
@@ -169,6 +172,8 @@ namespace LR2.UI
                 () => ColorBlindLabels.Length, i => LR2Settings.ColorBlindMode = i);
             HookStep(botDifficultyPrev, botDifficultyNext, () => Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1),
                 () => DifficultyLabels.Length, i => LR2Settings.BotDifficulty = i);
+            HookStep(botTeamModePrev, botTeamModeNext, () => Mathf.Clamp(LR2Settings.BotTeamMode, 0, LR2Session.BotTeamModeLabels.Length - 1),
+                () => LR2Session.BotTeamModeLabels.Length, i => LR2Settings.BotTeamMode = i);
             if (resetDefaultsButton != null) resetDefaultsButton.onClick.AddListener(ResetDefaults);
             if (resetBindingsButton != null) resetBindingsButton.onClick.AddListener(ResetKeybinds);
             if (tabButtons != null)
@@ -322,6 +327,8 @@ namespace LR2.UI
                 colorBlindValue.text = ColorBlindLabels[Mathf.Clamp(LR2Settings.ColorBlindMode, 0, ColorBlindLabels.Length - 1)];
             if (botDifficultyValue != null)
                 botDifficultyValue.text = DifficultyLabels[Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1)];
+            if (botTeamModeValue != null)
+                botTeamModeValue.text = LR2Session.BotTeamModeLabels[Mathf.Clamp(LR2Settings.BotTeamMode, 0, LR2Session.BotTeamModeLabels.Length - 1)];
         }
 
         public void ResetDefaults()

@@ -2137,8 +2137,8 @@ MonoBehaviour:
   leftGripCurl: -0.12
   thumbBaseRange: {x: -1.6, y: 0.3}
   thumbTipRange: {x: -1, y: 0.6}
-  rightGripOffset: {x: 0, y: -0.01, z: -0.075}
-  leftGripOffset: {x: 0, y: -0.03, z: 0}
+  rightGripOffset: {x: 0.006, y: -0.004, z: -0.075}
+  leftGripOffset: {x: 0, y: -0.036, z: 0}
 --- !u!114 &2210738732602222748
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5888,13 +5888,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LR2.Runtime::LR2.Characters.BodycamRig
   intensity: 1
-  adsDamping: 0.65
+  adsDamping: 0.88
   strideLength: 1.55
   bobVertical: 0.06
   bobLateral: 0.035
   bobRoll: 2.1
   bobPitch: 1.35
   bobYaw: 0.8
+  walkBobScale: 0.34
   sprintMultiplier: 1.7
   footfallKick: 0.9
   turnLag: 0.3

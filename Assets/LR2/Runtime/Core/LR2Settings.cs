@@ -49,8 +49,11 @@ namespace LR2.Core
         public static bool FilmGrain { get => GetB("FilmGrain", true); set => SetB("FilmGrain", value); }
         public static bool RayTracing { get => GetB("RayTracing", false); set => SetB("RayTracing", value); }
         public static bool HitmarkerSound { get => GetB("HitmarkerSound", true); set => SetB("HitmarkerSound", value); }
-        public static bool LaserEnabled { get => GetB("v3.LaserEnabled", false); set => SetB("v3.LaserEnabled", value); }
+        /// <summary>Weapon laser sight. Lasers are enabled for every firearm by default; L or the settings toggle can disable them.</summary>
+        public static bool LaserEnabled { get => GetB("v4.LaserEnabled", true); set => SetB("v4.LaserEnabled", value); }
         public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 4)); }
+        /// <summary>Bot team alignment in CTF/multi-bot modes: 0 Squads (Allies vs Enemies), 1 Free-For-All, 2 All Bots Same Team, 3 All Bots On Player Team.</summary>
+        public static int BotTeamMode { get => Mathf.Clamp(GetI("v3.BotTeamMode", 0), 0, 3); set => SetI("v3.BotTeamMode", Mathf.Clamp(value, 0, 3)); }
         /// <summary>Bodycam lens look (distortion, grain, aberration, grade).</summary>
         public static bool BodycamLook { get => GetB("v2.BodycamLook", false); set => SetB("v2.BodycamLook", value); }
         /// <summary>Bodycam camera motion (head bob, inertia sway, handheld shake). On by default (user asked for visible bodycam motion);
@@ -74,7 +77,7 @@ namespace LR2.Core
             foreach (var key in new[] { "MouseSensitivity", "v2.MouseSensitivity", "AdsSens", "v2.AdsSens", "FOV", "InvertY",
                          "v3.CameraShake", "v3.AntiAliasing", "v3.Upscaler", "v3.ColorBlind",
                          "MasterVol", "SfxVol", "MusicVol", "UiVol", "Quality", "VSync", "FpsLimit", "ShowFps",
-                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "v3.LaserEnabled", "BotDifficulty",
+                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "v3.LaserEnabled", "BotDifficulty", "v3.BotTeamMode",
                          "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion", "v3.BodycamMotion" })
                 PlayerPrefs.DeleteKey(Prefix + key);
             Notify();

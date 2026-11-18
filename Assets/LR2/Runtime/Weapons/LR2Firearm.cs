@@ -232,7 +232,7 @@ namespace LR2.Weapons
 
             _equipReadyAt = Time.time + (definition != null ? definition.equipTime : 0.5f);
             _triggerHeld = false;
-            UpdateFieldOfView(false);
+            OnAimReleased();
             if (definition != null && definition.audio != null) LR2Audio.PlayAt(definition.audio.equip, transform.position);
         }
 
@@ -244,11 +244,37 @@ namespace LR2.Weapons
 
         private void InitializeAttachments()
         {
+            // B49/B55: Strip any Generic-rig AttachHandLayerSettings from Kinemation attachments (e.g. Mk18 GripEmpty/GripMount)
+            // so Humanoid left-hand IK stays locked to the handguard instead of snapping to the waist.
+            foreach (var att in GetComponentsInChildren<BaseAttachment>(true))
+            {
+                if (att != null && att.attachmentLayerSettings != null && att.attachmentLayerSettings.Count > 0)
+                    att.attachmentLayerSettings.Clear();
+            }
+
             if (_fpsAnimator != null)
                 foreach (var group in scopeGroups) group.Initialize(_fpsAnimator);
             _scopeIndex = 0;
             if (scopeGroups.Count == 0) return;
             UpdateAimPoint();
+        }
+
+        /// <summary>
+        /// Disables every scope, grip and barrel attachment on this firearm.
+        /// LR2 currently treats the equipped weapon as a clean weapon rig unless a live attachment system enables a part.
+        /// </summary>
+        public void DisableAttachments()
+        {
+            foreach (var att in GetComponentsInChildren<BaseAttachment>(true))
+            {
+                if (att == null) continue;
+                if (att.attachmentLayerSettings != null)
+                    att.attachmentLayerSettings.Clear();
+                att.gameObject.SetActive(false);
+            }
+            _scopeIndex = 0;
+            if (_entity != null)
+                _entity.defaultAimPoint = null;
         }
 
         private void UpdateAimPoint()
@@ -608,6 +634,8 @@ namespace LR2.Weapons
         {
             _triggerHeld = false;
             StopRecoil();
+            // B59a: Always release ADS on cancel/death/unequip so rebuilt playables never stay locked in ADS.
+            OnAimReleased();
             if (!IsReloading) return;
             IsReloading = false;
             if (_weaponAnimator != null)

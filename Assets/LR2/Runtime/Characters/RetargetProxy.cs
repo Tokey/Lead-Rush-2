@@ -58,6 +58,11 @@ namespace LR2.Characters
         private ReloadMotionBridge _bridge;
         private bool _offsetsReady;
         private int _frames;
+        // B60a: HyperMotion-style C2 inertialization offset decay across weapon/reload/sprint transitions.
+        private bool _hasPrevHands, _prevReloading, _prevSprinting, _prevAiming;
+        private Transform _prevItemTf;
+        private Vector3 _prevLPos, _prevRPos, _lInertialOffset, _rInertialOffset;
+        private const float InertialHalfLifeSeconds = 0.045f;
         private static readonly int ProneWeightHash = Animator.StringToHash("ProneWeight");
         private static readonly List<int> _lProxIdx = new List<int>();
         private static readonly List<int> _lFingerIdx = new List<int>();
@@ -274,6 +279,51 @@ namespace LR2.Characters
                 ApplyProneWeaponPose(itemTf, ref lPos, ref lRot, ref rPos, ref rRot);
                 ApplyGloveClearance(itemTf, ref lPos, ref lRot, ref rPos);
                 ApplyGripOffsets(itemTf, ref lPos, ref rPos);
+
+                // B59b / B60d: Prevent collision pullback or IK deltas from ever pulling the weapon backwards through the eye/chest plane.
+                if (itemTf != null && _soldier != null)
+                {
+                    Vector3 eyeRef = FirstPersonActive && _soldier.ViewCamera != null
+                        ? _soldier.ViewCamera.transform.position
+                        : (_vHead != null ? _vHead.position : transform.position + Vector3.up * 1.52f);
+                    Vector3 aimFwd = FirstPersonActive && _soldier.ViewCamera != null
+                        ? _soldier.ViewCamera.transform.forward
+                        : (_soldier.AimDirection.sqrMagnitude > 1e-4f ? _soldier.AimDirection : transform.forward);
+                    float fwdDist = Vector3.Dot(itemTf.position - eyeRef, aimFwd);
+                    if (fwdDist < 0.08f)
+                    {
+                        Vector3 push = aimFwd * (0.08f - fwdDist);
+                        itemTf.position += push;
+                        lPos += push;
+                        rPos += push;
+                    }
+                }
+
+                // B60a: HyperMotion-style C2 inertialization offset decay on reload/sprint/ADS/weapon state transitions.
+                bool isReloading = _soldier != null && _soldier.IsReloading;
+                bool isSprinting = _soldier != null && _soldier.IsSprinting;
+                bool isAiming = _soldier != null && _soldier.IsAiming;
+                if (_hasPrevHands && (isReloading != _prevReloading || isSprinting != _prevSprinting || isAiming != _prevAiming || itemTf != _prevItemTf))
+                {
+                    _lInertialOffset = Vector3.ClampMagnitude(_lInertialOffset + (_prevLPos - lPos), 0.14f);
+                    _rInertialOffset = Vector3.ClampMagnitude(_rInertialOffset + (_prevRPos - rPos), 0.10f);
+                }
+                if (_lInertialOffset.sqrMagnitude > 1e-8f || _rInertialOffset.sqrMagnitude > 1e-8f)
+                {
+                    float decay = Mathf.Exp(-Time.deltaTime / InertialHalfLifeSeconds);
+                    _lInertialOffset *= decay;
+                    _rInertialOffset *= decay;
+                    lPos += _lInertialOffset;
+                    rPos += _rInertialOffset;
+                }
+                _hasPrevHands = true;
+                _prevReloading = isReloading;
+                _prevSprinting = isSprinting;
+                _prevAiming = isAiming;
+                _prevItemTf = itemTf;
+                _prevLPos = lPos;
+                _prevRPos = rPos;
+
                 Solve(_rUpper, _rLower, _rHand, rPos, rRot * _rOffset, handIKWeight);
                 Solve(_lUpper, _lLower, _lHand, lPos, lRot * _lOffset, handIKWeight);
                 HandErrorRight = _rHand != null ? Vector3.Distance(_rHand.position, rPos) : -1f;

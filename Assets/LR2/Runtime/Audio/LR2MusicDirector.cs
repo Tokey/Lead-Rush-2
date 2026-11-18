@@ -19,10 +19,10 @@ namespace LR2.Audio
         public static LR2MusicDirector Instance { get; private set; }
 
         [Header("Headroom caps (multiplied by LR2Settings.MusicVolume)")]
-        [SerializeField, Range(0f, 1f)] private float menuCeiling = 0.22f;
-        [SerializeField, Range(0f, 1f)] private float calmCeiling = 0.10f;
-        [SerializeField, Range(0f, 1f)] private float tensionCeiling = 0.17f;
-        [SerializeField, Range(0f, 1f)] private float combatCeiling = 0.28f;
+        [SerializeField, Range(0f, 1f)] private float menuCeiling = 0.24f;
+        [SerializeField, Range(0f, 1f)] private float calmCeiling = 0.15f;
+        [SerializeField, Range(0f, 1f)] private float tensionCeiling = 0.26f;
+        [SerializeField, Range(0f, 1f)] private float combatCeiling = 0.38f;
 
         private AudioSource _menuSrc;
         private AudioSource _calmSrc;
@@ -85,6 +85,12 @@ namespace LR2.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            // B58: Upgrade serialized headroom floors so legacy scenes never mute combat music during gunplay.
+            menuCeiling = Mathf.Clamp(menuCeiling, 0.20f, 0.32f);
+            calmCeiling = Mathf.Clamp(calmCeiling, 0.13f, 0.20f);
+            tensionCeiling = Mathf.Clamp(tensionCeiling, 0.22f, 0.34f);
+            combatCeiling = Mathf.Clamp(combatCeiling, 0.34f, 0.48f);
+
             LoadClips();
             BuildSources();
 
@@ -123,12 +129,17 @@ namespace LR2.Audio
             s.loop = true;
             s.spatialBlend = 0f;
             s.playOnAwake = false;
-            s.priority = 242;
+            // B58: Music must never be voice-stolen by LR2Audio's 72 gunfire/impact voices (priority 128..175).
+            s.priority = 8;
+            s.bypassEffects = true;
+            s.bypassListenerEffects = true;
+            s.bypassReverbZones = true;
             s.ignoreListenerPause = true; // handle pause ducking smoothly rather than hard-cutting music
             s.volume = 0f;
             lpf = child.AddComponent<AudioLowPassFilter>();
-            lpf.cutoffFrequency = 8500f;
-            lpf.lowpassResonanceQ = 0.8f;
+            lpf.cutoffFrequency = 18000f;
+            lpf.lowpassResonanceQ = 0.7f;
+            lpf.enabled = false;
             return s;
         }
 
@@ -264,11 +275,11 @@ namespace LR2.Audio
             if (_player == null) return;
             if (e.shooter == _player)
             {
-                NotifyCombatEvent(0.32f, 3.0f);
+                NotifyCombatEvent(0.56f, 3.6f);
                 return;
             }
             float d = Vector3.Distance(_player.Position, e.origin);
-            if (d < 30f) NotifyCombatEvent(Mathf.Lerp(0.36f, 0.14f, d / 30f), 2.8f);
+            if (d < 30f) NotifyCombatEvent(Mathf.Lerp(0.45f, 0.18f, d / 30f), 3.0f);
         }
 
         private void OnHit(HitEvent e)
@@ -354,18 +365,18 @@ namespace LR2.Audio
             if (_player != null && !_player.IsAlive) stateAtten *= 0.45f;
             float master = userMusic * stateAtten;
 
-            float gCalm = calmCeiling * Mathf.Lerp(0.85f, 0.38f, _intensity) * master;
-            float gTension = tensionCeiling * Mathf.SmoothStep(0.14f, 0.72f, _intensity) * master;
-            float gCombat = combatCeiling * Mathf.SmoothStep(0.42f, 0.96f, _intensity) * master;
+            float gCalm = calmCeiling * Mathf.Lerp(0.92f, 0.72f, _intensity) * master;
+            float gTension = tensionCeiling * Mathf.SmoothStep(0.06f, 0.54f, _intensity) * master;
+            float gCombat = combatCeiling * Mathf.SmoothStep(0.18f, 0.78f, _intensity) * master;
 
             if (_calmSrc != null) _calmSrc.volume = gCalm;
             if (_tensionSrc != null) _tensionSrc.volume = gTension;
             if (_combatSrc != null) _combatSrc.volume = gCombat;
 
-            // Open filter progressively during fights while keeping upper transient crunch bands clear for footsteps
-            float cutoffCalm = Mathf.Lerp(3200f, 5200f, _intensity);
-            float cutoffTension = Mathf.Lerp(4200f, 7000f, _intensity);
-            float cutoffCombat = Mathf.Lerp(5000f, 8000f, _intensity);
+            // Keep music un-muffled in gunplay while keeping mixer voice priority highest (B58)
+            float cutoffCalm = Mathf.Lerp(12000f, 20000f, _intensity);
+            float cutoffTension = Mathf.Lerp(14000f, 22000f, _intensity);
+            float cutoffCombat = Mathf.Lerp(16000f, 22000f, _intensity);
             if (_calmLpf != null) _calmLpf.cutoffFrequency = cutoffCalm;
             if (_tensionLpf != null) _tensionLpf.cutoffFrequency = cutoffTension;
             if (_combatLpf != null) _combatLpf.cutoffFrequency = cutoffCombat;

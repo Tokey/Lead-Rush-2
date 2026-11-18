@@ -209,6 +209,83 @@ namespace LR2.Game
             return Mathf.Lerp(2.25f, 0.28f, Mathf.Pow(t, 0.65f));
         }
 
+        /// <summary>Counts friendly and hostile combatants inside the outer zone vs inner 2.25x core for tactical bot planning.</summary>
+        public void CountZoneOccupants(Combatant observer, out int alliesInZone, out int alliesInCore, out int hostilesInZone, out Combatant closestHostileInZone)
+        {
+            alliesInZone = 0;
+            alliesInCore = 0;
+            hostilesInZone = 0;
+            closestHostileInZone = null;
+            float bestDist = float.MaxValue;
+
+            var list = Combatant.All;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var c = list[i];
+                if (c == null || c == observer || !c.IsAlive || c.Team == TeamId.Hostile) continue;
+                float planar = Vector2.Distance(new Vector2(c.Position.x, c.Position.z), new Vector2(_activePos.x, _activePos.z));
+                float vert = Mathf.Abs(c.Position.y - _activePos.y);
+                if (vert > 4.5f || planar > _outerRadius) continue;
+
+                bool hostile = observer == null || TeamUtil.AreHostile(observer, c);
+                if (hostile)
+                {
+                    hostilesInZone++;
+                    if (planar < bestDist)
+                    {
+                        bestDist = planar;
+                        closestHostileInZone = c;
+                    }
+                }
+                else
+                {
+                    alliesInZone++;
+                    if (planar <= _coreRadius) alliesInCore++;
+                }
+            }
+        }
+
+        /// <summary>True when a hostile is actively capturing or contesting the flag (returns normalized 0..1 capture urgency).</summary>
+        public bool IsHostileCapturingOrContesting(Combatant who, out float urgency01)
+        {
+            urgency01 = 0f;
+            if (who == null) return false;
+            var mm = MatchManager.Instance;
+            bool isTeamMode = mm != null && mm.IsTeamMode;
+            if (isTeamMode)
+            {
+                var local = mm != null ? mm.LocalPlayer : null;
+                bool sameAsPlayer = local != null && !TeamUtil.AreHostile(local, who);
+                if (State == ZoneState.Contested)
+                {
+                    urgency01 = Mathf.Max(0.45f, Mathf.Abs(Progress));
+                    return true;
+                }
+                if (sameAsPlayer && (Progress < -0.15f || State == ZoneState.Losing))
+                {
+                    urgency01 = Mathf.Clamp01(Mathf.Abs(Progress));
+                    return true;
+                }
+                if (!sameAsPlayer && Progress > 0.15f)
+                {
+                    urgency01 = Mathf.Clamp01(Progress);
+                    return true;
+                }
+                return false;
+            }
+
+            float maxEnemyProg = 0f;
+            bool enemyOccupant = State == ZoneState.Contested || (LeadingCombatant != null && LeadingCombatant != who);
+            foreach (var kv in _ffaProgress)
+            {
+                if (kv.Key == null || kv.Key == who || !kv.Key.IsAlive) continue;
+                if (kv.Value > maxEnemyProg) maxEnemyProg = kv.Value;
+            }
+            if (!enemyOccupant && maxEnemyProg < 0.2f) return false;
+            urgency01 = Mathf.Clamp01(Mathf.Max(maxEnemyProg, State == ZoneState.Contested ? 0.5f : 0.25f));
+            return true;
+        }
+
         private void EvaluateCapture(float dt)
         {
             var mm = MatchManager.Instance;

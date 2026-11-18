@@ -4315,8 +4315,8 @@ MonoBehaviour:
   leftGripCurl: -0.12
   thumbBaseRange: {x: -1.6, y: 0.3}
   thumbTipRange: {x: -1, y: 0.6}
-  rightGripOffset: {x: 0, y: -0.01, z: -0.075}
-  leftGripOffset: {x: 0, y: -0.03, z: 0}
+  rightGripOffset: {x: 0.006, y: -0.004, z: -0.075}
+  leftGripOffset: {x: 0, y: -0.036, z: 0}
 --- !u!114 &8062619651618415964
 MonoBehaviour:
   m_ObjectHideFlags: 0

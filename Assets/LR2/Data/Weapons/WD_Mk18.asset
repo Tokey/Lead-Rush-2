@@ -65,3 +65,5 @@ MonoBehaviour:
   tracerEvery: 1
   shellPrefab: {fileID: 7496392848592200594, guid: c114d37c6341b414aa4cb01b076e2836, type: 3}
   muzzleFlashPrefab: {fileID: 8025995091943808216, guid: 1b26fa37b150091409de8b6e8aea82d1, type: 3}
+  rightGripOffset: {x: 0.006, y: -0.004, z: -0.075}
+  leftGripOffset: {x: 0, y: -0.036, z: 0}

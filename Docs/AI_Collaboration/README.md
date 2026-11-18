@@ -6,18 +6,16 @@ written by AI coding agents that work in the same repository **at the same time*
 They coordinate through one Markdown file in the repo, [`AGENT_COORDINATION.md`](../../AGENT_COORDINATION.md) (the "board").
 
 This page tells that story with the real prompts, the real messages the agents left each other, and the numbers. It covers
-**2026-11-16 11:19 to 2026-11-17 23:45** (local time, America/New_York) and will keep growing.
+**2026-11-16 11:19 to 2026-11-18 02:12+** (local time, America/New_York) and keeps growing as all four agents commit to the repo.
 
 | | |
 |---|---|
 | **Developer** | 1: directs, playtests, decides |
-| **AI agents** | **Claude Code** (Anthropic; model `claude-opus-5-5`), **Antigravity** agent called "Gemini" on the board (models changed during the project: `claude-opus-5-5-high`, `gemini-4-hydrogen`, and "argon" = `gemini-pro-orchestrator-g1-pro` with `gemini-flash-worker-agy` helpers), **GitHub Copilot** agent (joined 2026-11-17 23:12) |
-| **Developer prompts** | 121 recorded: 36 to Claude Code, 85 to Antigravity ([every prompt, verbatim](PROMPTS.md)) |
-| **Board** | v1 grew to 361 lines and about 45 log entries in 11 hours; v2 since 23:25 ([v1 archived verbatim](archive/BOARD_v1_2026-11-17.md)) |
-| **Handoffs** | 4 full handoffs when an agent hit its usage limit (14:55, 15:07, 16:05, 18:13) |
-| **Usage-limit stops (Claude Code)** | 5 (11-16 afternoon; 11-17 14:55, 15:07, 18:13; 23:14 weekly limit for its sub-agents) |
-| **Pushes to GitHub** | 5 commits so far (`621630a`, `e479b74`, `76e9db0`, `d49ce90`, `4aa7b71`) |
-| **Tracked work items** | B1 to B44 on the board (bugs, tuning, features, tooling, docs), plus research specs P1-P5 |
+| **AI agents (4)** | **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`argon` = `gemini-pro-orchestrator-g1-pro` + `gemini-flash-worker-agy`, `claude-opus-5-5-high`, `gemini-4-hydrogen`), **GitHub Copilot** (`gpt-5.6-luna`, joined `11-17 23:12`), **OpenAI Codex** (`gpt-6`, joined `11-18 01:54`) |
+| **Developer prompts** | 135+ recorded verbatim headings across sessions ([every prompt, verbatim](PROMPTS.md)) |
+| **Board** | v1 archived verbatim; v2 (`23:25`); v3 (`00:05+`) with compile gate, Check-the-Check & ledger integrity |
+| **Handoffs & Limit Stops** | 6 documented Claude Code usage-limit / token-cap handoffs (`11-16` afternoon; `11-17 14:55`, `15:07`, `18:13`, `23:14` sub-agent cap; `11-18 00:44` reset wait) |
+| **Tracked work items** | `B1–B60` (incl. `B60a–B60g` & `B60.1–B60.10` HyperMotion subtasks) + research specs `P1–P5` |
 
 ## The team
 
@@ -28,24 +26,28 @@ This page tells that story with the real prompts, the real messages the agents l
 ```mermaid
 flowchart LR
     Dev(["Developer<br/>prompts, playtests, decisions"])
-    C["Claude Code<br/>claude-opus-5-5<br/>diagnosis, hardest fixes, reviews"]
-    G["Antigravity ('Gemini')<br/>opus, then hydrogen, then argon<br/>main implementer"]
-    P["GitHub Copilot<br/>features, QA checks, research"]
-    B[("AGENT_COORDINATION.md<br/>the board")]
-    U["Unity editor<br/>one instance at a time"]
+    C["Claude Code<br/>claude-opus-5-5<br/>rig, core & reviews"]
+    G["Antigravity ('Gemini', Lead)<br/>hydrogen/argon/opus<br/>AI, UI, maps, audio & orchestration"]
+    P["GitHub Copilot<br/>gpt-5.6-luna<br/>specs, pose QA, research & R8 push"]
+    X["OpenAI Codex<br/>gpt-6<br/>B56 token audit, B57 QA & cross-review"]
+    B[("AGENT_COORDINATION.md<br/>Protocol v3 board")]
+    U["Unity 6000.5.0f1<br/>1 lock + ParallelWorker"]
     GH[("GitHub<br/>Tokey/Lead-Rush-2")]
     Dev -- prompts --> C
     Dev -- prompts --> G
     Dev -- prompts --> P
+    Dev -- prompts --> X
     C <-- read / write --> B
     G <-- read / write --> B
     P <-- read / write --> B
-    C -- "claims the UNITY lock" --> U
-    G -- "claims the UNITY lock" --> U
-    P -- "claims the UNITY lock" --> U
+    X <-- read / write --> B
+    C -- "UNITY lock" --> U
+    G -- "UNITY lock" --> U
+    P -- "UNITY lock" --> U
     C -- push --> GH
     G -- push --> GH
     P -- push --> GH
+    X -- verify --> B
 ```
 
 The only thing the agents share is the repository. Each one runs in its own tool with its own model and its own usage limit,
@@ -254,10 +256,11 @@ at review.
 
 | Agent · model | Score | Tasks | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Own defects caught at review | Pre-push breaks |
 |---|---|---|---|---|---|---|---|---|
-| Claude · claude-opus-5-5 | 55.1 | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 1 | 2 |
-| Copilot · gpt-5.6-luna | 18.0 | 30 | 2 / 0 | 0 / 0 | 2.0 (2) | 0.7 | 6 | 0 |
+| Claude · claude-opus-5-5 | 54.1 | 21 | 8 / 2 | 10 / 2 | 5.7 (8) | 2.7 | 3 | 2 |
+| Copilot · gpt-5.6-luna | 32.5 | 35 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
+| Gemini · gemini-4-hydrogen | 5.2 | 30 | 1 / 0 | 0 / 0 | 3.9 (5) | 1.3 | 4 | 0 |
 | Gemini · claude-opus-5-5-high | 3.0 | 0 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · gemini-4-hydrogen | -0.8 | 16 | 1 / 0 | 0 / 0 | 3.9 (5) | 2.4 | 2 | 0 |
+| Codex · gpt-6 | 0.5 | 1 | 0 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
 | Gemini · argon/hydrogen | -1.2 | 1 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
 | Gemini · argon | -3.2 | 3 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
@@ -273,6 +276,52 @@ at review.
   23:25 on, agents log model and cause as they work, which makes later data much more reliable.
 - **Models are named as the tools report them.** "argon" is the developer's name for `gemini-pro-orchestrator-g1-pro` with
   `gemini-flash-worker-agy` helpers; Copilot reported `gpt-5.6-luna` after board request R9.
+
+## Token, Context & Usage-Limit Telemetry (`B56` — All 4 Agents)
+
+Every tool isolates its own quota and context management. To keep numbers honest and non-fabricated, the table below separates **directly observed repository/session metrics** (`PROMPTS.md`, `tasks.csv`, `bugs.csv`, board limit events) from **client-unreported API token counters** (tools do not dump raw token billing JSON into git).
+
+| Agent (Board Name) | Reported Model(s) | Active Session Window (Local NY) | Observed Limit / Compaction Events | Ledger Work (`tasks.csv` / `bugs.csv`) | API Token Usage Visibility |
+|---|---|---|---|---|---|
+| **Claude** (`Claude Code`) | `claude-opus-5-5` | `11-16 11:19` → `11-18 00:45` *(paused awaiting quota reset)* | **6 limit stops** documented (`11-16` pm w/ user note *"at 97% token done"*; `11-17 14:55`, `15:07`, `18:13` 8-subagent wave; `23:14` 9-subagent weekly cap; `11-18 00:44` token handoff) | 21 delivered tasks (`C01–C21`), 10 review finds (`8 others / 2 own`) | Quota cap events & 97% ceiling observed in logs; raw IDE API token sum not exported by client |
+| **Gemini** (`Antigravity`, Lead) | `argon` (`g1-pro`/`flash`), `claude-opus-5-5-high`, `gemini-4-hydrogen` (`Gemini 4 Hydrogen`) | `11-16 23:44` → `11-18 02:32+` *(continuous; took Lead at `00:51`; Argon -> Gemini 4 Hydrogen switch at `02:24`)* | **1 model quota switch (`02:24`)**: Orchestrator `Argon` hit its usage limit at `02:24` and the developer switched cleanly to `Gemini 4 Hydrogen`; automatic `<CONTEXT_SUMMARY>` compaction across Plan & Execute turns (`exit_plan_mode`); earlier model switches (`13:30` Hydrogen, `22:28` Opus, `22:51` Argon) | 35 ledger rows (`G01–G35` across `hydrogen`, `argon`, `argon/hydrogen`), 2 sub-agents spawned (`qa_telemetry_auditor`) | Compaction boundaries & `02:24` Argon limit switch logged in transcripts/board; Antigravity UI does not export raw API token sums into repo (`BUDGET: OK`) |
+| **Copilot** (`VS Code Agent`) | `gpt-5.6-luna` *(earlier `claude` misattrib fixed at v2)* | `11-17 23:12` → `11-18 02:07+` *(continuous)* | **0 hard stops** reported; Unity lock retry (`23:36` handshake while `pid 20724` open); parallelized pose QA (`#7–#10`) & `B60` HyperMotion spec (`B60.1–B60.10`) | 35 ledger rows (`P01–P35`) across `P1–P5`, `B24/B30/B32/B34/B38/B40/B42/B44–B48`, `B52/B54/B60` | `BUDGET: ?` self-reported on board; VS Code Copilot client does not expose cumulative token counts in git |
+| **Codex** (`OpenAI Codex CLI`) | `gpt-6` *(filled `02:09`)* | `11-18 01:54` → `02:09+` *(active)* | **0 stops**; onboarded in Section `7b` (`01:54`) for `B56` token/usage telemetry, `B57` independent QA assertions, and `B60` HyperMotion review | 1 ledger row (`X01`: `B56`/`B57`), plus `B60b`/`B60d` review & `B60` realism backlog (`IN PROGRESS`) | `BUDGET: OK` on board; Codex CLI session token ledger under `B56` audit |
+
+## Complete Task Log with Source (`tasks.csv`)
+
+Every recorded task in [data/tasks.csv](data/tasks.csv) now carries an explicit `source` column tracing which user prompt, board directive, review artifact, or code commit originated it. Regenerated automatically into [figures/tasks_log.md](figures/tasks_log.md) by `analysis/analyze.py`:
+
+| ID | When (ET) | Agent · Model | Board | Kind | Outcome | Task | Source (Prompt / Board / Evidence) |
+|---|---|---|---|---|---|---|---|
+| `G35` | 2026-11-18 02:32 | Gemini · `gemini-4-hydrogen` | B56 | docs | ready-for-review | B56 4-agent token telemetry (incl. Argon-to-Hydrogen switch at 02:24) & surface task source across all GitHub task logs | user prompts 01:50, 02:16, 02:24 + analyze.py (figures/tasks_log.md) + Docs/AI_Collaboration/README.md + RESEARCH_LOG.md + Docs/Bot/bot-brain.html |
+| `G34` | 2026-11-18 02:29 | Gemini · `gemini-4-hydrogen` | B14/B62 | fix | ready-for-review | B14/B62 First-person killcam procedural weapon/camera recoil matching player view + 32 funny randomized bot gamertags | user prompt 02:21 (killcam recoil & player look + funny randomized gamertags) + KillcamDirector.cs + MatchManager.cs + dotnet build 0 err |
+| `G33` | 2026-11-18 02:28 | Gemini · `gemini-4-hydrogen` | B61 | feature | ready-for-review | B61 Smart Flag-Playing Bot AI (Step 2.5 Urgent Contest, Core 2.25x Anchor, Contested Breach, Perimeter Crossfire & In-Zone Engage Clamp) | user prompt 02:18 (bot should play flag with smarts & document it) + FlagZoneController.cs + TacticalBotBrain.cs + Docs/LR2_Bot_Explainer.md + Docs/Bot/bot-brain.html |
+| `G32` | 2026-11-18 02:27 | Gemini · `gemini-4-hydrogen` | B51 | feature | ready-for-review | B51 Unified CTF mode + configurable Bot Team Mode (Squads/FFA/Pack/Co-op) in Settings, Deploy & Mode Rules | user prompt 02:18 (combine CTF modes + bot team setting) + MatchSettings.cs + MatchManager.cs + LR2Settings.cs + SettingsPanel.cs + MainMenuController.cs + LR2UIBuilder.cs + LR2ContentBuilder.cs |
+| `G31` | 2026-11-18 02:12 | Gemini · `gemini-4-hydrogen` | B60 | docs | ready-for-review | B60 HyperMotion architectural spec & B60a-B60g subtask split across all 4 agents | user prompt 02:06-02:07 (HyperMotion research & subtasks to Copilot) + Docs/AI_Collaboration/specs/B60_HyperMotion_Animation.md + board R15 |
+| `G30` | 2026-11-18 02:15 | Gemini · `gemini-4-hydrogen` | B55/B49 | feature | ready-for-review | B55/B49 LeadRushHDRP default MK18 Mod 1 + HoloSight promoted to Slot 0 primary, AK-12 preserved, all-5-gun Humanoid & 1P29 fixes | user prompt 01:49 (LeadRushHDRP MK18 default, keep AK12) + LR2ContentBuilder.cs + MatchSettings.cs + MainMenuController.cs + FirstPersonPoseCheck.cs + LR2_SoldierSettings.asset |
+| `G29` | 2026-11-18 02:14 | Gemini · `gemini-4-hydrogen` | B59/B60a/B60d | fix | ready-for-review | B59a/B59b/B60a/B60d post-death ADS reset, close-enemy weapon-through-body fix & C2 inertialization guard | user prompt 01:47 (ADS after death & weapon through body) + LR2Firearm.cs + SoldierController.cs + PlayerInputSource.cs + LR2Layers.cs + RetargetProxy.cs + KillcamDirector.cs + AnimatorProfile_Rifle_Humanoid.asset |
+| `G28` | 2026-11-18 02:13 | Gemini · `gemini-4-hydrogen` | B58 | fix | ready-for-review | B58 un-muted gunplay music (priority 8, bypassEffects/ListenerEffects/ReverbZones, upgraded ceilings, 0.56f shot impulse) | user prompt 01:47 (music severely muted during gunplay) + LR2MusicDirector.cs + LR2QABotRunner.cs |
+| `X01` | 2026-11-18 02:09 | Codex · `gpt-6` | B56/B57 | tooling | ready-for-review | B56 4-agent token/limit audit & B57 behavior QA checks | user prompt 01:54 (onboard Codex) + board Section 7b + AGENT_COORDINATION.md 02:09 |
+| `P35` | 2026-11-18 02:07 | Copilot · `gpt-5.6-luna` | B60 | docs | ready-for-review | B60 HyperMotion & motion-matching research spec + subtasks B60.1-B60.10 | user prompt 02:06 (HyperMotion research + subtasks) + Docs/AI_Collaboration/specs/B60.md + board B60.1-B60.10 |
+| `P34` | 2026-11-18 01:56 | Copilot · `gpt-5.6-luna` | B26/B35/B49 | review | reopened | Visible B26/B35/B49 pose-check review | user/board pose check #7-#10: Visible checks completed with 0 game errors; AK-12 charge displacement 0.021 m, foot slide 1.50-2.38 m/s, MK18 hand close-up lost weapon. |
+| `P33` | 2026-11-18 01:51 | Copilot · `gpt-5.6-luna` | B54 | review | verified | B54 asset-search evidence review | Corrected Holosight, Reddot, suppressor, and Humanoid slide paths; verified the nine named Asset Store packages under vendor subfolders without importing or redistributing them. |
+| `P32` | 2026-11-18 01:33 | Copilot · `gpt-5.6-luna` | B45/R14 | docs | delivered | R14 project history and tooling documentation update | Documented FFA CTF, -lr2Weapon <id>, nine bot explainer GIFs and the three-tab Docs/Bot/bot-brain.html manual |
+| `P31` | 2026-11-18 01:33 | Copilot · `gpt-5.6-luna` | B53/B52/B51/B49/B50/B26/R12 | review | verified | R14 cross-review: B53/B52/B51/B49/B50/B26/R12 and remaining review boundaries | Reviewed Bot Brain HTML, generator, all 9 looping GIFs, BotController.cs, FlagZoneController.cs, RetargetProxy.cs, LR2ContentBuilder.cs, BodycamRig.cs, HitFeedbackHUD.cs and pose selector; both required dotnet builds pass; visual/audio rows remain explicitly unverified while Unity PID 29780 is open |
+| `G27` | 2026-11-18 01:42 | Gemini · `gemini-4-hydrogen` | B26 | fix | ready-for-review | B26 index finger along right gun side + cached Thumb Spread + parallel Unity worker & prompt/asset audit | RetargetProxy.cs, LR2ParallelWorker.ps1, PROMPTS.md, specs/B54_Asset_Search.md |
+| `G26` | 2026-11-18 01:24 | Gemini · `gemini-4-hydrogen` | B51 | feature | ready-for-review | B51 Free-For-All Capture the Flag mode + menu entry + preset | FlagZoneController.cs, MatchSettings.cs, MatchManager.cs, MainMenuController.cs, LR2UIBuilder.cs |
+| `G25` | 2026-11-18 01:24 | Gemini · `gemini-4-hydrogen` | B50 | tune | ready-for-review | B50 cut walking bob to ~1/3 & sharpen ADS damping | BodycamRig.cs |
+| `G24` | 2026-11-18 01:24 | Gemini · `gemini-4-hydrogen` | B49 | fix | ready-for-review | B26 & B49 tucked rifle left thumb + Humanoid override/profile/aimPoint across all 5 weapons | RetargetProxy.cs, WeaponDefinition.cs, LR2ContentBuilder.cs, FirstPersonPoseCheck.cs |
+| `G23` | 2026-11-18 01:24 | Gemini · `gemini-4-hydrogen` | R12 | tooling | ready-for-review | R12 QA auto-refresh freeze & domain-reload null guards | HitFeedbackHUD.cs, LR2QABot.cs, BotController.cs |
+| `G22` | 2026-11-18 01:24 | Gemini · `gemini-4-hydrogen` | B53 | feature | ready-for-review | B53 empirical human miss pattern + 3-tab artifact HTML + 9 1:1 GIFs | BotController.cs, Docs/Bot/bot-brain.html, Tools/make_bot_gifs.py, Docs/LR2_Bot_Explainer.md |
+| `C21` | 2026-11-18 00:33 | Claude · `claude-opus-5-5` | R12 | tooling | verified | Test harness freezes asset auto-refresh during runs | LR2SmokeTest |
+| `C20` | 2026-11-18 00:35 | Claude · `claude-opus-5-5` | B47 | tune | ready-for-review | Researched ADS recoil values MK18 0.50 / FAL 0.60 | LR2ContentBuilder Guns table |
+| `C19` | 2026-11-18 00:35 | Claude · `claude-opus-5-5` | B35 | fix | ready-for-review | Reload muzzle pitch/yaw limits (keep the cant) | ReloadMotionBridge |
+| `C18` | 2026-11-18 00:29 | Claude · `claude-opus-5-5` | B26 | fix | ready-for-review | Rifle grip offsets (right hand onto the pistol grip, left hand lower) | RetargetProxy |
+| `C17` | 2026-11-18 00:21 | Claude · `claude-opus-5-5` | B26 | fix | ready-for-review | Weapon-hold fingers: authored shapes + snug bias, soft thumb limits (FingerMode A/B) | RetargetProxy + pose check A/B |
+| `P26–P30`, `P01–P25`, `G01–G21`, `C01–C16` | `2026-11-16` → `2026-11-18` | `Claude` / `Gemini` / `Copilot` | `P1–P5`, `B1–B53` | mixed | archived/verified | All 67 earlier historical rows with full `source` metadata | See full 92-row table in [figures/tasks_log.md](figures/tasks_log.md) and [data/tasks.csv](data/tasks.csv) |
+
+**Key takeaway from multi-agent token behavior:** Parallel fan-outs of 8–9 sub-agents quickly exhausted Claude Code's rolling window (`18:13`, `23:14`), whereas **single-stream compaction + Plan/Execute separation** (`Antigravity`) and **targeted file/diff review + R8 gate batching** (`Copilot` / `Codex`) sustained continuous multi-hour throughput when handoffs stayed serialized in `AGENT_COORDINATION.md`.
 
 ## What worked, and what didn't
 

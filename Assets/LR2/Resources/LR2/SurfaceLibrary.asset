@@ -18,33 +18,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 52c596d36eae86f47ae3b7662d852b98, type: 3}
-      - {fileID: 8300000, guid: 08e2f465521cf9c41876d3b83dab1ff8, type: 3}
-      - {fileID: 8300000, guid: 1c99d48572049c74bb838a1f16876772, type: 3}
-      - {fileID: 8300000, guid: 92fdd0efd325e9c44b04dbf728153be3, type: 3}
-      - {fileID: 8300000, guid: 809505e918813c047b06747932d460b7, type: 3}
-      - {fileID: 8300000, guid: 25153fc0b10e7944ba785aea4b2492ac, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: aa0867149f5e064469cf6e65660d49f2, type: 3}
-      - {fileID: 8300000, guid: c2f57aadae719ed4ab05935034de3ba1, type: 3}
-      - {fileID: 8300000, guid: e1ffe13dedc030d49a52dc9c6fc2dfad, type: 3}
-      - {fileID: 8300000, guid: 18e42e41ca4ec7e4397bc3b8879732eb, type: 3}
-      - {fileID: 8300000, guid: 4d6a1e8579d2e974b9f3365686e7be39, type: 3}
-      - {fileID: 8300000, guid: d876a1ae874ce184db5107542c1b4b93, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 2
@@ -52,33 +40,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 7ab9490fb4fd52145bd7c01d238317be, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: cc012516eaca0044e956eeee316ef849, type: 3}
-      - {fileID: 8300000, guid: 734a7a51f5966ed46b7935851cac3177, type: 3}
-      - {fileID: 8300000, guid: e87db13db7ca13c4498a293e3ca5ccc8, type: 3}
-      - {fileID: 8300000, guid: f9d4ea8a916d0fb4cbdad7d233cf9c11, type: 3}
-      - {fileID: 8300000, guid: e70cb46ee67814e42b449a2c1f8457e1, type: 3}
-      - {fileID: 8300000, guid: 90864184ec5999f4a943e328f5348a71, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: b8f8e43960f0e084db4abbcebb6dc633, type: 3}
-      - {fileID: 8300000, guid: f4d888e80def12c49903d149fdeb2558, type: 3}
-      - {fileID: 8300000, guid: 5c83922d9a7863a49aab658064ff4290, type: 3}
-      - {fileID: 8300000, guid: e477260ff21eac6448ee4e0fadc6bd66, type: 3}
-      - {fileID: 8300000, guid: b7cd54937198c794786e9735e538a55a, type: 3}
-      - {fileID: 8300000, guid: ffc88b1c507814b46922c7913712f30d, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 3
@@ -86,33 +62,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 111c3e3bb6f53344b868f3ddb04183ad, type: 3}
-      - {fileID: 8300000, guid: b8181c801a5397d4b8ef66b4993f6d42, type: 3}
-      - {fileID: 8300000, guid: b59c292fdef091940b4b75a61db38ceb, type: 3}
-      - {fileID: 8300000, guid: 5848dd7b1dc3a244b82d19465b82952b, type: 3}
-      - {fileID: 8300000, guid: a8c77e8f40c2d3846a3fe6da85423eb1, type: 3}
-      - {fileID: 8300000, guid: ad2f01476db178b468174dd61ae22fcf, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: dce13b065df6f12448951a064ed32cdb, type: 3}
-      - {fileID: 8300000, guid: 12e7c050c3a94684998b9200db36a163, type: 3}
-      - {fileID: 8300000, guid: 8e2c932d2882f1d418512b42a0a51b5d, type: 3}
-      - {fileID: 8300000, guid: e27864aaeac91e64eb086ce639b20de8, type: 3}
-      - {fileID: 8300000, guid: 39581bceb1819de4f8ebc4d154f7cbd3, type: 3}
-      - {fileID: 8300000, guid: 0d36327434f8aad47be34a736b998e42, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 4
@@ -120,33 +84,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 0}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: da8d912eadf66c64bb4f01da8b1d525a, type: 3}
-      - {fileID: 8300000, guid: 62fcea3ca7ed82247b33dbe47c407e1b, type: 3}
-      - {fileID: 8300000, guid: 8cfce0e8cfcde8245a104cd97e663e5f, type: 3}
-      - {fileID: 8300000, guid: e41c312247c377b4ca338fdf9ee977ad, type: 3}
-      - {fileID: 8300000, guid: cb4556187daf2f14b837e0858241a9a5, type: 3}
-      - {fileID: 8300000, guid: 73f6c98bc65a0c54db6158d26b31a5cf, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: 831d8bd84f7d56e448800fd68f2bfe72, type: 3}
-      - {fileID: 8300000, guid: 346a94c5f886b3f4db75c860df538205, type: 3}
-      - {fileID: 8300000, guid: 78ac0a36baa0a36498c1414f0a1948c3, type: 3}
-      - {fileID: 8300000, guid: b59fddd43c44a814e99af7e33884f756, type: 3}
-      - {fileID: 8300000, guid: 1d94120edffada5419d52ecfa4065e46, type: 3}
-      - {fileID: 8300000, guid: 6458259ea8c509143ad31fec01b05a8b, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 5
@@ -154,33 +106,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 979da87418bc2eb4cabe5c47e077a9e7, type: 3}
-      - {fileID: 8300000, guid: 7d9f575f39ef61d4db98602a9e88f13c, type: 3}
-      - {fileID: 8300000, guid: 92341e7ad0068c74ca6714a4e77dcd8c, type: 3}
-      - {fileID: 8300000, guid: 080e89fa1c2e5ca4ba620000bde28688, type: 3}
-      - {fileID: 8300000, guid: bcd0bd5e98653e340b3fdab06ada5e2a, type: 3}
-      - {fileID: 8300000, guid: 1864f35e02adbf64d95eff70c9755426, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: 75dae3b6cdb7f0a40b91f833235d717a, type: 3}
-      - {fileID: 8300000, guid: afafc9a4e0001464c9efc3a605ec3de5, type: 3}
-      - {fileID: 8300000, guid: e60ab7641f04e04498d79cd511263da1, type: 3}
-      - {fileID: 8300000, guid: 7a026f1c3adf0e843b9cbfdfdb82924c, type: 3}
-      - {fileID: 8300000, guid: 9d9f18990e797744e8d8bc40c944672b, type: 3}
-      - {fileID: 8300000, guid: 3dfa7ac90352a0b44bc5c939b4fbe4c3, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 6
@@ -188,33 +128,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 0}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: b489e53e3f4d7004bbb52c8e67eb18b4, type: 3}
-      - {fileID: 8300000, guid: 0d07eb39300e73242a18d4434af89f77, type: 3}
-      - {fileID: 8300000, guid: 5ff3fb7937ac2174ab77874206faa0f8, type: 3}
-      - {fileID: 8300000, guid: 3645b0af6debcbd4d8775d508a66bbc8, type: 3}
-      - {fileID: 8300000, guid: 26f35c53c5dacbc4f939b51da779a7fa, type: 3}
-      - {fileID: 8300000, guid: 456a1edc6e8ef8c46bc006eb8dbb5115, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: 614a924bdba8ca245bf9d443f2d1af5e, type: 3}
-      - {fileID: 8300000, guid: 077f749419cc82c438493579fb573d0d, type: 3}
-      - {fileID: 8300000, guid: b02245d3fb2aa1f44b17469c89b3d833, type: 3}
-      - {fileID: 8300000, guid: 64f326456a2867e428c5fe71a7fad261, type: 3}
-      - {fileID: 8300000, guid: 3a5bdd382442bcd40872abdf732994f3, type: 3}
-      - {fileID: 8300000, guid: 750780826a0eece4c976cb038d0ea46d, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 9
@@ -222,33 +150,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 0}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: ad1da23b3b3eb4745ac4dd3da1134c1a, type: 3}
-      - {fileID: 8300000, guid: 76231e18293904a468ffdfcb16e6baa3, type: 3}
-      - {fileID: 8300000, guid: 28f216382fbd4ad4db57e40e15ab3a19, type: 3}
-      - {fileID: 8300000, guid: 61f53de2d95ae4141b2ed08e93e3f15c, type: 3}
-      - {fileID: 8300000, guid: 2312dea3ec95be645aa9e59277c12adb, type: 3}
-      - {fileID: 8300000, guid: 3b4d9824feb7b9745864179f681dd95e, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: 0b3b3fb9a467cdf4e9f0b44aed5a63fb, type: 3}
-      - {fileID: 8300000, guid: 0c41535cd4c32084bbaeb490e42463be, type: 3}
-      - {fileID: 8300000, guid: 3b7510ac8ad7e8843b31e0a36d037ef2, type: 3}
-      - {fileID: 8300000, guid: 4431daa217ccb9d40a28cc365897bf9b, type: 3}
-      - {fileID: 8300000, guid: 875a9cd7a1be35549839947c50a0458b, type: 3}
-      - {fileID: 8300000, guid: 6a2658abbfd9fc84aa931dfa3db75f9c, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 8
@@ -256,33 +172,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 4f7a5a5b1f6b5044eb0c7c061d1b9d36, type: 3}
-      - {fileID: 8300000, guid: d87aaa1a45d347a42b599b6068a08728, type: 3}
-      - {fileID: 8300000, guid: 7ce62c5973b7044488a66a183e6a04af, type: 3}
-      - {fileID: 8300000, guid: c3c0b5bf4062a4746ad67c92b5930aac, type: 3}
-      - {fileID: 8300000, guid: a117e95a6407da04e8fd6d3111c150cd, type: 3}
-      - {fileID: 8300000, guid: 515cfa6cd4b2aae4cadd27f0aadf89dc, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: 70b9615c4f94d8548aec793ec8701149, type: 3}
-      - {fileID: 8300000, guid: d091d7863c539b74ab829a65b7963348, type: 3}
-      - {fileID: 8300000, guid: cdf52080e4b51e0499dba95a9799d2a5, type: 3}
-      - {fileID: 8300000, guid: c26c33e83d4820b4ba35d50326c38e0e, type: 3}
-      - {fileID: 8300000, guid: 14544c42b9cd228449062d6c127a447c, type: 3}
-      - {fileID: 8300000, guid: 3b2423bb664030a46b5420bcd359689f, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   - surface: 0
@@ -290,33 +194,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 52c596d36eae86f47ae3b7662d852b98, type: 3}
-      - {fileID: 8300000, guid: 08e2f465521cf9c41876d3b83dab1ff8, type: 3}
-      - {fileID: 8300000, guid: 1c99d48572049c74bb838a1f16876772, type: 3}
-      - {fileID: 8300000, guid: 92fdd0efd325e9c44b04dbf728153be3, type: 3}
-      - {fileID: 8300000, guid: 809505e918813c047b06747932d460b7, type: 3}
-      - {fileID: 8300000, guid: 25153fc0b10e7944ba785aea4b2492ac, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: aa0867149f5e064469cf6e65660d49f2, type: 3}
-      - {fileID: 8300000, guid: c2f57aadae719ed4ab05935034de3ba1, type: 3}
-      - {fileID: 8300000, guid: e1ffe13dedc030d49a52dc9c6fc2dfad, type: 3}
-      - {fileID: 8300000, guid: 18e42e41ca4ec7e4397bc3b8879732eb, type: 3}
-      - {fileID: 8300000, guid: 4d6a1e8579d2e974b9f3365686e7be39, type: 3}
-      - {fileID: 8300000, guid: d876a1ae874ce184db5107542c1b4b93, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   fallback:
@@ -325,33 +217,21 @@ MonoBehaviour:
     decalMaterial: {fileID: 2100000, guid: 1f8ab922aa67dc244af25380f1ba809c, type: 2}
     decalSize: {x: 0.09, y: 0.14}
     impactSound:
-      clips:
-      - {fileID: 8300000, guid: 52c596d36eae86f47ae3b7662d852b98, type: 3}
-      - {fileID: 8300000, guid: 08e2f465521cf9c41876d3b83dab1ff8, type: 3}
-      - {fileID: 8300000, guid: 1c99d48572049c74bb838a1f16876772, type: 3}
-      - {fileID: 8300000, guid: 92fdd0efd325e9c44b04dbf728153be3, type: 3}
-      - {fileID: 8300000, guid: 809505e918813c047b06747932d460b7, type: 3}
-      - {fileID: 8300000, guid: 25153fc0b10e7944ba785aea4b2492ac, type: 3}
-      volume: 0.85
+      clips: []
+      volume: 0.8
       pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 40
+      maxDistance: 35
       category: 0
       priority: 128
     footstepSound:
-      clips:
-      - {fileID: 8300000, guid: aa0867149f5e064469cf6e65660d49f2, type: 3}
-      - {fileID: 8300000, guid: c2f57aadae719ed4ab05935034de3ba1, type: 3}
-      - {fileID: 8300000, guid: e1ffe13dedc030d49a52dc9c6fc2dfad, type: 3}
-      - {fileID: 8300000, guid: 18e42e41ca4ec7e4397bc3b8879732eb, type: 3}
-      - {fileID: 8300000, guid: 4d6a1e8579d2e974b9f3365686e7be39, type: 3}
-      - {fileID: 8300000, guid: d876a1ae874ce184db5107542c1b4b93, type: 3}
-      volume: 0.65
-      pitch: {x: 0.92, y: 1.08}
+      clips: []
+      volume: 0.6
+      pitch: {x: 0.97, y: 1.03}
       spatialBlend: 1
       minDistance: 1.5
-      maxDistance: 28
+      maxDistance: 25
       category: 2
       priority: 128
   bloodPrefab: {fileID: 4039447503803968947, guid: 280066709da5d4940b50eb37fe8fc727, type: 3}

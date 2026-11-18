@@ -57,16 +57,18 @@ flowchart TD
     AF -->|yes| FL2[4. Continue active Flank]
     AF -->|no| H{Seen < 10 s ago?}
     H -->|yes| HU[5. Hunt targetLastKnown + Corner Slice]
-    H -->|no| N{Heard noise < 8 s?}
+    H -->|no| FC{Hostile capturing flag<br/>& zone <= 45 m?}
+    FC -->|yes| UC[2.5 Urgent Flag Contest<br/>Sprint to core!]
+    FC -->|no| N{Heard noise < 8 s?}
     N -->|yes| IN[6. Investigate noisePosition]
     N -->|no| CTF{FlagZoneController active?}
-    CTF -->|yes| FZ[6.5 Contest Flag Zone 8-slot core]
+    CTF -->|yes| FZ[6.5 Role-Adaptive Flag AI<br/>Core 2.25x / Breach / Crossfire]
     CTF -->|no| SL{Squad leader alive?}
     SL -->|yes| FO[7. FollowLeader ±75 deg rear guard]
     SL -->|no| P[8. PickPatrol weighted ~18 m]
 ```
 
-*(Note the verified source priority: **Step 6 Investigate noise** is checked BEFORE **Step 6.5 Flag Zone**.)*
+*(Note the verified source priority: **Step 2.5 Urgent Flag Contest** interrupts non-critical roaming when a hostile team is actively capturing within `45 m`, while **Step 6 Investigate noise** is checked BEFORE **Step 6.5 Role-Adaptive Flag AI** (`TacticalBotBrain.ObjectiveFlag`) — and inside the zone, `Engage()` clamps combat strafes so bots do not drift out of the capture ring.)*
 
 ---
 
@@ -109,8 +111,12 @@ Pull-down starts after `65–135 ms`, fatigues with `sprayHeat` (`0.19/shot` hip
 
 ![Rotating CTF flag zone and live tactical chat](Media/bot/ctf-and-chat.gif)
 
-- **Game Modes (`MatchSettings.cs` / `MatchManager.cs`):** Supports **1v1 Duel**, **Free-For-All**, **Team Deathmatch**, and **Rotating Capture the Flag (Team & FFA B51)** (+100 kill, +50 headshot, +25 assist, +250 flag capture).
-- **BF6-Style Proximity Flag Zone (`FlagZoneController.cs`):** Rotates after capture or `55 s` idle timeout. Inside the `2.6 m` core, capture speed runs at **`2.25×`**, decaying smoothly out to **`0.28×`** at `11.5 m` (`Lerp(2.25, 0.28, t^0.65)`). Bots claim 8 deterministic golden slots (`DisplayName.GetHashCode() & 7`).
+- **Game Modes (`MatchSettings.cs` / `MatchManager.cs`):** Supports **1v1 Duel**, **Free-For-All**, **Team Deathmatch**, and **Unified Rotating Capture the Flag (`B51`)** with a configurable **Bot Team Mode (`BotTeamMode`)** in Settings, Deploy, and Mode Rules (**Squads**, **Free-For-All**, **All Bots Same Team**, or **All Bots Player Team**). Bots receive **32 randomized funny gamertags** via Fisher-Yates shuffle (`B62`). Scoring: `+100` kill, `+50` headshot, `+25` assist, `+250` flag capture.
+- **Smart Flag-Playing Bot AI (`FlagZoneController.cs` & `TacticalBotBrain.cs`, `B61`):** Zone rotates after capture or `55 s` idle timeout. Inside the `2.6 m` core, capture speed runs at **`2.25×`**, decaying smoothly out to **`0.28×`** at `11.5 m` (`Lerp(2.25, 0.28, t^0.65)`). Bots use `CountZoneOccupants` and `IsHostileCapturingOrContesting` for three smart tactical behaviors:
+  1. **Step 2.5 Urgent Flag Contest:** When a hostile team is actively capturing or contesting within `45 m`, bots sprint straight into the `2.6 m` core to halt progress.
+  2. **Step 6.5 Role-Adaptive Flag AI (`ObjectiveFlag`):** Bots split roles between **Contested Breach** (tight core push when contested/enemy-owned), **Core `2.25×` Anchor** (deterministic 8-slot golden ring inside `2.45 m` when ≤1 ally is on point), and **Perimeter Crossfire Overwatch** (`6.0 m–8.5 m` outer ring when 2+ allies already anchor the core).
+  3. **In-Zone `Engage()` Clamp:** During gunfights inside the zone, combat strafe targets are clamped inside the `11.5 m` radius so bots never walk off the cap mid-duel.
+- **Task Source Audit:** Full prompt/board origin for every task is tracked in [Docs/AI_Collaboration/figures/tasks_log.md](AI_Collaboration/figures/tasks_log.md).
 - **Tactical Bot Chat (`TacticalChatSystem.cs`):** Queues kill roasts, headshot reactions, bot-vs-bot banter, and `FLAG HQ` sector alerts with `1.0–2.4 s` human typing latency, and parses `[T]` player keywords (`flank`, `hold`, `push`, `flag`) directly into `BotDirective` orders.
 
 ---

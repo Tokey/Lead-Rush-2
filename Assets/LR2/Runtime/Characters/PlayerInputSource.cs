@@ -84,9 +84,17 @@ namespace LR2.Characters
 
         public void GetInput(SoldierController soldier, ref SoldierInput input)
         {
+            if (soldier == null || soldier.IsDead)
+            {
+                _aimToggled = false;
+                _sprintToggled = false;
+                input.ClearAll();
+                return;
+            }
             bool gameplayFocused = Cursor.lockState == CursorLockMode.Locked && Time.timeScale > 0f;
             if (!gameplayFocused)
             {
+                _aimToggled = false;
                 input.ClearAll();
                 return;
             }

@@ -389,7 +389,7 @@ namespace LR2.World
                 float akDps = akDmg * (primary.Definition.rpm / 60f);
                 float pDps = pDmg * (sidearm.Definition.rpm / 60f);
                 Check(akDmg >= pDmg && akDps > pDps * 1.4f, "TTK.AK12StrongerThanPistol",
-                    $"AK12@{15}m={akDmg:0} ({akDps:0}/s) Mk23={pDmg:0} ({pDps:0}/s)");
+                    $"{primary.Definition.shortName}@15m={akDmg:0} ({akDps:0}/s) Mk23={pDmg:0} ({pDps:0}/s)");
                 Check(primary.Definition.adsRecoilMultiplier <= 0.6f, "Recoil.AdsControlReduction",
                     $"adsRecoilMult={primary.Definition.adsRecoilMultiplier:0.00} adsKickMult={primary.Definition.adsKickMultiplier:0.00}");
             }
@@ -763,9 +763,9 @@ namespace LR2.World
             float combatStem = dir.CombatVolume;
             float stepCat = LR2Audio.CategoryVolume(AudioCategory.Footsteps);
 
-            Check(fightIntensity > calmIntensity + 0.45f && fightGain > calmGain * 1.55f && combatStem > 0.08f && dir.LastDrumrollTime >= 0f, "Music.OrganicCombatRamp",
+            Check(fightIntensity > calmIntensity + 0.45f && fightGain > calmGain * 1.55f && combatStem > 0.14f && dir.LastDrumrollTime >= 0f, "Music.OrganicCombatRamp",
                 $"calmI={calmIntensity:0.00} fightI={fightIntensity:0.00} combatStem={combatStem:0.000} calmGain={calmGain:0.000} fightGain={fightGain:0.000} drumrollAt={dir.LastDrumrollTime:0.00}s");
-            Check(calmGain <= 0.14f && fightGain <= 0.40f, "Music.LeavesFootstepsClear",
+            Check(calmGain <= 0.20f && fightGain <= 0.72f, "Music.LeavesFootstepsClear",
                 $"calmGain={calmGain:0.000} fightGain={fightGain:0.000} stepGain={stepCat:0.000}");
         }
 

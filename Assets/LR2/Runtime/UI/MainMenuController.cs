@@ -52,6 +52,9 @@ namespace LR2.UI
         public Button deployDiffPrevButton;
         public Button deployDiffNextButton;
         public TMP_Text deployDiffValueText;
+        public Button deployBotTeamPrevButton;
+        public Button deployBotTeamNextButton;
+        public TMP_Text deployBotTeamValueText;
         public Slider deployScoreSlider;
         public TMP_Text deployScoreValueText;
         public Slider deployBotsSlider;
@@ -89,6 +92,9 @@ namespace LR2.UI
         public Button rulesBotDiffPrevButton;
         public Button rulesBotDiffNextButton;
         public TMP_Text rulesBotDiffValueText;
+        public Button rulesBotTeamPrevButton;
+        public Button rulesBotTeamNextButton;
+        public TMP_Text rulesBotTeamValueText;
         public Slider rulesEnemyBotsSlider;
         public TMP_Text rulesEnemyBotsValue;
         public Slider rulesFriendlyBotsSlider;
@@ -114,9 +120,9 @@ namespace LR2.UI
         private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private static readonly string[] WeaponBlurbs =
         {
+            "5.56x45 MK18 MOD 1  ·  HOLO RED-DOT ADS · TIGHT CLOSE-QUARTERS HANDLING",
             "5.45x39 ASSAULT RIFLE  ·  CONTROLLABLE AUTO · BALANCED ERGONOMICS",
-            "5.45x39 KALASHNIKOV  ·  HIGH RATE OF FIRE · CRISP MIDRANGE BURST",
-            "5.56x45 CARBINE  ·  TIGHT CLOSE-QUARTERS HANDLING · LOW RECOIL",
+            "5.45x39 KALASHNIKOV  ·  HIGH RATE OF FIRE · CRISP IRON-SIGHT BURST",
             "7.62x51 BATTLE RIFLE  ·  HIGH-CALIBER STOPPING POWER · HEAVY KICK"
         };
 
@@ -134,7 +140,6 @@ namespace LR2.UI
 
         private string _duelBaseLabel;
         private string _ctfBaseLabel;
-        private string _ffaCtfBaseLabel;
         private string _ffaBaseLabel;
         private string _tdmBaseLabel;
 
@@ -160,7 +165,6 @@ namespace LR2.UI
 
             if (duelButton != null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
             if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
-            if (ffaCtfButton != null) ffaCtfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAllCaptureTheFlag, ffaCtfSettings));
             if (ffaButton != null) ffaButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAll, ffaSettings));
             if (tdmButton != null) tdmButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.TeamDeathmatch, tdmSettings));
             if (modeRulesButton != null) modeRulesButton.onClick.AddListener(() => OpenModeRules(_editingMode));
@@ -336,7 +340,6 @@ namespace LR2.UI
         private MatchSettings SettingsFor(GameModeType mode) => mode switch
         {
             GameModeType.CaptureTheFlag => ctfSettings,
-            GameModeType.FreeForAllCaptureTheFlag => ffaCtfSettings ?? ctfSettings,
             GameModeType.FreeForAll => ffaSettings,
             GameModeType.TeamDeathmatch => tdmSettings,
             _ => duelSettings,
@@ -345,8 +348,7 @@ namespace LR2.UI
         private void CacheBaseModeLabels()
         {
             _duelBaseLabel = ReadButtonLabel(duelButton, "1V1 DEATHMATCH");
-            _ctfBaseLabel = ReadButtonLabel(ctfButton, "CAPTURE THE FLAG DM");
-            _ffaCtfBaseLabel = ReadButtonLabel(ffaCtfButton, "FREE-FOR-ALL CTF");
+            _ctfBaseLabel = ReadButtonLabel(ctfButton, "CAPTURE THE FLAG");
             _ffaBaseLabel = ReadButtonLabel(ffaButton, "FREE FOR ALL");
             _tdmBaseLabel = ReadButtonLabel(tdmButton, "TEAM DEATHMATCH");
         }
@@ -369,7 +371,6 @@ namespace LR2.UI
         {
             SetButtonLabel(duelButton, _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ctfButton, _ctfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.CaptureTheFlag) ? "  [CUSTOM]" : ""));
-            SetButtonLabel(ffaCtfButton, _ffaCtfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAllCaptureTheFlag) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ffaButton, _ffaBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAll) ? "  [CUSTOM]" : ""));
             SetButtonLabel(tdmButton, _tdmBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.TeamDeathmatch) ? "  [CUSTOM]" : ""));
             RefreshPreviewStatus();
@@ -383,14 +384,15 @@ namespace LR2.UI
             int mins = Mathf.RoundToInt(cfg.timeLimitSeconds / 60f);
             string modeLabel = _editingMode switch
             {
-                GameModeType.CaptureTheFlag => "CTF DM",
-                GameModeType.FreeForAllCaptureTheFlag => "FFA CTF",
+                GameModeType.CaptureTheFlag => LR2Settings.BotTeamMode == 1 ? "CTF · FFA"
+                    : (LR2Settings.BotTeamMode == 2 ? "CTF · PACK"
+                    : (LR2Settings.BotTeamMode == 3 ? "CTF · CO-OP" : "CTF · SQUADS")),
                 GameModeType.FreeForAll => "FFA",
                 GameModeType.TeamDeathmatch => "TDM",
                 _ => "1V1 DM",
             };
-            string bots = _editingMode == GameModeType.TeamDeathmatch
-                ? $"{cfg.friendlyBots + 1}V{cfg.enemyBots}"
+            string bots = _editingMode == GameModeType.TeamDeathmatch || (_editingMode == GameModeType.CaptureTheFlag && LR2Settings.BotTeamMode == 0)
+                ? $"{Mathf.Max(1, cfg.friendlyBots) + 1}V{cfg.enemyBots}"
                 : _editingMode == GameModeType.Duel ? "1V1" : $"1V{cfg.enemyBots}";
             string drones = cfg.spawnOrbs ? $"DRONES ON ({cfg.maxOrbs})" : "DRONES OFF";
             mapPreviewStatusText.text = $"{modeLabel} RULES  ·  {bots}  ·  FIRST TO {cfg.scoreLimit}  ·  {mins} MIN  ·  {cfg.respawnDelay:0.0}S RESPAWN  ·  {drones}";
@@ -418,6 +420,8 @@ namespace LR2.UI
             if (deployMapNextButton != null) deployMapNextButton.onClick.AddListener(() => StepMap(1));
             if (deployDiffPrevButton != null) deployDiffPrevButton.onClick.AddListener(() => { StepDifficulty(-1); RefreshDeployLabels(); });
             if (deployDiffNextButton != null) deployDiffNextButton.onClick.AddListener(() => { StepDifficulty(1); RefreshDeployLabels(); });
+            if (deployBotTeamPrevButton != null) deployBotTeamPrevButton.onClick.AddListener(() => StepBotTeamMode(-1));
+            if (deployBotTeamNextButton != null) deployBotTeamNextButton.onClick.AddListener(() => StepBotTeamMode(1));
             if (deployBackButton != null) deployBackButton.onClick.AddListener(ReturnFromDeploy);
             if (deployRulesButton != null) deployRulesButton.onClick.AddListener(() => OpenModeRules(_deployMode));
             if (deployStartButton != null) deployStartButton.onClick.AddListener(() => Play(SettingsFor(_deployMode) ?? duelSettings));
@@ -447,6 +451,17 @@ namespace LR2.UI
             RefreshDeployLabels();
         }
 
+        private void StepBotTeamMode(int delta)
+        {
+            int count = LR2Session.BotTeamModeLabels.Length;
+            int cur = Mathf.Clamp(LR2Settings.BotTeamMode, 0, count - 1);
+            LR2Settings.BotTeamMode = (cur + delta % count + count) % count;
+            LR2Settings.Save();
+            RefreshDeployLabels();
+            RefreshRulesLabels();
+            RefreshPreviewStatus();
+        }
+
         private void LoadDeployLobby(GameModeType mode)
         {
             _loadingRules = true;
@@ -456,8 +471,7 @@ namespace LR2.UI
             {
                 deployModeTitleText.text = mode switch
                 {
-                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DEATHMATCH",
-                    GameModeType.FreeForAllCaptureTheFlag => "FREE-FOR-ALL CAPTURE THE FLAG",
+                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG  ·  STAGING",
                     GameModeType.FreeForAll => "FREE FOR ALL  ·  STAGING",
                     GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD STAGING",
                     _ => "1V1 DEATHMATCH  ·  STAGING",
@@ -467,8 +481,7 @@ namespace LR2.UI
             {
                 deployModeDescText.text = mode switch
                 {
-                    GameModeType.CaptureTheFlag => "Strategic rotating flags with Battlefield-6 proximity capture speed: close core captures 2.25x fast; perimeter edge slows to 0.28x.",
-                    GameModeType.FreeForAllCaptureTheFlag => "Every player and bot is on their own team racing individually for the rotating strategic flag zone.",
+                    GameModeType.CaptureTheFlag => "Unified rotating strategic flags with Battlefield-6 proximity capture speed (2.25x inside 2.6m core; 0.28x edge) & configurable bot teams (Squads / FFA / Pack / Co-op).",
                     GameModeType.FreeForAll => "Every operator for themselves. Outshoot hostile fighters across dynamic weather and destructible cover.",
                     GameModeType.TeamDeathmatch => "Squad coordination against enemy fireteams. Support your teammate or push objective lanes.",
                     _ => "Head-to-head 1v1 tactical duel against a responsive human-input enemy bot.",
@@ -496,6 +509,12 @@ namespace LR2.UI
             int dIdx = Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1);
             if (deployDiffValueText != null)
                 deployDiffValueText.text = DifficultyLabels[dIdx];
+
+            int btIdx = Mathf.Clamp(LR2Settings.BotTeamMode, 0, LR2Session.BotTeamModeLabels.Length - 1);
+            if (deployBotTeamValueText != null)
+                deployBotTeamValueText.text = _deployMode == GameModeType.Duel ? "1V1 DUEL ONLY" : LR2Session.BotTeamModeLabels[btIdx];
+            if (deployBotTeamPrevButton != null) deployBotTeamPrevButton.interactable = _deployMode != GameModeType.Duel;
+            if (deployBotTeamNextButton != null) deployBotTeamNextButton.interactable = _deployMode != GameModeType.Duel;
 
             if (deployScoreValueText != null) deployScoreValueText.text = $"{_editingRules.scoreLimit} PTS";
             bool canEditBots = _deployMode != GameModeType.Duel;
@@ -547,6 +566,8 @@ namespace LR2.UI
             }
             if (rulesBotDiffPrevButton != null) rulesBotDiffPrevButton.onClick.AddListener(() => StepRulesDifficulty(-1));
             if (rulesBotDiffNextButton != null) rulesBotDiffNextButton.onClick.AddListener(() => StepRulesDifficulty(1));
+            if (rulesBotTeamPrevButton != null) rulesBotTeamPrevButton.onClick.AddListener(() => StepBotTeamMode(-1));
+            if (rulesBotTeamNextButton != null) rulesBotTeamNextButton.onClick.AddListener(() => StepBotTeamMode(1));
 
             HookSlider(rulesScoreLimitSlider, v => _editingRules.scoreLimit = Mathf.RoundToInt(v));
             HookSlider(rulesTimeLimitSlider, v => _editingRules.timeLimitSeconds = Mathf.RoundToInt(v) * 60f);
@@ -587,7 +608,7 @@ namespace LR2.UI
             _editingRules = LR2Session.LoadModeRules(SettingsFor(mode));
 
             HighlightTab(modeRulesDuelTab, mode == GameModeType.Duel);
-            HighlightTab(modeRulesCtfTab, mode == GameModeType.CaptureTheFlag || mode == GameModeType.FreeForAllCaptureTheFlag);
+            HighlightTab(modeRulesCtfTab, mode == GameModeType.CaptureTheFlag);
             HighlightTab(modeRulesFfaTab, mode == GameModeType.FreeForAll);
             HighlightTab(modeRulesTdmTab, mode == GameModeType.TeamDeathmatch);
 
@@ -595,8 +616,7 @@ namespace LR2.UI
             {
                 string label = mode switch
                 {
-                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DM  ·  STRATEGIC RADIUS RULES",
-                    GameModeType.FreeForAllCaptureTheFlag => "FREE-FOR-ALL CTF  ·  SOLO ZONE RULES",
+                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG  ·  UNIFIED STRATEGIC RULES",
                     GameModeType.FreeForAll => "FREE FOR ALL  ·  SOLO ARENA RULES",
                     GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD RULES",
                     _ => "1V1 DEATHMATCH  ·  COMPETITIVE RULES",
@@ -636,9 +656,16 @@ namespace LR2.UI
             if (rulesEnemyBotsSlider != null) rulesEnemyBotsSlider.interactable = canEditEnemies;
             if (rulesEnemyBotsValue != null) rulesEnemyBotsValue.text = canEditEnemies ? _editingRules.enemyBots.ToString() : "1 (1v1)";
 
-            bool canEditFriendly = _editingMode == GameModeType.TeamDeathmatch;
+            bool canEditFriendly = _editingMode == GameModeType.TeamDeathmatch || _editingMode == GameModeType.CaptureTheFlag;
             if (rulesFriendlyBotsSlider != null) rulesFriendlyBotsSlider.interactable = canEditFriendly;
             if (rulesFriendlyBotsValue != null) rulesFriendlyBotsValue.text = canEditFriendly ? _editingRules.friendlyBots.ToString() : "N/A";
+            if (rulesBotTeamValueText != null)
+            {
+                int bt = Mathf.Clamp(LR2Settings.BotTeamMode, 0, LR2Session.BotTeamModeLabels.Length - 1);
+                rulesBotTeamValueText.text = _editingMode == GameModeType.Duel ? "1V1 DUEL" : LR2Session.BotTeamModeLabels[bt];
+            }
+            if (rulesBotTeamPrevButton != null) rulesBotTeamPrevButton.interactable = _editingMode != GameModeType.Duel;
+            if (rulesBotTeamNextButton != null) rulesBotTeamNextButton.interactable = _editingMode != GameModeType.Duel;
 
             bool dronesOn = _editingRules.spawnOrbs;
             if (rulesMaxOrbsSlider != null) rulesMaxOrbsSlider.interactable = dronesOn;

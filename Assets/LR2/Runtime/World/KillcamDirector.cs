@@ -6,6 +6,7 @@ using LR2.Core;
 using LR2.FX;
 using LR2.Game;
 using LR2.UI;
+using LR2.Weapons;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
@@ -45,6 +46,7 @@ namespace LR2.World
             public float fov;
             public float pitch;
             public float yaw;
+            public float aimBlend;
             public bool localPlayer;
         }
 
@@ -124,6 +126,12 @@ namespace LR2.World
         private NavMeshAgent _killerAgent;
         private Canvas _canvas;
         private TMP_Text _title, _info;
+
+        // First-person procedural killcam recoil (B14: exact player feel & visible weapon kick/climb)
+        private Vector3 _gunRecoilPos;
+        private Vector3 _gunRecoilEuler;
+        private Vector2 _camRecoilKick;
+        private float _camRollKick;
 
         /// <summary>Extra respawn time so the killcam can play out before the player is put back in.</summary>
         public static float ExtraRespawnDelay(in KillEvent e, float baseDelay)
@@ -232,6 +240,7 @@ namespace LR2.World
                     fov = fov,
                     pitch = sc.Pitch,
                     yaw = sc.Yaw,
+                    aimBlend = sc.AimBlend,
                     localPlayer = sc.IsLocalPlayer
                 });
                 while (list.Count > MaxSamplesPerSoldier || (list.Count > 0 && list[0].time < cutoff))
@@ -377,6 +386,7 @@ namespace LR2.World
                     fov = LR2Settings.VerticalFov(LR2Settings.FieldOfView, 16f / 9f),
                     pitch = sc.Pitch,
                     yaw = sc.Yaw,
+                    aimBlend = sc.AimBlend,
                     localPlayer = sc.IsLocalPlayer
                 });
             }
@@ -411,21 +421,40 @@ namespace LR2.World
             Quaternion recordedYawRot = Quaternion.Euler(0f, kSnap.yaw, 0f);
             if (_puppets)
             {
+                float rDamp = LR2Math.Damp(14f, Time.deltaTime);
+                _gunRecoilPos = Vector3.Lerp(_gunRecoilPos, Vector3.zero, rDamp);
+                _gunRecoilEuler = Vector3.Lerp(_gunRecoilEuler, Vector3.zero, rDamp);
+                _camRecoilKick = Vector2.Lerp(_camRecoilKick, Vector2.zero, LR2Math.Damp(11f, Time.deltaTime));
+                _camRollKick = Mathf.Lerp(_camRollKick, 0f, LR2Math.Damp(12f, Time.deltaTime));
+
+                Quaternion camRecoilRot = kSnap.eyeRot * Quaternion.Euler(_camRecoilKick.y, _camRecoilKick.x, _camRollKick);
                 ApplyPose(_killerPuppet, _killerPuppetBones, _killerGunPuppet, _killerPoseReplay, sampleTime);
                 ApplyPose(_victimPuppet, _victimPuppetBones, _victimGunPuppet, _victimPoseReplay, sampleTime);
                 if (sampleTime >= _killTime)
                     ApplyVictimCollapse(_victimPuppet, _victimGunPuppet, Mathf.Clamp01((sampleTime - _killTime) / Mathf.Max(0.25f, postKillWindow * 0.72f)), _victimDeathDir);
-                // Match first-person camera-back separation identically while keeping hands & weapon locked together rigidly
+                // Match first-person camera-back separation identically while applying crisp camera & weapon recoil kick
                 if (!kSnap.localPlayer)
                 {
                     Vector3 bodyBack = -(recordedYawRot * Vector3.forward) * 0.025f;
                     if (_killerPuppet != null) _killerPuppet.transform.position += bodyBack;
                     if (_killerGunPuppet != null) _killerGunPuppet.transform.position += bodyBack;
                 }
+                if (_killerGunPuppet != null)
+                {
+                    Vector3 gunKick = camRecoilRot * _gunRecoilPos;
+                    if (_killerPuppet != null) _killerPuppet.transform.position += gunKick * 0.42f;
+                    _killerGunPuppet.transform.position += gunKick;
+                    _killerGunPuppet.transform.rotation = Quaternion.AngleAxis(_gunRecoilEuler.x, camRecoilRot * Vector3.right)
+                        * Quaternion.AngleAxis(_gunRecoilEuler.y, camRecoilRot * Vector3.up)
+                        * Quaternion.AngleAxis(_gunRecoilEuler.z, camRecoilRot * Vector3.forward)
+                        * _killerGunPuppet.transform.rotation;
+                }
                 var fpCam = _victim.ViewCamera;
-                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, kSnap.eyeRot);
-                fpCam.fieldOfView = kSnap.fov > 10f ? kSnap.fov : fieldOfView;
-                ReplayShots(sampleTime, kSnap.eyeRot);
+                float hipFov = LR2Settings.VerticalFov(LR2Settings.FieldOfView, fpCam.aspect);
+                float adsFov = Mathf.Lerp(hipFov, hipFov * 0.72f, kSnap.aimBlend);
+                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, camRecoilRot);
+                fpCam.fieldOfView = kSnap.fov > 10f ? kSnap.fov : adsFov;
+                ReplayShots(sampleTime, camRecoilRot, kSnap.aimBlend);
                 ReplayHits(sampleTime);
                 if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
                 return;
@@ -460,7 +489,7 @@ namespace LR2.World
             if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
         }
 
-        private void ReplayShots(float sampleTime, Quaternion aimRot)
+        private void ReplayShots(float sampleTime, Quaternion aimRot, float aimBlend = 0f)
         {
             for (int i = 0; i < _replayShots.Count; i++)
             {
@@ -468,6 +497,15 @@ namespace LR2.World
                 if (s.played || sampleTime < s.time) continue;
                 s.played = true;
                 _replayShots[i] = s;
+
+                float adsScale = Mathf.Lerp(1f, 0.58f, aimBlend);
+                _gunRecoilPos = Vector3.ClampMagnitude(_gunRecoilPos + new Vector3(Random.Range(-0.004f, 0.004f), 0.009f, -0.055f) * adsScale, 0.11f);
+                _gunRecoilEuler = Vector3.ClampMagnitude(_gunRecoilEuler + new Vector3(-7.4f, Random.Range(-1.8f, 1.8f), Random.Range(-3.2f, 3.2f)) * adsScale, 16f);
+                _camRecoilKick += new Vector2(Random.Range(-0.45f, 0.45f), -1.65f) * adsScale;
+                _camRollKick = Mathf.Clamp(_camRollKick + Random.Range(-0.95f, 0.95f) * adsScale, -3.5f, 3.5f);
+                CameraShake.AddTrauma(0.11f * adsScale);
+                CameraShake.AddJolt(new Vector3(-16f, Random.Range(-7f, 7f), Random.Range(-10f, 10f)) * adsScale);
+
                 Vector3 muzzle = _puppetMuzzle != null ? _puppetMuzzle.position : s.origin + aimRot * new Vector3(0.15f, -0.10f, 0.55f);
                 TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f);
                 if (_puppetMuzzleFlashes != null)
@@ -509,7 +547,8 @@ namespace LR2.World
 
             if (gunPuppet != null)
             {
-                gunPuppet.transform.position += deathDir * (0.28f * smooth) + Vector3.down * (0.95f * smooth) + fallAxis * (0.22f * smooth);
+                // B59b: Drop weapon outward beside the collapsing puppet and down to the floor rather than backwards through chest.
+                gunPuppet.transform.position += fallAxis * (0.34f * smooth) + Vector3.down * (0.92f * smooth);
                 gunPuppet.transform.rotation = Quaternion.Euler(65f * smooth, 35f * smooth, -55f * smooth) * gunPuppet.transform.rotation;
             }
         }
@@ -548,6 +587,7 @@ namespace LR2.World
             if (source == null) return null;
             var p = Instantiate(source);
             p.name = name;
+            bool hasWeaponLaser = source.GetComponentInChildren<WeaponLaser>(true) != null;
             foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true))
             {
                 if (keepMuzzleFlash && mb is MuzzleFlash) continue;
@@ -579,6 +619,12 @@ namespace LR2.World
                 r.shadowCastingMode = hideHead && head ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
             }
+            if (hasWeaponLaser)
+            {
+                var firearm = p.GetComponent<LR2Firearm>() ?? p.GetComponentInChildren<LR2Firearm>(true);
+                if (firearm != null && firearm.GetComponent<WeaponLaser>() == null)
+                    firearm.gameObject.AddComponent<WeaponLaser>();
+            }
             p.SetActive(true);
             return p;
         }
@@ -589,7 +635,7 @@ namespace LR2.World
             var kRoot = VisualRoot(_killer);
             var vRoot = VisualRoot(_victim);
             if (kRoot == null || vRoot == null || _killerPoseReplay.Count == 0 || _victimPoseReplay.Count == 0) return;
-            _killerPuppet = MakePuppet(kRoot.gameObject, "KillcamPuppet_Killer", true);
+            _killerPuppet = MakePuppet(kRoot.gameObject, "KillcamPuppet_Killer", false);
             _victimPuppet = MakePuppet(vRoot.gameObject, "KillcamPuppet_Victim", false);
             _killerPuppetBones = _killerPuppet.GetComponentsInChildren<Transform>(true);
             _victimPuppetBones = _victimPuppet.GetComponentsInChildren<Transform>(true);
@@ -606,6 +652,9 @@ namespace LR2.World
             _hiddenLive.Clear();
             foreach (var sc in new[] { _killer, _victim })
                 foreach (var r in sc.GetComponentsInChildren<Renderer>(true))
+                    if (r.enabled) { r.enabled = false; _hiddenLive.Add(r); }
+            if (_victim.DroppedWeapon != null)
+                foreach (var r in _victim.DroppedWeapon.GetComponentsInChildren<Renderer>(true))
                     if (r.enabled) { r.enabled = false; _hiddenLive.Add(r); }
             _puppets = true;
         }
@@ -644,6 +693,7 @@ namespace LR2.World
                         fov = Mathf.Lerp(a.fov, b.fov, t),
                         pitch = Mathf.LerpAngle(a.pitch, b.pitch, t),
                         yaw = Mathf.LerpAngle(a.yaw, b.yaw, t),
+                        aimBlend = Mathf.Lerp(a.aimBlend, b.aimBlend, t),
                         localPlayer = a.localPlayer
                     };
                 }
@@ -657,6 +707,10 @@ namespace LR2.World
             _playing = true;
             _endAt = Time.time + duration;
             _savedFov = _victim.ViewCamera.fieldOfView;
+            _gunRecoilPos = Vector3.zero;
+            _gunRecoilEuler = Vector3.zero;
+            _camRecoilKick = Vector2.zero;
+            _camRollKick = 0f;
 
             BuildPuppets();
             if (!_puppets)

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Demo.Scripts.Runtime.AttachmentSystem;
 using KINEMATION.FPSAnimationFramework.Runtime.Camera;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.AttachHandLayer;
@@ -596,18 +597,19 @@ namespace LR2.EditorTools
         /// for the humanoid driver rig. Loadout = weaponPrefabs order (1 = primary, 2 = sidearm).</summary>
         private static readonly WeaponSpec[] Guns =
         {
-            // TTK (100 HP): AK-12 3 body shots <= ~20 m (171 ms), 4 to ~40 m (257 ms), 5 beyond. Mk23 4 body shots (450 ms), 2 headshots.
-            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true, near = 35f, mid = 29f, far = 24f, hip = 2.2f },
+            // B55/B49: LeadRushHDRP default MK18 Mod 1 (HoloSight red-dot ADS) is Slot 0 default primary; AK-12 remains selectable alongside Mk23 sidearm.
+            new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4", akMaterials = true,
+                             rpm = 850f, near = 32f, mid = 26f, far = 21f, range = 28f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
+                             pattern = 0.3f, adsRecoil = 0.50f, rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 5.56 recoils less than 5.45 in ADS
             new WeaponSpec { id = "Mk23", display = "MK23", source = DemoDir + "/Prefabs/Humanoid/Mk23Mod0_Scriptable_Humanoid.prefab", audio = "Pistol",
                              cls = WeaponClass.Pistol, rpm = 400f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 30f, mid = 25f, far = 18f,
                              head = 1.8f, range = 18f, hip = 1.6f, ads = 0.08f, adsTime = 0.18f, sprintToFire = 0.12f, adsFov = 0.82f, kick = new Vector2(0.4f, 0.1f),
                              pattern = 1f, patternH = 1f, rightGripOffset = Vector3.zero, leftGripOffset = Vector3.zero },
-            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", rpm = 650f, near = 33f, mid = 28f, far = 23f,
+            // TTK (100 HP): AK-12 3 body shots <= ~20 m (171 ms), 4 to ~40 m (257 ms), 5 beyond. Mk23 4 body shots (450 ms), 2 headshots.
+            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true, near = 35f, mid = 29f, far = 24f, hip = 2.2f },
+            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", akMaterials = true, rpm = 650f, near = 33f, mid = 28f, far = 23f,
                              pattern = 0.36f, rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f), leftGripOffset = new Vector3(0f, -0.036f, 0f) },
-            new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4",
-                             rpm = 850f, near = 30f, mid = 25f, far = 21f, range = 26f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
-                             pattern = 0.3f, adsRecoil = 0.50f, rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 5.56 recoils less than 5.45 in ADS
-            new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
+            new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", akMaterials = true, rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
                              near = 48f, mid = 42f, far = 36f, range = 45f, hip = 3.0f, adsTime = 0.32f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
                              pattern = 0.5f, patternH = 0.4f, adsRecoil = 0.60f, rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 7.62x51 stays harder in ADS
         };
@@ -675,6 +677,26 @@ namespace LR2.EditorTools
             // Photoscanned object-space triplanar materials so steel receiver & polymer grips look lived-in without texture swim.
             if (spec.akMaterials) ApplyWeaponMaterials(go);
             foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.updateWhenOffscreen = true;
+
+            // B49/B55: Clear Generic-rig AttachHandLayerSettings from Kinemation demo attachments (e.g. Mk18 GripEmpty/GripMount)
+            // so Humanoid left-hand IK stays locked to the handguard instead of snapping down to the waist.
+            foreach (var att in go.GetComponentsInChildren<BaseAttachment>(true))
+            {
+                if (att != null && att.attachmentLayerSettings != null && att.attachmentLayerSettings.Count > 0)
+                {
+                    att.attachmentLayerSettings.Clear();
+                    EditorUtility.SetDirty(att);
+                }
+            }
+
+            // B49: AK-74N's demo 1P29 scope shader renders magenta in HDRP ADS; switch AK-74N cleanly to its built-in DefaultAimPoint iron sights.
+            if (spec.id == "AK74N")
+            {
+                foreach (var tf in go.GetComponentsInChildren<Transform>(true))
+                {
+                    if (tf.name == "1P29" || tf.name == "SideScope") tf.gameObject.SetActive(false);
+                }
+            }
 
             // Ensure a single weapon Animator on the child node that owns the rig (never shadow AK12's W_AK12_ReloadEmpty child Animator with a root Animator).
             var weaponCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(WeaponAnimControllerPath);
@@ -746,6 +768,11 @@ namespace LR2.EditorTools
                 var humCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(DemoDir + "/Animations/Locomotion/FPSAnimator_Humanoid.controller");
                 var ovProp = so.FindProperty("overrideController");
                 if (ovProp != null && humCtrl != null) ovProp.objectReferenceValue = humCtrl;
+            }
+            if (spec.id == "AK74N")
+            {
+                var sg = so.FindProperty("scopeGroups");
+                if (sg != null) sg.ClearArray();
             }
             so.ApplyModifiedPropertiesWithoutUndo();
 
@@ -927,18 +954,32 @@ namespace LR2.EditorTools
 
             foreach (var r in weaponGo.GetComponentsInChildren<Renderer>(true))
             {
+                bool isOptic = false;
+                for (Transform t = r.transform; t != null && t != weaponGo.transform; t = t.parent)
+                {
+                    string tn = t.name.ToLowerInvariant();
+                    if (tn.Contains("holosight") || tn.Contains("scope") || tn.Contains("optic") || tn.Contains("reticle") || tn.Contains("glass") || tn.Contains("lens"))
+                    {
+                        isOptic = true;
+                        break;
+                    }
+                }
+                if (isOptic) continue;
+
                 var mats = r.sharedMaterials;
                 bool changed = false;
                 for (int i = 0; i < mats.Length; i++)
                 {
                     if (mats[i] == null) continue;
                     string n = mats[i].name.ToLowerInvariant();
-                    Material rep = n.Contains("milled") ? matMilled
-                        : n.Contains("finish") ? matReceiver
+                    if (n.Contains("sight") || n.Contains("holo") || n.Contains("reticle") || n.Contains("lens") || n.Contains("brass") || n.Contains("bullet") || n.Contains("primer"))
+                        continue;
+                    Material rep = (n.Contains("milled") || n.Contains("metal bright")) ? matMilled
+                        : (n.Contains("finish") || n.Contains("metal dark") || n.Contains("metal")) ? matReceiver
                         : n.Contains("follower") ? matFollower
                         : n.Contains("translucent") ? matWindow
                         : n.Contains("mag") ? matPolyMag
-                        : n.Contains("polymer") ? matPolymer
+                        : (n.Contains("polymer") || n.Contains("plastic")) ? matPolymer
                         : null;
                     if (rep != null)
                     {
@@ -1692,7 +1733,7 @@ namespace LR2.EditorTools
                 Debug.LogError("[LR2] Soldier source prefab not found: " + soldierSrc);
                 return;
             }
-            var weapon = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/Weapons/LR2_AK12.prefab");
+            var weapon = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/Weapons/LR2_Mk18.prefab");
             var demoCtrlType = FindType("Demo.Scripts.Runtime.Character.FPSController");
             var demoMoveType = FindType("Demo.Scripts.Runtime.Character.FPSMovement");
             var settingsType = FindType("Demo.Scripts.Runtime.Character.FPSControllerSettings");
@@ -1712,10 +1753,10 @@ namespace LR2.EditorTools
                 list.ClearArray();
                 string[] order =
                 {
-                    PrefabDir + "/Weapons/LR2_AK12.prefab",
-                    PrefabDir + "/Weapons/LR2_Mk23.prefab",
-                    PrefabDir + "/Weapons/LR2_AK74N.prefab",
                     PrefabDir + "/Weapons/LR2_Mk18.prefab",
+                    PrefabDir + "/Weapons/LR2_Mk23.prefab",
+                    PrefabDir + "/Weapons/LR2_AK12.prefab",
+                    PrefabDir + "/Weapons/LR2_AK74N.prefab",
                     PrefabDir + "/Weapons/LR2_FAL.prefab",
                 };
                 int inserted = 0;
@@ -2061,8 +2102,7 @@ namespace LR2.EditorTools
                 EditorUtility.SetDirty(m);
             }
             Match("MatchSettings_Duel", "1v1 Deathmatch", "1v1 Deathmatch against an adaptive enemy operator. First to 15 kills.", GameModeType.Duel, 15, 480f, 0, 1);
-            Match("MatchSettings_CTF", "Capture The Flag DM", "Rotating strategic flag Deathmatch. BF6 radius: close core captures 2.25x faster.", GameModeType.CaptureTheFlag, 25, 480f, 0, 3);
-            Match("MatchSettings_FFA_CTF", "Free-For-All CTF", "Every operator competes individually for rotating strategic flags. Close core captures 2.25x faster.", GameModeType.FreeForAllCaptureTheFlag, 25, 480f, 0, 4);
+            Match("MatchSettings_CTF", "Capture The Flag", "Rotating strategic flag mode with BF6 proximity capture (2.25x in 2.6m core) and configurable bot teams (Squads / FFA / Pack / Co-op).", GameModeType.CaptureTheFlag, 25, 480f, 1, 3);
             Match("MatchSettings_FFA", "Free For All", "You against three bots. First to 20 kills.", GameModeType.FreeForAll, 20, 600f, 0, 3);
             Match("MatchSettings_TDM", "Team Deathmatch", "You and a bot squadmate against two bots. First team to 40.", GameModeType.TeamDeathmatch, 40, 600f, 1, 2);
 

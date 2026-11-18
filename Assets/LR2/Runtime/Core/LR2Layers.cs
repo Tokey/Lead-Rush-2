@@ -48,6 +48,7 @@ namespace LR2.Core
             for (int i = 0; i < 32; i++) Physics.IgnoreLayerCollision(Hitbox, i, true);
             Physics.IgnoreLayerCollision(Character, Ragdoll, true);
             Physics.IgnoreLayerCollision(Character, Debris, true);
+            Physics.IgnoreLayerCollision(Ragdoll, Debris, true);
             Physics.IgnoreLayerCollision(Ragdoll, PlayerClip, true);
             Physics.IgnoreLayerCollision(Debris, PlayerClip, true);
         }

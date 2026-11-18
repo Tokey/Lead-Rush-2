@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using KINEMATION.FPSAnimationFramework.Runtime.Core;
 using LR2.Characters;
 using LR2.Core;
 using LR2.Weapons;
@@ -13,6 +14,10 @@ namespace LR2.World
         private const float MaxGunAngle = 50f;
         private const float MaxFootSlideSpeed = 0.5f;
         private const float MaxHandError = 0.03f;
+        private const float MaxDeathAimBlend = 0.001f;
+        private const float MinWeaponForwardDot = -0.08f;
+        private const float MaxMotionFootSlideSpeed = 0.35f;
+        private const int MaxMusicPriority = 32;
         private sealed class ReloadIdlePose
         {
             public Vector3 Forward;
@@ -136,6 +141,106 @@ namespace LR2.World
             }
             bool pass = left < MaxHandError && right < MaxHandError;
             return $"{(pass ? "PASS" : "FAIL")} Hands.OnGun: visual leftPalm={left:0.000}m rightPalm={right:0.000}m max={MaxHandError:0.000}m";
+        }
+
+        public static string CheckDeathAimReset(SoldierController soldier)
+        {
+            if (soldier == null)
+                return "FAIL Death.AimReset: missing soldier";
+
+            bool hasInput = soldier.UserInput != null;
+            bool inputAiming = hasInput && soldier.UserInput.GetValue<bool>(FPSANames.IsAiming);
+            bool hasRecoil = soldier.RecoilAnimation != null;
+            bool recoilAiming = hasRecoil && soldier.RecoilAnimation.isAiming;
+            return CheckDeathAimResetState(soldier.IsDead, soldier.IsAiming, soldier.AimBlend,
+                hasInput, inputAiming, hasRecoil, recoilAiming);
+        }
+
+        public static string CheckDeathAimResetState(bool isDead, bool controllerAiming, float aimBlend,
+            bool hasInput, bool inputAiming, bool hasRecoil, bool recoilAiming)
+        {
+            bool pass = isDead && !controllerAiming && aimBlend >= 0f && aimBlend <= MaxDeathAimBlend &&
+                        hasInput && !inputAiming && hasRecoil && !recoilAiming;
+            return $"{(pass ? "PASS" : "FAIL")} Death.AimReset: dead={isDead} controller={controllerAiming} blend={aimBlend:0.000} input={inputAiming} recoil={recoilAiming} components={hasInput}/{hasRecoil} maxBlend={MaxDeathAimBlend:0.000}";
+        }
+
+        public static string CheckCloseWeaponSafety(Vector3 weaponPosition, Vector3 eyePosition,
+            Vector3 aimForward, int collisionLayerMask)
+        {
+            if (aimForward.sqrMagnitude <= 1e-6f)
+                return "FAIL Death.CloseWeaponSafety: zero aim direction";
+
+            float forwardDot = Vector3.Dot(weaponPosition - eyePosition, aimForward.normalized);
+            int characterBits = LR2Layers.ToMask(LR2Layers.Character, LR2Layers.Hitbox, LR2Layers.Ragdoll);
+            int forbiddenBits = collisionLayerMask & characterBits;
+            bool pass = forwardDot >= MinWeaponForwardDot && forbiddenBits == 0;
+            return $"{(pass ? "PASS" : "FAIL")} Death.CloseWeaponSafety: eyePlane={forwardDot:0.000}m min={MinWeaponForwardDot:0.000}m forbiddenMask=0x{forbiddenBits:X}";
+        }
+
+        public static string CheckMusicSource(AudioSource source)
+        {
+            if (source == null)
+                return "FAIL Music.SourcePriority: missing source";
+
+            bool safe = source.priority <= MaxMusicPriority && source.bypassEffects &&
+                        source.bypassListenerEffects && source.bypassReverbZones;
+            return $"{(safe ? "PASS" : "FAIL")} Music.SourcePriority: name={source.name} priority={source.priority} max={MaxMusicPriority} bypass={source.bypassEffects}/{source.bypassListenerEffects}/{source.bypassReverbZones}";
+        }
+
+        public static string CheckMusicSources(AudioSource[] sources)
+        {
+            if (sources == null || sources.Length == 0)
+                return "FAIL Music.SourcePriority: no music sources";
+
+            int failures = 0;
+            int worstPriority = 0;
+            foreach (var source in sources)
+            {
+                if (source == null)
+                {
+                    failures++;
+                    continue;
+                }
+                worstPriority = Mathf.Max(worstPriority, source.priority);
+                if (source.priority > MaxMusicPriority || !source.bypassEffects ||
+                    !source.bypassListenerEffects || !source.bypassReverbZones)
+                    failures++;
+            }
+            return $"{(failures == 0 ? "PASS" : "FAIL")} Music.SourcePriority: sources={sources.Length} failures={failures} worst={worstPriority} max={MaxMusicPriority}";
+        }
+
+        public static string CheckMusicGainDuringGunfire(float calmGain, float gunfireGain)
+        {
+            bool pass = calmGain >= 0f && gunfireGain > calmGain;
+            return $"{(pass ? "PASS" : "FAIL")} Music.GunfireGain: calm={calmGain:0.000} gunfire={gunfireGain:0.000} required=gunfire>calm";
+        }
+
+        public static string CheckMotionFootSlide(float plantedFootSpeed)
+        {
+            bool pass = plantedFootSpeed >= 0f && plantedFootSpeed < MaxMotionFootSlideSpeed;
+            return $"{(pass ? "PASS" : "FAIL")} Motion.FootSlide: plantedSpeed={plantedFootSpeed:0.000}m/s max={MaxMotionFootSlideSpeed:0.000}m/s";
+        }
+
+        public static string[] CheckB57KnownBadFixtures()
+        {
+            string deathBad = CheckDeathAimResetState(true, true, 1f, true, true, true, true);
+            string deathGood = CheckDeathAimResetState(true, false, 0f, true, false, true, false);
+            string weaponBad = CheckCloseWeaponSafety(Vector3.back * 0.20f, Vector3.zero,
+                Vector3.forward, LR2Layers.EnvironmentMask | (1 << LR2Layers.Character));
+            string weaponGood = CheckCloseWeaponSafety(Vector3.forward * 0.05f, Vector3.zero,
+                Vector3.forward, LR2Layers.EnvironmentMask);
+            string gainBad = CheckMusicGainDuringGunfire(0.30f, 0.20f);
+            string gainGood = CheckMusicGainDuringGunfire(0.20f, 0.30f);
+            string slideBad = CheckMotionFootSlide(1.50f);
+            string slideGood = CheckMotionFootSlide(0.10f);
+
+            return new[]
+            {
+                $"{(deathBad.StartsWith("FAIL", StringComparison.Ordinal) && deathGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.DeathAimReset: bad={deathBad.StartsWith("FAIL", StringComparison.Ordinal)} good={deathGood.StartsWith("PASS", StringComparison.Ordinal)}",
+                $"{(weaponBad.StartsWith("FAIL", StringComparison.Ordinal) && weaponGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.CloseWeaponSafety: bad={weaponBad.StartsWith("FAIL", StringComparison.Ordinal)} good={weaponGood.StartsWith("PASS", StringComparison.Ordinal)}",
+                $"{(gainBad.StartsWith("FAIL", StringComparison.Ordinal) && gainGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicGain: bad={gainBad.StartsWith("FAIL", StringComparison.Ordinal)} good={gainGood.StartsWith("PASS", StringComparison.Ordinal)}",
+                $"{(slideBad.StartsWith("FAIL", StringComparison.Ordinal) && slideGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.FootSlide: bad={slideBad.StartsWith("FAIL", StringComparison.Ordinal)} good={slideGood.StartsWith("PASS", StringComparison.Ordinal)}"
+            };
         }
 
         private static Transform FindChildNamed(Transform root, string name)

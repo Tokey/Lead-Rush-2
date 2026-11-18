@@ -476,7 +476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a38f36b54b84df3873b796d6728c637, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animatorProfile: {fileID: 11400000, guid: ca0f87b4add08a24b9c437e6dd0ba7e4, type: 2}
+  animatorProfile: {fileID: 11400000, guid: 47f71d3d06d0eea408769a2b405d56c0, type: 2}
   defaultAimPoint: {fileID: 347777031982771737}
 --- !u!95 &4769882692582717299
 Animator:
@@ -512,7 +512,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857fe0f09a0861b419c9e78db7d5fcfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LR2.Runtime::LR2.Weapons.LR2Firearm
-  overrideController: {fileID: 9100000, guid: feca7ec1143483a7de2cfe240c0e64f7, type: 2}
+  overrideController: {fileID: 9100000, guid: 70b165214a68c65428af65a49a82895b, type: 2}
   equipMotion: {fileID: 11400000, guid: b11b46638e8719941a429aa33657277d, type: 2}
   unEquipMotion: {fileID: 11400000, guid: 6e3ba419dec1a754b9c447a8fc1f9b1f, type: 2}
   displayNameOverride: 

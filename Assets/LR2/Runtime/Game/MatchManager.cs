@@ -37,7 +37,17 @@ namespace LR2.Game
 
         [Header("Flow")]
         [SerializeField] private float suddenDeathSeconds = 60f;
-        [SerializeField] private string[] botCallsigns = { "BOT-01", "AI-02", "BOT-03", "AI-04", "BOT-ALPHA", "AI-BRAVO", "BOT-07", "AI-08", "BOT-09", "AI-10", "BOT-11", "AI-12" };
+        [SerializeField] private string[] botCallsigns =
+        {
+            "xX_NoScopeGrandma_Xx", "TaxEvader420", "MomPulledThePlug", "WiFi_On_A_Potato",
+            "CrouchSpammer99", "KneecapCollector", "ForgotToReload", "200PingWarrior",
+            "TouchGrass_Later", "AimAssist_Enjoyer", "Campfire_CEO", "ControllerDisconnected",
+            "JohnWickFromWish", "LagSwitch_Larry", "TacticalSnackBreak", "SentToLobby",
+            "HipfireHero", "CheckMyKillcam", "FreeKD_Delivery", "SweatyPalms_TTV",
+            "HDMI_Unplugged", "FriendlyFire_Enjoyer", "ProneInA_Bush", "OneMoreGameMom",
+            "SkillIssue_Official", "MousepadRanOut", "AltF4_ForBoost", "DoritoDustFingers",
+            "LaggingOnPurpose", "MyCatWalkedOnWASD", "ReloadAfter1Bullet", "LootGoblin_77"
+        };
 
         public MatchSettings Settings { get; private set; }
         public MatchState State { get; private set; } = MatchState.None;
@@ -66,6 +76,7 @@ namespace LR2.Game
         private float _nextOrbSpawn;
         private float _lastTick = -1f;
         private int _nameIndex;
+        private string[] _shuffledCallsigns;
 
         // ------------------------------------------------------------------ lifecycle
         private void Awake()
@@ -143,6 +154,8 @@ namespace LR2.Game
         // ------------------------------------------------------------------ spawning
         private void SpawnParticipants()
         {
+            _shuffledCallsigns = null;
+            _nameIndex = 0;
             if (playerPrefab == null || botPrefab == null)
             {
                 Debug.LogError("[LR2] MatchManager is missing playerPrefab/botPrefab. Run LR2 > Build Everything.");
@@ -150,21 +163,41 @@ namespace LR2.Game
                 return;
             }
 
-            bool team = Settings.IsTeamMode;
+            BotTeamAlignment align = Settings.EffectiveBotTeamAlignment;
+            bool team = align != BotTeamAlignment.FreeForAll && Settings.mode != GameModeType.Duel;
             TeamId playerTeam = team ? TeamId.Alpha : TeamId.None;
             LocalPlayer = Spawn(playerPrefab, playerTeam, LR2Settings.PlayerName, true);
 
             int enemies = Settings.mode == GameModeType.Duel ? 1 : Mathf.Max(1, Settings.enemyBots);
-            if (team)
+            if (align == BotTeamAlignment.FreeForAll)
             {
-                for (int i = 0; i < Settings.friendlyBots; i++)
+                for (int i = 0; i < enemies; i++) Spawn(botPrefab, TeamId.None, NextName(), false);
+            }
+            else if (align == BotTeamAlignment.AllBotsPlayerTeam)
+            {
+                int allies = Mathf.Max(1, Settings.friendlyBots + enemies);
+                for (int i = 0; i < allies; i++)
                 {
                     var bot = Spawn(botPrefab, TeamId.Alpha, NextName(), false);
                     var bc = bot != null ? bot.GetComponent<BotController>() : null;
                     if (bc != null && LocalPlayer != null) bc.SetSquadLeader(LocalPlayer);
                 }
             }
-            for (int i = 0; i < enemies; i++) Spawn(botPrefab, team ? TeamId.Bravo : TeamId.None, NextName(), false);
+            else if (align == BotTeamAlignment.BotsSameTeamVsPlayer)
+            {
+                for (int i = 0; i < enemies; i++) Spawn(botPrefab, TeamId.Bravo, NextName(), false);
+            }
+            else
+            {
+                int allies = Settings.IsFlagMode ? Mathf.Max(1, Settings.friendlyBots) : Settings.friendlyBots;
+                for (int i = 0; i < allies; i++)
+                {
+                    var bot = Spawn(botPrefab, TeamId.Alpha, NextName(), false);
+                    var bc = bot != null ? bot.GetComponent<BotController>() : null;
+                    if (bc != null && LocalPlayer != null) bc.SetSquadLeader(LocalPlayer);
+                }
+                for (int i = 0; i < enemies; i++) Spawn(botPrefab, team ? TeamId.Bravo : TeamId.None, NextName(), false);
+            }
         }
 
         /// <summary>Overview camera so the screen is never black if the soldier prefabs are missing.</summary>
@@ -180,11 +213,30 @@ namespace LR2.Game
 
         private string NextName()
         {
-            string[] names = botCallsigns;
-            // Ensure bots always carry clear BOT / AI identifiers (also overrides older serialized scene arrays).
-            if (names == null || names.Length == 0 || (!names[0].Contains("BOT") && !names[0].Contains("AI")))
-                names = new[] { "BOT-01", "AI-02", "BOT-03", "AI-04", "BOT-ALPHA", "AI-BRAVO", "BOT-07", "AI-08", "BOT-09", "AI-10", "BOT-11", "AI-12" };
-            return names[_nameIndex++ % names.Length];
+            if (_shuffledCallsigns == null || _shuffledCallsigns.Length == 0)
+            {
+                string[] fallback =
+                {
+                    "xX_NoScopeGrandma_Xx", "TaxEvader420", "MomPulledThePlug", "WiFi_On_A_Potato",
+                    "CrouchSpammer99", "KneecapCollector", "ForgotToReload", "200PingWarrior",
+                    "TouchGrass_Later", "AimAssist_Enjoyer", "Campfire_CEO", "ControllerDisconnected",
+                    "JohnWickFromWish", "LagSwitch_Larry", "TacticalSnackBreak", "SentToLobby",
+                    "HipfireHero", "CheckMyKillcam", "FreeKD_Delivery", "SweatyPalms_TTV",
+                    "HDMI_Unplugged", "FriendlyFire_Enjoyer", "ProneInA_Bush", "OneMoreGameMom",
+                    "SkillIssue_Official", "MousepadRanOut", "AltF4_ForBoost", "DoritoDustFingers",
+                    "LaggingOnPurpose", "MyCatWalkedOnWASD", "ReloadAfter1Bullet", "LootGoblin_77"
+                };
+                bool useSerialized = botCallsigns != null && botCallsigns.Length >= 8 && !botCallsigns[0].StartsWith("BOT-");
+                string[] src = useSerialized ? botCallsigns : fallback;
+                _shuffledCallsigns = new string[src.Length];
+                System.Array.Copy(src, _shuffledCallsigns, src.Length);
+                for (int i = _shuffledCallsigns.Length - 1; i > 0; i--)
+                {
+                    int j = Random.Range(0, i + 1);
+                    (_shuffledCallsigns[i], _shuffledCallsigns[j]) = (_shuffledCallsigns[j], _shuffledCallsigns[i]);
+                }
+            }
+            return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
 
         private Combatant Spawn(GameObject prefab, TeamId team, string displayName, bool local)

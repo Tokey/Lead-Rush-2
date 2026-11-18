@@ -9,9 +9,9 @@ developer's prompts, the board archive and git; their `source` says so.
 
 | Column | Meaning |
 |---|---|
-| `id` | Unique ID (`C..` Claude Code, `G..` Antigravity/"Gemini", `P..` Copilot) |
+| `id` | Unique ID (`C..` Claude Code, `G..` Antigravity/"Gemini", `P..` Copilot, `X..` Codex) |
 | `when` | Local time (America/New_York) the work was delivered, `YYYY-MM-DD HH:MM` |
-| `agent` | Board name: Claude, Gemini, Copilot |
+| `agent` | Board name: Claude, Gemini, Copilot, Codex |
 | `model` | Exact model id, or the developer's name for it (e.g. `argon`), or `unknown` |
 | `title` | What was built or fixed |
 | `kind` | feature, fix, tune, tooling, docs, review |
@@ -25,7 +25,7 @@ developer's prompts, the board archive and git; their `source` says so.
 |---|---|
 | `id` | Unique ID |
 | `found` | Local time it was reported |
-| `found_by` | user, qa-bot, claude-review, copilot-review, gemini-review, push-check, claude-self |
+| `found_by` | user, qa-bot, claude-review, copilot-review, gemini-review, codex-review, push-check, claude-self |
 | `found_by_agent`, `found_by_model` | Who gets the credit for finding it (empty when the developer found it) |
 | `stage` | **escaped** (found after delivery), **review** (caught by another agent before the developer saw it), **pre-push** (broken build stopped before a push) |
 | `description` | Short description |

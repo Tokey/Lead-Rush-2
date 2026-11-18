@@ -491,10 +491,10 @@ a { color: var(--bot) }
   <!-- ==================== TAB 3: HOW AI BUILT LR2 & RESEARCH LAB ==================== -->
   <div class="tab-panel" data-panel="ai">
     <section id="ai-story">
-      <div class="chapter-head"><div class="tag">Tab 3 · AI Engineering Process · AGENT_COORDINATION.md</div><h2>How 1 developer + 3 AI agents build LeadRush 2 in parallel</h2>
-        <p>Three independent AI coding tools — <b>Claude Code</b> (<code>claude-opus-5-5</code>), <b>Antigravity ("Gemini")</b> (<code>gemini-4-hydrogen</code> / <code>argon</code>), and <b>GitHub Copilot</b> (<code>gpt-5.6-luna</code>) — never talk directly. Everything flows through one shared Markdown board (<code>AGENT_COORDINATION.md</code>), an exclusive <code>UNITY</code> process lock, code-generated builders (<code>LR2BuildPipeline.BuildAllBatch</code>), and mandatory cross-agent verification.</p></div>
+      <div class="chapter-head"><div class="tag">Tab 3 · AI Engineering Process · AGENT_COORDINATION.md</div><h2>How 1 developer + 4 AI agents build LeadRush 2 in parallel</h2>
+        <p>Four independent AI coding tools — <b>Claude Code</b> (<code>claude-opus-5-5</code>), <b>Antigravity ("Gemini")</b> (<code>gemini-4-hydrogen</code> / <code>argon</code>, Lead), <b>GitHub Copilot</b> (<code>gpt-5.6-luna</code>), and <b>OpenAI Codex</b> (<code>gpt-6</code>) — never talk directly. Everything flows through one shared Markdown board (<code>AGENT_COORDINATION.md</code>), an exclusive <code>UNITY</code> process lock (plus isolated <code>ParallelWorker</code> junctions), code-generated builders (<code>LR2BuildPipeline.BuildAllBatch</code>), and mandatory cross-agent verification.</p></div>
       <div class="instrument">
-        <canvas id="cv-agents" aria-label="Animated workflow of Developer, Claude Code, Gemini, Copilot, Board and Unity Lock"></canvas>
+        <canvas id="cv-agents" aria-label="Animated workflow of Developer, Claude Code, Gemini, Copilot, Codex, Board and Unity Lock"></canvas>
         <div class="controls">
           <div class="ctl"><label for="proto-ver">Select Coordination Protocol Era</label>
             <div style="display:flex;gap:6px;flex-wrap:wrap" id="proto-btns">
@@ -505,18 +505,18 @@ a { color: var(--bot) }
           </div>
           <div id="proto-desc" class="card" style="margin-top:4px"></div>
           <div class="readout">
-            <div class="stat"><div class="k">Tracked Items</div><div class="v">B1–B54 + P1–P5</div></div>
-            <div class="stat"><div class="k">Dev Prompts</div><div class="v">145+ verbatim</div></div>
-            <div class="stat"><div class="k">Limit Handoffs</div><div class="v">5+ continuous</div></div>
-            <div class="stat"><div class="k">Review Catches</div><div class="v">9+ pre-dev</div></div>
+            <div class="stat"><div class="k">Tracked Items</div><div class="v">B1–B60 + P1–P5</div></div>
+            <div class="stat"><div class="k">Dev Prompts</div><div class="v">135+ verbatim</div></div>
+            <div class="stat"><div class="k">Limit Handoffs</div><div class="v">6 continuous</div></div>
+            <div class="stat"><div class="k">Active Agents</div><div class="v">4 AI + 1 Human</div></div>
           </div>
         </div>
       </div>
     </section>
 
     <section id="ai-quality">
-      <div class="chapter-head"><div class="tag">Empirical Process Telemetry · Docs/AI_Collaboration/data/</div><h2>Model quality, defect attribution &amp; ledger scores</h2>
-        <p>Every delivered task (<code>tasks.csv</code>) and bug (<code>bugs.csv</code>) records which agent &amp; model wrote it, who reviewed it, and whether it escaped to the developer or was caught in review (+3 catching another agent's bug, +2 own find, +3 adopted suggestion, +1 verified task, -2 escaped defect). Data below reflects <code>python Docs/AI_Collaboration/analysis/analyze.py</code> on 2026-11-18.</p></div>
+      <div class="chapter-head"><div class="tag">Empirical Process Telemetry · B56 Token &amp; Quality Audit</div><h2>Model quality, defect attribution &amp; 4-agent token/limit telemetry</h2>
+        <p>Every delivered task (<code>tasks.csv</code>, 92 rows) and bug (<code>bugs.csv</code>, 39 rows) records which agent &amp; model wrote it, who reviewed it, its explicit <code>source</code> (prompt, board row, or evidence), and whether it escaped to the developer or was caught in review (+3 cross-catch, +2 own catch, +3 adopted suggestion, +1 verified task, -2 escaped defect). Client IDE API billing totals are <b>never guessed</b>: where a client does not expose raw token counts into the repository, the telemetry table explicitly states observed limit/handoff counts and verifiable proxies alongside API visibility.</p></div>
       <div class="instrument">
         <canvas id="cv-quality" aria-label="Bar chart of contribution score and defect rates by agent and model"></canvas>
         <div class="controls">
@@ -528,17 +528,94 @@ a { color: var(--bot) }
               <option value="caught">Own Defects Caught at Review</option>
             </select>
           </div>
-          <p class="note"><b>Reading honestly:</b> Role bias gives the coordinator/reviewer (Claude Code) higher catch scores while solo overnight shifts (Gemini before cross-review existed) accumulated higher escaped rates. Once cross-review &amp; v3 compile gates engaged (23:25–00:05), Copilot caught 6 pre-merge defects and escaped bugs dropped sharply.</p>
-          <p class="note">Regenerate anytime: <code>python Docs/AI_Collaboration/analysis/analyze.py</code></p>
+          <p class="note"><b>Reading honestly:</b> Role bias gives the coordinator/reviewer (Claude Code) higher catch scores while solo overnight shifts (Gemini before cross-review existed) accumulated higher escaped rates. Once cross-review &amp; v3 compile gates engaged (23:25–00:05), Copilot caught 6+ pre-merge defects and Codex added independent assertion QA (`B57`).</p>
+          <p class="note">Regenerate charts anytime: <code>python Docs/AI_Collaboration/analysis/analyze.py</code></p>
         </div>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <h3>B56 · Observed Token, Context &amp; Usage-Limit Telemetry (All 4 Agents · Honest Measurement)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.45">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--line);color:var(--ink-2)">
+              <th style="padding:6px 8px">Agent · Tool</th>
+              <th style="padding:6px 8px">Model(s)</th>
+              <th style="padding:6px 8px">Active Window (ET)</th>
+              <th style="padding:6px 8px">Observed Limits / Compaction</th>
+              <th style="padding:6px 8px">Verified Work Proxies</th>
+              <th style="padding:6px 8px">Client API Token Visibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:6px 8px"><b>Claude</b> · Claude Code</td>
+              <td style="padding:6px 8px"><code>claude-opus-5-5</code></td>
+              <td style="padding:6px 8px">11-16 11:19 → 11-18 00:45</td>
+              <td style="padding:6px 8px"><b>6 quota stops</b> (11-16 pm 97% cap alert, 14:55, 15:07, 18:13 8-agent wave, 23:14 9-agent weekly cap, 00:44 token handoff)</td>
+              <td style="padding:6px 8px">21 delivered tasks (<code>C01–C21</code>), 10 bug finds, Protocol v2/v3</td>
+              <td style="padding:6px 8px">User-reported <code>97%</code> + quota cap timestamps verified; raw vendor token count unreported by client</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:6px 8px"><b>Gemini</b> · Antigravity (Lead)</td>
+              <td style="padding:6px 8px"><code>Gemini 4 Hydrogen</code> / <code>argon</code> / <code>opus-high</code></td>
+              <td style="padding:6px 8px">11-16 23:44 → 11-18 02:37+</td>
+              <td style="padding:6px 8px"><b>1 quota switch (02:24)</b>: Orchestrator <code>Argon</code> hit usage limit &amp; developer switched cleanly to <code>Gemini 4 Hydrogen</code>; automatic <code>&lt;CONTEXT_SUMMARY&gt;</code> compaction + 2 QA sub-agents</td>
+              <td style="padding:6px 8px">35 ledger rows (<code>G01–G35</code>): <code>B55</code> MK18 default, <code>B58</code> music, <code>B59</code> death ADS/clip, <code>B51/B61</code> Unified CTF + Smart Flag AI, <code>B14/B62</code> killcam recoil &amp; gamertags</td>
+              <td style="padding:6px 8px"><code>BUDGET: OK</code> on board; <code>02:24</code> Argon limit logged; Antigravity IDE does not export raw API token sums into git</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:6px 8px"><b>Copilot</b> · VS Code Chat</td>
+              <td style="padding:6px 8px"><code>gpt-5.6-luna</code></td>
+              <td style="padding:6px 8px">11-17 23:12 → 11-18 02:07+</td>
+              <td style="padding:6px 8px"><b>0 hard stops</b>; continuous cross-review, P1–P5 research specs, <code>R8</code> pushes, pose checks (#7–#10) &amp; HyperMotion <code>B60.1–B60.10</code></td>
+              <td style="padding:6px 8px">35 ledger rows (<code>P01–P35</code>), 6 pre-merge review catches, <code>B60.md</code></td>
+              <td style="padding:6px 8px"><code>BUDGET: ?</code> self-reported; VS Code Copilot Chat does not export token counts into git</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex CLI</td>
+              <td style="padding:6px 8px"><code>gpt-6</code></td>
+              <td style="padding:6px 8px">11-18 01:54 → 02:12+</td>
+              <td style="padding:6px 8px"><b>0 stops</b>; onboarded in Section <code>7b</code> for telemetry audit, known-bad QA assertions &amp; cross-review</td>
+              <td style="padding:6px 8px">1 ledger row (<code>X01</code>): <code>B56</code> (telemetry), <code>B57</code> (behavior QA), <code>B60</code> (realism backlog)</td>
+              <td style="padding:6px 8px"><code>BUDGET: OK</code> on board; CLI session token accounting under active <code>B56</code> audit</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="overflow-x:auto;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <h3 style="margin:0">Task Log with Explicit Source (<code>data/tasks.csv</code> · Full table in <code>figures/tasks_log.md</code>)</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="task-agent-filter" style="padding:4px 8px;border-radius:6px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);font-size:12px">
+              <option value="all">All Agents</option>
+              <option value="Gemini">Gemini</option>
+              <option value="Copilot">Copilot</option>
+              <option value="Codex">Codex</option>
+              <option value="Claude">Claude</option>
+            </select>
+            <input id="task-search" type="search" placeholder="Filter by board, task, or source..." style="padding:4px 8px;border-radius:6px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);font-size:12px;min-width:210px">
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;line-height:1.4">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--line);color:var(--ink-2)">
+              <th style="padding:5px 6px">ID</th>
+              <th style="padding:5px 6px">When</th>
+              <th style="padding:5px 6px">Agent</th>
+              <th style="padding:5px 6px">Board</th>
+              <th style="padding:5px 6px">Task</th>
+              <th style="padding:5px 6px">Source (Prompt / Board / Evidence)</th>
+            </tr>
+          </thead>
+          <tbody id="task-log-body"></tbody>
+        </table>
       </div>
     </section>
 
     <section id="ai-research">
       <div class="chapter-head"><div class="tag">Grounded Engineering · Rule 13: Research First</div><h2>Research specs &amp; academic papers driving every system</h2>
-        <p>Protocol v3 Rule 13 requires every feature, visual pass, recoil tune, or bot tweak to start with a sourced research spec in <code>Docs/AI_Collaboration/specs/</code>. Filter by subsystem below:</p></div>
+        <p>Protocol v3 Rule 13 requires every feature, visual pass, recoil tune, animation principle, or bot tweak to start with a sourced research spec in <code>Docs/AI_Collaboration/specs/</code>. Filter by subsystem below:</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="spec-filters">
-        <button type="button" data-cat="all" class="active">All Specs (11)</button>
+        <button type="button" data-cat="all" class="active">All Specs (13)</button>
         <button type="button" data-cat="ai" class="ghost">Bot AI &amp; Human Motor</button>
         <button type="button" data-cat="wpn" class="ghost">Weapons &amp; Animation</button>
         <button type="button" data-cat="gfx" class="ghost">Graphics &amp; Maps</button>
@@ -779,14 +856,15 @@ a { color: var(--bot) }
   const GOALS = [
     ['1', 'Retreat', 'Health under 38% while under fire with a target: fall back to cover breaking LOS within 22 m (7 s max).'],
     ['2', 'Follow order', 'Active BotDirective (HoldPosition, MoveTo, Attack, Retreat, Flank, FollowLeader).'],
+    ['2.5', 'Urgent flag contest', 'CTF hostile team actively capturing/contesting within 45 m: sprint straight into the 2.6 m core!'],
     ['3a', 'Take cover', 'Inside active engage: reloading while enemy sees it -> break LOS into CoverPoint within 10 m.'],
     ['3b', 'Anti-camp flank', 'Target anchored > 4.0–7.2 s window: pick 90° off-axis TacticalPoint (6–30 m) & commit 9 s.'],
-    ['3c', 'Engage', 'Target visible or seen < 0.7 s: advance if > 1.35× desiredRange, back off if < 5 m & cautious, ADAD strafe & shoot.'],
+    ['3c', 'Engage', 'Target visible or seen < 0.7 s: advance if > 1.35× desiredRange, back off if < 5 m & cautious, ADAD strafe (clamped in CTF zone) & shoot.'],
     ['4', 'Continue flank', 'Flank still active (now < _flankUntil) even after sight temporarily drops.'],
     ['5', 'Hunt', 'Lost sight < 10 s ago: sprint/move to targetLastKnown; between 2.5–10 m slice corner & pre-aim +1.42 m.'],
-    ['6', 'Investigate', 'Heard gunshot or footsteps within 8 s (checked BEFORE CTF flag zone!): move & look at noisePosition.'],
-    ['6.5', 'Hold the flag', 'CTF zone active and not actively pinned in sight: claim one of 8 golden slots around the inner 2.6 m core.'],
-    ['7', 'Follow leader', 'TDM team modes: staggered offset 2.5–5 m wide, 4–8 m behind leader, scanning ±75° rear flank.'],
+    ['6', 'Investigate', 'Heard gunshot or footsteps within 8 s (checked BEFORE 6.5 Flag AI): move & look at noisePosition.'],
+    ['6.5', 'Role-adaptive flag AI', 'CTF active: Contested Breach, Core 2.25× Anchor (<=1 ally, 8 golden slots), or Perimeter Crossfire Overwatch (6–8.5 m, 2+ allies).'],
+    ['7', 'Follow leader', 'Team modes: staggered offset 2.5–5 m wide, 4–8 m behind leader, scanning ±75° rear flank.'],
     ['8', 'Patrol', 'Fallback: PickPatrol weighted by point weight, visit staleness, and ~18 m optimal distance.'],
   ];
   function decide() {
@@ -797,6 +875,7 @@ a { color: var(--bot) }
     const conds = [
       [hp < 0.38 && hurt && hasT, hp >= 0.38 ? 'health ' + Math.round(hp * 100) + '% >= 38%' : 'not under fire with a target'],
       [!!order, 'no commander order'],
+      [flag && dist <= 45 && !hasT && !noise, 'no hostile capture alert (<45 m)'],
       [recentEngage && reload, !recentEngage ? 'not in engage window (<0.7 s)' : 'not reloading'],
       [recentEngage && anchor > flankWin, !recentEngage ? 'not in engage window' : 'anchored ' + anchor + 's <= ' + flankWin.toFixed(1) + 's'],
       [recentEngage, 'target not visible or seen >= 0.7 s ago'],
@@ -1370,15 +1449,16 @@ a { color: var(--bot) }
     ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
 
     const nodes = [
-      { id: 'DEV', x: 0.5, y: 0.14, c: acc, lbl: 'Developer (1)', sub: 'Prompts · Playtest · Calls' },
-      { id: 'CLAUDE', x: 0.17, y: 0.48, c: '#b388ff', lbl: 'Claude Code', sub: 'opus-5-5 · Rig & Reviews' },
-      { id: 'BOARD', x: 0.5, y: 0.48, c: ink, lbl: 'AGENT_COORDINATION.md', sub: 'Lock · Ownership · Ledgers' },
-      { id: 'GEMINI', x: 0.83, y: 0.48, c: botC, lbl: 'Gemini (Lead)', sub: 'hydrogen/argon · AI/UI/Maps' },
-      { id: 'COPILOT', x: 0.5, y: 0.84, c: good, lbl: 'GitHub Copilot', sub: 'gpt-5.6-luna · Specs/QA/Push' },
-      { id: 'UNITY', x: 0.17, y: 0.84, c: warn, lbl: 'Unity 6000.5', sub: '1 Lock · Visible QA' },
-      { id: 'GIT', x: 0.83, y: 0.84, c: ink2, lbl: 'GitHub Main', sub: 'dotnet green -> R8 Push' }
+      { id: 'DEV', x: 0.5, y: 0.13, c: acc, lbl: 'Developer (1)', sub: 'Prompts · Playtest · Calls' },
+      { id: 'CLAUDE', x: 0.14, y: 0.46, c: '#b388ff', lbl: 'Claude Code', sub: 'opus-5-5 · Rig & Reviews' },
+      { id: 'BOARD', x: 0.5, y: 0.46, c: ink, lbl: 'AGENT_COORDINATION.md', sub: 'v3 Lock · Ownership · Ledgers' },
+      { id: 'GEMINI', x: 0.86, y: 0.46, c: botC, lbl: 'Gemini (Lead)', sub: 'hydrogen/argon · AI/UI/Audio' },
+      { id: 'COPILOT', x: 0.36, y: 0.84, c: good, lbl: 'GitHub Copilot', sub: 'gpt-5.6-luna · Specs/QA/Push' },
+      { id: 'CODEX', x: 0.65, y: 0.84, c: '#47d9ff', lbl: 'OpenAI Codex', sub: 'gpt-6 · B56 Tokens & B57 QA' },
+      { id: 'UNITY', x: 0.12, y: 0.84, c: warn, lbl: 'Unity 6000.5', sub: '1 Lock + ParallelWorker' },
+      { id: 'GIT', x: 0.89, y: 0.84, c: ink2, lbl: 'GitHub Main', sub: 'dotnet green -> R8 Push' }
     ];
-    const edges = [['DEV', 'CLAUDE'], ['DEV', 'GEMINI'], ['DEV', 'COPILOT'], ['CLAUDE', 'BOARD'], ['GEMINI', 'BOARD'], ['COPILOT', 'BOARD'], ['CLAUDE', 'UNITY'], ['GEMINI', 'UNITY'], ['COPILOT', 'GIT'], ['BOARD', 'GIT']];
+    const edges = [['DEV', 'CLAUDE'], ['DEV', 'GEMINI'], ['DEV', 'COPILOT'], ['DEV', 'CODEX'], ['CLAUDE', 'BOARD'], ['GEMINI', 'BOARD'], ['COPILOT', 'BOARD'], ['CODEX', 'BOARD'], ['CLAUDE', 'UNITY'], ['GEMINI', 'UNITY'], ['COPILOT', 'GIT'], ['BOARD', 'GIT']];
     const map = Object.fromEntries(nodes.map(n => [n.id, n]));
     edges.forEach(([a, b], i) => {
       const n1 = map[a], n2 = map[b];
@@ -1401,12 +1481,13 @@ a { color: var(--bot) }
   redrawers.push(drawAgents); drawAgents();
   if (!reduce) (function agLoop() { agAnim += 0.016; drawAgents(); requestAnimationFrame(agLoop); })();
 
-  // ---------------- TAB 3: QUALITY METRICS CHART (real analyze.py values 01:08) ----------------
+  // ---------------- TAB 3: QUALITY METRICS CHART (real analyze.py values 02:30) ----------------
   const QUALITY_ROWS = [
-    { lbl: 'Claude · opus-5-5', score: 55.1, tasks: 21, escaped: 2.7, caught: 1, c: '#b388ff' },
-    { lbl: 'Copilot · gpt-5.6-luna', score: 18.0, tasks: 30, escaped: 0.7, caught: 6, c: '#5cc46a' },
-    { lbl: 'Gemini · opus-high', score: 3.0, tasks: 1, escaped: 0.0, caught: 0, c: '#e2b54a' },
-    { lbl: 'Gemini · hydrogen', score: -0.8, tasks: 16, escaped: 2.4, caught: 2, c: '#6eaee6' },
+    { lbl: 'Claude · opus-5-5', score: 54.1, tasks: 21, escaped: 2.7, caught: 3, c: '#b388ff' },
+    { lbl: 'Copilot · gpt-5.6-luna', score: 32.5, tasks: 35, escaped: 0.6, caught: 6, c: '#5cc46a' },
+    { lbl: 'Gemini · hydrogen', score: 5.2, tasks: 30, escaped: 1.3, caught: 4, c: '#6eaee6' },
+    { lbl: 'Gemini · opus-high', score: 3.0, tasks: 0, escaped: 0.0, caught: 0, c: '#e2b54a' },
+    { lbl: 'Codex · gpt-6', score: 0.5, tasks: 1, escaped: 0.0, caught: 0, c: '#2dd4bf' },
     { lbl: 'Gemini · argon/hyd', score: -1.2, tasks: 1, escaped: 6.0, caught: 0, c: '#6eaee6' },
     { lbl: 'Gemini · argon', score: -3.2, tasks: 3, escaped: 12.0, caught: 2, c: '#ff7d3b' }
   ];
@@ -1434,8 +1515,40 @@ a { color: var(--bot) }
   $('q-metric').addEventListener('change', drawQuality);
   redrawers.push(drawQuality); drawQuality();
 
+  // ---------------- TAB 3: TASK LOG WITH SOURCE ----------------
+  const TASKS_LOG = [
+    { id: 'G35', when: '02:32', agent: 'Gemini', board: 'B56', task: '4-agent token telemetry (incl. 02:24 Argon->Hydrogen switch) & surface task source across all GitHub task logs', src: 'user prompts 01:50, 02:16, 02:24 + analyze.py + README + RESEARCH_LOG' },
+    { id: 'G34', when: '02:29', agent: 'Gemini', board: 'B14/B62', task: 'First-person killcam procedural weapon/camera recoil matching player view + 32 funny randomized gamertags', src: 'user prompt 02:21 + KillcamDirector.cs + MatchManager.cs' },
+    { id: 'G33', when: '02:28', agent: 'Gemini', board: 'B61', task: 'Smart Flag-Playing Bot AI (Step 2.5 Urgent Contest, Core 2.25x Anchor, Breach, Crossfire & In-Zone Clamp)', src: 'user prompt 02:18 + FlagZoneController.cs + TacticalBotBrain.cs' },
+    { id: 'G32', when: '02:27', agent: 'Gemini', board: 'B51', task: 'Unified CTF mode + configurable Bot Team Mode (Squads/FFA/Pack/Co-op) in Settings, Deploy & Rules', src: 'user prompt 02:18 + MatchSettings.cs + MatchManager.cs + LR2UIBuilder.cs' },
+    { id: 'G31', when: '02:12', agent: 'Gemini', board: 'B60', task: 'HyperMotion architectural spec & B60a–B60g subtask split across all 4 agents', src: 'user prompt 02:06-02:07 + specs/B60_HyperMotion_Animation.md + board R15' },
+    { id: 'G30', when: '02:15', agent: 'Gemini', board: 'B55/B49', task: 'LeadRushHDRP default MK18 Mod 1 + HoloSight promoted to Slot 0 primary, AK-12 preserved', src: 'user prompt 01:49 + LeadRushHDRP MainLevel HD.unity + LR2ContentBuilder.cs' },
+    { id: 'G29', when: '02:14', agent: 'Gemini', board: 'B59/B60', task: 'Post-death ADS reset, close-enemy weapon-through-body fix & C2 inertialization guard', src: 'user prompt 01:47 + LR2Firearm.cs + SoldierController.cs + RetargetProxy.cs' },
+    { id: 'G28', when: '02:13', agent: 'Gemini', board: 'B58', task: 'Un-muted gunplay music (priority 8, bypassEffects/ListenerEffects/ReverbZones, 0.56f shot impulse)', src: 'user prompt 01:47 + LR2MusicDirector.cs + LR2QABotRunner.cs' },
+    { id: 'X01', when: '02:09', agent: 'Codex', board: 'B56/B57', task: '4-agent token/limit audit & behavior QA checks', src: 'user prompt 01:54 (onboard Codex) + board Section 7b' },
+    { id: 'P35', when: '02:07', agent: 'Copilot', board: 'B60', task: 'HyperMotion & motion-matching research spec + subtasks B60.1–B60.10', src: 'user prompt 02:06 + Docs/AI_Collaboration/specs/B60.md' },
+    { id: 'P34', when: '01:56', agent: 'Copilot', board: 'B26/B35/B49', task: 'Visible pose-check review (#7–#10)', src: 'user/board pose check #7–#10' },
+    { id: 'C21', when: '00:33', agent: 'Claude', board: 'R12', task: 'Test harness freezes asset auto-refresh during runs', src: 'LR2SmokeTest + board R12' }
+  ];
+  function renderTaskLog() {
+    const body = $('task-log-body'); if (!body) return;
+    const af = ($('task-agent-filter')?.value || 'all').toLowerCase();
+    const q = ($('task-search')?.value || '').trim().toLowerCase();
+    body.innerHTML = TASKS_LOG.filter(t =>
+      (af === 'all' || t.agent.toLowerCase() === af) &&
+      (!q || (t.id + ' ' + t.board + ' ' + t.task + ' ' + t.src).toLowerCase().includes(q))
+    ).map(t => `<tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 6px"><code>${t.id}</code></td><td style="padding:5px 6px">${t.when}</td><td style="padding:5px 6px"><b>${t.agent}</b></td><td style="padding:5px 6px"><code>${t.board}</code></td><td style="padding:5px 6px">${t.task}</td><td style="padding:5px 6px;color:var(--ink-2)">${t.src}</td></tr>`).join('');
+  }
+  $('task-agent-filter')?.addEventListener('change', renderTaskLog);
+  $('task-search')?.addEventListener('input', renderTaskLog);
+  renderTaskLog();
+
   // ---------------- TAB 3: RESEARCH SPECS ----------------
   const SPECS = [
+    { id: 'B51 / B61', cat: 'ai', title: 'Unified CTF, BotTeamMode & Smart Flag-Playing Bot AI', cite: 'FlagZoneController · TacticalBotBrain Step 2.5 & 6.5', desc: 'Combines Team/FFA CTF with 4 BotTeamModes (Squads, FFA, Pack, Co-op) plus Step 2.5 Urgent Contest, Core 2.25× Anchor, Contested Breach & Crossfire Overwatch.' },
+    { id: 'B14 / B62', cat: 'wpn', title: 'First-Person Killcam Recoil & Funny Bot Gamertags', cite: 'KillcamDirector · CameraShake · MatchManager', desc: 'Replays killer procedural gun & camera recoil + FOV kick matching player view, plus 32 Fisher-Yates randomized funny bot gamertags.' },
+    { id: 'B60 / B60a–g', cat: 'wpn', title: 'HyperMotion Research & Hybrid Motion Matching', cite: 'Bollo Inertialization (GDC 2017) · EA Delannoy Motion Matching (GDC 2023) · AcceleRATE', desc: 'Applies C2 inertial transitions (B60a), foot-plant locking (<0.35 m/s, B60b), weight curves (B60c), kinetic close-wall tuck (B60d), ML-Flow finger tension (B60e) & locomotion DB query behind A/B flag.' },
+    { id: 'B56 / B57', cat: 'ai', title: 'Four-Agent Token Telemetry & Known-Bad QA Gates', cite: 'Protocol v3 Rule 1 (Check-the-Check) · Honest Telemetry Audit', desc: 'Tracks quota caps, context compactions & client API visibility across Claude, Gemini, Copilot, and Codex alongside death-ADS & close-range weapon QA assertions.' },
     { id: 'B53', cat: 'ai', title: 'Empirical Human Miss Pattern & Pathfinding', cite: 'ESTA (2022), CSKnow (2024), Aim Lab (2021), Meyer (1988), van Beers (2004)', desc: '125 ms velocity lag, 1.55:1 wrist/arm sway, σ∥/σ⊥ ≈ 2.27 flick ellipse, calm undershoot.' },
     { id: 'B22/B24', cat: 'ai', title: 'Biomechanical Bot Aim & Believable Bots', cite: 'Fitts (1954), Flash & Hogan (1985), Harris & Wolpert (1998), BotPrize', desc: 'Minimum-jerk flicks, eccentric detection latency, adaptive EMA skill & tactical corner-slicing.' },
     { id: 'B47', cat: 'wpn', title: 'Caliber Recoil & TTK Realism Balance', cite: '5.45x39, 5.56x45, 7.62x51 & .45 ACP impulse anchors', desc: 'Tuned per-gun RPM, rise, learnable patterns (≤10% seeded drift), 0.3 s 80% recovery.' },

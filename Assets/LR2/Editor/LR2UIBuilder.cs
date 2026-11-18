@@ -511,7 +511,8 @@ namespace LR2.EditorTools
             AddSectionHeader(audioTab, "AudioRight", "COMBAT HUD & BOTS", rightCol);
             y = startY;
             SelectorColRow(audioTab, "HITMARKER PALETTE", rightCol, y, out s.colorBlindPrev, out s.colorBlindNext, out s.colorBlindValue); y -= step;
-            SelectorColRow(audioTab, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue);
+            SelectorColRow(audioTab, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue); y -= step;
+            SelectorColRow(audioTab, "BOT TEAM MODE", rightCol, y, out s.botTeamModePrev, out s.botTeamModeNext, out s.botTeamModeValue);
 
             s.resetDefaultsButton = Btn("Reset Defaults", t, new Vector2(-190f, -446f), new Vector2(310f, 54f));
             back = Btn("Back", t, new Vector2(190f, -446f), new Vector2(310f, 54f));
@@ -716,14 +717,13 @@ namespace LR2.EditorTools
                 rt.anchoredPosition = new Vector2(320f, y);
                 return b;
             }
-            mm.duelButton = MenuBtn("1v1 Deathmatch", 232f, 48f);
-            mm.ctfButton = MenuBtn("Capture The Flag DM", 178f, 48f);
-            mm.ffaCtfButton = MenuBtn("Free-For-All CTF", 124f, 48f);
-            mm.ffaButton = MenuBtn("Free For All", 70f, 48f);
-            mm.tdmButton = MenuBtn("Team Deathmatch", 16f, 48f);
-            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -50f, 44f);
-            mm.settingsButton = MenuBtn("Settings", -100f, 44f);
-            mm.quitButton = MenuBtn("Quit", -150f, 44f);
+            mm.duelButton = MenuBtn("1v1 Deathmatch", 226f, 52f);
+            mm.ctfButton = MenuBtn("Capture The Flag", 166f, 52f);
+            mm.ffaButton = MenuBtn("Free For All", 106f, 52f);
+            mm.tdmButton = MenuBtn("Team Deathmatch", 46f, 52f);
+            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -34f, 44f);
+            mm.settingsButton = MenuBtn("Settings", -88f, 44f);
+            mm.quitButton = MenuBtn("Quit", -142f, 44f);
 
             // Bot difficulty roster selector (left/right stepper matching the Map Recon card; map dropdown removed)
             Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -208f), new Vector2(455f, 24f), true, accent);
@@ -800,7 +800,6 @@ namespace LR2.EditorTools
 
             mm.duelSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_Duel.asset");
             mm.ctfSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_CTF.asset");
-            mm.ffaCtfSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_FFA_CTF.asset");
             mm.ffaSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_FFA.asset");
             mm.tdmSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_TDM.asset");
             SavePrefab(canvas.gameObject, PrefabDir + "/LR2_MainMenuUI.prefab");
@@ -821,14 +820,15 @@ namespace LR2.EditorTools
             CardBacking(t, "DeployRightCard", topC, new Vector2(392f, -458f), new Vector2(730f, 466f), accent);
 
             const float leftCol = -730f;
-            float y = -286f;
-            const float step = 76f;
-            SelectorColRow(t, "PRIMARY WEAPON", leftCol, y, out mm.deployWeaponPrevButton, out mm.deployWeaponNextButton, out mm.deployWeaponValueText); y -= 42f;
+            float y = -270f;
+            const float step = 62f;
+            SelectorColRow(t, "PRIMARY WEAPON", leftCol, y, out mm.deployWeaponPrevButton, out mm.deployWeaponNextButton, out mm.deployWeaponValueText); y -= 40f;
             mm.deployWeaponInfoText = Txt("WeaponBlurb", t, "", 14.5f, TextAlignmentOptions.MidlineLeft, topC, new Vector2(leftCol, y), new Vector2(680f, 22f), false, accent);
             ((RectTransform)mm.deployWeaponInfoText.transform).pivot = new Vector2(0f, 0.5f);
-            y -= 52f;
+            y -= 44f;
             SelectorColRow(t, "SECTOR / MAP", leftCol, y, out mm.deployMapPrevButton, out mm.deployMapNextButton, out mm.deployMapValueText); y -= step;
             SelectorColRow(t, "BOT DIFFICULTY", leftCol, y, out mm.deployDiffPrevButton, out mm.deployDiffNextButton, out mm.deployDiffValueText); y -= step;
+            SelectorColRow(t, "BOT TEAM MODE", leftCol, y, out mm.deployBotTeamPrevButton, out mm.deployBotTeamNextButton, out mm.deployBotTeamValueText); y -= step;
             mm.deployScoreSlider = SliderColRow(t, "SCORE LIMIT", leftCol, y, out mm.deployScoreValueText); y -= step;
             mm.deployBotsSlider = SliderColRow(t, "ENEMY BOTS", leftCol, y, out mm.deployBotsValueText);
 
@@ -852,8 +852,8 @@ namespace LR2.EditorTools
 
             Txt("Title", t, "MODE RULES & MATCH SETUP", 56f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(960f, 68f), true);
             mm.modeRulesTitleText = Txt("SubTitle", t, "1V1 DEATHMATCH  ·  COMPETITIVE RULES", 22f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(900f, 32f), false, accent);
-            CardBacking(t, "RulesLeftCard", new Vector2(0.5f, 1f), new Vector2(-448f, -404f), new Vector2(700f, 358f), accent);
-            CardBacking(t, "RulesRightCard", new Vector2(0.5f, 1f), new Vector2(392f, -404f), new Vector2(700f, 358f), accent);
+            CardBacking(t, "RulesLeftCard", new Vector2(0.5f, 1f), new Vector2(-448f, -435f), new Vector2(700f, 420f), accent);
+            CardBacking(t, "RulesRightCard", new Vector2(0.5f, 1f), new Vector2(392f, -435f), new Vector2(700f, 420f), accent);
 
             Button Tab(string label, float x)
             {
@@ -864,23 +864,24 @@ namespace LR2.EditorTools
                 return b;
             }
             mm.modeRulesDuelTab = Tab("1v1 Deathmatch", -420f);
-            mm.modeRulesCtfTab = Tab("Capture Flag DM", -140f);
+            mm.modeRulesCtfTab = Tab("Capture The Flag", -140f);
             mm.modeRulesFfaTab = Tab("Free For All", 140f);
             mm.modeRulesTdmTab = Tab("Team Deathmatch", 420f);
 
             const float leftCol = -770f;
             const float rightCol = 70f;
-            const float step = 68f;
-            float yL = -268f;
+            const float step = 62f;
+            float yL = -266f;
             mm.rulesScoreLimitSlider = SliderColRow(t, "SCORE LIMIT", leftCol, yL, out mm.rulesScoreLimitValue); yL -= step;
             mm.rulesTimeLimitSlider = SliderColRow(t, "TIME LIMIT (MIN)", leftCol, yL, out mm.rulesTimeLimitValue); yL -= step;
             mm.rulesRespawnSlider = SliderColRow(t, "RESPAWN DELAY", leftCol, yL, out mm.rulesRespawnValue); yL -= step;
             mm.rulesCountdownSlider = SliderColRow(t, "PRE-MATCH COUNTDOWN", leftCol, yL, out mm.rulesCountdownValue); yL -= step;
             SelectorColRow(t, "MODE BOT DIFFICULTY", leftCol, yL, out mm.rulesBotDiffPrevButton, out mm.rulesBotDiffNextButton, out mm.rulesBotDiffValueText);
 
-            float yR = -268f;
+            float yR = -266f;
             mm.rulesEnemyBotsSlider = SliderColRow(t, "ENEMY BOTS", rightCol, yR, out mm.rulesEnemyBotsValue); yR -= step;
             mm.rulesFriendlyBotsSlider = SliderColRow(t, "FRIENDLY BOTS", rightCol, yR, out mm.rulesFriendlyBotsValue); yR -= step;
+            SelectorColRow(t, "BOT TEAM MODE", rightCol, yR, out mm.rulesBotTeamPrevButton, out mm.rulesBotTeamNextButton, out mm.rulesBotTeamValueText); yR -= step;
             mm.rulesSeekerDronesToggle = ToggleColRow(t, "SEEKER DRONES", rightCol, yR); yR -= step;
             mm.rulesMaxOrbsSlider = SliderColRow(t, "MAX SEEKER DRONES", rightCol, yR, out mm.rulesMaxOrbsValue); yR -= step;
             mm.rulesOrbIntervalSlider = SliderColRow(t, "DRONE SPAWN INTERVAL", rightCol, yR, out mm.rulesOrbIntervalValue);

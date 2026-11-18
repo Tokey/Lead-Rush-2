@@ -653,3 +653,16 @@ Prompts about other projects were left out, and storage artifacts in the Antigra
 > i think the hold but can be solved by just placing the index finger on the right side of the gun and bringing the thumb closer. fx that immidietly now and let me know once done.
 > also report all your prompts in the board so github can be updated with those too. also copilots prompts. update github once again
 > do an asset search on the internet and on the unity repo to find better assets if available.
+
+
+## 2026-11-18 01:47–02:37 ET — Multi-Agent Sprint (`B55–B62`, 4-Agent Telemetry, Task Source & Model Switch)
+- `01:47` (B58, B59): *"the music is severely muted during gunplay"*; *"when you die while aiming down sights, after respawn it stays in ADS, and if an enemy kills you close up the gun goes through your body"*
+- `01:49` (B55): *"check LeadRushHDRP for default gun (FAL wasn't default, it was MK18 Mod or something) — make it default, keep AK-12"*
+- `01:50` (B56): *"add token usage / usage-limit info for all agents honestly"*
+- `01:54` (Codex): *"onboard Codex ASAP & give it tasks"*
+- `02:06–02:07` (B60): *"do a thorough research on hypermotion to see if any of those principles can be applied to our animation system or not? create tasks in the board, with many subtasks. also giving this to copilot."*
+- `02:16` (Task Source): *"have the source of each task also be shown on github task logs etc"*
+- `02:18` (B51, B61): *"the two CTF modes, combine them and in the settings add something to make the bots be free for all, or same team, or player team etc. also the bot should play the flag too, design smarts in it and document it too."*
+- `02:21` (B14, B62): *"killcam still not showing recoil. the look should exactly be like player. also change the bot names to real gamertags randomized. make it funny."*
+- `02:24` (B56 Model Switch): *"swtiching to hydrogen because out of argon. keep working!!!!"*
+- `02:32–02:37` (Verification): *"are u running hydrogen now? run hydrogen pls"*

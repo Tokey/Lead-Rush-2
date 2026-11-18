@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08abf749f46b7de4d8756fd48f6a454d, type: 3}
   m_Name: MatchSettings_CTF
   m_EditorClassIdentifier: LR2.Runtime::LR2.Game.MatchSettings
-  displayName: Capture The Flag DM
-  description: 'Rotating strategic flag Deathmatch. BF6 radius: close core captures
-    2.25x faster.'
+  displayName: Capture The Flag
+  description: Rotating strategic flag mode with BF6 proximity capture (2.25x in
+    2.6m core) and configurable bot teams (Squads / FFA / Pack / Co-op).
   mode: 3
   scoreLimit: 25
   timeLimitSeconds: 480
   countdownSeconds: 5
   respawnDelay: 3
-  friendlyBots: 0
+  friendlyBots: 1
   enemyBots: 3
   spawnOrbs: 1
   maxOrbs: 2

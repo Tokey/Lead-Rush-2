@@ -136,6 +136,15 @@ namespace LR2.AI
                 }
             }
 
+            // ---------------------------------------------------------- 2.5 urgent CTF flag contest (stop hostile near-capture before distant hunting)
+            var flag = LR2.Game.FlagZoneController.Instance;
+            var selfCombatant = _bot != null ? _bot.Combatant : null;
+            if (flag != null && flag.IsHostileCapturingOrContesting(selfCombatant, out float flagUrgency)
+                && flagUrgency >= 0.35f && (!bb.targetVisible || bb.targetDistance > 14f))
+            {
+                return ObjectiveFlag(bb, intent, flag, selfCombatant, now, urgent: true);
+            }
+
             // ---------------------------------------------------------- 3. engage visible / just-lost target
             if (bb.target != null && (bb.targetVisible || bb.TimeSinceSeen < 0.7f))
             {
@@ -211,33 +220,13 @@ namespace LR2.AI
                 return intent;
             }
 
-            // ---------------------------------------------------------- 6.5 active rotating Flag Zone (Capture The Flag DM)
-            var flag = LR2.Game.FlagZoneController.Instance;
+            // ---------------------------------------------------------- 6.5 active rotating Flag Zone (Smart Objective AI)
             if (flag != null)
             {
                 Vector3 fPos = flag.ActiveFlagPosition;
                 float distToFlag = Vector3.Distance(bb.position, fPos);
-                // When nobody close or not actively pinned, push into the inner BF6 capture core (<= 2.6m) for 2.25x capture speed
                 if (!bb.targetVisible && (bb.target == null || bb.TimeSinceSeen > 3.2f || distToFlag > flag.ActiveRadius * 0.7f))
-                {
-                    SetGoal(BotGoal.MoveTo, now);
-                    intent.goal = BotGoal.MoveTo;
-                    int angleSlot = (_bot != null && _bot.Combatant != null ? _bot.Combatant.DisplayName.GetHashCode() : 0) & 7;
-                    Vector3 offsetDir = Quaternion.Euler(0f, angleSlot * 45f, 0f) * Vector3.forward;
-                    float holdRad = flag.State == LR2.Game.FlagZoneController.ZoneState.Contested ? Mathf.Min(flag.ActiveRadius * 0.5f, 4.5f) : Mathf.Max(1.0f, flag.CoreRadius * 0.65f);
-                    Vector3 desired = fPos + offsetDir * holdRad;
-                    if (NavMesh.SamplePosition(desired, out var nh, 3f, NavMesh.AllAreas)) desired = nh.position;
-                    intent.hasDestination = Vector3.Distance(bb.position, desired) > 1.3f;
-                    intent.destination = desired;
-                    intent.allowSprint = distToFlag > flag.ActiveRadius + 4f;
-                    intent.crouch = distToFlag <= flag.CoreRadius + 1.2f && _cover != null && _cover.crouchCover;
-                    if (distToFlag <= flag.ActiveRadius + 1f && bb.target != null)
-                    {
-                        intent.hasLookPoint = true;
-                        intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.4f;
-                    }
-                    return intent;
-                }
+                    return ObjectiveFlag(bb, intent, flag, selfCombatant, now, urgent: false);
             }
 
             // ---------------------------------------------------------- 7. support the squad leader (TDM)
@@ -245,6 +234,60 @@ namespace LR2.AI
 
             // ---------------------------------------------------------- 8. patrol
             return Patrol(bb, intent, now);
+        }
+
+        private BotIntent ObjectiveFlag(BotBlackboard bb, BotIntent intent, LR2.Game.FlagZoneController flag, Combatant self, float now, bool urgent)
+        {
+            SetGoal(BotGoal.MoveTo, now);
+            intent.goal = BotGoal.MoveTo;
+            Vector3 fPos = flag.ActiveFlagPosition;
+            float distToFlag = Vector3.Distance(bb.position, fPos);
+            flag.CountZoneOccupants(self, out int alliesInZone, out int alliesInCore, out int hostilesInZone, out Combatant closestHostile);
+
+            int angleSlot = (self != null ? self.DisplayName.GetHashCode() : 0) & 7;
+            Vector3 offsetDir = Quaternion.Euler(0f, angleSlot * 45f, 0f) * Vector3.forward;
+            float aggression = bb.difficulty != null ? bb.difficulty.aggression : 0.55f;
+
+            Vector3 desired;
+            if (hostilesInZone > 0 || flag.State == LR2.Game.FlagZoneController.ZoneState.Contested)
+            {
+                // Contested Breach vs Tactical Ring Hold: aggressive bots crash closest hostile inside core; others pre-aim cross-pole cover
+                if (aggression >= 0.55f && closestHostile != null)
+                    desired = Vector3.Lerp(fPos, closestHostile.Position, 0.45f) + offsetDir * 0.9f;
+                else
+                    desired = fPos + offsetDir * Mathf.Min(flag.CoreRadius + 1.6f, flag.ActiveRadius * 0.5f);
+
+                intent.hasLookPoint = true;
+                Vector3 watchTarget = closestHostile != null ? closestHostile.Position : (bb.target != null ? bb.targetLastKnown : fPos);
+                intent.lookPoint = watchTarget + Vector3.up * 1.38f;
+            }
+            else if (alliesInCore < 2)
+            {
+                // Core Anchor: claim inner 2.25x proximity core slot (<= 2.6m)
+                desired = fPos + offsetDir * Mathf.Max(0.95f, flag.CoreRadius * 0.62f);
+                if (bb.target != null)
+                {
+                    intent.hasLookPoint = true;
+                    intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.4f;
+                }
+            }
+            else
+            {
+                // Perimeter Overwatch: allies already saturate 2.25x core -> fan out to outer ring and cover approach lanes
+                float watchRad = Mathf.Clamp(flag.ActiveRadius * 0.58f, flag.CoreRadius + 1.8f, 7.2f);
+                desired = fPos + offsetDir * watchRad;
+                intent.hasLookPoint = true;
+                intent.lookPoint = fPos + offsetDir * (watchRad + 10f) + Vector3.up * 1.4f;
+            }
+
+            if (NavMesh.SamplePosition(desired, out var nh, 3f, NavMesh.AllAreas)) desired = nh.position;
+            intent.hasDestination = Vector3.Distance(bb.position, desired) > 1.3f;
+            intent.destination = desired;
+            intent.allowSprint = urgent ? (distToFlag > flag.CoreRadius + 2f) : (distToFlag > flag.ActiveRadius + 3.5f);
+            intent.crouch = distToFlag <= flag.CoreRadius + 1.2f && hostilesInZone == 0 && _cover != null && _cover.crouchCover;
+            intent.target = bb.target;
+            intent.allowFire = true;
+            return intent;
         }
 
         private BotIntent Engage(BotBlackboard bb, BotIntent intent, float now, bool allowMove)
@@ -265,6 +308,21 @@ namespace LR2.AI
                 {
                     intent.hasDestination = true;
                     intent.destination = AwayFrom(bb.position, bb.targetLastKnown, 4f);
+                }
+
+                // Objective discipline: if fighting inside an active flag zone, stay anchored inside the zone instead of chasing out
+                var flag = LR2.Game.FlagZoneController.Instance;
+                if (intent.hasDestination && flag != null && Vector3.Distance(bb.position, flag.ActiveFlagPosition) <= flag.ActiveRadius + 1f)
+                {
+                    Vector3 fromFlag = intent.destination - flag.ActiveFlagPosition;
+                    fromFlag.y = 0f;
+                    float maxKeep = Mathf.Max(2f, flag.ActiveRadius * 0.85f);
+                    if (fromFlag.magnitude > maxKeep)
+                    {
+                        Vector3 clamped = flag.ActiveFlagPosition + fromFlag.normalized * maxKeep;
+                        if (NavMesh.SamplePosition(clamped, out var nh, 2.5f, NavMesh.AllAreas)) clamped = nh.position;
+                        intent.destination = clamped;
+                    }
                 }
             }
             intent.crouch = _cover != null && _cover.crouchCover && Vector3.Distance(bb.position, _cover.transform.position) < 1.2f;

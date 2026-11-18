@@ -5,6 +5,9 @@ namespace LR2.Game
 {
     public enum GameModeType { Duel, FreeForAll, TeamDeathmatch, CaptureTheFlag, FreeForAllCaptureTheFlag }
 
+    /// <summary>Configurable bot team allegiance in multi-bot modes (especially unified Capture The Flag).</summary>
+    public enum BotTeamAlignment { SquadsWithAllies = 0, FreeForAll = 1, BotsSameTeamVsPlayer = 2, AllBotsPlayerTeam = 3 }
+
     /// <summary>Per-mode customizable match rules stored persistently per GameModeType.</summary>
     [System.Serializable]
     public struct ModeRuleConfig
@@ -62,7 +65,7 @@ namespace LR2.Game
             respawnDelay = Mathf.Clamp(respawnDelay, 0f, 15f);
             countdownSeconds = Mathf.Clamp(countdownSeconds, 0f, 10f);
             enemyBots = mode == GameModeType.Duel ? 1 : Mathf.Clamp(enemyBots, 1, 8);
-            friendlyBots = mode == GameModeType.TeamDeathmatch ? Mathf.Clamp(friendlyBots, 0, 5) : 0;
+            friendlyBots = (mode == GameModeType.TeamDeathmatch || mode == GameModeType.CaptureTheFlag) ? Mathf.Clamp(friendlyBots, 0, 5) : 0;
             botDifficulty = Mathf.Clamp(botDifficulty, -1, 3);
             maxOrbs = Mathf.Clamp(maxOrbs, 1, 6);
             orbSpawnInterval = Mathf.Clamp(orbSpawnInterval, 10f, 90f);
@@ -99,7 +102,7 @@ namespace LR2.Game
         [Min(0f)] public float respawnDelay = 3f;
 
         [Header("Participants")]
-        [Tooltip("Bots on the player's team (TDM only).")]
+        [Tooltip("Bots on the player's team (TDM and Squads CTF).")]
         [Min(0)] public int friendlyBots = 1;
         [Tooltip("Enemy bots (Duel uses 1, FFA uses this as total opponents).")]
         [Min(0)] public int enemyBots = 1;
@@ -109,8 +112,20 @@ namespace LR2.Game
         [Min(0)] public int maxOrbs = 2;
         [Min(5f)] public float orbSpawnInterval = 30f;
 
-        public bool IsTeamMode => mode == GameModeType.TeamDeathmatch;
-        public bool IsFlagMode => mode == GameModeType.CaptureTheFlag || mode == GameModeType.FreeForAllCaptureTheFlag;
+        /// <summary>Effective bot team structure (follows LR2Settings.BotTeamMode for CTF, fixed for Duel/FFA/TDM).</summary>
+        public BotTeamAlignment EffectiveBotTeamAlignment => mode switch
+        {
+            GameModeType.Duel => BotTeamAlignment.BotsSameTeamVsPlayer,
+            GameModeType.FreeForAll => LR2Settings.BotTeamMode == 2 ? BotTeamAlignment.BotsSameTeamVsPlayer
+                : (LR2Settings.BotTeamMode == 3 ? BotTeamAlignment.AllBotsPlayerTeam : BotTeamAlignment.FreeForAll),
+            GameModeType.TeamDeathmatch => LR2Settings.BotTeamMode == 1 ? BotTeamAlignment.FreeForAll
+                : (BotTeamAlignment.SquadsWithAllies),
+            GameModeType.CaptureTheFlag => (BotTeamAlignment)LR2Settings.BotTeamMode,
+            _ => BotTeamAlignment.FreeForAll
+        };
+
+        public bool IsTeamMode => EffectiveBotTeamAlignment != BotTeamAlignment.FreeForAll && mode != GameModeType.Duel;
+        public bool IsFlagMode => mode == GameModeType.CaptureTheFlag;
     }
 
     /// <summary>Carries the menu's choice into the map scene (and across restarts).</summary>
@@ -144,8 +159,15 @@ namespace LR2.Game
         };
 
         private const string MapPrefKey = "LR2.SelectedMap";
-        private const string WeaponPrefKey = "LR2.SelectedPrimaryWeapon";
-        public static readonly string[] PrimaryWeaponNames = { "AK-12", "AK-74N", "MK18", "FAL" };
+        private const string WeaponPrefKey = "LR2.SelectedPrimaryWeapon.v2";
+        public static readonly string[] PrimaryWeaponNames = { "MK18", "AK-12", "AK-74N", "FAL" };
+        public static readonly string[] BotTeamModeLabels =
+        {
+            "SQUADS (ALLIES VS ENEMIES)",
+            "FREE-FOR-ALL (EVERY BOT SOLO)",
+            "ALL BOTS SAME TEAM (SOLO VS PACK)",
+            "ALL BOTS ON PLAYER TEAM (CO-OP)"
+        };
         private static MatchSettings _runtimeCopy;
 
         public static int SelectedPrimaryWeapon

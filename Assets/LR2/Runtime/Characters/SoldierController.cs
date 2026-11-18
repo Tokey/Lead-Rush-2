@@ -127,6 +127,7 @@ namespace LR2.Characters
         private Combatant _killer;
         private Vector3 _deathPos;
         private GameObject _droppedWeapon;
+        public GameObject DroppedWeapon => _droppedWeapon;
 
         private static readonly int FullBodyWeightHash = Animator.StringToHash("FullBodyWeight");
         private static readonly int SlideHash = Animator.StringToHash("Sliding");
@@ -286,8 +287,8 @@ namespace LR2.Characters
             _items.Clear();
             if (settings == null || settings.weaponPrefabs == null) return;
 
-            // Loadout slots: weaponPrefabs holds [0:AK12, 1:Mk23, 2:AK74N, 3:Mk18, 4:FAL].
-            // Equip the player's chosen primary rifle cleanly in slot 0 + Mk23 suppressed sidearm in slot 1.
+            // Loadout slots: weaponPrefabs holds [0:Mk18, 1:Mk23, 2:AK12, 3:AK74N, 4:FAL].
+            // Equip the player's chosen primary rifle cleanly in slot 0 (default = MK18 Mod 1) + Mk23 suppressed sidearm in slot 1.
             var spawnList = new List<GameObject>(2);
             if (settings.weaponPrefabs.Count >= 2)
             {
@@ -592,6 +593,28 @@ namespace LR2.Characters
 
         }
 
+        private void ForceResetAimState()
+        {
+            _isAiming = false;
+            AimBlend = 0f;
+            if (ActiveItem != null) ActiveItem.OnAimReleased();
+            if (UserInput != null)
+            {
+                UserInput.SetValue(FPSANames.IsAiming, false);
+                UserInput.SetValue("AimingWeight", 0f);
+            }
+            if (RecoilAnimation != null)
+            {
+                RecoilAnimation.isAiming = false;
+                RecoilAnimation.Stop();
+            }
+            if (ViewCamera != null && Movement != null)
+            {
+                float hipFovH = IsLocalPlayer ? LR2Settings.FieldOfView : 90f;
+                ViewCamera.fieldOfView = LR2Settings.VerticalFov(hipFovH, ViewCamera.aspect);
+            }
+        }
+
         private void OnDied(DamageInfo info)
         {
             _killer = info.attacker;
@@ -599,8 +622,7 @@ namespace LR2.Characters
             if (_firePressed && ActiveItem != null) ActiveItem.OnFireReleased();
             _firePressed = false;
             if (ActiveItem != null) ActiveItem.CancelActions();
-            _isAiming = false;
-            AimBlend = 0f;
+            ForceResetAimState();
             _switching = false;
             _input.ClearAll();
             Movement.ResetState();
@@ -628,8 +650,10 @@ namespace LR2.Characters
         {
             var item = ActiveItem;
             if (item == null) return;
-            // Visual copy only: the real item stays with the soldier (hidden) for respawn.
-            _droppedWeapon = Instantiate(item.gameObject, item.transform.position, item.transform.rotation);
+            // B59b: Spawn slightly forward/right of chest & drop forward/downward so close-range attacker fire
+            // never drives the dropped weapon backwards through the victim's torso.
+            Vector3 dropPos = transform.position + Vector3.up * 1.12f + transform.forward * 0.28f + transform.right * 0.16f;
+            _droppedWeapon = Instantiate(item.gameObject, dropPos, item.transform.rotation);
             foreach (var b in _droppedWeapon.GetComponentsInChildren<MonoBehaviour>(true)) Destroy(b);
             foreach (var a in _droppedWeapon.GetComponentsInChildren<Animator>(true)) Destroy(a);
             foreach (var l in _droppedWeapon.GetComponentsInChildren<Light>(true)) Destroy(l);
@@ -642,8 +666,8 @@ namespace LR2.Characters
             box.size = new Vector3(0.08f, 0.2f, 0.8f);
             var rb = _droppedWeapon.AddComponent<Rigidbody>();
             rb.mass = 3.5f;
-            rb.linearVelocity = info.direction * 1.5f + Vector3.up * 1.2f;
-            rb.angularVelocity = UnityEngine.Random.insideUnitSphere * 4f;
+            rb.linearVelocity = transform.forward * 0.9f + transform.right * 0.55f + Vector3.up * 0.85f;
+            rb.angularVelocity = UnityEngine.Random.insideUnitSphere * 3.5f;
             Destroy(_droppedWeapon, droppedWeaponLifetime);
             item.gameObject.SetActive(false);
         }
@@ -719,8 +743,7 @@ namespace LR2.Characters
             Movement.enabled = true;
             Teleport(position, yaw);
             _flinch = _flinchVel = _kick = _kickApplied = Vector2.zero;
-            _isAiming = false;
-            AimBlend = 0f;
+            ForceResetAimState();
             _firePressed = false;
             _switching = false;
             _sprintOutUntil = 0f;
@@ -729,6 +752,7 @@ namespace LR2.Characters
             if (Health != null) Health.Revive();
             RefillAmmo();
             EquipImmediate(0);
+            ForceResetAimState();
             if (Combatant != null) Combatant.SpawnTime = Time.time;
             ConfigureRole();
             Respawned?.Invoke(this);
