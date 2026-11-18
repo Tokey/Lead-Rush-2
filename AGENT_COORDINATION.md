@@ -68,7 +68,7 @@ BUDGET: Claude LOW, handing off (00:44) · Gemini OK (00:59) · Copilot ?   <- e
 |---|---|---|---|---|
 | Claude | OUT soon (tokens) | handed everything off (HANDOFF section) | resumes via its 20-min tick after the reset; verify B53 & sync `claude.ai` artifact (`R13`) | 00:45 |
 | Gemini (LEAD) | READY / MONITORING | Completed `B53` (human miss pattern + 3-tab HTML + 9 1:1 GIFs), `R12`, `B26`, `B49`, `B50`, `B51` (FFA CTF); `dotnet build` 0 err; assigned `R14` to Copilot | Visible pose-check (`-lr2Weapon`), `BuildAllBatch`, `P3` 4-map flush & Windows build once Unity `PID 29780` exits | 01:24 |
-| Copilot | IN PROGRESS | B40/B52/B44/B45/B48/P1/P2/P4/P5 reviewed; B53 runtime update reviewed | Continue READY-row review; no Unity launch while editors are live | 01:08 |
+| Copilot | IN PROGRESS | R14 cross-review: B53/B52/B51/B49/B50/B26/R12 code/docs verified; remaining visual rows bounded | R8 commit/push after documentation and ledger updates; no Unity launch while editors are live | 01:33 |
 
 ## 2. Needs the user
 
@@ -394,3 +394,5 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Copilot gpt-5.6-luna 01:07] [REVIEW] Reviewed B53's new runtime diff: `_perceivedTargetVel`, 125 ms lag, anisotropic covariance and horizontal/vertical asymmetry compile in both assemblies; left it IN PROGRESS pending its HTML/documentation surfaces. Verified docs/spec rows B45, B48, P1, P2, P4 and P5 against repository evidence.
 - [Copilot gpt-5.6-luna 01:08] [REVIEW] [B40 VERIFIED (code)] Confirmed the bounded HDRP local fog, particle atmosphere and reactive force-field implementation; runtime/editor builds pass. Per-map placement and visible readability remain with Gemini.
 - [Copilot gpt-5.6-luna 01:09] [PUSH] `8a023ff` pushed: B40 atmosphere code verification and the catch-up review ledger updates. Both assemblies pass.
+- [Copilot gpt-5.6-luna 01:33] [R14 REVIEW] Verified B53/B52/B51/B49/B50/B26 and R12 against source: the three-tab HTML exposes `#components`, `#nav`, `#miss`, modes/CTF/chat and AI lab; its perception, 125 ms velocity lag, Fitts, recoil, and dual-pathfinding claims match the reviewed C#; all nine GIFs exist with `loop=0`; FFA CTF keeps per-combatant progress and awards the individual capturer; per-gun grip offsets, Humanoid controllers/profiles, pose selector, reduced walk bob, replay overlay guards and auto-refresh lock compile cleanly. B4/B8/B14/B19/B31/B36/B39/B41/B43 remain visual/audio or integration checks, not falsely marked verified without Unity.
+- [Copilot gpt-5.6-luna 01:33] [R14 DOCS] Updated `Docs/PROJECT_HISTORY.md` and `Docs/TOOLING.md` for FFA CTF, `-lr2Weapon <id>`, the nine bot GIFs and the three-tab manual. R8 gate: `dotnet build LR2.Runtime.csproj -nologo -v q` and `dotnet build LR2.Editor.csproj -nologo -v q` both pass with 0 warnings/errors; Unity PID 29780 remains open, so no Unity launch.

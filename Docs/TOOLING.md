@@ -22,6 +22,21 @@ Run commands from the Unity project root unless a command explicitly names a pro
 | First-person pose check | Samples reload, idle, ADS, gait, hand and rig alignment | `LR2SmokeTest` `-lr2PoseCheck` flags | `Logs/LR2_PoseCheck` reports and screenshots |
 | HDRP fidelity screenshot runner | Captures separated lighting, texture and VFX views | `LR2.EditorTools.LR2FidelityScreenshotRunner` when available | PNG captures and scene diagnostics |
 
+## Bot explainer manual and media
+
+- [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html) is the three-tab interactive manual:
+  Bot Brain/Aim Lab, Game Modes/CTF/Chat, and AI Build/Research Lab.
+- `Tools\make_bot_gifs.py` regenerates the nine looping 1:1 explainer GIFs in
+  `Docs\Media\bot\`, including `watch-a-bot-play.gif`, perception, Fitts flick,
+  human miss pattern, recoil, adaptive skill, dual pathfinding, CTF/chat, and the
+  multi-agent workflow.
+- Select a weapon for a pose run with `-lr2Weapon <id>` (`AK12`, `Mk23`, `AK74N`,
+  `Mk18`, or `FAL`). The harness captures hand close-ups plus idle, ADS, gait and
+  reload views for the selected weapon.
+- The game-mode builder includes Free-for-All CTF (`GameModeType.FreeForAllCaptureTheFlag`);
+  `FlagZoneController` tracks each combatant's independent capture progress and
+  `MatchManager` awards the capture to that individual.
+
 ## Compile and visible Unity checks
 
 - Runtime assembly:

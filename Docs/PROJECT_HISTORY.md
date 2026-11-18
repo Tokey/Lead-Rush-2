@@ -34,7 +34,11 @@ points in `Assets/` for compatibility while moving active gameplay onto the LR2 
 - **2026-11-17 late evening:** Copilot joined for laser, audio, bot-AI documentation,
   glass, typography research, QA and world/atmosphere components.
 - **2026-11-18:** protocol v3 added clocked work, process locks, measured cross-review
-  ledgers and bug-first lane priorities.
+  ledgers and bug-first lane priorities. The rebuild also added Free-for-All Capture
+  the Flag (per-combatant capture progress and scoring), the `-lr2Weapon <id>` pose
+  check selector for per-gun first-person verification, nine looping 1:1 bot-AI
+  explainer GIFs, and the three-tab interactive manual at
+  [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html).
 
 ## What LR2 added
 
