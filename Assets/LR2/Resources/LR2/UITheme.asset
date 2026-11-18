@@ -19,6 +19,6 @@ MonoBehaviour:
   textDim: {r: 1, g: 1, b: 1, a: 0.55}
   panel: {r: 0.03, g: 0.04, b: 0.05, a: 0.62}
   warning: {r: 1, g: 0.55, b: 0.1, a: 1}
-  headingFont: {fileID: 11400000, guid: fdd4dbc6a2930324a803620b7ff3071f, type: 2}
+  headingFont: {fileID: 11400000, guid: e5ca16fe2b86dd94a95f5029b86f8572, type: 2}
   bodyFont: {fileID: 11400000, guid: 0fdb5837ba8d9ee4db4bd0898664c65b, type: 2}
   numberFont: {fileID: 11400000, guid: 8826780deb8b1e942a4ce47dacc4dbcd, type: 2}

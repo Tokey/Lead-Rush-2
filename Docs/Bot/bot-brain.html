@@ -1,0 +1,576 @@
+<title>LR2 Bot Brain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column of field-manual chapters; each chapter pairs plain-language text with a live "instrument" (canvas + controls) driven by the bot's real formulas. */
+:root {
+  --bg: #eceee9; --panel: #f7f8f4; --ink: #141714; --ink-2: #4f564f; --line: #c8cdc5; --grid: #dfe3dc;
+  --accent: #c84a12; --bot: #2c6aa0; --good: #2f7d3a; --bad: #b3261e; --warn: #9a6b00;
+  --display: "Saira Stencil One", "Barlow Condensed", Impact, sans-serif;
+  --label: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111512; --panel: #181e1a; --ink: #e6ebe4; --ink-2: #a3ada2; --line: #2d3630; --grid: #222a24;
+  --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a; --bad: #ff6b60; --warn: #e2b54a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111512; --panel: #181e1a; --ink: #e6ebe4; --ink-2: #a3ada2; --line: #2d3630; --grid: #222a24;
+  --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a; --bad: #ff6b60; --warn: #e2b54a; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font: 400 clamp(40px, 7vw, 68px)/1 var(--display); margin: 0; letter-spacing: .5px; text-wrap: balance }
+h2 { font: 700 30px/1.1 var(--label); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; text-wrap: balance }
+h3 { font: 600 18px/1.2 var(--label); text-transform: uppercase; letter-spacing: .8px; margin: 0 }
+p { margin: 0 0 10px; max-width: 68ch }
+.lede { font-size: 17px; color: var(--ink-2); max-width: 64ch; margin-top: 12px }
+.tag { font: 600 13px/1 var(--label); text-transform: uppercase; letter-spacing: 1.4px; color: var(--accent) }
+code, .mono { font-family: var(--mono); font-size: 13px }
+section { display: grid; gap: 14px; padding-block: 34px; border-top: 1px solid var(--line) }
+.chapter-head { display: grid; gap: 4px }
+.instrument { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px }
+@media (max-width: 760px) { .instrument { grid-template-columns: minmax(0, 1fr) } }
+canvas { width: 100%; display: block; touch-action: none; border-radius: 4px }
+.controls { display: grid; gap: 10px; align-content: start; min-width: 0 }
+.ctl { display: grid; gap: 2px }
+.ctl label, .ctl .lbl { font: 600 13px/1.2 var(--label); text-transform: uppercase; letter-spacing: 1px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px }
+.ctl output { font: 500 13px var(--mono); color: var(--ink); text-transform: none; letter-spacing: 0 }
+input[type=range] { width: 100%; accent-color: var(--accent) }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px }
+.checks label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
+button { font: 600 14px/1 var(--label); text-transform: uppercase; letter-spacing: 1px; color: var(--bg); background: var(--ink); border: 0; border-radius: 4px; padding: 9px 12px; cursor: pointer }
+button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line) }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+select { font: 14px var(--body); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 5px }
+.readout { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px }
+.stat { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0 }
+.stat .k { font: 600 12px/1.2 var(--label); text-transform: uppercase; letter-spacing: 1px; color: var(--ink-2) }
+.stat .v { font: 500 18px/1.3 var(--mono); font-variant-numeric: tabular-nums }
+.note { font-size: 13px; color: var(--ink-2) }
+.pill { display: inline-block; font: 600 12px/1 var(--label); text-transform: uppercase; letter-spacing: 1px; padding: 4px 7px; border-radius: 3px; border: 1px solid currentColor }
+.on { color: var(--good) } .off { color: var(--bad) } .warn { color: var(--warn) }
+/* pipeline */
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 18px }
+@media (max-width: 760px) { .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: grid; gap: 4px; min-width: 0 }
+.stage .rate { font: 500 12px var(--mono); color: var(--ink-2) }
+.led { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: inline-block; vertical-align: middle; margin-right: 6px; transition: background .08s }
+.led.hot { background: var(--accent) }
+.stage .count { font: 500 13px var(--mono); font-variant-numeric: tabular-nums }
+.commander { margin-top: 10px; background: var(--panel); border: 1px dashed var(--line); border-radius: 6px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center }
+/* brain */
+.goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.goal { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: start; border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; color: var(--ink-2) }
+.goal .n { font: 600 14px/1.4 var(--mono); }
+.goal b { font: 600 15px/1.3 var(--label); text-transform: uppercase; letter-spacing: .8px; color: var(--ink-2) }
+.goal .why { font-size: 13px }
+.goal.win { border-color: var(--accent); color: var(--ink); box-shadow: inset 4px 0 0 var(--accent) }
+.goal.win b { color: var(--accent) }
+.goal.skip { opacity: .55 }
+pre.code { margin: 0; overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; font: 13px/1.5 var(--mono) }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr) } }
+ol.refs { font-size: 13px; color: var(--ink-2); padding-left: 20px }
+a { color: var(--bot) }
+@media (prefers-reduced-motion: reduce) { .led { transition: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="tag">LeadRush 2 · Bot field manual</div>
+    <h1>LR2 Bot Brain</h1>
+    <p class="lede">How the LeadRush 2 bots see you, decide what to do, aim, fight recoil and adapt to you. Every simulation below runs the same
+      formulas and constants as the game code (<code>Assets/LR2/Runtime/AI</code>), so you can poke at the real behaviour instead of a cartoon of it.</p>
+    <div class="pipe" id="pipe">
+      <div class="stage"><h3><span class="led" data-led="perc"></span>Perception</h3><div class="rate">every 0.1 s (10 Hz)</div><div class="count" id="c-perc">0 looks</div><div class="note">Vision rays, hearing, memory, team callouts</div></div>
+      <div class="stage"><h3><span class="led" data-led="bb"></span>Blackboard</h3><div class="rate">shared state</div><div class="count" id="c-bb">0 updates</div><div class="note">Health, ammo, best target, last-known position</div></div>
+      <div class="stage"><h3><span class="led" data-led="brain"></span>Brain</h3><div class="rate">every ~0.25 s (4 Hz)</div><div class="count" id="c-brain">0 decisions</div><div class="note">Picks one goal in priority order</div></div>
+      <div class="stage"><h3><span class="led" data-led="ctl"></span>Controller</h3><div class="rate">every frame</div><div class="count" id="c-ctl">0 frames</div><div class="note">Steering, aim, trigger, stance</div></div>
+      <div class="stage"><h3><span class="led" data-led="sold"></span>Soldier</h3><div class="rate">same as yours</div><div class="count" id="c-sold">same code</div><div class="note">Physics, recoil, reload and hitboxes as the player</div></div>
+    </div>
+    <div class="commander"><span class="led" data-led="cmd"></span><b class="tag" style="color:var(--ink)">Commander hook</b><span class="mono">every 1.5 s</span><span class="note">An external brain (for example an LLM) can give orders here; aim and movement stay human-limited.</span><span class="count mono" id="c-cmd">0 polls</span></div>
+  </header>
+
+  <section id="see">
+    <div class="chapter-head"><div class="tag">Chapter 1 · Perception</div><h2>Seeing you</h2>
+      <p>The bot looks every 0.1 s. You are visible when you are inside its vision cone, within range and not behind a wall. Visibility fills a
+        <b>detection meter</b>; at 1.0 the bot has spotted you. Closer, moving and recently-firing targets fill it faster, crouching slows it, and
+        within 6 m anything within 100° of its gaze counts, because you notice someone right next to you. <b>Drag the orange dot</b> to move.</p></div>
+    <div class="instrument">
+      <canvas id="cv-see" aria-label="Top-down view of the bot's vision cone and the player"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="see-gaze">Bot gaze <output id="o-gaze"></output></label><input id="see-gaze" type="range" min="-180" max="180" value="0"></div>
+        <div class="ctl"><label for="see-fov">Field of view <output id="o-fov"></output></label><input id="see-fov" type="range" min="95" max="132" value="110"></div>
+        <div class="ctl"><label for="see-spd">Detection speed <output id="o-spd"></output></label><input id="see-spd" type="range" min="80" max="138" value="100"></div>
+        <div class="ctl"><label for="see-react">Base reaction <output id="o-react"></output></label><input id="see-react" type="range" min="16" max="76" value="40"></div>
+        <div class="checks"><label><input id="see-crouch" type="checkbox"> Crouched</label><label><input id="see-sprint" type="checkbox"> Moving fast</label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="see-fire" type="button">Fire a shot</button><button id="see-reset" type="button" class="ghost">Reset meter</button></div>
+        <div class="readout">
+          <div class="stat"><div class="k">State</div><div class="v" id="r-state">-</div></div>
+          <div class="stat"><div class="k">Distance</div><div class="v" id="r-dist">-</div></div>
+          <div class="stat"><div class="k">Off gaze</div><div class="v" id="r-ang">-</div></div>
+          <div class="stat"><div class="k">Fill rate</div><div class="v" id="r-rate">-</div></div>
+          <div class="stat"><div class="k">Meter</div><div class="v" id="r-meter">-</div></div>
+          <div class="stat"><div class="k">Reacts after</div><div class="v" id="r-react">-</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Fill rate per second = detection speed × (0.9 + 9 / distance), × 1.35 if you move faster than 2 m/s, × 2.2 for 1 s after a loud shot,
+      × 1.4 within 12° of its gaze, × 0.7 if crouched. Out of sight it drains at 0.5/s, and the bot forgets you after 12 s. Its first shot also waits a
+      reaction time that grows from 0.76× (you were already in view) to 1.58× (you appeared far to the side). <span class="mono">BotPerception.cs</span></p>
+  </section>
+
+  <section id="decide">
+    <div class="chapter-head"><div class="tag">Chapter 2 · Decision</div><h2>Choosing what to do</h2>
+      <p>About four times a second the brain walks down a fixed priority list and takes the first goal whose conditions hold. Set up a situation on the
+        right and watch which goal wins, and why the ones above it were skipped.</p></div>
+    <div class="instrument">
+      <ol class="goals" id="goals"></ol>
+      <div class="controls">
+        <div class="ctl"><label for="b-hp">Bot health <output id="o-hp"></output></label><input id="b-hp" type="range" min="1" max="100" value="80"></div>
+        <div class="ctl"><label for="b-dist">Target distance <output id="o-bdist"></output></label><input id="b-dist" type="range" min="2" max="60" value="22"></div>
+        <div class="ctl"><label for="b-seen">Seconds since seen <output id="o-seen"></output></label><input id="b-seen" type="range" min="0" max="15" step="0.5" value="0"></div>
+        <div class="ctl"><label for="b-anchor">Target camping on one spot <output id="o-anchor"></output></label><input id="b-anchor" type="range" min="0" max="12" step="0.5" value="2"></div>
+        <div class="checks">
+          <label><input id="b-target" type="checkbox" checked> Has a target</label>
+          <label><input id="b-visible" type="checkbox" checked> Target visible</label>
+          <label><input id="b-hurt" type="checkbox"> Just got hit</label>
+          <label><input id="b-reload" type="checkbox"> Reloading</label>
+          <label><input id="b-noise" type="checkbox"> Heard a noise</label>
+          <label><input id="b-squad" type="checkbox"> Has a squad leader</label>
+          <label><input id="b-flag" type="checkbox"> CTF flag zone active</label>
+        </div>
+        <div class="ctl"><label for="b-order">Commander order</label>
+          <select id="b-order"><option value="">None (free roam)</option><option>HoldPosition</option><option>MoveTo</option><option>Attack</option><option>Flank</option><option>Retreat</option><option>FollowLeader</option></select></div>
+        <div class="note">Chances such as "take cover 60%" and "flank" use the difficulty's dice; the list shows when a goal is allowed to roll.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="aim">
+    <div class="chapter-head"><div class="tag">Chapter 3 · Motor control</div><h2>Aiming like a hand</h2>
+      <p>Bots never snap. A big turn onto you is a quick <b>ballistic flick</b> whose duration follows <b>Fitts's law</b> (far and small targets take
+        longer), shaped like a human arm movement (the <b>minimum-jerk</b> curve: slow, fast, slow), landing with some scatter. Then a feedback loop
+        corrects onto the target, with a little tremor that grows with fast movements. Faint lines are other attempts with different scatter.</p></div>
+    <div class="instrument">
+      <div style="display:grid;gap:8px;min-width:0"><canvas id="cv-aim" aria-label="Aim error over time for a flick"></canvas><canvas id="cv-vel" aria-label="Turn speed over time"></canvas></div>
+      <div class="controls">
+        <div class="ctl"><label for="a-d">Turn needed <output id="o-d"></output></label><input id="a-d" type="range" min="12" max="120" value="60"></div>
+        <div class="ctl"><label for="a-dist">Target distance <output id="o-adist"></output></label><input id="a-dist" type="range" min="5" max="60" value="20"></div>
+        <div class="ctl"><label for="a-w">Aim speed (skill) <output id="o-w"></output></label><input id="a-w" type="range" min="44" max="102" value="70"></div>
+        <div class="ctl"><label for="a-stress">Combat stress <output id="o-stress"></output></label><input id="a-stress" type="range" min="0" max="100" value="20"></div>
+        <div class="checks"><label><input id="a-head" type="checkbox"> Aiming at the head</label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="a-go" type="button">Flick again</button></div>
+        <div class="readout">
+          <div class="stat"><div class="k">Difficulty (ID)</div><div class="v" id="r-id">-</div></div>
+          <div class="stat"><div class="k">Flick time</div><div class="v" id="r-mt">-</div></div>
+          <div class="stat"><div class="k">Landing error</div><div class="v" id="r-land">-</div></div>
+          <div class="stat"><div class="k">On target at</div><div class="v" id="r-on">-</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">ID = log₂(1 + D / W) bits; flick time = (65 ms + 42 ms × ID) × skill scale, clamped to 85-380 ms; landing scatter grows with the turn
+      size and stress. Tracking is a damped spring (ω = aim speed, ζ = 0.8 while fighting). Turn rate is capped at 720°/s. <span class="mono">BotController.cs · UpdateAim</span></p>
+  </section>
+
+  <section id="recoil">
+    <div class="chapter-head"><div class="tag">Chapter 4 · Recoil</div><h2>Fighting recoil</h2>
+      <p>The bot's gun climbs exactly like yours. It only starts pulling down after a human reaction delay (65-135 ms), and the longer it sprays the
+        worse its pull-down gets ("spray heat"). That leaves a window where its shots go high: your counter-play.</p></div>
+    <div class="instrument">
+      <canvas id="cv-rec" aria-label="Muzzle climb during a ten-shot spray"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="rc-w">Aim speed (skill) <output id="o-rcw"></output></label><input id="rc-w" type="range" min="44" max="102" value="70"></div>
+        <div class="ctl"><label for="rc-shots">Shots in the spray <output id="o-shots"></output></label><input id="rc-shots" type="range" min="3" max="20" value="10"></div>
+        <div class="checks"><label><input id="rc-ads" type="checkbox" checked> Aiming down sights</label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="rc-go" type="button">Spray again</button></div>
+        <div class="readout">
+          <div class="stat"><div class="k">Peak climb</div><div class="v" id="r-peak">-</div></div>
+          <div class="stat"><div class="k">Without pull-down</div><div class="v" id="r-raw">-</div></div>
+          <div class="stat"><div class="k">Reaction delay</div><div class="v" id="r-delay">-</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">AK-12 climb ≈ 1.05° per shot from the hip (× 0.55 in ADS) at 700 rounds/min. Pull-down strength = clamp(aim speed / 10.5, 0.55-0.92) ×
+      (1 − 0.22 × spray heat); heat rises 0.19 per shot from the hip, 0.13 in ADS, and cools at 0.95/s.</p>
+  </section>
+
+  <section id="adapt">
+    <div class="chapter-head"><div class="tag">Chapter 5 · Adaptive difficulty</div><h2>Learning your style</h2>
+      <p>On <b>Adaptive</b>, bots read how you play. Win duels and they sharpen; lose a few and they ease off, so fights stay close. Your accuracy,
+        headshots and whether you rush or camp also shape how they fight. Play a few duels with the buttons.</p></div>
+    <div class="instrument">
+      <div style="display:grid;gap:10px;min-width:0">
+        <canvas id="cv-skill" aria-label="Bot skill over the duels played"></canvas>
+        <div class="readout" id="adapt-out"></div>
+      </div>
+      <div class="controls">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="ad-win" type="button">You win a duel</button>
+          <button id="ad-hs" type="button">You win with a headshot</button>
+          <button id="ad-lose" type="button" class="ghost">You lose a duel</button>
+          <button id="ad-reset" type="button" class="ghost">New match</button>
+        </div>
+        <div class="ctl"><label for="ad-acc">Your accuracy <output id="o-acc"></output></label><input id="ad-acc" type="range" min="5" max="60" value="25"></div>
+        <div class="ctl"><label for="ad-hsr">Your headshot rate <output id="o-hsr"></output></label><input id="ad-hsr" type="range" min="0" max="50" value="12"></div>
+        <div class="ctl"><label for="ad-rush">Rusher or camper <output id="o-rush"></output></label><input id="ad-rush" type="range" min="0" max="100" value="50"></div>
+        <div class="ctl"><label for="ad-crouch">How often you crouch <output id="o-crouch"></output></label><input id="ad-crouch" type="range" min="0" max="100" value="25"></div>
+        <p class="note">Skill moves +0.045 per win (+0.03 on a streak, +0.02 for a headshot, + a little for accuracy) and −0.040 per loss
+          (−0.035 more on a losing streak), always between 0.12 and 0.96. <span class="mono">AdaptiveDifficultyTracker.cs</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="llm">
+    <div class="chapter-head"><div class="tag">Chapter 6 · Next</div><h2>Plugging in an LLM</h2>
+      <p>The plan is LLM-driven bots for team deathmatch. The language model never steers the crosshair: it reads a compact state summary every 1.5 s
+        and gives orders, while the human-limited aim and movement above stay in charge of the hands. A full replacement brain is also possible.</p></div>
+    <div class="two">
+      <div><h3 style="margin-bottom:6px">What the model reads</h3>
+<pre class="code">{
+  "goal": "Engage",
+  "health": 64, "ammo": 40, "reloading": false,
+  "underFire": true,
+  "target": { "name": "Operator", "visible": true,
+              "distance": 18.4, "position": [12.1, 0.0, -3.7],
+              "secondsSinceSeen": 0.0 },
+  "knownEnemies": 2,
+  "directive": "None"
+}</pre><p class="note">Example of <code>Blackboard.ToJson(...)</code> (values illustrative).</p></div>
+      <div><h3 style="margin-bottom:6px">How it gives orders</h3>
+<pre class="code">class LlmCommander : MonoBehaviour, IBotDirectiveProvider {
+  public bool TryGetDirective(BotController bot,
+      BotBlackboard bb, out BotDirective d) {
+    // ask the model, map the reply to an order
+    d = new BotDirective { order = BotOrder.Flank,
+                           duration = 8f };
+    return true;
+  }
+}</pre><p class="note">Orders: HoldPosition, MoveTo, Attack, Flank, Retreat, FollowLeader. Or implement <code>IBotBrain</code> to replace the whole decision layer.</p></div>
+    </div>
+  </section>
+
+  <section id="refs">
+    <div class="chapter-head"><div class="tag">Sources</div><h2>Where the ideas come from</h2></div>
+    <ol class="refs">
+      <li>Fitts, P. M. (1954). The information capacity of the human motor system in controlling the amplitude of movement. <i>J. Experimental Psychology</i> 47(6).</li>
+      <li>MacKenzie, I. S. (1992). Fitts' law as a research and design tool in human-computer interaction. <i>HCI</i> 7(1).</li>
+      <li>Flash, T. &amp; Hogan, N. (1985). The coordination of arm movements: an experimentally confirmed mathematical model. <i>J. Neuroscience</i> 5(7).</li>
+      <li>Meyer, D. E. et al. (1988). Optimality in human motor performance: ideal control of rapid aimed movements. <i>Psychological Review</i> 95(3).</li>
+      <li>Harris, C. M. &amp; Wolpert, D. M. (1998). Signal-dependent noise determines motor planning. <i>Nature</i> 394.</li>
+      <li>Schrum, J., Karpov, I. V. &amp; Miikkulainen, R. (2012). Humanlike combat behavior via multiobjective neuroevolution. In <i>Believable Bots</i>, Springer.</li>
+    </ol>
+    <p class="note">Built from the LeadRush 2 source on 2026-11-18. Code: <span class="mono">BotPerception.cs</span>, <span class="mono">TacticalBotBrain.cs</span>,
+      <span class="mono">BotController.cs</span>, <span class="mono">AdaptiveDifficultyTracker.cs</span>, <span class="mono">BotTypes.cs</span>.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function fit(cv, aspect) {
+    const w = Math.max(240, cv.parentElement.clientWidth || 600), h = Math.round(w * aspect), d = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); cv.style.height = h + 'px'; }
+    const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return { ctx, w, h };
+  }
+  const redrawers = [];
+  const redrawAll = () => redrawers.forEach(f => f());
+  new ResizeObserver(redrawAll).observe(document.body);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+  new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------------- pipeline ticks (real rates) ----------------
+  const counts = { perc: 0, bb: 0, brain: 0, ctl: 0, cmd: 0 };
+  function flash(key) { if (reduce) return; const el = document.querySelector(`[data-led="${key}"]`); if (!el) return; el.classList.add('hot'); setTimeout(() => el.classList.remove('hot'), 60); }
+  setInterval(() => { counts.perc++; counts.bb++; $('c-perc').textContent = counts.perc + ' looks'; $('c-bb').textContent = counts.bb + ' updates'; flash('perc'); flash('bb'); }, 100);
+  setInterval(() => { counts.brain++; $('c-brain').textContent = counts.brain + ' decisions'; flash('brain'); }, 250);
+  setInterval(() => { counts.cmd++; $('c-cmd').textContent = counts.cmd + ' polls'; flash('cmd'); }, 1500);
+  (function frameLoop() { counts.ctl++; if (counts.ctl % 6 === 0) { $('c-ctl').textContent = counts.ctl + ' frames'; flash('ctl'); flash('sold'); } requestAnimationFrame(frameLoop); })();
+
+  // ---------------- chapter 1: perception ----------------
+  const W = 32, H = 18, bot = { x: 5, y: 9 };
+  const walls = [{ x: 12, y: 1.5, w: 1.2, h: 6.5 }, { x: 18.5, y: 10.5, w: 7, h: 1.2 }, { x: 12, y: 12.5, w: 1.2, h: 4 }];
+  const pl = { x: 22, y: 5 };
+  let meter = 0, lastShot = -99, spotted = false, reactAt = null, simTime = 0;
+  const segRect = (ax, ay, bx, by, r) => {
+    let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
+    const clip = (p, q) => { if (p === 0) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+    return clip(-dx, ax - r.x) && clip(dx, r.x + r.w - ax) && clip(-dy, ay - r.y) && clip(dy, r.y + r.h - ay) && t0 <= t1;
+  };
+  function seeState() {
+    const gaze = +$('see-gaze').value * Math.PI / 180, halfFov = +$('see-fov').value / 2;
+    const dx = pl.x - bot.x, dy = pl.y - bot.y, dist = Math.hypot(dx, dy);
+    let ang = Math.abs((Math.atan2(dy, dx) - gaze) * 180 / Math.PI) % 360; if (ang > 180) ang = 360 - ang;
+    const inCone = ang <= halfFov || (dist < 6 && ang < 100);
+    const blocked = walls.some(r => segRect(bot.x, bot.y, pl.x, pl.y, r));
+    const visible = inCone && !blocked && dist <= 70;
+    let rate = (+$('see-spd').value / 100) * (0.9 + 9 / Math.max(dist, 1.5));
+    if ($('see-sprint').checked) rate *= 1.35;
+    if (simTime - lastShot < 1) rate *= 2.2;
+    if (ang < 12) rate *= 1.4;
+    if ($('see-crouch').checked) rate *= 0.7;
+    return { dist, ang, inCone, blocked, visible, rate, gaze, halfFov };
+  }
+  function stepSee(dt) {
+    simTime += dt; const s = seeState();
+    if (s.visible) meter = Math.min(1.25, meter + s.rate * dt); else meter = Math.max(0, meter - 0.5 * dt);
+    if (!spotted && meter >= 1) { spotted = true; const ecc = lerp(0.76, 1.58, clamp(s.ang / 115, 0, 1)); reactAt = (+$('see-react').value / 100) * ecc; }
+    if (spotted && meter <= 0.05) { spotted = false; reactAt = null; }
+    return s;
+  }
+  function drawSee(s = seeState()) {
+    const cv = $('cv-see'), { ctx, w, h } = fit(cv, H / W), k = w / W;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent'), good = css('--good'), bad = css('--bad');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) { ctx.moveTo(x * k, 0); ctx.lineTo(x * k, h); } for (let y = 0; y <= H; y += 2) { ctx.moveTo(0, y * k); ctx.lineTo(w, y * k); } ctx.stroke();
+    // vision cone
+    const R = 26 * k; ctx.fillStyle = botC; ctx.globalAlpha = 0.13; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k);
+    ctx.arc(bot.x * k, bot.y * k, R, s.gaze - s.halfFov * Math.PI / 180, s.gaze + s.halfFov * Math.PI / 180); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.08; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.arc(bot.x * k, bot.y * k, 6 * k, s.gaze - 100 * Math.PI / 180, s.gaze + 100 * Math.PI / 180); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 6 * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = ink2; walls.forEach(r => ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k));
+    // sight line
+    ctx.strokeStyle = s.visible ? good : bad; ctx.lineWidth = 2; ctx.setLineDash(s.visible ? [] : [6, 5]);
+    ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(pl.x * k, pl.y * k); ctx.stroke(); ctx.setLineDash([]);
+    // bot
+    ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = botC; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(bot.x * k + Math.cos(s.gaze) * 22, bot.y * k + Math.sin(s.gaze) * 22); ctx.stroke();
+    // player
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, $('see-crouch').checked ? 6 : 8, 0, Math.PI * 2); ctx.fill();
+    if (simTime - lastShot < 1) { ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, 14 + (simTime - lastShot) * 30, 0, Math.PI * 2); ctx.stroke(); }
+    // meter bar
+    const bx = 10, by = h - 22, bw = Math.min(220, w - 20), bh = 10;
+    ctx.fillStyle = grid; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = spotted ? bad : acc; ctx.fillRect(bx, by, bw * meter / 1.25, bh);
+    ctx.strokeStyle = ink; ctx.beginPath(); ctx.moveTo(bx + bw / 1.25, by - 3); ctx.lineTo(bx + bw / 1.25, by + bh + 3); ctx.stroke();
+    ctx.fillStyle = ink; ctx.font = '12px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
+    ctx.fillStyle = ink2; ctx.fillText('6 m', bot.x * k + 6 * k * 0.72, bot.y * k - 6 * k * 0.72);
+    // readouts
+    $('r-state').innerHTML = spotted ? '<span class="off">Spotted</span>' : (s.visible ? '<span class="warn">Seeing</span>' : (s.blocked ? 'Behind cover' : 'Out of view'));
+    $('r-dist').textContent = s.dist.toFixed(1) + ' m'; $('r-ang').textContent = s.ang.toFixed(0) + '°';
+    $('r-rate').textContent = s.visible ? s.rate.toFixed(2) + '/s' : '-0.50/s'; $('r-meter').textContent = meter.toFixed(2);
+    $('r-react').textContent = reactAt != null ? reactAt.toFixed(2) + ' s' : '-';
+  }
+  ['see-gaze', 'see-fov', 'see-spd', 'see-react'].forEach(id => $(id).addEventListener('input', () => { $('o-gaze').textContent = $('see-gaze').value + '°'; $('o-fov').textContent = $('see-fov').value + '°'; $('o-spd').textContent = (+$('see-spd').value / 100).toFixed(2) + '×'; $('o-react').textContent = (+$('see-react').value / 100).toFixed(2) + ' s'; drawSee(); }));
+  $('see-gaze').dispatchEvent(new Event('input'));
+  $('see-fire').onclick = () => { lastShot = simTime; };
+  $('see-reset').onclick = () => { meter = 0; spotted = false; reactAt = null; drawSee(); };
+  const cvSee = $('cv-see');
+  const movePl = e => { const r = cvSee.getBoundingClientRect(), k = r.width / W; pl.x = clamp((e.clientX - r.left) / k, 0.3, W - 0.3); pl.y = clamp((e.clientY - r.top) / k, 0.3, H - 0.3); drawSee(); };
+  let dragging = false;
+  cvSee.addEventListener('pointerdown', e => { dragging = true; cvSee.setPointerCapture(e.pointerId); movePl(e); });
+  cvSee.addEventListener('pointermove', e => { if (dragging) movePl(e); });
+  cvSee.addEventListener('pointerup', () => { dragging = false; });
+  redrawers.push(() => drawSee());
+  let lastT = performance.now(), acc = 0;
+  (function seeLoop(t) { const dt = Math.min(0.25, (t - lastT) / 1000); lastT = t; acc += dt; let s = null; while (acc >= 0.1) { s = stepSee(0.1); acc -= 0.1; } if (s) drawSee(s); requestAnimationFrame(seeLoop); })(performance.now());
+
+  // ---------------- chapter 2: decision ----------------
+  const GOALS = [
+    ['Retreat', 'Health under 38% while under fire with a target: fall back to cover that breaks line of sight (within 22 m).'],
+    ['Follow order', 'A commander order is active (hold, move, attack, flank, retreat, follow).'],
+    ['Take cover', 'Reloading while the enemy can see it: 60% chance to reload behind cover within 10 m.'],
+    ['Flank', 'The target has camped on one spot for over 6 s: roll the flank chance and circle about 90° around.'],
+    ['Engage', 'Target visible: close in beyond 1.35× the preferred range, crouch behind waist-high cover, fire.'],
+    ['Hunt', 'Lost sight under 10 s ago: move to the last known position, pre-aim, slice corners.'],
+    ['Hold the flag', 'Capture the Flag: no enemy in sight, so take a slot around the active zone.'],
+    ['Investigate', 'Heard a gunshot, reload or footsteps in the last 8 s: go and look.'],
+    ['Follow leader', 'Team modes: keep a staggered spot behind or beside the squad leader.'],
+    ['Patrol', 'Nothing else: walk to a tactical point it has not visited for a while.'],
+  ];
+  function decide() {
+    const hp = +$('b-hp').value / 100, dist = +$('b-dist').value, seen = +$('b-seen').value, anchor = +$('b-anchor').value;
+    const hasT = $('b-target').checked, vis = hasT && $('b-visible').checked && seen === 0, hurt = $('b-hurt').checked;
+    const order = $('b-order').value, reload = $('b-reload').checked, noise = $('b-noise').checked, squad = $('b-squad').checked, flag = $('b-flag').checked;
+    const conds = [
+      [hp < 0.38 && (hurt || vis) && hasT, hp >= 0.38 ? 'health ' + Math.round(hp * 100) + '% is above 38%' : 'not under fire with a target'],
+      [!!order, 'no order'],
+      [reload && vis, !reload ? 'not reloading' : 'enemy cannot see it'],
+      [hasT && (vis || seen < 3) && anchor > 6, anchor <= 6 ? 'target moved within 6 s' : 'no recent target'],
+      [vis, 'target not visible'],
+      [hasT && !vis && seen <= 10, !hasT ? 'no target' : (vis ? 'target visible' : 'lost sight over 10 s ago')],
+      [flag && !vis && (!hasT || seen > 3.2), !flag ? 'not Capture the Flag' : 'still chasing a fresh target'],
+      [noise, 'nothing heard'],
+      [squad, 'no squad leader'],
+      [true, ''],
+    ];
+    let win = conds.findIndex(c => c[0]);
+    const list = $('goals'); list.innerHTML = '';
+    GOALS.forEach(([name, desc], i) => {
+      const li = document.createElement('li');
+      li.className = 'goal' + (i === win ? ' win' : (i < win ? ' skip' : ''));
+      let why = desc;
+      if (i < win) why = 'Skipped: ' + conds[i][1] + '.';
+      if (i === win && i === 1) why = 'Following the commander order: ' + order + '.';
+      if (i === win && i === 4) why += dist > 22 * 1.35 ? ' Distance ' + dist + ' m: closing in.' : (dist < 5 ? ' Very close: backs off if it is cautious.' : ' At a good range: holds and shoots.');
+      if (i === win && i === 5) why += dist < 10 ? ' Close to the corner: crouch-peeks and pre-aims.' : '';
+      li.innerHTML = `<span class="n">${i + 1}</span><span><b>${name}</b><div class="why">${why}</div></span>`;
+      list.appendChild(li);
+    });
+    $('o-hp').textContent = Math.round(hp * 100) + '%'; $('o-bdist').textContent = dist + ' m'; $('o-seen').textContent = seen + ' s'; $('o-anchor').textContent = anchor + ' s';
+  }
+  document.querySelectorAll('#decide input, #decide select').forEach(el => el.addEventListener('input', decide));
+  decide();
+
+  // ---------------- chapter 3: flick ----------------
+  let aimSeed = 7;
+  function simulateFlick(seed) {
+    const rnd = mulberry(seed);
+    const D = +$('a-d').value, dist = +$('a-dist').value, w = +$('a-w').value / 10, stress = +$('a-stress').value / 100, head = $('a-head').checked;
+    const half = Math.atan2(head ? 0.16 : 0.34, Math.max(1.5, dist)) * 180 / Math.PI;
+    const id = Math.log2(1 + D / Math.max(0.4, half));
+    const skill = clamp(7.5 / Math.max(2.5, w), 0.62, 1.55);
+    const mt = clamp((0.065 + 0.042 * id) * skill, 0.085, 0.38);
+    const sigma = clamp(D * (0.045 + 0.045 * stress) * skill, 0.35, 6.5);
+    const endErr = (rnd() - 0.5) * 2 * sigma;
+    const dt = 1 / 120, T = 0.9, pts = [], vel = [];
+    let aim = 0, v = 0, t = 0, flick = true, phase = rnd() * 6, onAt = null, landErr = null;
+    const goal = D + endErr;
+    while (t <= T) {
+      let step;
+      if (flick) {
+        const u = clamp(t / mt, 0, 1), s = u * u * u * (10 + u * (-15 + 6 * u));
+        const next = goal * s; step = next - aim; v = step / dt;
+        if (u >= 1 || Math.abs(D - next) < 2.2 && u > 0.5) { flick = false; landErr = D - next; }
+      } else {
+        let err = D - aim;
+        phase += dt * (7.5 + stress * 4);
+        const amp = Math.min(1.6, Math.abs(err) * 0.032 * (0.55 + stress * 0.65));
+        err += Math.sin(phase * 1.37) * amp;
+        v += (w * w * err - 2 * 0.8 * w * v) * dt; v = clamp(v, -900, 900); step = v * dt;
+      }
+      step = clamp(step, -720 * dt, 720 * dt);
+      aim += step;
+      const e = D - aim;
+      if (onAt == null && Math.abs(e) <= half && !flick) onAt = t;
+      pts.push([t, e, flick]); vel.push([t, Math.abs(step / dt)]);
+      t += dt;
+    }
+    return { D, half, id, mt, landErr: landErr ?? endErr, onAt, pts, vel };
+  }
+  let flickNow = null;
+  function drawAim() {
+    const r = flickNow || simulateFlick(aimSeed); flickNow = r;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent');
+    let { ctx, w, h } = fit($('cv-aim'), 0.5);
+    const L = 44, B = 26, T = 10, Rm = 10, X = t => L + (w - L - Rm) * t / 0.9, Y = e => T + (h - T - B) * (1 - (e + r.D * 0.15) / (r.D * 1.15));
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = acc; ctx.globalAlpha = 0.12; ctx.fillRect(L, Y(r.half), w - L - Rm, Y(-r.half) - Y(r.half)); ctx.globalAlpha = 1;
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.font = '11px ' + css('--mono'); ctx.fillStyle = ink2;
+    for (let ms = 0; ms <= 900; ms += 150) { ctx.beginPath(); ctx.moveTo(X(ms / 1000), T); ctx.lineTo(X(ms / 1000), h - B); ctx.stroke(); ctx.fillText(ms + ' ms', X(ms / 1000) - 14, h - 8); }
+    [0, r.D / 2, r.D].forEach(e => { ctx.beginPath(); ctx.moveTo(L, Y(e)); ctx.lineTo(w - Rm, Y(e)); ctx.stroke(); ctx.fillText(Math.round(e) + '°', 6, Y(e) + 4); });
+    for (let g = 1; g <= 6; g++) { const gr = simulateFlick(aimSeed + g * 101); ctx.strokeStyle = ink2; ctx.globalAlpha = 0.18; ctx.beginPath(); gr.pts.forEach(([t, e], i) => i ? ctx.lineTo(X(t), Y(e)) : ctx.moveTo(X(t), Y(e))); ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.lineWidth = 2.5;
+    for (let i = 1; i < r.pts.length; i++) { const [t0, e0] = r.pts[i - 1], [t1, e1, f] = r.pts[i]; ctx.strokeStyle = f ? acc : botC; ctx.beginPath(); ctx.moveTo(X(t0), Y(e0)); ctx.lineTo(X(t1), Y(e1)); ctx.stroke(); }
+    ctx.strokeStyle = ink; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(r.mt), T); ctx.lineTo(X(r.mt), h - B); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = ink; ctx.fillText('flick ends', X(r.mt) + 4, T + 12); ctx.fillStyle = acc; ctx.fillText('ballistic flick', L + 6, T + 12); ctx.fillStyle = botC; ctx.fillText('feedback tracking', L + 6, T + 26);
+    ctx.fillStyle = ink2; ctx.fillText('target (±' + r.half.toFixed(1) + '°)', w - 120, Y(0) - 6);
+    // velocity
+    ({ ctx, w, h } = fit($('cv-vel'), 0.22));
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    const vmax = Math.max(...r.vel.map(v => v[1]), 1), VX = t => L + (w - L - Rm) * t / 0.9, VY = v => 6 + (h - 20) * (1 - v / vmax);
+    ctx.strokeStyle = acc; ctx.lineWidth = 2; ctx.beginPath(); r.vel.forEach(([t, v], i) => i ? ctx.lineTo(VX(t), VY(v)) : ctx.moveTo(VX(t), VY(v))); ctx.stroke();
+    ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono'); ctx.fillText('turn speed (peak ' + Math.round(vmax) + '°/s): slow, fast, slow', L, h - 4);
+    $('r-id').textContent = r.id.toFixed(2) + ' bits'; $('r-mt').textContent = Math.round(r.mt * 1000) + ' ms';
+    $('r-land').textContent = Math.abs(r.landErr).toFixed(1) + '°'; $('r-on').textContent = r.onAt != null ? Math.round(r.onAt * 1000) + ' ms' : '> 900 ms';
+    $('o-d').textContent = $('a-d').value + '°'; $('o-adist').textContent = $('a-dist').value + ' m'; $('o-w').textContent = (+$('a-w').value / 10).toFixed(1); $('o-stress').textContent = $('a-stress').value + '%';
+  }
+  document.querySelectorAll('#aim input').forEach(el => el.addEventListener('input', () => { flickNow = null; drawAim(); }));
+  $('a-go').onclick = () => { aimSeed = (aimSeed * 7919 + 13) % 100003; flickNow = null; drawAim(); };
+  redrawers.push(drawAim); drawAim();
+
+  // ---------------- chapter 4: recoil ----------------
+  let recSeed = 3;
+  function simRecoil(comp) {
+    const rnd = mulberry(recSeed), w = +$('rc-w').value / 10, ads = $('rc-ads').checked, shots = +$('rc-shots').value;
+    const climb = 1.05 * (ads ? 0.55 : 1), interval = 60 / 700, dt = 1 / 240, T = shots * interval + 0.6;
+    const delay = 0.065 + rnd() * 0.07;
+    let off = 0, raw = 0, v = 0, heat = 0, t = 0, next = 0, fired = 0, reactAt = delay; const pts = [];
+    while (t <= T) {
+      if (fired < shots && t >= next) { off += climb; raw += climb; heat = Math.min(1, heat + (ads ? 0.13 : 0.19)); fired++; next += interval; }
+      heat = Math.max(0, heat - 0.95 * dt);
+      if (comp) {
+        let err = -off; // pull-down needed
+        if (-err > 0.2 && t < reactAt) err *= 0.12;
+        else if (-err > 0.3 && heat > 0.1) err *= clamp(clamp(w / 10.5, 0.55, 0.92) * (1 - heat * 0.22), 0.45, 0.94);
+        v += (w * w * err - 2 * 0.8 * w * v) * dt; v = clamp(v, -900, 900); off += clamp(v * dt, -720 * dt, 720 * dt);
+      }
+      pts.push([t, comp ? off : raw]); t += dt;
+    }
+    return { pts, delay, T, shots, interval };
+  }
+  function drawRec() {
+    const a = simRecoil(true), b = simRecoil(false);
+    const ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent');
+    const { ctx, w, h } = fit($('cv-rec'), 0.55);
+    const ymax = Math.max(...b.pts.map(p => p[1]), 1) * 1.1, L = 44, B = 24, T = 10, Rm = 10;
+    const X = t => L + (w - L - Rm) * t / a.T, Y = y => T + (h - T - B) * (1 - y / ymax);
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = grid; ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    for (let y = 0; y <= ymax; y += Math.max(1, Math.round(ymax / 4))) { ctx.beginPath(); ctx.moveTo(L, Y(y)); ctx.lineTo(w - Rm, Y(y)); ctx.stroke(); ctx.fillText(y + '°', 8, Y(y) + 4); }
+    for (let i = 0; i < a.shots; i++) { const x = X(i * a.interval); ctx.fillStyle = acc; ctx.globalAlpha = 0.35; ctx.fillRect(x - 1, h - B, 2, 6); ctx.globalAlpha = 1; }
+    ctx.fillStyle = ink2; ctx.fillText('shots', L, h - 6);
+    ctx.lineWidth = 2; ctx.strokeStyle = ink2; ctx.setLineDash([5, 4]); ctx.beginPath(); b.pts.forEach(([t, y], i) => i ? ctx.lineTo(X(t), Y(y)) : ctx.moveTo(X(t), Y(y))); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = botC; ctx.lineWidth = 2.5; ctx.beginPath(); a.pts.forEach(([t, y], i) => i ? ctx.lineTo(X(t), Y(y)) : ctx.moveTo(X(t), Y(y))); ctx.stroke();
+    ctx.fillStyle = botC; ctx.fillText('bot with pull-down', w - 150, T + 12); ctx.fillStyle = ink2; ctx.fillText('no pull-down', w - 150, T + 26);
+    ctx.strokeStyle = acc; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(a.delay), T); ctx.lineTo(X(a.delay), h - B); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = acc; ctx.fillText('pull-down starts', X(a.delay) + 4, h - B - 6);
+    $('r-peak').textContent = Math.max(...a.pts.map(p => p[1])).toFixed(1) + '°'; $('r-raw').textContent = Math.max(...b.pts.map(p => p[1])).toFixed(1) + '°';
+    $('r-delay').textContent = Math.round(a.delay * 1000) + ' ms';
+    $('o-rcw').textContent = (+$('rc-w').value / 10).toFixed(1); $('o-shots').textContent = $('rc-shots').value;
+  }
+  document.querySelectorAll('#recoil input').forEach(el => el.addEventListener('input', drawRec));
+  $('rc-go').onclick = () => { recSeed = (recSeed * 7919 + 17) % 100003; drawRec(); };
+  redrawers.push(drawRec); drawRec();
+
+  // ---------------- chapter 5: adaptive ----------------
+  let skill = 0.48, pStreak = 0, bStreak = 0; const hist = [0.48];
+  function profile() {
+    const acc = +$('ad-acc').value / 100, hs = +$('ad-hsr').value / 100, rush = +$('ad-rush').value / 100, crouch = +$('ad-crouch').value / 100;
+    const accBonus = clamp((acc - 0.2) * 1.4, 0, 1), hsBonus = clamp(hs * 1.5, 0, 1), e = clamp(skill * 0.78 + accBonus * 0.22, 0, 1);
+    const antiCamp = clamp(0.25 + (1 - rush) * 0.35, 0, 1);
+    return [
+      ['Effective skill', e.toFixed(2)],
+      ['Reaction', lerp(0.52, 0.16, e).toFixed(2) + '-' + lerp(0.76, 0.26, e).toFixed(2) + ' s'],
+      ['Field of view', Math.round(lerp(95, 132, e)) + '°'],
+      ['Aim speed', lerp(4.4, 10.2, e).toFixed(1)],
+      ['Settled error', lerp(1.35, 0.28, e).toFixed(2) + '°'],
+      ['Headshot chance', Math.round(clamp(lerp(0.06, 0.30, e * 0.7 + hsBonus * 0.3), 0.05, 0.34) * 100) + '%'],
+      ['Aggression', clamp(lerp(0.45, 0.78, e) - rush * 0.12, 0.25, 0.85).toFixed(2)],
+      ['Flank chance', Math.round(lerp(0.18, 0.48, e * 0.6 + antiCamp * 0.4) * 100) + '%'],
+      ['Crouch-peek', Math.round(lerp(0.10, 0.32, e * 0.65 + crouch * 0.35) * 100) + '%'],
+      ['Burst', Math.round(lerp(2, 4, e)) + '-' + Math.round(lerp(5, 8, e)) + ' rounds'],
+    ];
+  }
+  function drawAdapt() {
+    $('adapt-out').innerHTML = profile().map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    const { ctx, w, h } = fit($('cv-skill'), 0.32), ink2 = css('--ink-2'), grid = css('--grid'), acc = css('--accent');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    const L = 40, B = 18, T = 10, n = Math.max(hist.length, 10), X = i => L + (w - L - 10) * i / (n - 1), Y = s => T + (h - T - B) * (1 - s);
+    ctx.strokeStyle = grid; ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    [0.12, 0.48, 0.96].forEach(s => { ctx.beginPath(); ctx.moveTo(L, Y(s)); ctx.lineTo(w - 10, Y(s)); ctx.stroke(); ctx.fillText(s.toFixed(2), 4, Y(s) + 4); });
+    ctx.strokeStyle = acc; ctx.lineWidth = 2.5; ctx.beginPath(); hist.forEach((s, i) => i ? ctx.lineTo(X(i), Y(s)) : ctx.moveTo(X(i), Y(s))); ctx.stroke();
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(X(hist.length - 1), Y(skill), 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink2; ctx.fillText('bot skill after each duel (now ' + skill.toFixed(2) + ')', L, h - 4);
+    $('o-acc').textContent = $('ad-acc').value + '%'; $('o-hsr').textContent = $('ad-hsr').value + '%'; $('o-crouch').textContent = $('ad-crouch').value + '%';
+    const r = +$('ad-rush').value; $('o-rush').textContent = r > 60 ? 'rusher' : (r < 40 ? 'camper' : 'mixed');
+  }
+  const win = headshot => { pStreak++; bStreak = 0; const acc = +$('ad-acc').value / 100; skill = clamp(skill + 0.045 + (pStreak >= 2 ? 0.03 : 0) + (headshot ? 0.02 : 0) + acc * 0.03, 0.12, 0.96); hist.push(skill); drawAdapt(); };
+  $('ad-win').onclick = () => win(false); $('ad-hs').onclick = () => win(true);
+  $('ad-lose').onclick = () => { bStreak++; pStreak = 0; skill = clamp(skill - 0.040 - (bStreak >= 2 ? 0.035 : 0), 0.12, 0.96); hist.push(skill); drawAdapt(); };
+  $('ad-reset').onclick = () => { skill = 0.48; pStreak = bStreak = 0; hist.length = 0; hist.push(0.48); drawAdapt(); };
+  document.querySelectorAll('#adapt input').forEach(el => el.addEventListener('input', drawAdapt));
+  // a sample match so the chart opens with a story: you win three, lose two, win one
+  [() => win(false), () => win(true), () => win(false)].forEach(f => f());
+  $('ad-lose').onclick(); $('ad-lose').onclick(); win(false);
+  redrawers.push(drawAdapt);
+})();
+</script>
