@@ -505,8 +505,8 @@ a { color: var(--bot) }
           </div>
           <div id="proto-desc" class="card" style="margin-top:4px"></div>
           <div class="readout">
-            <div class="stat"><div class="k">Tracked Items</div><div class="v">B1–B53 + P1–P5</div></div>
-            <div class="stat"><div class="k">Dev Prompts</div><div class="v">130+ verbatim</div></div>
+            <div class="stat"><div class="k">Tracked Items</div><div class="v">B1–B54 + P1–P5</div></div>
+            <div class="stat"><div class="k">Dev Prompts</div><div class="v">145+ verbatim</div></div>
             <div class="stat"><div class="k">Limit Handoffs</div><div class="v">5+ continuous</div></div>
             <div class="stat"><div class="k">Review Catches</div><div class="v">9+ pre-dev</div></div>
           </div>
@@ -538,7 +538,7 @@ a { color: var(--bot) }
       <div class="chapter-head"><div class="tag">Grounded Engineering · Rule 13: Research First</div><h2>Research specs &amp; academic papers driving every system</h2>
         <p>Protocol v3 Rule 13 requires every feature, visual pass, recoil tune, or bot tweak to start with a sourced research spec in <code>Docs/AI_Collaboration/specs/</code>. Filter by subsystem below:</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="spec-filters">
-        <button type="button" data-cat="all" class="active">All Specs (14)</button>
+        <button type="button" data-cat="all" class="active">All Specs (11)</button>
         <button type="button" data-cat="ai" class="ghost">Bot AI &amp; Human Motor</button>
         <button type="button" data-cat="wpn" class="ghost">Weapons &amp; Animation</button>
         <button type="button" data-cat="gfx" class="ghost">Graphics &amp; Maps</button>
@@ -1445,6 +1445,7 @@ a { color: var(--bot) }
     { id: 'P1/B36', cat: 'aud', title: 'War-Torn D-Phrygian Score & Indoor/Outdoor Tails', cite: 'LUFS loudness targets · Raycast roof occlusion', desc: 'Voice-limited tails (1.0x indoor / 0.65x outdoor, <=4 concurrent) + distant battle bed.' },
     { id: 'B32/P4', cat: 'aud', title: 'Saira Stencil UI Typography & Okabe-Ito Hitmarkers', cite: 'WCAG 3:1/4.5:1 Contrast + Deuteranopia/Protanopia checks', desc: 'Google Fonts OFL Saira Stencil One + outlined colorblind-safe hit zone readouts.' },
     { id: 'B48/P3', cat: 'aud', title: 'HDRP 17.5 Upscaling & Frame-Time Profiling', cite: 'Native/STP · 30 s per-map CPU/GPU/p99 telemetry', desc: 'Automated LR2QABotRunner captures frametime budgets across all 4 combat arenas.' },
+    { id: 'B54', cat: 'gfx', title: 'Local Repo, Cache & CC0 Internet Asset Audit', cite: 'Poly Haven CC0, ambientCG CC0, MeasuredMaterialLibraryHDRP, AppData Cache', desc: 'Catalogs unused Kinemation scopes/grips/clips, downloaded AK-74 HDRP & Apocalypse Playground packs, and CC0 replacements to unblock B33 releases.' },
     { id: 'P2', cat: 'gfx', title: 'Surface-Aware Ballistic Decals & Impact FX', cite: 'SurfaceDecalPolicy · Metal, Concrete, Glass, Fabric, Wood', desc: 'Ring-buffered HDRP DecalProjector variants keyed cleanly to material SurfaceIdentifier.' }
   ];
   let specCat = 'all';

@@ -115,7 +115,7 @@ namespace LR2.EditorTools
         }
 
         /// <summary>Builds the Windows 64-bit standalone executable into the configured build location.</summary>
-        public static void BuildWindowsPlayerBatch()
+        public static bool BuildWindowsPlayer()
         {
             ConfigureBuildIdentity();
             const string outExe = "H:/Unity Projects/Builds/Lead Rush 2/LeadRush 2.exe";
@@ -133,6 +133,20 @@ namespace LR2.EditorTools
             var report = BuildPipeline.BuildPlayer(opts);
             bool ok = report != null && report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
             Debug.Log($"[LR2] Windows Build result={report?.summary.result} size={report?.summary.totalSize} errors={report?.summary.totalErrors} -> {outExe}");
+            return ok;
+        }
+
+        /// <summary>Batch entry: builds all content + maps if needed, then builds Windows 64-bit standalone executable.</summary>
+        public static void BuildWindowsPlayerBatch()
+        {
+            bool ok = BuildWindowsPlayer();
+            if (Application.isBatchMode) EditorApplication.Exit(ok ? 0 : 1);
+        }
+
+        /// <summary>Batch entry: rebuilds all content &amp; scenes, then builds the Windows standalone executable.</summary>
+        public static void BuildAllAndPlayerBatch()
+        {
+            bool ok = Run(false) && BuildWindowsPlayer();
             if (Application.isBatchMode) EditorApplication.Exit(ok ? 0 : 1);
         }
 

@@ -113,9 +113,9 @@ namespace LR2.Weapons
 
         [Header("First-person grip offsets (B49)")]
         [Tooltip("Right (trigger) hand offset in gun frame (x right, y up, z forward).")]
-        public Vector3 rightGripOffset = new Vector3(0f, -0.01f, -0.075f);
+        public Vector3 rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f);
         [Tooltip("Left (support) hand offset on handguard in gun frame.")]
-        public Vector3 leftGripOffset = new Vector3(0f, -0.03f, 0f);
+        public Vector3 leftGripOffset = new Vector3(0f, -0.036f, 0f);
 
         public float SecondsBetweenShots => 60f / Mathf.Max(1f, rpm);
 

@@ -6,7 +6,8 @@ Run commands from the Unity project root unless a command explicitly names a pro
 
 | Tool | Purpose | Command / entry | Output |
 |---|---|---|---|
-| LR2 build pipeline | Builds all generated LR2 content and scenes | Unity menu `LR2 > Build Everything`; `LR2.EditorTools.LR2BuildPipeline.BuildAllBatch` | Generated prefabs, scenes, UI, maps and derived assets |
+| LR2 build pipeline | Builds all generated LR2 content and scenes | Unity menu `LR2 > Build Everything`; `LR2.EditorTools.LR2BuildPipeline.BuildAllBatch` / `BuildAllAndPlayerBatch` | Generated prefabs, scenes, UI, maps, derived assets & standalone `.exe` |
+| LR2 parallel Unity worker | Junctions `Assets`/`Packages`/`ProjectSettings` to `H:\Unity Projects\Builds\LR2_ParallelWorker` so a second `Unity.exe` builds or tests concurrently | `powershell -ExecutionPolicy Bypass -File Tools\LR2ParallelWorker.ps1` | Non-blocking builds, visible QA, or `-lr2PoseCheck` while main Editor is open |
 | LR2 content builder | Builds FX, audio, weapons and soldier content | `LR2ContentBuilder` methods through `LR2BuildPipeline` | Runtime assets under `Assets/LR2` |
 | LR2 map builder | Creates the map scenes and map presentation | `LR2MapBuilder` / `LR2BuildPipeline` | Four map scenes plus preview assets |
 | LR2 glass builder | Creates clean, dirty and cracked HDRP glass materials | Unity menu `LR2 > Build Glass Materials` | `M_LR2_Glass_*` materials and mask textures |
@@ -57,7 +58,7 @@ Run commands from the Unity project root unless a command explicitly names a pro
 |---|---|---|
 | Agent board | Single shared state for ownership, tracker status, requests and logs | `AGENT_COORDINATION.md` |
 | Agent bridge | Lets an open Unity editor execute agent commands without acquiring a second process | `Temp/LR2_AgentCommand.txt`; results in `Temp/LR2_AgentResult.txt` |
-| Agent bridge commands | Refresh, rebuild characters/maps, play a scene or stop play mode | `refresh`, `rebuild-chars`, `rebuild-all`, `play <scene> <seconds>`, `stop` |
+| Agent bridge commands | Refresh, rebuild weapons/characters/maps, build Windows player, play or stop | `refresh`, `build-weapons`, `rebuild-chars`, `rebuild-all`, `build-player`, `play <scene> <seconds>`, `stop` |
 | Copilot prompt | Continue Copilot in VS Code agent mode | `code chat -m agent -r -a AGENT_COORDINATION.md '<prompt>'` |
 | Gemini prompt | Continue or start the Gemini/Antigravity work conversation | `agy --continue --mode auto -p '<prompt>'` or the Hydrogen model command from the board |
 

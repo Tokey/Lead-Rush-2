@@ -74,6 +74,15 @@ namespace LR2.EditorTools
                         AssetDatabase.SaveAssets();
                         Result("rebuild-chars " + (ok ? "OK" : "FAILED"));
                         break;
+                    case "build-weapons":
+                        LR2ContentBuilder.BuildWeapons();
+                        AssetDatabase.SaveAssets();
+                        Result("build-weapons OK");
+                        break;
+                    case "build-player":
+                        bool pOk = LR2BuildPipeline.BuildWindowsPlayer();
+                        Result("build-player " + (pOk ? "SUCCESS -> H:/Unity Projects/Builds/Lead Rush 2/LeadRush 2.exe" : "FAILED"));
+                        break;
                     case "play":
                         string scene = parts.Length > 1 ? parts[1] : LR2MapBuilder.ScenePath;
                         float seconds = parts.Length > 2 && float.TryParse(parts[2], out float s) ? s : 45f;

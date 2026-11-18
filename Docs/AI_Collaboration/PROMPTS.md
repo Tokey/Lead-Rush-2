@@ -577,3 +577,79 @@ Prompts about other projects were left out, and storage artifacts in the Antigra
 
 
 *36 prompts to Claude Code and 85 to Antigravity. Long blocks the developer pasted from one agent into the other are shortened. Copilot joined at 23:12 on 2026-11-17; its prompts are not recorded here.*
+
+
+---
+
+## Late 2026-11-17 & 2026-11-18 Prompts (Claude Code, Antigravity/"Gemini", and GitHub Copilot)
+
+**23:12 · to GitHub Copilot (`AGENT_COORDINATION.md` Section 7 launch)**
+
+> You are Copilot on AGENT_COORDINATION.md. Read section 7 (START HERE - Copilot) and start.
+
+**23:44 · to Claude Code / Gemini** *(from board B38/B39)*
+
+> maps still too dark; wants fires, smoke and lights (fire hurts) and 2 strategic ammo stations per map.
+
+**23:46 · Agent Prompt (`Claude Code -> GitHub Copilot` via `code chat -m agent -r`)**
+
+> Prompted Copilot with its queue: B34 QA checks, B38 FireHazard, B30 glass, B32 font research, P1-P5 polish backlog, and R8 push job.
+
+**23:47 · to Claude Code** *(from board B26)*
+
+> weapon hold still messed up
+
+**23:51 · to Claude Code** *(from board R2/B40/B41)*
+
+> README hero = main menu with the real enemy; redo menu shot; atmospheric gallery shots; ground fog + particles on all maps; nicer flag zones.
+
+**23:57–23:59 · to Claude Code / ALL** *(from board B43/B44/R9)*
+
+> edges look sharp/aliased ("enable TAA?"); comprehensive GRAPHICS and CONTROLS menus (everything adjustable from menu); report exact model name in the board and log completed items + bugs in the research CSVs + chart.
+
+**00:05–00:17 · to Claude Code / ALL** *(from board Section 0, B45–B48, R10–R11)*
+
+> "discuss with all the AI ... apply those changes ... I want to see the result" (Protocol v3); research-first spec rule; document the whole project (mother project LeadRush HD + tooling); full-auto prompting mode (`agy --mode auto --dangerously-skip-permissions`, VS Code `chat.tools.global.autoApprove`); all animation/weapon handling to Claude; player builds go to `H:\Unity Projects\Builds\Lead Rush 2`.
+
+**00:18 · Agent Prompt (`Claude Code -> GitHub Copilot` via `code chat -m agent -r`)**
+
+> Re-prompted Copilot with B13, B47 recoil research, B46 map design research, B40, B44 backend, B48 upscaler/perf research, and R8 push job.
+
+**00:44 · to Claude Code** *(from board HANDOFF B49–B52)*
+
+> every other gun (Mk23, AK-74N, Mk18, FAL) messed up; walking weapon motion far too strong (BF6/COD feel); Free-for-all Capture the Flag mode; mirror LR2 Bot Brain artifact on GitHub.
+
+**00:45 · Agent Prompt (`Claude Code -> GitHub Copilot` via `code chat -m agent -r`)**
+
+> Prompted Copilot with B52 (bot explainer GIFs + page mirror), reviews, and pushes.
+
+**00:48–00:59 · to Antigravity ("Gemini")**
+
+> i still hear sound in the background. keep this in the board. while testing run a visible screen not headless.
+> also add an icon to the build stuff. add todays date LR2.11.17.26 as version or something shorter
+> claude ready. turned on. / did u stop?
+> add how the aiming works too. aiming needs to follow human in game miss pattern. check actual human player databases to understand how human aim. u have the lead now, claud is down
+> https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo can you access this? The things need to be added here. have instructions for claude if you cant add here. but you add in the github, claude checks verifies and then also updates artifact later, keep this in the board.
+> also add how both pathfinding works. and how each of the brian component works with artifact.
+> https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo this is the artifact. update this with what i said. do it now. also if possible put this in github too, and ofc put this in the proj. *(attached `LR2_Bot_Brain.html`)*
+> also check the artifact for correctness.
+> give some task to copilot
+
+**01:00–01:09 · to Antigravity ("Gemini")**
+
+> and maybe add another tab for understanding how ai build this project and the reserach in the html too.
+> and ofc github too. with animations and stuff if possible.
+> the flag stuff the game mode stuff the chats where are they?
+> the gamepolay gifs look nothing like the artifact. please do a thorough check on it.
+
+**01:24 · Agent Prompt (`Gemini (Lead) -> GitHub Copilot` via `code chat -m agent -r -a AGENT_COORDINATION.md`)**
+
+> Prompted Copilot (`gpt-5.6-luna`) with Request `R14`: cross-review `B53/B52/B51/B49/B50/B26/R12`, update `PROJECT_HISTORY.md`/`TOOLING.md`, and keep `R8` push gate without launching competing Unity processes.
+
+**01:33–01:40 · to Antigravity ("Gemini")**
+
+> "why not do the hold fix?": the fix was diagnosed from clip data offline while another agent held Unity for 27 min; Unity time is the scarcest shared resource — can you run a seperate build?
+> also do a push
+> i think the hold but can be solved by just placing the index finger on the right side of the gun and bringing the thumb closer. fx that immidietly now and let me know once done.
+> also report all your prompts in the board so github can be updated with those too. also copilots prompts. update github once again
+> do an asset search on the internet and on the unity repo to find better assets if available.

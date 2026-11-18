@@ -64,9 +64,14 @@ namespace LR2.Characters
         private static readonly List<int> _lThumbProxIdx = new List<int>();
         private static readonly List<int> _lThumbDistIdx = new List<int>();
         private static readonly List<int> _rIndexIdx = new List<int>();
+        private static readonly List<int> _rIndexProxIdx = new List<int>();
+        private static readonly List<int> _rIndexDistIdx = new List<int>();
+        private static readonly List<int> _rIndexSpreadIdx = new List<int>();
         private static readonly List<int> _rFingerIdx = new List<int>();
         private static readonly List<int> _rThumbProxIdx = new List<int>();
         private static readonly List<int> _rThumbDistIdx = new List<int>();
+        private static readonly List<int> _lThumbSpreadIdx = new List<int>();
+        private static readonly List<int> _rThumbSpreadIdx = new List<int>();
         private static readonly List<int> _spreadIdx = new List<int>();
         private static bool _fingerCacheReady;
 
@@ -168,9 +173,12 @@ namespace LR2.Characters
                 bool isRight = n.StartsWith("Right ");
                 if (!isLeft && !isRight) continue;
 
-                if (n.Contains("Spread") && (n.Contains("Index") || n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")))
+                if (n.Contains("Spread"))
                 {
-                    _spreadIdx.Add(i);
+                    if (isLeft && n.Contains("Thumb")) _lThumbSpreadIdx.Add(i);
+                    else if (isRight && n.Contains("Thumb")) _rThumbSpreadIdx.Add(i);
+                    else if (isRight && n.Contains("Index")) _rIndexSpreadIdx.Add(i);
+                    else if (n.Contains("Index") || n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")) _spreadIdx.Add(i);
                     continue;
                 }
                 if (!n.Contains("Stretched")) continue;
@@ -187,7 +195,11 @@ namespace LR2.Characters
                 }
                 else if (isRight)
                 {
-                    if (n.Contains("Index")) _rIndexIdx.Add(i);
+                    if (n.Contains("Index"))
+                    {
+                        _rIndexIdx.Add(i);
+                        if (n.Contains("1 Stretched")) _rIndexProxIdx.Add(i); else _rIndexDistIdx.Add(i);
+                    }
                     else if (n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")) _rFingerIdx.Add(i);
                 }
             }
@@ -365,26 +377,29 @@ namespace LR2.Characters
             {
                 for (int i = 0; i < list.Count; i++) { int idx = list[i]; if (idx < mus.Length) mus[idx] = Mathf.Clamp(mus[idx], range.x, range.y); }
             }
-            // Right (trigger) hand: authored grip shape + snug curl; the trigger finger stays along the frame.
+            // Right (trigger) hand: wrap middle/ring/little tightly around grip, rest index finger straight along the right
+            // side of the frame (clearing the trigger guard), and bring the right thumb closer to the grip.
             Add(_rFingerIdx, rightGripCurl);
-            Add(_rIndexIdx, triggerCurl);
-            Soft(_rThumbProxIdx, thumbBaseRange);
-            Soft(_rThumbDistIdx, thumbTipRange);
-            // Left (support) hand: the authored fingers are too open for these handguards (pose check 00:24: fingers and thumb
-            // poked up over the rail), so it keeps the C-clamp limits that wrap it (opening during magazine handling).
+            Soft(_rIndexProxIdx, new Vector2(0.15f, 0.45f));
+            Soft(_rIndexDistIdx, new Vector2(-0.22f, 0.06f));
+            Soft(_rIndexSpreadIdx, new Vector2(-0.35f, -0.08f));
+            Soft(_rThumbProxIdx, new Vector2(-1.20f, -0.55f));
+            Soft(_rThumbDistIdx, new Vector2(-0.70f, -0.20f));
+            Soft(_rThumbSpreadIdx, new Vector2(-0.78f, -0.35f));
+            // Left (support) hand: wrap fingers snugly under the rail and tuck the left thumb close against the handguard.
             bool pistol = IsHoldingPistol;
-            float lProxMax = pistol ? -0.48f : Mathf.Lerp(-0.34f, -0.14f, reloadHand);
-            float lDistMax = pistol ? -0.58f : Mathf.Lerp(-0.42f, -0.18f, reloadHand);
+            float lProxMax = pistol ? -0.48f : Mathf.Lerp(-0.56f, -0.14f, reloadHand);
+            float lDistMax = pistol ? -0.58f : Mathf.Lerp(-0.62f, -0.18f, reloadHand);
             Add(_lProxIdx, leftGripCurl * (1f - reloadHand));
             Add(_lFingerIdx, leftGripCurl * (1f - reloadHand));
-            Soft(_lProxIdx, new Vector2(-0.92f, lProxMax));
-            Soft(_lFingerIdx, new Vector2(-0.94f, lDistMax));
-            // B26: default rifle left thumb is tucked snugly beside the handguard so it doesn't poke up into first-person sights.
-            Vector2 rifleThumbBase = new Vector2(-1.25f, Mathf.Lerp(-0.85f, 0.14f, reloadHand));
-            Vector2 rifleThumbTip = new Vector2(-0.60f, Mathf.Lerp(-0.15f, 0.08f, reloadHand));
-            Soft(_lThumbProxIdx, !pistol && LeftThumbBaseOverride.HasValue ? LeftThumbBaseOverride.Value : (pistol ? new Vector2(-0.35f, -0.05f) : rifleThumbBase));
-            Soft(_lThumbDistIdx, !pistol && LeftThumbTipOverride.HasValue ? LeftThumbTipOverride.Value : (pistol ? new Vector2(-0.45f, -0.14f) : rifleThumbTip));
-            Soft(_spreadIdx, new Vector2(-0.25f, IsHoldingPistol ? 0.06f : 0.14f)); // keep the compact spread (that part of the old clamp was fine)
+            Soft(_lProxIdx, new Vector2(-0.96f, lProxMax));
+            Soft(_lFingerIdx, new Vector2(-0.98f, lDistMax));
+            Vector2 rifleThumbBase = new Vector2(-1.28f, Mathf.Lerp(-0.88f, 0.14f, reloadHand));
+            Vector2 rifleThumbTip = new Vector2(-0.65f, Mathf.Lerp(-0.20f, 0.08f, reloadHand));
+            Soft(_lThumbProxIdx, !pistol && LeftThumbBaseOverride.HasValue ? LeftThumbBaseOverride.Value : (pistol ? new Vector2(-0.65f, -0.18f) : rifleThumbBase));
+            Soft(_lThumbDistIdx, !pistol && LeftThumbTipOverride.HasValue ? LeftThumbTipOverride.Value : (pistol ? new Vector2(-0.55f, -0.18f) : rifleThumbTip));
+            Soft(_lThumbSpreadIdx, new Vector2(-0.85f, Mathf.Lerp(-0.45f, -0.10f, reloadHand)));
+            Soft(_spreadIdx, new Vector2(-0.30f, IsHoldingPistol ? 0.04f : 0.08f));
         }
 
         private void RelaxGlovedFingerMuscles(ref HumanPose pose)
@@ -458,10 +473,10 @@ namespace LR2.Characters
 
         [Header("Grip placement on rifles (B26)")]
         [Tooltip("Moves the right (trigger) hand in the gun's frame, metres: x right, y up, z forward along the barrel. " +
-                 "Kinemation's hand sockets fit its demo hands; the bigger SWAT hand landed ~7.5 cm forward of the pistol grip (pose check 00:28).")]
-        public Vector3 rightGripOffset = new Vector3(0f, -0.01f, -0.075f);
+                 "Slight +x and higher y keep the index finger cleanly along the right receiver wall above the trigger guard.")]
+        public Vector3 rightGripOffset = new Vector3(0.006f, -0.004f, -0.075f);
         [Tooltip("Moves the left (support) hand on the handguard, same axes. Negative y lowers it so the fingers wrap under the rail instead of over it.")]
-        public Vector3 leftGripOffset = new Vector3(0f, -0.03f, 0f);
+        public Vector3 leftGripOffset = new Vector3(0f, -0.036f, 0f);
 
         private void ApplyGripOffsets(Transform item, ref Vector3 lPos, ref Vector3 rPos)
         {
