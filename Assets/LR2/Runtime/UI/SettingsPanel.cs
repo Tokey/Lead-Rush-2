@@ -37,13 +37,33 @@ namespace LR2.UI
         public TMP_Text qualityValue;
         public Button antiAliasingPrev, antiAliasingNext;
         public TMP_Text antiAliasingValue;
+        public Button upscalerPrev, upscalerNext;
+        public TMP_Text upscalerValue;
+        public TMP_Text upscalerStatusNote;
         public Button frameLimitPrev, frameLimitNext;
         public TMP_Text frameLimitValue;
 
-        [Header("Gameplay")]
+        [Header("Gameplay & Accessibility")]
         public Button botDifficultyPrev, botDifficultyNext;
         public TMP_Text botDifficultyValue;
+        public Button colorBlindPrev, colorBlindNext;
+        public TMP_Text colorBlindValue;
         public Toggle laserSight;
+
+        [Header("Tabs & Keybinds (B44)")]
+        public GameObject[] tabPanels;
+        public Button[] tabButtons;
+        public Button resetBindingsButton;
+        public TMP_Text rebindStatusText;
+        public List<KeybindSlot> keybindSlots = new List<KeybindSlot>();
+
+        [System.Serializable]
+        public struct KeybindSlot
+        {
+            public string actionName;
+            public Button button;
+            public TMP_Text label;
+        }
 
         [Header("Actions (optional)")]
         public Button resetDefaultsButton;
@@ -61,12 +81,20 @@ namespace LR2.UI
 
         private static readonly int[] FrameLimits = { 0, 60, 120, 144, 165, 240 };
         private static readonly string[] AaLabels = { "OFF", "FXAA", "SMAA", "TAA" };
+        private static readonly string[] UpscalerLabels = { "NATIVE", "STP" };
+        private static readonly string[] ColorBlindLabels = { "STANDARD", "COLOR-BLIND SAFE" };
         private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private bool _loading;
+        private int _activeTab;
+        private UnityEngine.InputSystem.InputActionRebindingExtensions.RebindingOperation _activeRebind;
 
         private static int WrapStep(int cur, int count, int delta) => count > 0 ? (cur + delta % count + count) % count : 0;
 
-        private void OnEnable() => Load();
+        private void OnEnable()
+        {
+            Load();
+            SelectTab(0);
+        }
 
         public void Load()
         {
@@ -90,11 +118,17 @@ namespace LR2.UI
             if (laserSight != null) laserSight.isOn = LR2Settings.LaserEnabled;
             if (rayTracing != null)
             {
-                bool supported = SystemInfo.supportsRayTracing;
+                bool supported = GraphicsPresetContract.SupportsRayTracing;
                 rayTracing.interactable = supported;
                 rayTracing.isOn = supported && LR2Settings.RayTracing;
             }
+            if (upscalerStatusNote != null)
+            {
+                string rtState = GraphicsPresetContract.SupportsRayTracing ? "DXR SUPPORTED" : "DXR UNAVAILABLE ON GPU";
+                upscalerStatusNote.text = $"{rtState} · DLSS/FSR REQUIRE VENDOR PLUGIN";
+            }
             UpdateLabels();
+            RefreshKeybindLabels();
             _loading = false;
         }
 
@@ -117,16 +151,98 @@ namespace LR2.UI
             Hook(vsync, v => { LR2Settings.VSync = v; LR2Settings.Apply(); });
             Hook(showFps, v => LR2Settings.ShowFps = v);
             Hook(laserSight, v => LR2Settings.LaserEnabled = v);
-            Hook(rayTracing, v => { LR2Settings.RayTracing = v && SystemInfo.supportsRayTracing; LR2Settings.Apply(); });
-            HookStep(qualityPrev, qualityNext, () => Mathf.Max(0, LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel()),
-                () => QualitySettings.names.Length, i => { LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
+            Hook(rayTracing, v => { LR2Settings.RayTracing = v && GraphicsPresetContract.SupportsRayTracing; LR2Settings.Apply(); });
+            HookStep(qualityPrev, qualityNext, () => Mathf.Clamp(LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : 2, 0, 3),
+                () => 4, i =>
+                {
+                    int qIdx = GraphicsPresetContract.ResolveQualityIndex((LR2GraphicsPreset)i);
+                    LR2Settings.QualityLevel = qIdx >= 0 ? qIdx : i;
+                    LR2Settings.Apply();
+                });
+            HookStep(upscalerPrev, upscalerNext, () => Mathf.Clamp(LR2Settings.UpscalerMode, 0, UpscalerLabels.Length - 1),
+                () => UpscalerLabels.Length, i => { LR2Settings.UpscalerMode = i; LR2Settings.Apply(); });
             HookStep(antiAliasingPrev, antiAliasingNext, () => Mathf.Clamp(LR2Settings.AntiAliasing, 0, AaLabels.Length - 1),
                 () => AaLabels.Length, i => { LR2Settings.AntiAliasing = i; LR2Settings.Apply(); });
             HookStep(frameLimitPrev, frameLimitNext, () => Mathf.Max(0, System.Array.IndexOf(FrameLimits, LR2Settings.FrameRateLimit)),
                 () => FrameLimits.Length, i => { LR2Settings.FrameRateLimit = FrameLimits[i]; LR2Settings.Apply(); });
+            HookStep(colorBlindPrev, colorBlindNext, () => Mathf.Clamp(LR2Settings.ColorBlindMode, 0, ColorBlindLabels.Length - 1),
+                () => ColorBlindLabels.Length, i => LR2Settings.ColorBlindMode = i);
             HookStep(botDifficultyPrev, botDifficultyNext, () => Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1),
                 () => DifficultyLabels.Length, i => LR2Settings.BotDifficulty = i);
             if (resetDefaultsButton != null) resetDefaultsButton.onClick.AddListener(ResetDefaults);
+            if (resetBindingsButton != null) resetBindingsButton.onClick.AddListener(ResetKeybinds);
+            if (tabButtons != null)
+            {
+                for (int t = 0; t < tabButtons.Length; t++)
+                {
+                    int tabIndex = t;
+                    if (tabButtons[t] != null) tabButtons[t].onClick.AddListener(() => SelectTab(tabIndex));
+                }
+            }
+            for (int k = 0; k < keybindSlots.Count; k++)
+            {
+                var slot = keybindSlots[k];
+                if (slot.button != null && !string.IsNullOrEmpty(slot.actionName))
+                    slot.button.onClick.AddListener(() => StartRebind(slot));
+            }
+        }
+
+        public void SelectTab(int index)
+        {
+            if (tabPanels == null || tabPanels.Length == 0) return;
+            _activeTab = Mathf.Clamp(index, 0, tabPanels.Length - 1);
+            for (int i = 0; i < tabPanels.Length; i++)
+            {
+                if (tabPanels[i] != null) tabPanels[i].SetActive(i == _activeTab);
+                if (tabButtons != null && i < tabButtons.Length && tabButtons[i] != null)
+                {
+                    var img = tabButtons[i].targetGraphic as Graphic;
+                    if (img != null) img.color = (i == _activeTab) ? new Color(1f, 0.71f, 0.28f, 0.92f) : new Color(0.11f, 0.13f, 0.16f, 0.88f);
+                }
+            }
+        }
+
+        private void StartRebind(KeybindSlot slot)
+        {
+            _activeRebind?.Dispose();
+            _activeRebind = null;
+            if (slot.label != null) slot.label.text = "...";
+            if (rebindStatusText != null) rebindStatusText.text = $"PRESS ANY KEY FOR {slot.actionName.ToUpperInvariant()} (ESC CANCELS)";
+            _activeRebind = LR2Bindings.BeginRebind(slot.actionName, 0,
+                display =>
+                {
+                    _activeRebind = null;
+                    if (slot.label != null) slot.label.text = display.ToUpperInvariant();
+                    if (rebindStatusText != null) rebindStatusText.text = $"BOUND {slot.actionName.ToUpperInvariant()} TO [{display.ToUpperInvariant()}]";
+                },
+                () =>
+                {
+                    _activeRebind = null;
+                    RefreshKeybindLabels();
+                    if (rebindStatusText != null) rebindStatusText.text = "REBIND CANCELLED · CLICK ANY ACTION TO REBIND";
+                });
+        }
+
+        public void ResetKeybinds()
+        {
+            _activeRebind?.Dispose();
+            _activeRebind = null;
+            LR2Bindings.ResetToDefaults();
+            RefreshKeybindLabels();
+            if (rebindStatusText != null) rebindStatusText.text = "KEYBINDS RESET TO DEFAULTS";
+        }
+
+        private void RefreshKeybindLabels()
+        {
+            for (int i = 0; i < keybindSlots.Count; i++)
+            {
+                var slot = keybindSlots[i];
+                if (slot.label != null && !string.IsNullOrEmpty(slot.actionName))
+                {
+                    string key = LR2Bindings.GetDisplayString(slot.actionName, 0);
+                    slot.label.text = string.IsNullOrEmpty(key) ? "-" : key.ToUpperInvariant();
+                }
+            }
         }
 
         private void HookStep(Button prev, Button next, System.Func<int> getIndex, System.Func<int> getCount, System.Action<int> applyIndex)
@@ -143,7 +259,12 @@ namespace LR2.UI
             if (next != null) next.onClick.AddListener(() => Step(1));
         }
 
-        private void OnDisable() => LR2Settings.Save();
+        private void OnDisable()
+        {
+            _activeRebind?.Dispose();
+            _activeRebind = null;
+            LR2Settings.Save();
+        }
 
         private static void Set(Slider s, float min, float max, float value, bool whole = false)
         {
@@ -185,9 +306,11 @@ namespace LR2.UI
             if (qualityValue != null)
             {
                 int q = LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel();
-                var qNames = QualitySettings.names;
-                qualityValue.text = q >= 0 && q < qNames.Length ? qNames[q].ToUpperInvariant() : "DEFAULT";
+                var preset = (LR2GraphicsPreset)Mathf.Clamp(q, 0, 3);
+                qualityValue.text = GraphicsPresetContract.Label(preset);
             }
+            if (upscalerValue != null)
+                upscalerValue.text = UpscalerLabels[Mathf.Clamp(LR2Settings.UpscalerMode, 0, UpscalerLabels.Length - 1)];
             if (antiAliasingValue != null)
                 antiAliasingValue.text = AaLabels[Mathf.Clamp(LR2Settings.AntiAliasing, 0, AaLabels.Length - 1)];
             if (frameLimitValue != null)
@@ -195,6 +318,8 @@ namespace LR2.UI
                 int f = LR2Settings.FrameRateLimit;
                 frameLimitValue.text = f <= 0 ? "UNLIMITED" : f + " FPS";
             }
+            if (colorBlindValue != null)
+                colorBlindValue.text = ColorBlindLabels[Mathf.Clamp(LR2Settings.ColorBlindMode, 0, ColorBlindLabels.Length - 1)];
             if (botDifficultyValue != null)
                 botDifficultyValue.text = DifficultyLabels[Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1)];
         }

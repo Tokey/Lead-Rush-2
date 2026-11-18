@@ -363,9 +363,9 @@ namespace LR2.Audio
             if (_combatSrc != null) _combatSrc.volume = gCombat;
 
             // Open filter progressively during fights while keeping upper transient crunch bands clear for footsteps
-            float cutoffCalm = Mathf.Lerp(3600f, 5800f, _intensity);
-            float cutoffTension = Mathf.Lerp(4500f, 7600f, _intensity);
-            float cutoffCombat = Mathf.Lerp(5400f, 8400f, _intensity);
+            float cutoffCalm = Mathf.Lerp(3200f, 5200f, _intensity);
+            float cutoffTension = Mathf.Lerp(4200f, 7000f, _intensity);
+            float cutoffCombat = Mathf.Lerp(5000f, 8000f, _intensity);
             if (_calmLpf != null) _calmLpf.cutoffFrequency = cutoffCalm;
             if (_tensionLpf != null) _tensionLpf.cutoffFrequency = cutoffTension;
             if (_combatLpf != null) _combatLpf.cutoffFrequency = cutoffCombat;

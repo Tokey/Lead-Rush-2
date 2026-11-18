@@ -603,10 +603,10 @@ namespace LR2.EditorTools
                              pattern = 0.36f },
             new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4",
                              rpm = 850f, near = 30f, mid = 25f, far = 21f, range = 26f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
-                             pattern = 0.3f },
+                             pattern = 0.3f, adsRecoil = 0.50f }, // B47: 5.56 recoils less than 5.45 in ADS
             new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
                              near = 48f, mid = 42f, far = 36f, range = 45f, hip = 3.0f, adsTime = 0.32f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
-                             pattern = 0.5f, patternH = 0.4f },
+                             pattern = 0.5f, patternH = 0.4f, adsRecoil = 0.60f }, // B47: 7.62x51 stays harder in ADS
         };
 
         public static void BuildWeapons()

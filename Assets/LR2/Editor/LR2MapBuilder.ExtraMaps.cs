@@ -103,6 +103,9 @@ namespace LR2.EditorTools
             // Central checkpoint ruined bus/container + crossroad cover
             Container(_structures, "CheckpointContA", new Vector3(-2.5f, 0f, 2.5f), 22f, 2);
             Container(_structures, "CheckpointContB", new Vector3(3.2f, 0f, -3.5f), -68f, 0);
+            // B46: waist-high street crossing cover ~10m out along main street
+            Box("StreetCoverN", _structures, new Vector3(-1.2f, 0.52f, 9.5f), new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, 8f);
+            Box("StreetCoverS", _structures, new Vector3(1.2f, 0.52f, -9.5f), new Vector3(2.4f, 1.04f, 0.75f), _m.concrete, LR2Layers.Default, SurfaceType.Concrete, -8f);
 
             // Perimeter walls (broken masonry silhouettes with protruding rebar & base rubble) + Clip + War-torn city skyline
             var bnd = Child(_structures, "Boundary");
@@ -356,6 +359,10 @@ namespace LR2.EditorTools
             Railing(cat, new Vector3(15.75f, 3.02f, -10f), new Vector3(15.75f, 3.02f, -2.5f));
             Railing(cat, new Vector3(15.75f, 3.02f, 2.5f), new Vector3(15.75f, 3.02f, 10f));
             Box("CatCoverCrate", cat, new Vector3(16.6f, 3.47f, 0f), new Vector3(0.9f, 0.9f, 1.8f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
+            // B46: upper catwalk sightline occluder + safe stair landing pockets
+            Box("CatwalkOccluderS", cat, new Vector3(15.75f, 3.85f, -5.8f), new Vector3(0.18f, 1.5f, 3.8f), _m.corrugated, LR2Layers.Default, SurfaceType.Metal);
+            Box("StairPocketN", cat, new Vector3(15.8f, 0.55f, 15.2f), new Vector3(1.8f, 1.1f, 0.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
+            Box("StairPocketS", cat, new Vector3(15.8f, 0.55f, -15.2f), new Vector3(1.8f, 1.1f, 0.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
 
             // West Container Maze
             var wYard = Child(_structures, "WestContainers");
@@ -507,6 +514,9 @@ namespace LR2.EditorTools
                 (-5.5f, -6.5f, 2.4f, 1.08f, 0.85f), (5.5f, 6.5f, 2.4f, 1.08f, 0.85f),
                 (-4.5f, 15.5f, 2.8f, 2.3f, 0.95f), (4.5f, -15.5f, 2.8f, 2.3f, 0.95f),
                 (4.5f, 15.5f, 2.8f, 2.3f, 0.95f), (-4.5f, -15.5f, 2.8f, 2.3f, 0.95f),
+                // B46: symmetric cover gates at +/-8.2m + spawn exit flank shields (+/-18.5m) keeping x=0 clean
+                (-2.8f, 8.2f, 2.2f, 1.08f, 0.75f), (2.8f, -8.2f, 2.2f, 1.08f, 0.75f),
+                (-2.4f, -18.5f, 2.4f, 1.95f, 0.75f), (2.4f, 18.5f, 2.4f, 1.95f, 0.75f),
             })
             {
                 var blk = Box("TacticalBlock", center, new Vector3(x, h * 0.5f, z), new Vector3(w, h, d), _m.concrete, LR2Layers.Default, SurfaceType.Concrete);

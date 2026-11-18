@@ -36,6 +36,10 @@ namespace LR2.Characters
         public static float MaxGunAngle = 38f;
         /// <summary>Largest gun translation (m) the reload may add on top of the procedural pose.</summary>
         public static float MaxGunOffset = 0.18f;
+        /// <summary>Per-axis limits of the reload gun motion, degrees (x = pitch, muzzle up/down; y = yaw; z = roll/cant). The cant
+        /// carries a believable mag change; pitch is kept small so the muzzle stays roughly forward (B35: the front view read as a
+        /// vertical rifle with the old -26..22 pitch range).</summary>
+        public static Vector2 PitchRange = new Vector2(-12f, 12f), YawRange = new Vector2(-18f, 18f), RollRange = new Vector2(-34f, 34f);
         /// <summary>
         /// B35: Kinemation already moves the driver's weapon bone with the clip, weighted by the clip's WeaponBoneWeight curve, and the
         /// visible gun inherits that. 1 = the bridge only adds the share Kinemation has not applied (1 - WeaponBoneWeight); 0 = old
@@ -192,7 +196,7 @@ namespace LR2.Characters
             float ry = euler.y > 180f ? euler.y - 360f : euler.y;
             float rz = euler.z > 180f ? euler.z - 360f : euler.z;
             // Keep barrel tactical (prevent vertical 90 deg pointing into helmet in 3P or shoulder clipping 1P camera)
-            Quaternion dRotV = Quaternion.Euler(Mathf.Clamp(rx, -26f, 22f), Mathf.Clamp(ry, -26f, 26f), Mathf.Clamp(rz, -32f, 32f));
+            Quaternion dRotV = Quaternion.Euler(Mathf.Clamp(rx, PitchRange.x, PitchRange.y), Mathf.Clamp(ry, YawRange.x, YawRange.y), Mathf.Clamp(rz, RollRange.x, RollRange.y));
             Vector3 dPosV = Vector3.ClampMagnitude(invO * (invRest * (cPos - rest.gunPos)), MaxGunOffset);
             dPosV = new Vector3(Mathf.Clamp(dPosV.x, -0.09f, 0.06f), Mathf.Clamp(dPosV.y, -0.05f, 0.09f), Mathf.Clamp(dPosV.z, -0.015f, 0.14f));
 

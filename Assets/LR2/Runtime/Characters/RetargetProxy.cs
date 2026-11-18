@@ -261,6 +261,7 @@ namespace LR2.Characters
                                ref lPos, ref lRot, ref rPos, ref rRot);
                 ApplyProneWeaponPose(itemTf, ref lPos, ref lRot, ref rPos, ref rRot);
                 ApplyGloveClearance(itemTf, ref lPos, ref lRot, ref rPos);
+                ApplyGripOffsets(itemTf, ref lPos, ref rPos);
                 Solve(_rUpper, _rLower, _rHand, rPos, rRot * _rOffset, handIKWeight);
                 Solve(_lUpper, _lLower, _lHand, lPos, lRot * _lOffset, handIKWeight);
                 HandErrorRight = _rHand != null ? Vector3.Distance(_rHand.position, rPos) : -1f;
@@ -361,15 +362,22 @@ namespace LR2.Characters
             {
                 for (int i = 0; i < list.Count; i++) { int idx = list[i]; if (idx < mus.Length) mus[idx] = Mathf.Clamp(mus[idx], range.x, range.y); }
             }
-            float leftBias = leftGripCurl * (1f - reloadHand); // the left hand opens while it handles the magazine
+            // Right (trigger) hand: authored grip shape + snug curl; the trigger finger stays along the frame.
             Add(_rFingerIdx, rightGripCurl);
             Add(_rIndexIdx, triggerCurl);
-            Add(_lProxIdx, leftBias);
-            Add(_lFingerIdx, leftBias);
-            Soft(_lThumbProxIdx, thumbBaseRange);
             Soft(_rThumbProxIdx, thumbBaseRange);
-            Soft(_lThumbDistIdx, thumbTipRange);
             Soft(_rThumbDistIdx, thumbTipRange);
+            // Left (support) hand: the authored fingers are too open for these handguards (pose check 00:24: fingers and thumb
+            // poked up over the rail), so it keeps the C-clamp limits that wrap it (opening during magazine handling).
+            bool pistol = IsHoldingPistol;
+            float lProxMax = pistol ? -0.48f : Mathf.Lerp(-0.34f, -0.14f, reloadHand);
+            float lDistMax = pistol ? -0.58f : Mathf.Lerp(-0.42f, -0.18f, reloadHand);
+            Add(_lProxIdx, leftGripCurl * (1f - reloadHand));
+            Add(_lFingerIdx, leftGripCurl * (1f - reloadHand));
+            Soft(_lProxIdx, new Vector2(-0.92f, lProxMax));
+            Soft(_lFingerIdx, new Vector2(-0.94f, lDistMax));
+            Soft(_lThumbProxIdx, new Vector2(-0.35f, pistol ? -0.05f : Mathf.Lerp(0.05f, 0.14f, reloadHand)));
+            Soft(_lThumbDistIdx, new Vector2(-0.45f, pistol ? -0.14f : Mathf.Lerp(-0.04f, 0.08f, reloadHand)));
             Soft(_spreadIdx, new Vector2(-0.25f, IsHoldingPistol ? 0.06f : 0.14f)); // keep the compact spread (that part of the old clamp was fine)
         }
 
@@ -440,6 +448,21 @@ namespace LR2.Characters
                 int idx = _spreadIdx[i];
                 if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.25f, spreadCap);
             }
+        }
+
+        [Header("Grip placement on rifles (B26)")]
+        [Tooltip("Moves the right (trigger) hand in the gun's frame, metres: x right, y up, z forward along the barrel. " +
+                 "Kinemation's hand sockets fit its demo hands; the bigger SWAT hand landed ~7.5 cm forward of the pistol grip (pose check 00:28).")]
+        public Vector3 rightGripOffset = new Vector3(0f, -0.01f, -0.075f);
+        [Tooltip("Moves the left (support) hand on the handguard, same axes. Negative y lowers it so the fingers wrap under the rail instead of over it.")]
+        public Vector3 leftGripOffset = new Vector3(0f, -0.03f, 0f);
+
+        private void ApplyGripOffsets(Transform item, ref Vector3 lPos, ref Vector3 rPos)
+        {
+            if (item == null || IsHoldingPistol) return; // pistol hold was verified separately
+            float leftW = 1f - (_bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f); // left hand is free while it handles the magazine
+            rPos += item.rotation * rightGripOffset;
+            lPos += item.rotation * (leftGripOffset * leftW);
         }
 
         /// <summary>Keep wrist targets snug on the handguard/pistol grip, stepping outward cleanly during magazine removal/insertion.</summary>

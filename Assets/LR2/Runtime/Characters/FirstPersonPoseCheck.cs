@@ -115,9 +115,17 @@ namespace LR2.Characters
             yield return Capture("tp_02_side", null, View.Side, true);
             yield return Capture("tp_03_overshoulder", null, View.OverShoulder, false);
             yield return Capture("tp_04_head_close", null, View.HeadClose, true);
-            LogFingers("idle rifle");
+            LogFingers("idle rifle (FingerMode 1: authored shapes + snug bias)");
             yield return Capture("tp_04b_hands_left", null, View.HandsLeft, true);
             yield return Capture("tp_04c_hands_right", null, View.HandsRight, true);
+            // B26 A/B: the legacy hard clamps (FingerMode 0) for comparison, then back to the new mode
+            RetargetProxy.FingerMode = 0;
+            yield return Wait(0.2f);
+            LogFingers("idle rifle (FingerMode 0: legacy clamps)");
+            yield return Capture("tp_04d_hands_left_LEGACY", null, View.HandsLeft, true);
+            yield return Capture("tp_04e_hands_right_LEGACY", null, View.HandsRight, true);
+            RetargetProxy.FingerMode = 1;
+            yield return Wait(0.2f);
 
             _cmd.aimPitch = 60f;
             yield return Wait(0.9f);

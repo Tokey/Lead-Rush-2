@@ -163,6 +163,9 @@ namespace LR2.UI
             _zoneLabel.alignment = TextAlignmentOptions.Center;
             _zoneLabel.raycastTarget = false;
             _zoneLabel.color = new Color(1f, 1f, 1f, 0f);
+            var zo = zoneRT.gameObject.AddComponent<Outline>();
+            zo.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            zo.effectDistance = new Vector2(1.4f, -1.4f);
             if (!_isReplayOverlay && Instance == null) Instance = this;
         }
 
@@ -208,7 +211,11 @@ namespace LR2.UI
             float now = Time.unscaledTime;
             _streak = now - _hitTime < 0.25f ? Mathf.Min(_streak + 1, 6) : 0;
             _hitTime = now;
-            _color = killed ? killColor : head ? headColor : bodyColor;
+            bool cb = LR2Settings.ColorBlindMode > 0;
+            Color bCol = cb ? HitmarkerPalette.Body : bodyColor;
+            Color hCol = cb ? HitmarkerPalette.Head : headColor;
+            Color kCol = cb ? HitmarkerPalette.Kill : killColor;
+            _color = killed ? kCol : head ? hCol : bCol;
             _scale = killed ? 1.45f : head ? 1.18f : 1f + _streak * 0.03f;
             _thick = killed ? 1.5f : head ? 1.2f : 1f;
             _lastHitWorld = worldPoint;
@@ -269,7 +276,7 @@ namespace LR2.UI
             if (k > skullHold) pop *= Mathf.Lerp(1f, 0.75f, Mathf.Clamp01((k - skullHold) / skullFade));
             _skullRT.localScale = Vector3.one * pop;
             _skullRT.anchoredPosition = new Vector2(0f, 52f + 8f * Mathf.Clamp01(k / (skullHold + skullFade)));
-            var sc = killColor;
+            var sc = LR2Settings.ColorBlindMode > 0 ? HitmarkerPalette.Kill : killColor;
             sc.a = ka;
             _skull.color = sc;
             var rc = _skullRim.color;

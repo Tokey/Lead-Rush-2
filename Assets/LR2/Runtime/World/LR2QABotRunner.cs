@@ -944,6 +944,29 @@ namespace LR2.World
         private void FinishReport(string outDir, string sceneName)
         {
             Application.logMessageReceived -= OnLog;
+            var perf = FindAnyObjectByType<PerformanceFrameTelemetry>();
+            if (perf != null && perf.Count >= 8)
+            {
+                int sc = Mathf.Min(perf.Count, 3600);
+                var ms = new float[sc];
+                double sum = 0.0;
+                int offset = Mathf.Max(0, perf.Count - sc);
+                for (int i = 0; i < sc; i++)
+                {
+                    float v = perf.Get((offset + i) % sc).frameMs;
+                    ms[i] = v;
+                    sum += v;
+                }
+                System.Array.Sort(ms);
+                float avg = (float)(sum / sc);
+                float med = ms[sc / 2];
+                float p99 = ms[Mathf.Clamp(Mathf.CeilToInt(sc * 0.99f) - 1, 0, sc - 1)];
+                Check(true, "Performance.FrameTelemetry", $"samples={sc} avg={avg:0.00}ms med={med:0.00}ms p99={p99:0.00}ms");
+                string p3Dir = Path.Combine(Directory.GetCurrentDirectory(), "Logs", "LR2_P3");
+                Directory.CreateDirectory(p3Dir);
+                File.WriteAllText(Path.Combine(p3Dir, $"{sceneName}_frame_timing.txt"),
+                    $"scene={sceneName}\nsamples={sc}\navgFrameMs={avg:0.00}\nmedianFrameMs={med:0.00}\np99FrameMs={p99:0.00}\n");
+            }
             Check(_runtimeErrors == 0, $"{sceneName}.RuntimeErrors", $"count={_runtimeErrors}");
             _report.AppendLine($"Failures: {_failures.Count}");
             string path = Path.Combine(outDir, $"qa_{sceneName}.txt");

@@ -27,7 +27,15 @@ G09,2026-11-17 22:50,Gemini,gemini-4-hydrogen,"Round-3 fixes B1, B2, B3, B5, B6,
 G10,2026-11-17 23:05,Gemini,argon,"CTF mode, layered deploy menu, tactical chat",feature,,delivered,board briefing 23:02 + log 23:05
 G11,2026-11-17 23:02,Gemini,argon,Human-like bot aim + adaptive difficulty,feature,B22,verified,specs/B22.md
 G12,2026-11-17 22:30,Gemini,gemini-4-hydrogen,Test-harness start-scene changes,tooling,,delivered,prompt 22:33
-G13,2026-11-17 23:41,Gemini,argon,Menu soldier + QA/killcam work in progress,feature,B19,open,board R7
+G13,2026-11-18 00:18,Gemini,gemini-4-hydrogen,Menu masked SWAT soldier + B1/B30/B38/B40 map & lighting hooks (awaiting rebuild/QA),feature,B1/B19/B30/B38/B40,open,board code + Menu vis PNG
+G14,2026-11-18 00:18,Gemini,gemini-4-hydrogen,AdaptiveDifficultyTracker ShotFired update (B22 note #1),fix,B22,ready-for-review,AdaptiveDifficultyTracker.cs + dotnet build
+G15,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Footstep mix at -15.9 dB under weapons (0.16x scalar)",tune,B5,ready-for-review,LR2Audio.cs + Saltworks QA PASS
+G16,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Mirrored mid-map AmmoCrate stations ([F] interact + minimap pips) & ReloadDisplayProgress",feature,B39/R5,ready-for-review,AmmoCrate.cs + HUDController.cs + dotnet build
+G17,2026-11-18 00:18,Gemini,gemini-4-hydrogen,Feathered CTF flag zone rings + soft light beam + rising particles,feature,B41,ready-for-review,FlagZoneController.cs + dotnet build
+G18,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Interactive starter title screen (LR2.11.17.26) in LR2LoadingIntro",feature,B31,ready-for-review,LR2LoadingIntro.cs + MainMenu QA PASS
+G19,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Settings controls: Camera Shake slider, Anti-Aliasing stepper, Laser Sight [L] toggle",feature,R6/B43/B13,ready-for-review,SettingsPanel.cs + LR2UIBuilder.cs + dotnet build
+G20,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Wire LR2QAExtraChecks into LR2QABotRunner with bolt-settle + bounds fallback + 5-ray roof check",tooling,B34,ready-for-review,LR2QABotRunner.cs + LR2QAExtraChecks.cs
+G21,2026-11-18 00:18,Gemini,gemini-4-hydrogen,"Hitmarker world impact pip, zone readout & killcam 0.95s victim collapse window",feature,B4/B6/B8/B14,ready-for-review,HitFeedbackHUD.cs + KillcamDirector.cs + dotnet build
 P01,2026-11-17 23:36,Copilot,gpt-5.6-luna,Pain and death voices (PainVoice),feature,B12,verified,board row B12
 P02,2026-11-17 23:36,Copilot,gpt-5.6-luna,Toggleable weapon laser (WeaponLaser),feature,B13,reopened,board row B13
 P03,2026-11-17 23:41,Copilot,gpt-5.6-luna,Bot research write-up corrections,docs,B24,ready-for-review,board log 23:37-23:48
@@ -50,3 +58,8 @@ P19,2026-11-18 00:20,Copilot,gpt-5.6-luna,Four-map lane and spawn-flow research 
 P20,2026-11-18 00:20,Copilot,gpt-5.6-luna,Calibre recoil and fair-pattern research specification,tune,B47,ready-for-review,specs/B47.md with per-gun WeaponDefinition targets
 P21,2026-11-18 00:20,Copilot,gpt-5.6-luna,Unity HDRP upscaler and latency research specification,feature,B48,ready-for-review,specs/B48.md with support matrix and sources
 P22,2026-11-18 00:20,Copilot,gpt-5.6-luna,R8 stable batch commit and push,tooling,,delivered,a1ba3ec after LR2.Runtime and LR2.Editor builds passed
+C17,2026-11-18 00:21,Claude,claude-opus-5-5,"Weapon-hold fingers: authored shapes + snug bias, soft thumb limits (FingerMode A/B)",fix,B26,ready-for-review,RetargetProxy + pose check A/B
+C18,2026-11-18 00:29,Claude,claude-opus-5-5,"Rifle grip offsets (right hand onto the pistol grip, left hand lower)",fix,B26,ready-for-review,RetargetProxy
+C19,2026-11-18 00:35,Claude,claude-opus-5-5,"Reload muzzle pitch/yaw limits (keep the cant)",fix,B35,ready-for-review,ReloadMotionBridge
+C20,2026-11-18 00:35,Claude,claude-opus-5-5,"Researched ADS recoil values MK18 0.50 / FAL 0.60",tune,B47,ready-for-review,LR2ContentBuilder Guns table
+C21,2026-11-18 00:33,Claude,claude-opus-5-5,"Test harness freezes asset auto-refresh during runs",tooling,R12,verified,LR2SmokeTest

@@ -1187,6 +1187,9 @@ namespace LR2.EditorTools
             Block(new Vector3(10f, 0f, 12.5f), 0f);
             Block(new Vector3(-6f, 0f, 11f), -20f);
             Block(new Vector3(12.5f, 0f, -4f), 90f);
+            // B46: waist-high plaza cargo breaks every ~10m across central engagement lane
+            Block(new Vector3(-1.5f, 0f, -3.2f), 8f);
+            Block(new Vector3(2.2f, 0f, 3.8f), -12f);
         }
 
         private static void BuildBoundary()

@@ -25,6 +25,8 @@ namespace LR2.Audio
         private static readonly List<AudioSource> Voices = new List<AudioSource>(MaxVoices);
         private static readonly Dictionary<AudioSource, AudioLowPassFilter> Filters = new Dictionary<AudioSource, AudioLowPassFilter>(MaxVoices);
         private static readonly Dictionary<AudioSource, float> StartTimes = new Dictionary<AudioSource, float>(MaxVoices);
+        private static readonly List<float> ActiveTailEndTimes = new List<float>(8);
+        private static WeaponSoundTailRouter _tailRouter;
         private static Transform _root;
         private static AnimationCurve _rolloff;
         private static AudioListener _listener;
@@ -32,6 +34,7 @@ namespace LR2.Audio
 
         /// <summary>0..1 duck amount currently applied to ambience/footsteps/sfx.</summary>
         public static float DuckFactor { get; private set; }
+        public static int ActiveTailCount => ActiveTailEndTimes.Count;
 
         public static float CategoryVolume(AudioCategory category)
         {
@@ -41,7 +44,7 @@ namespace LR2.Audio
                 case AudioCategory.Music: return LR2Settings.MusicVolume;
                 case AudioCategory.Weapons: return LR2Settings.SfxVolume;
                 case AudioCategory.Voice: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.2f);
-                case AudioCategory.Ambience: return LR2Settings.SfxVolume * 0.68f * (1f - DuckFactor * 0.85f);
+                case AudioCategory.Ambience: return LR2Settings.SfxVolume * 0.72f * (1f - DuckFactor * 0.85f);
                 case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.16f * (1f - DuckFactor * 0.55f);
                 case AudioCategory.Sfx: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.45f);
                 default: return LR2Settings.SfxVolume;
@@ -55,7 +58,22 @@ namespace LR2.Audio
             EnsureRoot();
         }
 
-        internal static void TickDuck(float dt) => DuckFactor = Mathf.MoveTowards(DuckFactor, 0f, DuckRecovery * dt);
+        internal static void TickDuck(float dt)
+        {
+            DuckFactor = Mathf.MoveTowards(DuckFactor, 0f, DuckRecovery * dt);
+            if (_tailRouter != null && ActiveTailEndTimes.Count > 0)
+            {
+                float now = Time.unscaledTime;
+                for (int i = ActiveTailEndTimes.Count - 1; i >= 0; i--)
+                {
+                    if (now >= ActiveTailEndTimes[i])
+                    {
+                        ActiveTailEndTimes.RemoveAt(i);
+                        _tailRouter.NotifyTailEnded();
+                    }
+                }
+            }
+        }
 
         public static AudioSource PlayAt(SoundSet set, Vector3 position, float volumeScale = 1f, float delay = 0f,
             bool ignoreOcclusion = false, float pitchMultiplier = 1f)
@@ -86,11 +104,39 @@ namespace LR2.Audio
             return PlayAt(set, position, volumeScale, delay);
         }
 
+        /// <summary>Plays an environmental weapon tail gated and balanced through <see cref="WeaponSoundTailRouter"/>.</summary>
+        public static AudioSource PlayWeaponTail(AudioClip clip, Vector3 position, float volume, float minDistance, float maxDistance, bool indoors)
+        {
+            return PlayClipCore(clip, position, volume, UnityEngine.Random.Range(0.96f, 1.04f), minDistance, maxDistance, 1f,
+                AudioCategory.Weapons, 150, 0f, null, false, forceTailRoute: true, tailIndoorsOverride: indoors);
+        }
+
         public static AudioSource PlayClip(AudioClip clip, Vector3 position, float volume, float pitch, float minDistance,
             float maxDistance, float spatialBlend, AudioCategory category, int priority = 128, float delay = 0f, Transform parent = null,
             bool ignoreOcclusion = false)
         {
+            return PlayClipCore(clip, position, volume, pitch, minDistance, maxDistance, spatialBlend, category, priority,
+                delay, parent, ignoreOcclusion, forceTailRoute: false, tailIndoorsOverride: null);
+        }
+
+        private static AudioSource PlayClipCore(AudioClip clip, Vector3 position, float volume, float pitch, float minDistance,
+            float maxDistance, float spatialBlend, AudioCategory category, int priority, float delay, Transform parent,
+            bool ignoreOcclusion, bool forceTailRoute, bool? tailIndoorsOverride)
+        {
             if (clip == null) return null;
+            EnsureRoot();
+            bool isTail = forceTailRoute || (category == AudioCategory.Weapons &&
+                clip.name.IndexOf("tail", System.StringComparison.OrdinalIgnoreCase) >= 0);
+            float vol = volume;
+            if (isTail && _tailRouter != null)
+            {
+                if (!_tailRouter.CanPlay(Time.unscaledTime + delay)) return null;
+                bool indoors = tailIndoorsOverride ??
+                    (clip.name.IndexOf("interior", System.StringComparison.OrdinalIgnoreCase) >= 0 || IsIndoors(parent != null ? parent.position : position));
+                vol *= _tailRouter.Gain(indoors);
+                ActiveTailEndTimes.Add(Time.unscaledTime + delay + Mathf.Clamp(clip.length, 0.15f, 2.5f));
+            }
+
             var src = GetVoice(priority);
             if (src == null) return null;
 
@@ -100,7 +146,6 @@ namespace LR2.Audio
             else t.position = position;
 
             float cutoff = 22000f;
-            float vol = volume;
             if (!ignoreOcclusion && spatialBlend > 0.5f && category != AudioCategory.UI && category != AudioCategory.Music)
                 ApplyDepth(parent != null ? parent.position : position, ref vol, ref cutoff);
             if (category == AudioCategory.Footsteps)
@@ -211,10 +256,12 @@ namespace LR2.Audio
             if (_root != null) return;
             var go = new GameObject("[LR2 Audio]");
             go.AddComponent<LR2AudioDriver>();
+            _tailRouter = go.AddComponent<WeaponSoundTailRouter>();
             _root = go.transform;
             Voices.Clear();
             Filters.Clear();
             StartTimes.Clear();
+            ActiveTailEndTimes.Clear();
         }
 
         private static AudioSource GetVoice(int priority)
@@ -273,6 +320,8 @@ namespace LR2.Audio
             Voices.Clear();
             Filters.Clear();
             StartTimes.Clear();
+            ActiveTailEndTimes.Clear();
+            _tailRouter = null;
             _root = null;
             _listener = null;
             DuckFactor = 0f;

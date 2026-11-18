@@ -24,7 +24,8 @@ namespace LR2.FX
             var rot = Quaternion.LookRotation(normal.sqrMagnitude > 0.01f ? normal : -direction);
 
             if (fx.impactPrefab != null) LR2Pool.Spawn(fx.impactPrefab, point + normal * 0.01f, rot, 2.5f);
-            if (fx.decalMaterial != null) PlaceDecal(fx.decalMaterial, point, normal, Random.Range(fx.decalSize.x, fx.decalSize.y) * (exitHole ? 1.3f : 1f), lib);
+            if (fx.decalMaterial != null && SurfaceDecalPolicy.ShouldProject(surface))
+                PlaceDecal(fx.decalMaterial, point, normal, Random.Range(fx.decalSize.x, fx.decalSize.y) * (exitHole ? 1.3f : 1f), SurfaceDecalPolicy.Depth(surface), lib);
 
             // Avoid machine-gun audio spam: at most ~30 impact sounds per second.
             if (Time.time - _lastImpactSoundTime > 0.033f)
@@ -49,7 +50,7 @@ namespace LR2.FX
 
             // Blood spatter on the wall behind the victim.
             if (lib.bloodDecal != null && Physics.Raycast(point, direction, out var wall, 2.5f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
-                PlaceDecal(lib.bloodDecal, wall.point, wall.normal, Random.Range(0.45f, 0.85f), lib);
+                PlaceDecal(lib.bloodDecal, wall.point, wall.normal, Random.Range(0.45f, 0.85f), 0.12f, lib);
         }
 
         public static void PlayFootstep(Vector3 position, SurfaceType surface, float intensity, bool localPlayer)
@@ -62,7 +63,7 @@ namespace LR2.FX
             LR2Audio.PlayAt(set, position, vol);
         }
 
-        private static void PlaceDecal(Material material, Vector3 point, Vector3 normal, float size, SurfaceLibrary lib)
+        private static void PlaceDecal(Material material, Vector3 point, Vector3 normal, float size, float depth, SurfaceLibrary lib)
         {
             if (_decalRoot == null)
             {
@@ -100,7 +101,7 @@ namespace LR2.FX
             t.rotation = Quaternion.LookRotation(-normal, Mathf.Abs(normal.y) > 0.9f ? Vector3.forward : Vector3.up) *
                          Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
             projector.material = material;
-            projector.size = new Vector3(size, size, 0.12f);
+            projector.size = new Vector3(size, size, depth);
             projector.pivot = Vector3.zero;
             projector.drawDistance = 60f;
             projector.fadeScale = 0.9f;

@@ -146,28 +146,31 @@ namespace LR2.EditorTools
                     padSumL += oscA * (v % 2 == 0 ? 0.7f : 0.45f) + oscB * 0.35f;
                     padSumR += oscB * (v % 2 == 0 ? 0.45f : 0.7f) + oscA * 0.35f;
                 }
-                float sweep = 520f + 420f * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * t / DurationSec));
+                float sweep = 460f + 360f * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * t / DurationSec));
                 float pL = SoftLowpass(ref padLpL, padSumL * 0.14f * chordEnv, sweep);
                 float pR = SoftLowpass(ref padLpR, padSumR * 0.14f * chordEnv, sweep);
 
                 // Warm deep sub-bass
                 float subF = LoopLockedPhaseHz(MidiToHz(BassMidi[bar]));
-                float sub = Mathf.Sin(2f * Mathf.PI * subF * t) * 0.20f * Mathf.Clamp01(barT / 0.08f);
+                float sub = Mathf.Sin(2f * Mathf.PI * subF * t) * 0.22f * Mathf.Clamp01(barT / 0.08f);
 
-                // Delicate 8th-note glass/felt tactical arpeggio
+                // Bowed war-cello / Phrygian minor 2nd tension motif (subtle analog grit)
                 int step = Mathf.Clamp((int)(barT / 0.25f), 0, 7);
                 float stepT = barT - step * 0.25f;
-                float noteHz = MidiToHz(ArpNotes[bar][step]);
-                float arpEnv = Mathf.Exp(-stepT * 7.5f) * Mathf.Clamp01(stepT / 0.004f);
-                float arp = (Mathf.Sin(2f * Mathf.PI * noteHz * stepT) * 0.7f + Tri(noteHz * 2f * stepT) * 0.18f * Mathf.Exp(-stepT * 18f)) * arpEnv * 0.16f;
+                float arpMidi = (bar % 2 == 1 && step == 6) ? (ArpNotes[bar][step] - 1f) : ArpNotes[bar][step];
+                float noteHz = MidiToHz(arpMidi - 12f);
+                float bowAtk = Mathf.Clamp01(stepT / 0.035f);
+                float arpEnv = bowAtk * Mathf.Exp(-stepT * 4.8f);
+                float bowed = (float)Math.Tanh((Saw(noteHz * stepT) * 0.55f + Tri(noteHz * 2f * stepT) * 0.28f) * 1.4f) * arpEnv * 0.18f;
                 float pan = (step % 2 == 0) ? 0.65f : 0.35f;
 
-                float dryL = pL + sub + arp * pan;
-                float dryR = pR + sub + arp * (1f - pan);
-                L[i] = SoftLowpass(ref lpL, dryL, 6200f);
-                R[i] = SoftLowpass(ref lpR, dryR, 6200f);
+                float dryL = pL + sub + bowed * pan;
+                float dryR = pR + sub + bowed * (1f - pan);
+                L[i] = SoftLowpass(ref lpL, dryL, 5200f);
+                R[i] = SoftLowpass(ref lpR, dryR, 5200f);
             }
 
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.22f, gritDrive: 1.35f, withArtillery: true);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.375f * SampleRate), 0.34f);
             FinalizeStem(L, R, targetRms: 0.145f, maxPeak: 0.78f);
             WriteWav(path, L, R);
@@ -207,6 +210,7 @@ namespace LR2.EditorTools
                 R[i] = SoftLowpass(ref lpR, xR, 3800f);
             }
 
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.10f, gritDrive: 1.15f, withArtillery: true);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.375f * SampleRate), 0.28f);
             MixProgressiveGuitar(L, R, GuitarIntensity.CleanCalm);
             FinalizeStem(L, R, targetRms: 0.080f, maxPeak: 0.70f);
@@ -261,9 +265,10 @@ namespace LR2.EditorTools
                 R[i] = bR + drum + sR;
             }
 
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.28f, gritDrive: 1.75f, withArtillery: true);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.25f * SampleRate), 0.18f);
             MixProgressiveGuitar(L, R, GuitarIntensity.OverdriveTension);
-            FinalizeStem(L, R, targetRms: 0.140f, maxPeak: 0.80f);
+            FinalizeStem(L, R, targetRms: 0.145f, maxPeak: 0.80f);
             WriteWav(path, L, R);
         }
 
@@ -353,10 +358,59 @@ namespace LR2.EditorTools
                 R[i] = kick + snare + hat + bassDrive + rollR + SoftLowpass(ref leadLpR, ostR, fCut);
             }
 
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.42f, gritDrive: 2.35f, withArtillery: true);
             MixProgressiveGuitar(L, R, GuitarIntensity.HeavyCombat);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.1875f * SampleRate), 0.16f);
-            FinalizeStem(L, R, targetRms: 0.220f, maxPeak: 0.86f);
+            FinalizeStem(L, R, targetRms: 0.225f, maxPeak: 0.86f);
             WriteWav(path, L, R);
+        }
+
+        /// <summary>
+        /// B36: Adds war-torn low bowed brass/cello D-Phrygian power fifths, subtle tape-grit saturation,
+        /// and far-off muffled battlefield artillery thuds while carving upper-mids so footsteps cut cleanly through.
+        /// </summary>
+        private static void AddWarTornOrchestralBed(float[] L, float[] R, float brassWeight, float gritDrive, bool withArtillery)
+        {
+            int n = L.Length;
+            float hornLpL = 0f, hornLpR = 0f, artLp = 0f;
+            var rng = new System.Random(1944);
+            float[] artStarts = { 0.40f, 5.15f, 9.85f, 13.70f };
+
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)SampleRate;
+                int bar = Mathf.Clamp((int)(t / 2f), 0, 7);
+                float barT = t - bar * 2f;
+                float edge = Mathf.Clamp01(barT / 0.04f) * Mathf.Clamp01((2f - barT) / 0.04f);
+
+                // Low bowed war brass (D3/A3 power fifths + Phrygian b2 tension in bars 3 & 7)
+                float rootF = LoopLockedPhaseHz(MidiToHz(BassMidi[bar] + 12f));
+                float fifthF = (bar == 3 || bar == 7) ? LoopLockedPhaseHz(MidiToHz(BassMidi[bar] + 13f)) : LoopLockedPhaseHz(MidiToHz(BassMidi[bar] + 19f));
+                float swell = (0.35f + 0.65f * Mathf.Clamp01(bar / 7f)) * edge;
+                float brassL = (float)Math.Tanh((Saw(rootF * 1.002f * t) + Saw(fifthF * 0.998f * t) * 0.72f) * gritDrive) * brassWeight * swell;
+                float brassR = (float)Math.Tanh((Saw(rootF * 0.998f * t) + Saw(fifthF * 1.002f * t) * 0.72f) * gritDrive) * brassWeight * swell;
+                float bCut = 880f + 620f * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * 0.5f * t / DurationSec));
+
+                float art = 0f;
+                if (withArtillery)
+                {
+                    float white = (float)(rng.NextDouble() * 2.0 - 1.0);
+                    for (int a = 0; a < artStarts.Length; a++)
+                    {
+                        float dt = t - artStarts[a];
+                        if (dt >= 0f && dt < 1.15f)
+                        {
+                            float rumbleEnv = Mathf.Clamp01(dt / 0.025f) * Mathf.Exp(-dt * 3.4f);
+                            float subBoom = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(74f, 34f, Mathf.Clamp01(dt * 1.8f)) * dt);
+                            art += (subBoom * 0.62f + white * 0.55f) * rumbleEnv;
+                        }
+                    }
+                    art = SoftLowpass(ref artLp, art * 0.16f, 220f);
+                }
+
+                L[i] += SoftLowpass(ref hornLpL, brassL, bCut) + art;
+                R[i] += SoftLowpass(ref hornLpR, brassR, bCut) + art;
+            }
         }
 
         private static void AddCircularStereoEcho(float[] L, float[] R, int delaySamples, float feedbackGain)

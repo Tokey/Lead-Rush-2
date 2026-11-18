@@ -28,3 +28,6 @@ D26,2026-11-17 23:39,copilot-review,Copilot,gpt-5.6-luna,review,Deprecated FindO
 D27,2026-11-17 23:47,user,,,escaped,Weapon hold / fingers still look wrong,C04,Claude,claude-opus-5-5,medium,open
 D28,2026-11-18 00:10,user,,,escaped,"Unity compile error reached the developer: Recorder.valid (PerformanceFrameTelemetry, P3 telemetry); Copilot also saw it in its own run at 00:08",P09,Copilot,gpt-5.6-luna,high,fixed
 D29,2026-11-18 00:10,user,,,escaped,Unity compile error reached the developer: HDAdditionalLightData.displayLightIntensity (FireHazard fix) does not exist in HDRP 17.5,P06,Copilot,gpt-5.6-luna,high,fixed
+D30,2026-11-18 00:21,claude-self,Claude,claude-opus-5-5,pre-push,"RetargetProxy finger-mode edit captured a ref parameter in a local function: file uncompilable for ~30 s",C17,Claude,claude-opus-5-5,high,fixed
+D31,2026-11-18 00:34,claude-review,Claude,claude-opus-5-5,review,"AtmosphereFX lacks the low Local Volumetric Fog layer from the B40 spec",P12,Copilot,gpt-5.6-luna,high,open
+D32,2026-11-18 00:31,claude-review,Claude,claude-opus-5-5,review,"Agents saved scripts during another agent's Unity run; mid-run recompile killed pose check #4 (process defect)",G13,Gemini,argon,medium,fixed

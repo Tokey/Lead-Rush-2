@@ -22,11 +22,54 @@ namespace LR2.EditorTools
         public static void Build()
         {
             _theme = AssetDatabase.LoadAssetAtPath<UITheme>("Assets/LR2/Resources/LR2/UITheme.asset");
+            EnsureHeadingFont(_theme);
             MakeSprites();
             BuildGameUI();
             BuildMainMenuUI();
             AssetDatabase.SaveAssets();
             Debug.Log("[LR2] UI prefabs built (LR2_GameUI, LR2_MainMenuUI).");
+        }
+
+        private static void EnsureHeadingFont(UITheme theme)
+        {
+            if (theme == null) return;
+            const string ttfPath = "Assets/LR2/UI/Fonts/SairaStencilOne-Regular.ttf";
+            const string assetPath = "Assets/LR2/UI/Fonts/LR2_SairaStencil SDF.asset";
+            const string fallbackPath = "Assets/LR2/UI/Fonts/LR2_Bebas SDF.asset";
+            var fa = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
+            if (fa == null)
+            {
+                AssetDatabase.ImportAsset(ttfPath, ImportAssetOptions.ForceSynchronousImport);
+                var font = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
+                if (font != null)
+                {
+                    fa = TMP_FontAsset.CreateFontAsset(font);
+                    if (fa != null)
+                    {
+                        AssetDatabase.CreateAsset(fa, assetPath);
+                        if (fa.atlasTextures != null)
+                            foreach (var tex in fa.atlasTextures)
+                                if (tex != null) { tex.name = fa.name + " Atlas"; AssetDatabase.AddObjectToAsset(tex, fa); }
+                        if (fa.material != null)
+                        {
+                            fa.material.name = fa.name + " Material";
+                            AssetDatabase.AddObjectToAsset(fa.material, fa);
+                        }
+                    }
+                }
+            }
+            if (fa != null)
+            {
+                var fb = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(fallbackPath);
+                if (fb != null)
+                {
+                    fa.fallbackFontAssetTable ??= new System.Collections.Generic.List<TMP_FontAsset>();
+                    if (!fa.fallbackFontAssetTable.Contains(fb)) fa.fallbackFontAssetTable.Add(fb);
+                }
+                EditorUtility.SetDirty(fa);
+                theme.headingFont = fa;
+                EditorUtility.SetDirty(theme);
+            }
         }
 
         public static void EnsureEventSystem()
@@ -331,6 +374,24 @@ namespace LR2.EditorTools
             BuildStepper(slot, 34f, out prev, out next, out valueText, 18f);
         }
 
+        private static SettingsPanel.KeybindSlot KeybindColRow(Transform parent, string actionName, string displayLabel, float colLeft, float y, float labelW = 248f, float slotW = 360f)
+        {
+            ColRow(parent, displayLabel, colLeft, y, labelW, slotW, out var slot, out var val);
+            Object.DestroyImmediate(val.gameObject);
+            var btn = Btn(actionName, slot, Vector2.zero, new Vector2(slotW, 34f));
+            var bRt = (RectTransform)btn.transform;
+            bRt.anchorMin = bRt.anchorMax = new Vector2(0.5f, 0.5f);
+            bRt.anchoredPosition = Vector2.zero;
+            var lbl = btn.GetComponentInChildren<TMP_Text>();
+            if (lbl != null)
+            {
+                lbl.alignment = TextAlignmentOptions.Center;
+                lbl.fontSize = 18f;
+                lbl.rectTransform.anchoredPosition = Vector2.zero;
+            }
+            return new SettingsPanel.KeybindSlot { actionName = actionName, button = btn, label = lbl };
+        }
+
         private static Canvas NewCanvas(string name, int order)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -350,47 +411,107 @@ namespace LR2.EditorTools
             var group = Panel("SettingsPanel", parent, new Color(0.015f, 0.02f, 0.026f, 0.95f));
             var t = group.transform;
             Color accent = _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f);
+            Color dim = _theme != null ? _theme.textDim : new Color(1f, 1f, 1f, 0.62f);
 
-            Txt("Title", t, "SETTINGS", 58f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(900f, 72f), true);
-            Img("TitleRule", t, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -104f), new Vector2(220f, 2f));
-            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -432f), new Vector2(700f, 646f), accent);
-            CardBacking(t, "RightColCard", new Vector2(0.5f, 1f), new Vector2(392f, -432f), new Vector2(700f, 646f), accent);
+            Txt("Title", t, "SETTINGS", 54f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -54f), new Vector2(900f, 64f), true);
+            Img("TitleRule", t, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -92f), new Vector2(220f, 2f));
+            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-420f, -476f), new Vector2(720f, 598f), accent);
+            CardBacking(t, "RightColCard", new Vector2(0.5f, 1f), new Vector2(420f, -476f), new Vector2(720f, 598f), accent);
 
             var s = group.gameObject.AddComponent<SettingsPanel>();
-            const float leftCol = -770f;
-            const float rightCol = 70f;
-            const float stepLeft = 51f;
+            string[] tabTitles = { "GRAPHICS", "CONTROLS", "KEYBINDS", "AUDIO & HUD" };
+            s.tabButtons = new Button[tabTitles.Length];
+            s.tabPanels = new GameObject[tabTitles.Length];
+            for (int ti = 0; ti < tabTitles.Length; ti++)
+            {
+                float tx = -420f + ti * 280f;
+                var tb = Btn(tabTitles[ti], t, new Vector2(tx, 412f), new Vector2(256f, 42f));
+                var tLbl = tb.GetComponentInChildren<TMP_Text>();
+                if (tLbl != null)
+                {
+                    tLbl.alignment = TextAlignmentOptions.Center;
+                    tLbl.fontSize = 20f;
+                    tLbl.rectTransform.anchoredPosition = Vector2.zero;
+                }
+                s.tabButtons[ti] = tb;
 
-            var lHdr = Txt("HeaderLeft", t, "CONTROLS & CAMERA", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(leftCol, -142f), new Vector2(520f, 30f), true, accent);
-            ((RectTransform)lHdr.transform).pivot = new Vector2(0f, 0.5f);
-            float y = -194f;
-            s.sensitivity = SliderColRow(t, "MOUSE SENSITIVITY", leftCol, y, out s.sensitivityValue); y -= stepLeft;
-            s.adsSensitivity = SliderColRow(t, "ADS SENSITIVITY", leftCol, y, out s.adsSensitivityValue); y -= stepLeft;
-            s.invertY = ToggleColRow(t, "INVERT Y", leftCol, y); y -= stepLeft;
-            s.fieldOfView = SliderColRow(t, "FOV (HORIZONTAL)", leftCol, y, out s.fovValue); y -= stepLeft;
-            s.cameraShake = SliderColRow(t, "CAMERA SHAKE", leftCol, y, out s.cameraShakeValue); y -= stepLeft;
-            s.bodycamLook = ToggleColRow(t, "BODYCAM LENS LOOK", leftCol, y); y -= stepLeft;
-            s.bodycamMotion = SliderColRow(t, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= stepLeft;
-            s.motionBlur = ToggleColRow(t, "MOTION BLUR", leftCol, y); y -= stepLeft;
-            s.filmGrain = ToggleColRow(t, "FILM GRAIN", leftCol, y); y -= stepLeft;
-            s.rayTracing = ToggleColRow(t, "RAY TRACING (DXR)", leftCol, y); y -= stepLeft;
-            s.laserSight = ToggleColRow(t, "LASER SIGHT [L]", leftCol, y);
+                var tabGo = Stretch("Tab_" + tabTitles[ti].Replace(" ", ""), t);
+                s.tabPanels[ti] = tabGo.gameObject;
+            }
 
-            const float stepRight = 51f;
-            var rHdr = Txt("HeaderRight", t, "AUDIO, DISPLAY & BOTS", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, -142f), new Vector2(520f, 30f), true, accent);
-            ((RectTransform)rHdr.transform).pivot = new Vector2(0f, 0.5f);
-            y = -194f;
-            s.masterVolume = SliderColRow(t, "MASTER VOLUME", rightCol, y, out s.masterVolumeValue); y -= stepRight;
-            s.sfxVolume = SliderColRow(t, "EFFECTS VOLUME", rightCol, y, out s.sfxVolumeValue); y -= stepRight;
-            s.musicVolume = SliderColRow(t, "MUSIC VOLUME", rightCol, y, out s.musicVolumeValue); y -= stepRight;
-            s.uiVolume = SliderColRow(t, "UI VOLUME", rightCol, y, out s.uiVolumeValue); y -= stepRight;
-            s.hitmarkerSound = ToggleColRow(t, "HITMARKER SOUND", rightCol, y); y -= stepRight;
-            SelectorColRow(t, "GRAPHICS QUALITY", rightCol, y, out s.qualityPrev, out s.qualityNext, out s.qualityValue); y -= stepRight;
-            SelectorColRow(t, "ANTI-ALIASING", rightCol, y, out s.antiAliasingPrev, out s.antiAliasingNext, out s.antiAliasingValue); y -= stepRight;
-            s.vsync = ToggleColRow(t, "V-SYNC", rightCol, y); y -= stepRight;
-            SelectorColRow(t, "FRAME LIMIT", rightCol, y, out s.frameLimitPrev, out s.frameLimitNext, out s.frameLimitValue); y -= stepRight;
-            s.showFps = ToggleColRow(t, "SHOW FPS", rightCol, y); y -= stepRight;
-            SelectorColRow(t, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue);
+            const float leftCol = -752f;
+            const float rightCol = 88f;
+            const float step = 58f;
+            const float startY = -246f;
+
+            void AddSectionHeader(Transform tabRoot, string name, string text, float x)
+            {
+                var h = Txt(name, tabRoot, text, 21f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(x, -196f), new Vector2(540f, 28f), true, accent);
+                ((RectTransform)h.transform).pivot = new Vector2(0f, 0.5f);
+            }
+
+            // Tab 0: GRAPHICS (P5 + B43 + B48)
+            var gfxTab = s.tabPanels[0].transform;
+            AddSectionHeader(gfxTab, "GfxLeft", "CAMERA & POST-PROCESSING", leftCol);
+            float y = startY;
+            s.fieldOfView = SliderColRow(gfxTab, "FOV (HORIZONTAL)", leftCol, y, out s.fovValue); y -= step;
+            s.cameraShake = SliderColRow(gfxTab, "CAMERA SHAKE", leftCol, y, out s.cameraShakeValue); y -= step;
+            s.bodycamMotion = SliderColRow(gfxTab, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= step;
+            s.bodycamLook = ToggleColRow(gfxTab, "BODYCAM LENS LOOK", leftCol, y); y -= step;
+            s.motionBlur = ToggleColRow(gfxTab, "MOTION BLUR", leftCol, y); y -= step;
+            s.filmGrain = ToggleColRow(gfxTab, "FILM GRAIN", leftCol, y);
+
+            AddSectionHeader(gfxTab, "GfxRight", "QUALITY, UPSCALER & DISPLAY", rightCol);
+            y = startY;
+            SelectorColRow(gfxTab, "GRAPHICS PRESET", rightCol, y, out s.qualityPrev, out s.qualityNext, out s.qualityValue); y -= step;
+            SelectorColRow(gfxTab, "UPSCALER MODE", rightCol, y, out s.upscalerPrev, out s.upscalerNext, out s.upscalerValue); y -= step;
+            SelectorColRow(gfxTab, "ANTI-ALIASING", rightCol, y, out s.antiAliasingPrev, out s.antiAliasingNext, out s.antiAliasingValue); y -= step;
+            s.vsync = ToggleColRow(gfxTab, "V-SYNC", rightCol, y); y -= step;
+            SelectorColRow(gfxTab, "FRAME LIMIT", rightCol, y, out s.frameLimitPrev, out s.frameLimitNext, out s.frameLimitValue); y -= step;
+            s.showFps = ToggleColRow(gfxTab, "SHOW FPS", rightCol, y); y -= step;
+            s.rayTracing = ToggleColRow(gfxTab, "RAY TRACING (DXR)", rightCol, y); y -= step;
+            s.upscalerStatusNote = Txt("UpscalerStatusNote", gfxTab, "", 16f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, y), new Vector2(640f, 26f), false, dim);
+            ((RectTransform)s.upscalerStatusNote.transform).pivot = new Vector2(0f, 0.5f);
+
+            // Tab 1: CONTROLS
+            var ctrlTab = s.tabPanels[1].transform;
+            AddSectionHeader(ctrlTab, "CtrlLeft", "AIMING & WEAPON CONTROLS", leftCol);
+            y = startY;
+            s.sensitivity = SliderColRow(ctrlTab, "MOUSE SENSITIVITY", leftCol, y, out s.sensitivityValue); y -= step;
+            s.adsSensitivity = SliderColRow(ctrlTab, "ADS SENSITIVITY", leftCol, y, out s.adsSensitivityValue); y -= step;
+            s.invertY = ToggleColRow(ctrlTab, "INVERT Y AXIS", leftCol, y); y -= step;
+            s.laserSight = ToggleColRow(ctrlTab, "LASER SIGHT [L]", leftCol, y);
+            AddSectionHeader(ctrlTab, "CtrlRight", "INPUT & BINDINGS", rightCol);
+            var ctrlHint = Txt("CtrlHint", ctrlTab, "All primary keyboard & mouse actions are remappable under KEYBINDS and persisted via Unity Input System overrides.", 20f, TextAlignmentOptions.TopLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, startY + 12f), new Vector2(620f, 180f), false, dim);
+            ((RectTransform)ctrlHint.transform).pivot = new Vector2(0f, 1f);
+
+            // Tab 2: KEYBINDS (LR2Bindings B44)
+            var bindTab = s.tabPanels[2].transform;
+            AddSectionHeader(bindTab, "BindLeft", "MOVEMENT & COMBAT", leftCol);
+            AddSectionHeader(bindTab, "BindRight", "UTILITY & STANCES", rightCol);
+            (string action, string label)[] leftBinds = { ("Move", "MOVE FORWARD"), ("Fire", "FIRE WEAPON"), ("Aim", "AIM DOWN SIGHTS"), ("Sprint", "SPRINT"), ("Jump", "JUMP / MANTLE"), ("Reload", "RELOAD") };
+            (string action, string label)[] rightBinds = { ("Crouch", "CROUCH"), ("Prone", "PRONE"), ("LeanLeft", "LEAN LEFT"), ("LeanRight", "LEAN RIGHT"), ("Interact", "INTERACT / RESUPPLY"), ("Laser", "TOGGLE LASER") };
+            for (int bi = 0; bi < leftBinds.Length; bi++)
+                s.keybindSlots.Add(KeybindColRow(bindTab, leftBinds[bi].action, leftBinds[bi].label, leftCol, startY - bi * step));
+            for (int bi = 0; bi < rightBinds.Length; bi++)
+                s.keybindSlots.Add(KeybindColRow(bindTab, rightBinds[bi].action, rightBinds[bi].label, rightCol, startY - bi * step));
+            s.rebindStatusText = Txt("RebindStatus", bindTab, "CLICK ANY ACTION TO REBIND (ESC TO CANCEL)", 18f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -640f), new Vector2(900f, 30f), false, accent);
+            s.resetBindingsButton = Btn("Reset Keybinds", bindTab, new Vector2(0f, -692f), new Vector2(280f, 44f));
+
+            // Tab 3: AUDIO & HUD (B5, P4, B44)
+            var audioTab = s.tabPanels[3].transform;
+            AddSectionHeader(audioTab, "AudioLeft", "AUDIO CHANNELS", leftCol);
+            y = startY;
+            s.masterVolume = SliderColRow(audioTab, "MASTER VOLUME", leftCol, y, out s.masterVolumeValue); y -= step;
+            s.sfxVolume = SliderColRow(audioTab, "EFFECTS VOLUME", leftCol, y, out s.sfxVolumeValue); y -= step;
+            s.musicVolume = SliderColRow(audioTab, "MUSIC VOLUME", leftCol, y, out s.musicVolumeValue); y -= step;
+            s.uiVolume = SliderColRow(audioTab, "UI VOLUME", leftCol, y, out s.uiVolumeValue); y -= step;
+            s.hitmarkerSound = ToggleColRow(audioTab, "HITMARKER SOUND", leftCol, y);
+
+            AddSectionHeader(audioTab, "AudioRight", "COMBAT HUD & BOTS", rightCol);
+            y = startY;
+            SelectorColRow(audioTab, "HITMARKER PALETTE", rightCol, y, out s.colorBlindPrev, out s.colorBlindNext, out s.colorBlindValue); y -= step;
+            SelectorColRow(audioTab, "BOT DIFFICULTY", rightCol, y, out s.botDifficultyPrev, out s.botDifficultyNext, out s.botDifficultyValue);
 
             s.resetDefaultsButton = Btn("Reset Defaults", t, new Vector2(-190f, -446f), new Vector2(310f, 54f));
             back = Btn("Back", t, new Vector2(190f, -446f), new Vector2(310f, 54f));

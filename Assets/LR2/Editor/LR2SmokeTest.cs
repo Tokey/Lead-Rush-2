@@ -58,6 +58,9 @@ namespace LR2.EditorTools
 
         private static void Begin()
         {
+            // Three agents edit scripts while tests run; an auto-refresh would recompile mid-play, reload the domain and
+            // destroy the test (pose check #4, 00:31). Freeze asset auto-refresh for this test editor; it exits afterwards.
+            AssetDatabase.DisallowAutoRefresh();
             string scenePath = LR2MapBuilder.ScenePath;
             var args = System.Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
