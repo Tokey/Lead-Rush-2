@@ -26,7 +26,7 @@ namespace LR2.Characters
 
         private const int Width = 1280, Height = 720;
 
-        private enum View { FirstPerson, Front, Side, OverShoulder, HeadClose, Enemy }
+        private enum View { FirstPerson, Front, Side, OverShoulder, HeadClose, Enemy, HandsLeft, HandsRight }
 
         private struct Shot
         {
@@ -115,6 +115,9 @@ namespace LR2.Characters
             yield return Capture("tp_02_side", null, View.Side, true);
             yield return Capture("tp_03_overshoulder", null, View.OverShoulder, false);
             yield return Capture("tp_04_head_close", null, View.HeadClose, true);
+            LogFingers("idle rifle");
+            yield return Capture("tp_04b_hands_left", null, View.HandsLeft, true);
+            yield return Capture("tp_04c_hands_right", null, View.HandsRight, true);
 
             _cmd.aimPitch = 60f;
             yield return Wait(0.9f);
@@ -129,6 +132,8 @@ namespace LR2.Characters
             yield return Wait(1.0f);
             yield return Capture("fp_04_ads", "ADS rifle");
             yield return Capture("tp_05_ads_side", null, View.Side, true);
+            LogFingers("ADS rifle");
+            yield return Capture("tp_05b_ads_hands_right", null, View.HandsRight, true);
             _cmd.aim = false;
             yield return Wait(0.6f);
 
@@ -241,6 +246,8 @@ namespace LR2.Characters
             yield return Wait(1.1f);
             yield return Capture("fp_08_pistol", "pistol idle");
             yield return Capture("tp_07_pistol_front", null, View.Front, true);
+            LogFingers("pistol");
+            yield return Capture("tp_07b_pistol_hands_left", null, View.HandsLeft, true);
             _cmd.aim = true;
             yield return Wait(0.8f);
             yield return Capture("fp_09_pistol_ads", "pistol ADS");
@@ -578,6 +585,40 @@ namespace LR2.Characters
             Note(sb.ToString());
         }
 
+        private HumanPoseHandler _fingerHandler;
+        private HumanPose _fingerPose;
+
+        /// <summary>B26: per finger, the humanoid muscle values and the measured bend (degrees) of the visible SWAT hands.</summary>
+        private void LogFingers(string label)
+        {
+            var vis = _proxy != null ? _proxy.Visual : null;
+            if (vis == null || !vis.isHuman || vis.avatar == null) { Note($"FINGERS [{label}] no visual humanoid"); return; }
+            if (_fingerHandler == null) _fingerHandler = new HumanPoseHandler(vis.avatar, vis.transform);
+            _fingerHandler.GetHumanPose(ref _fingerPose);
+            string[] names = HumanTrait.MuscleName;
+            float M(string n) { int i = System.Array.IndexOf(names, n); return i >= 0 && _fingerPose.muscles != null && i < _fingerPose.muscles.Length ? _fingerPose.muscles[i] : float.NaN; }
+            float Bend(HumanBodyBones hand, HumanBodyBones a, HumanBodyBones b, HumanBodyBones c)
+            {
+                var h = vis.GetBoneTransform(hand); var p = vis.GetBoneTransform(a); var m = vis.GetBoneTransform(b); var d = vis.GetBoneTransform(c);
+                if (h == null || p == null || m == null || d == null) return -1f;
+                return Vector3.Angle(p.position - h.position, m.position - p.position) + Vector3.Angle(m.position - p.position, d.position - m.position);
+            }
+            var sb = new System.Text.StringBuilder($"FINGERS [{label}] (muscle 1/2/3, bend deg)");
+            foreach (var side in new[] { "Left", "Right" })
+            {
+                bool L = side == "Left";
+                var hand = L ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
+                sb.Append("\n    " + side + ":");
+                void F(string f, HumanBodyBones a, HumanBodyBones b, HumanBodyBones c)
+                    => sb.Append($" {f} {M($"{side} {f} 1 Stretched"):0.00}/{M($"{side} {f} 2 Stretched"):0.00}/{M($"{side} {f} 3 Stretched"):0.00} bend={Bend(hand, a, b, c):0}");
+                F("Thumb", L ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal, L ? HumanBodyBones.LeftThumbIntermediate : HumanBodyBones.RightThumbIntermediate, L ? HumanBodyBones.LeftThumbDistal : HumanBodyBones.RightThumbDistal);
+                F("Index", L ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal, L ? HumanBodyBones.LeftIndexIntermediate : HumanBodyBones.RightIndexIntermediate, L ? HumanBodyBones.LeftIndexDistal : HumanBodyBones.RightIndexDistal);
+                F("Middle", L ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal, L ? HumanBodyBones.LeftMiddleIntermediate : HumanBodyBones.RightMiddleIntermediate, L ? HumanBodyBones.LeftMiddleDistal : HumanBodyBones.RightMiddleDistal);
+                F("Little", L ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal, L ? HumanBodyBones.LeftLittleIntermediate : HumanBodyBones.RightLittleIntermediate, L ? HumanBodyBones.LeftLittleDistal : HumanBodyBones.RightLittleDistal);
+            }
+            Note(sb.ToString());
+        }
+
         private void Render(Shot shot)
         {
             var fp = _soldier != null ? _soldier.ViewCamera : null;
@@ -593,6 +634,19 @@ namespace LR2.Characters
                 case View.Side: pos = t.position + t.right * 2.4f + t.forward * 0.4f + Vector3.up * 1.5f; look = t.position + t.forward * 0.25f + Vector3.up * 1.3f; break;
                 case View.OverShoulder: pos = t.position - t.forward * 1.5f + t.right * 0.55f + Vector3.up * 2.0f; look = t.position + t.forward * 1.6f + Vector3.up * 1.35f; break;
                 case View.HeadClose: pos = eye + t.right * 0.85f + t.forward * 0.25f + Vector3.up * 0.05f; look = eye - Vector3.up * 0.12f; break;
+                case View.HandsLeft:
+                case View.HandsRight:
+                {
+                    // close-up of the grip: midpoint of the visible hands, seen from the left or right side and slightly above
+                    var vis = _proxy != null ? _proxy.Visual : null;
+                    var hl = vis != null ? vis.GetBoneTransform(HumanBodyBones.LeftHand) : null;
+                    var hr = vis != null ? vis.GetBoneTransform(HumanBodyBones.RightHand) : null;
+                    Vector3 mid = hl != null && hr != null ? (hl.position + hr.position) * 0.5f : eye + t.forward * 0.35f - Vector3.up * 0.3f;
+                    float side = shot.view == View.HandsLeft ? -1f : 1f;
+                    pos = mid + t.right * (0.5f * side) + t.forward * 0.12f + Vector3.up * 0.14f;
+                    look = mid;
+                    break;
+                }
                 default:
                     if (_enemy == null) return;
                     var e = _enemy.transform;
@@ -627,7 +681,7 @@ namespace LR2.Characters
                 go.transform.position = pos;
                 go.transform.LookAt(look);
                 var cam = go.AddComponent<Camera>();
-                cam.fieldOfView = shot.view == View.HeadClose ? 40f : 52f;
+                cam.fieldOfView = shot.view == View.HeadClose ? 40f : (shot.view == View.HandsLeft || shot.view == View.HandsRight) ? 38f : 52f;
                 cam.nearClipPlane = 0.02f;
                 go.AddComponent<HDAdditionalCameraData>();
                 RenderCamera(cam, shot.name);

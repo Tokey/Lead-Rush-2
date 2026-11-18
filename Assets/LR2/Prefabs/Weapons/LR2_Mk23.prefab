@@ -204,6 +204,10 @@ MonoBehaviour:
     handLRot: {x: -0.28261206, y: 0.62173283, z: 0.67253405, w: -0.28509068}
     handRRot: {x: -0.1053657, y: 0.77602786, z: 0.5331706, w: -0.32001254}
   reloadPlayRate: 0.85
+  reloadSpeedMultiplier: 1.5
+  tacticalReload: 1
+  tacticalEndAfterMagIn: 0.08
+  chamberedRoundBonus: 1
   cameraReloadAnimation: {fileID: 0}
   grenadeClip: {fileID: 0}
   cameraGrenadeAnimation: {fileID: 0}

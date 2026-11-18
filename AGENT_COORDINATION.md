@@ -17,14 +17,14 @@ Names go by **tool**, not model. If you run a Claude model inside Copilot or Ant
 
 ## 1. Now
 
-UNITY: Gemini 23:47 BuildAllBatch (ETA 23:50)
-PUSH: 4aa7b71 by Claude 23:26 (board v2, Hor+ FOV, faster + tactical reload). Next push at the next stable point, within about 2 h of work.
+UNITY: Gemini 23:50 BuildWindowsPlayerBatch (ETA 23:54)
+PUSH: aa4ad20 by Claude 23:48 (AI-process docs, README, camera shake, reload harness, Copilot B12/B13/B24, Gemini WIP). Copilot owns the next push (R8).
 
 | Agent | State | Doing now | Next | Updated |
 |---|---|---|---|---|
 | Claude | ONLINE | board v2, AI-process docs (B21) | review Gemini's work (B1-B11, B15), bot AI (B22), B16 | 23:25 |
-| Gemini | ONLINE | R7 fixed (0 warn/0 err); BuildAllBatch | visible QA + B32 font + R2 media | 23:47 |
-| Copilot | IN PROGRESS | B30/B32 ready for review; B34 runtime QA checks awaiting Gemini runner hooks | continue B34 integration after Gemini handoff | 23:52 |
+| Gemini | ONLINE | BuildAllBatch OK; BuildWindowsPlayerBatch | visible QA across 5 scenes + R2 media | 23:50 |
+| Copilot | IN PROGRESS | B34/B38 ready for review; preparing R8 push after both green builds | polish backlog P1-P5 | 23:49 |
 
 ## 2. Needs the user
 
@@ -77,11 +77,11 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B31 | feature | LeadRush 2 starter (title) screen before the main menu | Gemini | - | Claude | OPEN | - | 23:35 | User 23:33. Fits with LR2LoadingIntro |
 | B32 | feature | New war-torn but classy font, chosen after research | Copilot (research), Gemini (implement) | copilot | user | READY FOR REVIEW | - | 23:48 | `Docs/AI_Collaboration/specs/B32.md`: seven-font shortlist, readability rules, official Google Fonts/OFL links, and Bebas Neue + Barlow Condensed recommendation |
 | B33 | release | Pre-alpha release: fresh standalone build, zipped, as a GitHub pre-release | Claude | claude-opus-5-5 | user | BLOCKED (user) | - | 23:27 | User 23:2x. Build when most changes land; zip `H:/Unity Projects/Builds/Lead Rush 2` without `*_DoNotShip`. Blocked on the private-audio question in section 2 |
-| B34 | tooling | QA checks that would have caught tonight's misses (absolute gun angle in reloads, tactical charge handle, foot slide, hands on gun, shake, Hor+ FOV) | Copilot | copilot | Claude | IN PROGRESS | - | 23:46 | Added `LR2QAExtraChecks.cs` and manual runtime project entry; Gemini runner hooks requested. Full runtime build currently blocked by pre-existing `LR2QABotRunner` access errors on `KillcamDirector` windows |
+| B34 | tooling | QA checks that would have caught tonight's misses (absolute gun angle in reloads, tactical charge handle, foot slide, hands on gun, shake, Hor+ FOV) | Copilot | copilot | Claude | READY FOR REVIEW | - | 23:49 | `LR2QAExtraChecks.cs` plus Gemini runner hooks cover reload pose, tactical ammo/charge, foot slide, hands, shake recovery and Hor+ FOV; both assemblies pass 0 warnings/0 errors |
 | B35 | bug | Reload: the rifle still stands vertical mid-reload (`tp_06`, 23:33 run) although the bridge clamp holds 38 deg | Claude | claude-opus-5-5 | Gemini | IN PROGRESS | Claude ReloadMotionBridge + Kinemation WeaponBoneWeight (double motion, suspected) | 23:40 | `Logs/LR2_PoseCheck_Claude1`. QA Reload.* passed because it measures only the bridge delta |
 | B36 | feature | Music and all game audio: more realistic and grand; gritty, war-torn | Gemini | - | Claude + user | OPEN | - | 23:40 | User 23:38. Research first (film/game war scores, loudness and dynamics, reverb tails, distant battle ambience); write `specs/B36.md`, then build |
 | B37 | tune | "Buttery smooth motion and tactility" | Claude (weapon + camera feel), Gemini (movement, foley) | - | user | OPEN | - | 23:40 | User 23:38. Frame pacing, input latency, weapon sway/inertia, camera smoothing, footstep and gear foley |
-| B38 | feature | Still too dark: fill maps with practical light (burning barrels, fires, flares, work lamps, embers) and smoke; standing in fire hurts | Gemini (placement + lighting), Copilot (`FireHazard` component) | - | Claude + user | OPEN | - | 23:45 | User 23:44. Copilot: new `Runtime/World/FireHazard.cs` (trigger volume, damage over time through the normal damage path with a fire DamageType, flame + smoke particles, flickering light, crackle loop). Gemini: 4-8 per map at cover and landmark spots, never blocking lanes |
+| B38 | feature | Still too dark: fill maps with practical light (burning barrels, fires, flares, work lamps, embers) and smoke; standing in fire hurts | Gemini (placement + lighting), Copilot (`FireHazard` component) | copilot | Claude + user | READY FOR REVIEW | - | 23:49 | Added `Runtime/World/FireHazard.cs`: trigger damage through `Health.ApplyDamage`, procedural flame/smoke, flickering point light and optional crackle loop; both assemblies pass 0 warnings/0 errors |
 | B39 | feature | Two ammo stations per map, placed strategically | Gemini | - | Claude | OPEN | - | 23:45 | User 23:44. Mid-map but exposed, on contested routes, mirrored for fairness; reuse the existing ammo crate (F to interact); show them on the minimap |
 
 ## 4. Ownership (who may edit what)
@@ -225,6 +225,8 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Copilot 23:44] [B32] Took the font-research workload from Claude's queue; researching a display/title face plus condensed HUD/body pairing with public-repo-compatible licenses.
 - [Copilot 23:48] [B32 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/B32.md`; verified official Google Fonts metadata for Bebas Neue, Anton, Oswald, Barlow Condensed, Rajdhani, Saira Condensed, and Teko, plus SIL OFL redistribution guidance.
 - [Copilot 23:51] [B30 READY FOR REVIEW] Added `LR2GlassMaterials.cs` with `LR2 > Build Glass Materials`, HDRP Lit transparent thin refraction (`IOR 1.52`, thickness `0.008 m`), procedural grime/crack PNGs, and clean/dirty/cracked material assets. `LR2.Editor` builds with 0 warnings/errors; visible material/map QA and Gemini hook remain.
+- [Copilot 23:49] [B34 READY FOR REVIEW] Confirmed `LR2QAExtraChecks.cs` and Gemini runner hooks cover absolute reload pose, tactical ammo/charge invariants, foot slide, hands-on-gun, shake recovery, and Hor+ FOV. Both assemblies build with 0 warnings and 0 errors.
+- [Copilot 23:49] [B38 READY FOR REVIEW] Added `Runtime/World/FireHazard.cs` with trigger-volume damage through `Health.ApplyDamage`, procedural flame/smoke particles, flickering light, and optional crackle-loop audio. Both assemblies build with 0 warnings and 0 errors.
 - [Claude opus-5-5 23:26] [PUSH] `4aa7b71`: board v2, Hor+ FOV (B25), 1.5x faster + tactical reload with 30+1 (B27, B28). Compiles; Unity check pending.
 - [Claude opus-5-5 23:27] [USER] User wants a pre-alpha GitHub release (zip of the build) after a fresh build. Filed as B33, blocked on the private-audio question in section 2.
 - [Claude opus-5-5 23:30] B29 camera shake coded (new `CameraShake.cs`, reload jolts make the reload more aggressive). Not pushed yet; Unity check next when the lock is free.
@@ -236,3 +238,5 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Claude opus-5-5 23:45] [USER] User 23:44: maps still too dark; wants fires, smoke and lights (fire hurts) and 2 strategic ammo stations per map. Filed B38 (Gemini + Copilot) and B39 (Gemini).
 - [Claude opus-5-5 23:46] [PROMPT] User asked Claude to prompt Copilot directly. Sent Copilot its queue (B34, B38 FireHazard, B30, B32, polish backlog, R8 push job) with `code chat -m agent -r` (VS Code 1.146 CLI). First direct agent-to-agent prompt; until now every hand-off went through this board.
 - [Claude opus-5-5 23:48] [USER] User played the build at about 23:47: "weapon hold still messed up". Claude takes it now (B26 + B23), with hand close-ups in the pose check.
+- [Claude opus-5-5 23:48] [PUSH] `aa4ad20`: AI-process docs (Docs/AI_Collaboration), README hero + link, camera shake, reload harness, Copilot B12/B13/B24. Both assemblies compile.
+- [Claude opus-5-5 23:50] [OWNERSHIP] Near miss: my `FirstPersonPoseCheck.cs` edit did not compile from 23:49 to 23:50, while Gemini's BuildAllBatch was starting. Its log shows 0 CS errors (it compiled at 23:47), so no harm. Next for Claude: hand close-ups + finger metrics + reload A/B pose check when Gemini's build frees Unity.
