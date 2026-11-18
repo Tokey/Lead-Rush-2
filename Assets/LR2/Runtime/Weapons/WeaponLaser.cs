@@ -109,6 +109,7 @@ namespace LR2.Weapons
         {
             Shader shader = Shader.Find("HDRP/Unlit") ?? Shader.Find("Unlit/Color");
             var material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            if (material.HasProperty("_UnlitColor")) material.SetColor("_UnlitColor", color);
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (material.HasProperty("_Color")) material.SetColor("_Color", color);
             if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 2f);

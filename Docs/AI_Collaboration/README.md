@@ -17,7 +17,7 @@ This page tells that story with the real prompts, the real messages the agents l
 | **Handoffs** | 4 full handoffs when an agent hit its usage limit (14:55, 15:07, 16:05, 18:13) |
 | **Usage-limit stops (Claude Code)** | 5 (11-16 afternoon; 11-17 14:55, 15:07, 18:13; 23:14 weekly limit for its sub-agents) |
 | **Pushes to GitHub** | 5 commits so far (`621630a`, `e479b74`, `76e9db0`, `d49ce90`, `4aa7b71`) |
-| **Tracked work items** | B1 to B39 on the board (bugs, tuning, features, tooling, docs) |
+| **Tracked work items** | B1 to B44 on the board (bugs, tuning, features, tooling, docs), plus research specs P1-P5 |
 
 ## The team
 
@@ -214,41 +214,47 @@ before a planned push (caught by the push rule: never push a tree that doesn't c
 | Antigravity | "argon" | 11-17 22:51 onwards | CTF mode, tactical chat, lighting and HDRI skies, human-like bot aiming |
 | GitHub Copilot | not recorded yet | 11-17 23:12 onwards | Pain/death voices, laser, bot research write-up, first review catch |
 
-## Quality: bugs traced back to the work that caused them
+## Quality: which model produced what quality of work
 
-From board v2 on, every tracker row records the **model** that did the work and the task that **caused** each bug, so these
-numbers will become exact. For the time before that, the table below is a best-effort reconstruction from the developer's
-prompts and the board.
+Every finished item and every defect goes into two ledgers, [`data/tasks.csv`](data/tasks.csv) and
+[`data/bugs.csv`](data/bugs.csv), with the agent and **model** that did the work and the task that **caused** each defect.
+[`analysis/analyze.py`](analysis/analyze.py) turns them into the charts below (`python Docs/AI_Collaboration/analysis/analyze.py`,
+needs matplotlib). A defect is **escaped** when the developer or a QA run found it after delivery, and **caught at review** when
+another agent stopped it first.
 
-```mermaid
-xychart-beta horizontal
-    title "Bugs traced to each agent and model (2026-11-16 to 17, best effort)"
-    x-axis ["Claude Code · opus-5-5", "Antigravity · argon (night)", "Antigravity · hydrogen", "Copilot"]
-    y-axis "Bugs reported after the work landed" 0 --> 7
-    bar [6, 4, 5, 0]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/escaped_per_10_tasks_dark.png">
+  <img alt="Bar chart: defects that reached the developer per 10 delivered tasks, by agent and model" src="figures/escaped_per_10_tasks_light.png">
+</picture>
 
-| Agent · model | Bug (when reported) | Caused by | Confidence |
-|---|---|---|---|
-| Claude Code · opus-5-5 | Camera doesn't load (11-16 22:38) | First LR2 rebuild | medium |
-| Claude Code · opus-5-5 | Walk animation too rapid, guns laggy and heavy (11-16 22:45) | First LR2 rebuild | medium |
-| Claude Code · opus-5-5 | Map clipping and flicker (11-16 23:34, 23:43) | First LR2 maps | medium |
-| Claude Code · opus-5-5 | Own shoulder inside the camera (11-17 13:08) | `RetargetProxy` (12:58): HumanPose units | high |
-| Claude Code · opus-5-5 | Rifle swings up during reloads (B16, B35) | `ReloadMotionBridge` (14:55 onwards) | high |
-| Claude Code · opus-5-5 | FOV looks wrong on wide screens (B25) | Horizontal-FOV change (13:58) | high |
-| Antigravity · argon | Player became "the default strange rig" (11-17 00:07) | Night-shift character changes | high |
-| Antigravity · argon | Main menu gone (00:23) | Night-shift scene changes | high |
-| Antigravity · argon/hydrogen | Gun hold and ADS broken, reload worse (11:31-11:33) | Morning changes in Antigravity | medium |
-| Antigravity · argon/hydrogen | Blood drops fly onto the screen (B3) | `GunBloodFX` (12:45) | medium |
-| Antigravity · hydrogen | Headless enemy (14:29) | unknown change that day | low |
-| Antigravity · hydrogen | Music dips during fights and comes back late (20:44) | Music director (18:19 onwards) | high |
-| Antigravity · hydrogen | Standalone build crashes (B18, 21:46) | Shader warm-up in the loading screen | high |
-| Antigravity · hydrogen | Game skips the main menu (22:33) | Test-harness start-scene change | medium |
-| Antigravity · hydrogen | Hidden test runs play sound in the background (22:59) | Running playtests in hidden batch mode | high |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/review_catches_per_10_tasks_dark.png">
+  <img alt="Bar chart: defects caught by another agent's review per 10 tasks, by agent and model" src="figures/review_catches_per_10_tasks_light.png">
+</picture>
 
-Read these numbers with care. They are **not normalised by the amount of work**: Claude Code wrote most of the original game and
-the hardest animation code, so it had the most surface for bugs. Some reports bundle several issues, and attribution before the
-tracker relies on timing. The [research log](RESEARCH_LOG.md) explains how the metrics will be computed from now on.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/tasks_delivered_dark.png">
+  <img alt="Bar chart: tasks delivered per agent and model" src="figures/tasks_delivered_light.png">
+</picture>
+
+| Agent · model | Tasks delivered | Escaped defects, weighted (count) | Escaped per 10 tasks | Caught at review | Pre-push breaks |
+|---|---|---|---|---|---|
+| Claude · claude-opus-5-5 | 16 | 5.7 (8) | 3.6 | 1 | 1 |
+| Copilot · unknown | 10 | 0.0 (0) | 0.0 | 4 | 0 |
+| Gemini · gemini-4-hydrogen | 8 | 3.9 (5) | 4.9 | 1 | 0 |
+| Gemini · argon | 3 | 3.6 (4) | 12.0 | 1 | 1 |
+| Gemini · argon/hydrogen | 1 | 0.6 (1) | 6.0 | 0 | 0 |
+
+**Read these numbers with care** (as of 2026-11-18 00:05; regenerate for the latest):
+- **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
+- **Time at risk differs.** Copilot's work is minutes old and not yet playtested: its 0 escaped defects means "none found yet",
+  and its review catches show the defects exist. Older work has had more playtests to reveal problems.
+- **Tasks differ in size and difficulty.** Claude Code built the original game and the hardest animation code; the Antigravity
+  agent's night shift was broad. A task-size weight is a planned improvement.
+- **Attribution before the tracker is reconstructed** from timing and prompts, so it carries a confidence weight. From 2026-11-17
+  23:25 on, agents log model and cause as they work, which makes later data much more reliable.
+- **Models are named as the tools report them.** "argon" is the developer's name for `gemini-pro-orchestrator-g1-pro` with
+  `gemini-flash-worker-agy` helpers; Copilot's model is not reported yet (board request R9).
 
 ## What worked, and what didn't
 
@@ -279,3 +285,6 @@ tracker relies on timing. The [research log](RESEARCH_LOG.md) explains how the m
 | [`PROMPTS.md`](PROMPTS.md) | Every developer prompt to the agents, verbatim, in order |
 | [`RESEARCH_LOG.md`](RESEARCH_LOG.md) | Tagged event log, metric definitions and open questions (raw material for a paper) |
 | [`archive/`](archive/) | The board as it was before each format change, verbatim |
+| [`data/`](data/) | The research ledgers: `tasks.csv` (who did what, with which model, outcome) and `bugs.csv` (each defect and its cause) |
+| [`analysis/analyze.py`](analysis/analyze.py) | Turns the ledgers into the charts and table in [`figures/`](figures/) |
+| [`specs/`](specs/) | Specs and reviews for individual tracker items |

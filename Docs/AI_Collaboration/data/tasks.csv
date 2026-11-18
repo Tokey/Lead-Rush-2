@@ -1,0 +1,40 @@
+id,when,agent,model,title,kind,board_id,outcome,source
+C01,2026-11-16 22:30,Claude,claude-opus-5-5,"First LR2 rebuild: builder pipeline, maps, bots, weapons",feature,,delivered,reconstruction (prompt 11:19 + playtest 22:38)
+C02,2026-11-17 06:00,Claude,claude-opus-5-5,"Night fixes: camera, animation speed, map flicker, bodycam",fix,,delivered,reconstruction (prompts 22:38-23:43)
+C03,2026-11-17 12:42,Claude,claude-opus-5-5,"Guns table (5 weapons) + first-person killcam replay",feature,,delivered,board log 12:42
+C04,2026-11-17 12:58,Claude,claude-opus-5-5,"Full-body soldier: hidden Kinemation driver + RetargetProxy",feature,,delivered,board log 12:58
+C05,2026-11-17 13:58,Claude,claude-opus-5-5,"HumanPose units root cause (shoulder in camera)",fix,,verified,board log 13:58 (pose check)
+C06,2026-11-17 13:58,Claude,claude-opus-5-5,"FOV setting as horizontal FOV",feature,,delivered,board log 13:58
+C07,2026-11-17 14:55,Claude,claude-opus-5-5,"ReloadMotionBridge (reload onto the visible gun)",feature,B16,delivered,board handoff 14:55
+C08,2026-11-17 18:11,Claude,claude-opus-5-5,"ReloadMotionBridge rewrite (gun's own frame, hand calibration)",fix,B16,ready-for-review,transcript 18:11
+C09,2026-11-17 18:13,Claude,claude-opus-5-5,"Recoil per gun + ADS multipliers, TTK rebalance",tune,B17,ready-for-review,transcript 18:13 + QA PASS
+C10,2026-11-17 23:24,Claude,claude-opus-5-5,"Board v2 + AI-process docs",docs,B21,ready-for-review,board log 23:25
+C11,2026-11-17 23:26,Claude,claude-opus-5-5,"Hor+ FOV for any aspect ratio",fix,B25,ready-for-review,commit 4aa7b71
+C12,2026-11-17 23:26,Claude,claude-opus-5-5,"Reload 1.5x faster + tactical reload (30+1)",feature,B27/B28,ready-for-review,commit 4aa7b71 + pose check
+C13,2026-11-17 23:30,Claude,claude-opus-5-5,"Camera shake (trauma + spring jolts)",feature,B29,ready-for-review,board log 23:30
+C14,2026-11-17 23:54,Claude,claude-opus-5-5,"Bot-AI code review",review,B22,verified,specs/B22.md
+C15,2026-11-17 23:56,Claude,claude-opus-5-5,"Softer TAA + anti-aliasing setting",fix,B43,ready-for-review,board row B43
+C16,2026-11-17 23:50,Claude,claude-opus-5-5,"Pose-check harness: reload A/B, hand close-ups, finger metrics",tooling,B26/B35,ready-for-review,board log 23:50
+G01,2026-11-17 00:30,Gemini,argon,"Night shift: 2 new maps, destructible props, clipping math, UI, notes for Claude",feature,,delivered,reconstruction (prompts 23:44-00:30)
+G02,2026-11-17 12:45,Gemini,argon/hydrogen,"Map previews, per-mode rules, gun/screen blood FX, HUD QoL",feature,,delivered,board log 12:45
+G03,2026-11-17 13:48,Gemini,gemini-4-hydrogen,"BF6 hit feedback + map flicker/clipping fixes on 4 maps",feature,,delivered,board log 13:48
+G04,2026-11-17 16:05,Gemini,gemini-4-hydrogen,"Solo: UI steppers, war-torn meshes, reload wiring, README + push",feature,,delivered,board 16:05
+G05,2026-11-17 21:00,Gemini,gemini-4-hydrogen,"Automated QA bot (LR2QABot + runner)",tooling,B15,ready-for-review,board row B15
+G06,2026-11-17 20:40,Gemini,gemini-4-hydrogen,"Procedural music stems + music director",feature,,delivered,prompts 18:19-21:03
+G07,2026-11-17 21:30,Gemini,gemini-4-hydrogen,"Thunder, rain, wet surfaces",feature,,delivered,prompt 21:06 + log 21:48
+G08,2026-11-17 20:45,Gemini,gemini-4-hydrogen,"Loading intro screen",feature,,delivered,prompt 20:36
+G09,2026-11-17 22:50,Gemini,gemini-4-hydrogen,"Round-3 fixes B1, B2, B3, B5, B6, B7, B9, B10, B11",fix,B1-B11,ready-for-review,QA lines 22:57
+G10,2026-11-17 23:05,Gemini,argon,"CTF mode, layered deploy menu, tactical chat",feature,,delivered,board briefing 23:02 + log 23:05
+G11,2026-11-17 23:02,Gemini,argon,"Human-like bot aim + adaptive difficulty",feature,B22,verified,specs/B22.md
+G12,2026-11-17 22:30,Gemini,gemini-4-hydrogen,"Test-harness start-scene changes",tooling,,delivered,prompt 22:33
+G13,2026-11-17 23:41,Gemini,argon,"Menu soldier + QA/killcam work in progress",feature,B19,open,board R7
+P01,2026-11-17 23:36,Copilot,unknown,"Pain and death voices (PainVoice)",feature,B12,verified,board row B12
+P02,2026-11-17 23:36,Copilot,unknown,"Toggleable weapon laser (WeaponLaser)",feature,B13,reopened,board row B13
+P03,2026-11-17 23:41,Copilot,unknown,"Bot research write-up corrections",docs,B24,ready-for-review,board log 23:37-23:48
+P04,2026-11-17 23:39,Copilot,unknown,"Deprecated API fix in CameraShake",review,,verified,board log 23:39
+P05,2026-11-17 23:41,Copilot,unknown,"QA extra checks (LR2QAExtraChecks)",tooling,B34,reopened,board row B34
+P06,2026-11-17 23:48,Copilot,unknown,"FireHazard component",feature,B38,reopened,board row B38
+P07,2026-11-17 23:45,Copilot,unknown,"Glass material builder",feature,B30,verified,board row B30
+P08,2026-11-17 23:44,Copilot,unknown,"Font research",docs,B32,reopened,board row B32
+P09,2026-11-17 23:52,Copilot,unknown,"Polish research specs P1-P5",docs,P1-P5,ready-for-review,board log 23:51
+P10,2026-11-17 23:20,Copilot,unknown,"Reload completion timing (0.85 factor removed)",fix,B16,verified,board log 23:20 + review 23:30

@@ -31,6 +31,8 @@ namespace LR2.Core
         public static bool InvertY { get => GetB("InvertY", false); set => SetB("InvertY", value); }
         /// <summary>Camera shake intensity 0..1 (shots, hits taken, near misses, reload jolts, landings). Default 1.</summary>
         public static float CameraShake { get => GetF("v3.CameraShake", 1f); set => SetF("v3.CameraShake", Mathf.Clamp01(value)); }
+        /// <summary>View-camera anti-aliasing: 0 off, 1 FXAA, 2 SMAA, 3 TAA (default). Applied by ViewCameraQuality.</summary>
+        public static int AntiAliasing { get => Mathf.Clamp(Mathf.RoundToInt(GetF("v3.AntiAliasing", 3f)), 0, 3); set => SetF("v3.AntiAliasing", Mathf.Clamp(value, 0, 3)); }
         public static float MasterVolume { get => GetF("MasterVol", 0.9f); set => SetF("MasterVol", Mathf.Clamp01(value)); }
         public static float SfxVolume { get => GetF("SfxVol", 1f); set => SetF("SfxVol", Mathf.Clamp01(value)); }
         public static float MusicVolume { get => GetF("MusicVol", 0.55f); set => SetF("MusicVol", Mathf.Clamp01(value)); }

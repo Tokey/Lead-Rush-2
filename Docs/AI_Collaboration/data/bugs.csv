@@ -1,0 +1,28 @@
+id,found,found_by,stage,description,caused_by_task,caused_by_agent,caused_by_model,confidence,status
+D01,2026-11-16 22:38,user,escaped,"Camera doesn't load, game not playable",C01,Claude,claude-opus-5-5,medium,fixed
+D02,2026-11-16 22:45,user,escaped,"Walk animation too rapid, guns laggy and heavy",C01,Claude,claude-opus-5-5,medium,fixed
+D03,2026-11-16 23:34,user,escaped,"Map and enemy clipping, whole-map flicker",C01,Claude,claude-opus-5-5,medium,fixed
+D04,2026-11-17 13:08,user,escaped,"Own shoulder inside the first-person camera",C04,Claude,claude-opus-5-5,high,fixed
+D05,2026-11-17 18:00,user,escaped,"Rifle swings ~90 deg during reloads, also while walking",C07,Claude,claude-opus-5-5,high,open
+D06,2026-11-17 23:24,user,escaped,"FOV looks wrong on a wide screen",C06,Claude,claude-opus-5-5,high,fixed
+D07,2026-11-17 23:57,user,escaped,"Edges look sharp/aliased (TAA over-sharpened)",C02,Claude,claude-opus-5-5,low,fixed
+D08,2026-11-17 00:07,user,escaped,"Player became 'the default strange rig'",G01,Gemini,argon,high,fixed
+D09,2026-11-17 00:23,user,escaped,"Main menu gone",G01,Gemini,argon,high,fixed
+D10,2026-11-17 11:31,user,escaped,"Gun hold and ADS broken, reload worse",G01,Gemini,argon,medium,fixed
+D11,2026-11-17 18:00,user,escaped,"3D blood drops fly onto the screen",G02,Gemini,argon/hydrogen,medium,fixed
+D12,2026-11-17 14:29,user,escaped,"Headless enemy in a screenshot",G03,Gemini,gemini-4-hydrogen,low,fixed
+D13,2026-11-17 20:44,user,escaped,"Music dips during fights and comes back late",G06,Gemini,gemini-4-hydrogen,high,fixed
+D14,2026-11-17 21:46,user,escaped,"Standalone build crashes after shader warm-up",G08,Gemini,gemini-4-hydrogen,high,fixed
+D15,2026-11-17 22:33,user,escaped,"Game skips the main menu",G12,Gemini,gemini-4-hydrogen,medium,fixed
+D16,2026-11-17 22:59,user,escaped,"Hidden test runs play game audio in the background",G05,Gemini,gemini-4-hydrogen,high,fixed
+D17,2026-11-17 23:33,claude-review,review,"QA check Reload.WalkingNoFlip passes while the rifle stands vertical",G05,Gemini,gemini-4-hydrogen,high,open
+D18,2026-11-17 23:05,gemini-review,review,"Tactical chat NullReferenceException in every gameplay scene",G10,Gemini,argon,high,fixed
+D19,2026-11-17 23:51,user,escaped,"CTF flag zones look awful",G10,Gemini,argon,high,open
+D20,2026-11-17 23:41,push-check,pre-push,"Two compile errors in-flight (missing using, private killcam fields)",G13,Gemini,argon,high,fixed
+D21,2026-11-17 23:51,claude-review,review,"Laser colour set on a property HDRP Unlit ignores",P02,Copilot,unknown,high,open
+D22,2026-11-17 23:58,claude-review,review,"QA hands-on-gun check reads IK error; foot slide not plant-gated",P05,Copilot,unknown,high,open
+D23,2026-11-17 23:58,claude-review,review,"Fire damage stacks per hitbox collider; particles lack an HDRP material; light too dim",P06,Copilot,unknown,high,open
+D24,2026-11-17 23:58,claude-review,review,"Font research recommends the fonts already in use",P08,Copilot,unknown,high,open
+D25,2026-11-17 23:49,claude-self,pre-push,"Pose-check edit left a broken string literal for one minute",C16,Claude,claude-opus-5-5,high,fixed
+D26,2026-11-17 23:39,copilot-review,review,"Deprecated FindObjectsByType overload in new CameraShake",C13,Claude,claude-opus-5-5,high,fixed
+D27,2026-11-17 23:47,user,escaped,"Weapon hold / fingers still look wrong",C04,Claude,claude-opus-5-5,medium,open

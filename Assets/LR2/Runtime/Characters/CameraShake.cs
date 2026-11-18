@@ -19,6 +19,8 @@ namespace LR2.Characters
     public sealed class CameraShake : MonoBehaviour
     {
         public static CameraShake Instance { get; private set; }
+        /// <summary>Current trauma 0..1 (QA reads this; no reflection needed).</summary>
+        public float Trauma => _trauma;
 
         [Header("Trauma shake")]
         [Tooltip("Trauma lost per second.")] public float decayPerSecond = 1.8f;

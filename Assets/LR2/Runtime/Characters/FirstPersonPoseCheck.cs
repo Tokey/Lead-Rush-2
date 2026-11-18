@@ -681,9 +681,24 @@ namespace LR2.Characters
                 go.transform.position = pos;
                 go.transform.LookAt(look);
                 var cam = go.AddComponent<Camera>();
-                cam.fieldOfView = shot.view == View.HeadClose ? 40f : (shot.view == View.HandsLeft || shot.view == View.HandsRight) ? 38f : 52f;
+                bool handsShot = shot.view == View.HandsLeft || shot.view == View.HandsRight;
+                cam.fieldOfView = shot.view == View.HeadClose ? 40f : handsShot ? 38f : 52f;
                 cam.nearClipPlane = 0.02f;
                 go.AddComponent<HDAdditionalCameraData>();
+                if (handsShot)
+                {
+                    // fill light for the grip close-ups only (the maps are dark); destroyed with the capture camera
+                    var lightGo = new GameObject("PoseCheckFill");
+                    lightGo.transform.SetParent(go.transform, false);
+                    lightGo.transform.localPosition = new Vector3(0f, 0.25f, 0.05f);
+                    var fill = lightGo.AddComponent<Light>();
+                    fill.type = LightType.Point;
+                    fill.range = 3f;
+                    fill.color = new Color(1f, 0.95f, 0.88f);
+                    fill.intensity = 1800f;
+                    fill.shadows = LightShadows.None;
+                    lightGo.AddComponent<HDAdditionalLightData>();
+                }
                 RenderCamera(cam, shot.name);
             }
             finally

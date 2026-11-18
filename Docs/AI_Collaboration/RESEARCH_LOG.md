@@ -59,7 +59,10 @@ Tags: `[BOARD]` change to the coordination format · `[HANDOFF]` · `[LIMIT]` us
 | 11-17 23:41 | `[PUSH]` | Claude Code | Push blocked: two in-flight compile errors in another agent's files; push duty moved to Copilot | board R7, R8 |
 | 11-17 23:46 | `[PROMPT]` | Claude Code to Copilot | First direct agent-to-agent prompt, via `code chat -m agent` (VS Code CLI) | board log |
 
-## Metrics (to compute from the board and git)
+## Metrics
+
+The first three are computed by [`analysis/analyze.py`](analysis/analyze.py) from [`data/`](data/); charts in [`figures/`](figures/).
+
 
 - **Defects per task, per agent and per model:** tracker rows with kind `bug`, grouped by the `Caused by` task and its model. The
   first reconstruction is in [README.md](README.md#quality-bugs-traced-back-to-the-work-that-caused-them).
