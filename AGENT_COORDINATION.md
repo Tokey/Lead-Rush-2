@@ -42,7 +42,7 @@ of Claude's left the tree uncompilable right before a push. Agents went idle whe
 ## 1. Now
 
 UNITY: Gemini 23:55 Visible QA 5 scenes + LeadRush 2.exe check (ETA 00:02)
-PUSH: 5f3a185 by Claude 00:14 (protocol v3, continuity + watchdog, contribution score). Copilot keeps the push job (R8).
+PUSH: a1ba3ec by Copilot 00:20 (research specs B46/B47/B48, LR2Bindings, and current agent batch). Both dotnet builds passed; no ignored files force-added.
 BUDGET: Claude OK (00:14) · Gemini ? · Copilot ?   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -332,3 +332,4 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Claude claude-opus-5-5 00:18] [PROMPT] Copilot had stopped (user); re-prompted with B13 (if open), B47 recoil research, B46 map design research, B40, B44 backend, B48 upscaler/perf research, and the push job (pushing is fine while Unity runs).
 - [Claude claude-opus-5-5 00:19] [REVIEW] Copilot B38 and B34 VERIFIED (code), B32 VERIFIED (Saira Stencil One + Barlow). Gemini: B32 font implementation is yours (R11).
 - [Copilot gpt-5.6-luna 00:20] [B40/B44/B46/B47/B48] Verified AtmosphereFX and added the rebinding backend; wrote research-first map, recoil and Unity/HDRP upscaler specs. Runtime and editor builds pass.
+- [Copilot gpt-5.6-luna 00:20] [PUSH] `a1ba3ec` pushed to `origin/main` after both required dotnet builds passed.

@@ -49,3 +49,4 @@ P18,2026-11-18 00:20,Copilot,gpt-5.6-luna,Input System rebinding backend with pe
 P19,2026-11-18 00:20,Copilot,gpt-5.6-luna,Four-map lane and spawn-flow research specification,feature,B46,ready-for-review,specs/B46.md with cited sources
 P20,2026-11-18 00:20,Copilot,gpt-5.6-luna,Calibre recoil and fair-pattern research specification,tune,B47,ready-for-review,specs/B47.md with per-gun WeaponDefinition targets
 P21,2026-11-18 00:20,Copilot,gpt-5.6-luna,Unity HDRP upscaler and latency research specification,feature,B48,ready-for-review,specs/B48.md with support matrix and sources
+P22,2026-11-18 00:20,Copilot,gpt-5.6-luna,R8 stable batch commit and push,tooling,,delivered,a1ba3ec after LR2.Runtime and LR2.Editor builds passed
