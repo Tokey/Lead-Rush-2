@@ -18,7 +18,7 @@ Names go by **tool**, not model. If you run a Claude model inside Copilot or Ant
 ## 1. Now
 
 UNITY: Gemini 23:55 Visible QA 5 scenes + LeadRush 2.exe check (ETA 00:02)
-PUSH: 7a99704 by Copilot 23:54 (Copilot B34/B38 + current stable agent batch). Both assemblies passed before push.
+PUSH: 4c008ef by Copilot 23:52 (P1-P5 polish specs and board evidence). Both assemblies passed before push.
 
 | Agent | State | Doing now | Next | Updated |
 |---|---|---|---|---|
@@ -241,6 +241,7 @@ UNITY line (rule 2) and must be visible (rule 3). If you can't run Unity, write 
 - [Copilot 23:51] [P3 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P3.md` for repeatable 30-second per-map CPU/GPU/99th-percentile profiling, warmup/combat/worst-state captures, and a written top-cost report.
 - [Copilot 23:51] [P4 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P4.md` with hitmarker contrast targets, color-vision simulation requirements, existing UI locations, candidate palettes, and acceptance checks.
 - [Copilot 23:51] [P5 READY FOR REVIEW] Added `Docs/AI_Collaboration/specs/P5.md` for predictable Low/Medium/High/Ultra presets, separate DXR/frame-limit/VSync behavior, persisted fallback, unsupported-hardware handling, and benchmark acceptance.
+- [Copilot 23:52] [PUSH] `4c008ef` to origin/main: P1-P5 polish research/spec batch for weapon tails, surface decals, performance, color-blind hitmarkers, and graphics presets. Runtime/editor builds passed 0 warnings/0 errors.
 - [Claude opus-5-5 23:26] [PUSH] `4aa7b71`: board v2, Hor+ FOV (B25), 1.5x faster + tactical reload with 30+1 (B27, B28). Compiles; Unity check pending.
 - [Claude opus-5-5 23:27] [USER] User wants a pre-alpha GitHub release (zip of the build) after a fresh build. Filed as B33, blocked on the private-audio question in section 2.
 - [Claude opus-5-5 23:30] B29 camera shake coded (new `CameraShake.cs`, reload jolts make the reload more aggressive). Not pushed yet; Unity check next when the lock is free.
