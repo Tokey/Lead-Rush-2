@@ -5,6 +5,7 @@ using LR2.Combat;
 using LR2.Core;
 using LR2.FX;
 using LR2.Game;
+using LR2.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
@@ -26,9 +27,9 @@ namespace LR2.World
         [SerializeField] private bool killcamEnabled = true;
         [Tooltip("Seconds of death cam before cutting to the killcam replay.")]
         [SerializeField, Min(0f)] private float startDelay = 0.65f;
-        [SerializeField, Min(0.5f)] private float duration = 3.0f;
+        [SerializeField, Min(0.5f)] private float duration = 3.2f;
         [SerializeField, Min(0.5f)] private float preKillWindow = 2.0f;
-        [SerializeField, Min(0f)] private float postKillWindow = 0.35f;
+        [SerializeField, Min(0f)] private float postKillWindow = 0.72f;
         [SerializeField] private float fieldOfView = 72f;
 
         private struct Snapshot
@@ -37,8 +38,11 @@ namespace LR2.World
             public Vector3 bodyPos;
             public Quaternion bodyRot;
             public Vector3 eyePos;
+            public Quaternion eyeRot;
+            public float fov;
             public float pitch;
             public float yaw;
+            public bool localPlayer;
         }
 
         private struct RecordedShot
@@ -49,9 +53,21 @@ namespace LR2.World
             public bool played;
         }
 
-        private const int MaxSamplesPerSoldier = 160;
+        private struct RecordedHit
+        {
+            public float time;
+            public Combatant attacker;
+            public Combatant victim;
+            public Vector3 point;
+            public Vector3 direction;
+            public bool headshot;
+            public bool killed;
+            public bool played;
+        }
 
-        // ---- full-body replay: every visual bone of every soldier, 30 Hz ring buffer (no per-frame allocations)
+        private const int MaxSamplesPerSoldier = 330;
+
+        // ---- full-body replay: every visual bone of every soldier, 60 Hz ring buffer (no per-frame allocations)
         private class PoseSample
         {
             public float time;
@@ -78,9 +94,10 @@ namespace LR2.World
         private GameObject _killerPuppet, _victimPuppet, _killerGunPuppet, _victimGunPuppet;
         private Transform[] _killerPuppetBones, _victimPuppetBones;
         private Transform _puppetMuzzle;
+        private MuzzleFlash[] _puppetMuzzleFlashes;
         private readonly List<Renderer> _hiddenLive = new List<Renderer>();
         private bool _puppets;
-        private const float SampleInterval = 1f / 30f;
+        private const float SampleInterval = 1f / 60f;
 
         private readonly Dictionary<SoldierController, List<Snapshot>> _histories = new Dictionary<SoldierController, List<Snapshot>>();
         private readonly List<RecordedShot> _shotLog = new List<RecordedShot>(128);
@@ -89,6 +106,9 @@ namespace LR2.World
         private readonly List<Snapshot> _killerReplay = new List<Snapshot>(128);
         private readonly List<Snapshot> _victimReplay = new List<Snapshot>(128);
         private readonly List<RecordedShot> _replayShots = new List<RecordedShot>(32);
+        private readonly List<RecordedHit> _hitLog = new List<RecordedHit>(128);
+        private readonly List<RecordedHit> _replayHits = new List<RecordedHit>(32);
+        private Vector3 _victimDeathDir = Vector3.forward;
 
         private SoldierController _killer;
         private SoldierController _victim;
@@ -129,6 +149,7 @@ namespace LR2.World
         private void OnEnable()
         {
             GameEvents.Killed += OnKilled;
+            GameEvents.Hit += OnHitRecorded;
             GameEvents.ShotFired += OnShotFired;
             GameEvents.CombatantSpawned += OnSpawned;
         }
@@ -136,10 +157,29 @@ namespace LR2.World
         private void OnDisable()
         {
             GameEvents.Killed -= OnKilled;
+            GameEvents.Hit -= OnHitRecorded;
             GameEvents.ShotFired -= OnShotFired;
             GameEvents.CombatantSpawned -= OnSpawned;
             End();
             if (Instance == this) Instance = null;
+        }
+
+        private void OnHitRecorded(HitEvent e)
+        {
+            if (_playing || e.attacker == null || e.victim == null || e.damage <= 0f) return;
+            _hitLog.Add(new RecordedHit
+            {
+                time = Time.time,
+                attacker = e.attacker,
+                victim = e.victim,
+                point = e.point,
+                direction = e.direction,
+                headshot = e.zone == HitZone.Head,
+                killed = e.killed,
+                played = false
+            });
+            float cutoff = Time.time - 6f;
+            while (_hitLog.Count > 0 && _hitLog[0].time < cutoff) _hitLog.RemoveAt(0);
         }
 
         private void OnShotFired(ShotEvent e)
@@ -168,17 +208,28 @@ namespace LR2.World
                     _histories[sc] = list;
                 }
                 var proxy = sc.GetComponent<RetargetProxy>();
-                Vector3 eye = sc.ViewCamera != null && sc.ViewCamera.isActiveAndEnabled
+                bool hasLiveCam = sc.ViewCamera != null && sc.ViewCamera.isActiveAndEnabled;
+                Vector3 eye = hasLiveCam
                     ? sc.ViewCamera.transform.position
                     : (proxy != null ? proxy.VisualEyePosition : (sc.ViewTransform != null ? sc.ViewTransform.position : c.HeadPosition));
+                Quaternion eyeRot = hasLiveCam
+                    ? sc.ViewCamera.transform.rotation
+                    : Quaternion.Euler(sc.Pitch, sc.Yaw, 0f);
+                float baseFov = LR2Settings.VerticalFov(LR2Settings.FieldOfView, Camera.main != null ? Camera.main.aspect : 16f / 9f);
+                float fov = hasLiveCam
+                    ? sc.ViewCamera.fieldOfView
+                    : Mathf.Lerp(baseFov, baseFov * 0.78f, sc.AimBlend);
                 list.Add(new Snapshot
                 {
                     time = Time.time,
                     bodyPos = sc.transform.position,
                     bodyRot = sc.transform.rotation,
                     eyePos = eye,
+                    eyeRot = eyeRot,
+                    fov = fov,
                     pitch = sc.Pitch,
-                    yaw = sc.Yaw
+                    yaw = sc.Yaw,
+                    localPlayer = sc.IsLocalPlayer
                 });
                 while (list.Count > MaxSamplesPerSoldier || (list.Count > 0 && list[0].time < cutoff))
                     list.RemoveAt(0);
@@ -265,6 +316,36 @@ namespace LR2.World
                     _replayShots.Add(s);
             }
 
+            _replayHits.Clear();
+            bool hasKillHit = false;
+            Vector3 deathPush = (victim.transform.position - killer.transform.position);
+            for (int i = 0; i < _hitLog.Count; i++)
+            {
+                var h = _hitLog[i];
+                if (h.attacker == e.killer && h.victim == e.victim && h.time >= _replayStartTime && h.time <= _replayEndTime)
+                {
+                    _replayHits.Add(h);
+                    if (h.killed) hasKillHit = true;
+                    if (h.direction.sqrMagnitude > 0.01f) deathPush = h.direction;
+                }
+            }
+            if (!hasKillHit)
+            {
+                _replayHits.Add(new RecordedHit
+                {
+                    time = _killTime,
+                    attacker = e.killer,
+                    victim = e.victim,
+                    point = victim.transform.position + Vector3.up * 1.4f,
+                    direction = deathPush,
+                    headshot = e.headshot,
+                    killed = true,
+                    played = false
+                });
+            }
+            deathPush.y = 0f;
+            _victimDeathDir = deathPush.sqrMagnitude > 0.01f ? deathPush.normalized : killer.transform.forward;
+
             _pending = true;
             _startAt = Time.time + startDelay;
         }
@@ -289,8 +370,11 @@ namespace LR2.World
                     bodyPos = sc.transform.position,
                     bodyRot = sc.transform.rotation,
                     eyePos = eye,
+                    eyeRot = Quaternion.Euler(sc.Pitch, sc.Yaw, 0f),
+                    fov = LR2Settings.VerticalFov(LR2Settings.FieldOfView, 16f / 9f),
                     pitch = sc.Pitch,
-                    yaw = sc.Yaw
+                    yaw = sc.Yaw,
+                    localPlayer = sc.IsLocalPlayer
                 });
             }
         }
@@ -326,11 +410,20 @@ namespace LR2.World
             {
                 ApplyPose(_killerPuppet, _killerPuppetBones, _killerGunPuppet, _killerPoseReplay, sampleTime);
                 ApplyPose(_victimPuppet, _victimPuppetBones, _victimGunPuppet, _victimPoseReplay, sampleTime);
-                if (_killerPuppet != null) _killerPuppet.transform.position -= (recordedYawRot * Vector3.forward) * 0.025f;
+                if (sampleTime >= _killTime)
+                    ApplyVictimCollapse(_victimPuppet, _victimGunPuppet, Mathf.Clamp01((sampleTime - _killTime) / Mathf.Max(0.25f, postKillWindow * 0.72f)), _victimDeathDir);
+                // Match first-person camera-back separation identically while keeping hands & weapon locked together rigidly
+                if (!kSnap.localPlayer)
+                {
+                    Vector3 bodyBack = -(recordedYawRot * Vector3.forward) * 0.025f;
+                    if (_killerPuppet != null) _killerPuppet.transform.position += bodyBack;
+                    if (_killerGunPuppet != null) _killerGunPuppet.transform.position += bodyBack;
+                }
                 var fpCam = _victim.ViewCamera;
-                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, aimRot);
-                fpCam.fieldOfView = fieldOfView;
-                ReplayShots(sampleTime, aimRot);
+                fpCam.transform.SetPositionAndRotation(kSnap.eyePos, kSnap.eyeRot);
+                fpCam.fieldOfView = kSnap.fov > 10f ? kSnap.fov : fieldOfView;
+                ReplayShots(sampleTime, kSnap.eyeRot);
+                ReplayHits(sampleTime);
                 if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
                 return;
             }
@@ -360,6 +453,7 @@ namespace LR2.World
             cam.fieldOfView = fieldOfView;
 
             ReplayShots(sampleTime, aimRot);
+            ReplayHits(sampleTime);
             if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
         }
 
@@ -373,9 +467,47 @@ namespace LR2.World
                 _replayShots[i] = s;
                 Vector3 muzzle = _puppetMuzzle != null ? _puppetMuzzle.position : s.origin + aimRot * new Vector3(0.15f, -0.10f, 0.55f);
                 TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f);
+                if (_puppetMuzzleFlashes != null)
+                {
+                    for (int m = 0; m < _puppetMuzzleFlashes.Length; m++)
+                        if (_puppetMuzzleFlashes[m] != null) _puppetMuzzleFlashes[m].Play();
+                }
                 var gun = _killer != null ? _killer.ActiveFirearm : null;
                 if (gun != null && gun.Definition != null && gun.Definition.audio != null)
-                    LR2Audio.PlayAt(gun.Definition.audio.firePlayer, muzzle, 0.65f);
+                    LR2Audio.PlayAt(gun.Definition.audio.firePlayer, muzzle, 0.85f);
+            }
+        }
+
+        private void ReplayHits(float sampleTime)
+        {
+            for (int i = 0; i < _replayHits.Count; i++)
+            {
+                var h = _replayHits[i];
+                if (h.played || sampleTime < h.time) continue;
+                h.played = true;
+                _replayHits[i] = h;
+                HUDController.ShowReplayHit(h.headshot, h.killed, h.point);
+            }
+        }
+
+        private static void ApplyVictimCollapse(GameObject victimPuppet, GameObject gunPuppet, float progress, Vector3 deathDir)
+        {
+            if (victimPuppet == null || progress <= 0f) return;
+            float smooth = progress * progress * (3f - 2f * progress);
+            Vector3 fallAxis = Vector3.Cross(Vector3.up, deathDir);
+            if (fallAxis.sqrMagnitude < 0.01f) fallAxis = Vector3.right;
+            else fallAxis.Normalize();
+
+            // Knock body back & collapse down to prone level cleanly on the floor
+            Vector3 drift = deathDir * (0.34f * smooth) + Vector3.down * (0.82f * smooth);
+            victimPuppet.transform.position += drift;
+            Quaternion dropRot = Quaternion.AngleAxis(82f * smooth, fallAxis) * Quaternion.Euler(0f, 0f, 16f * smooth);
+            victimPuppet.transform.rotation = dropRot * victimPuppet.transform.rotation;
+
+            if (gunPuppet != null)
+            {
+                gunPuppet.transform.position += deathDir * (0.28f * smooth) + Vector3.down * (0.95f * smooth) + fallAxis * (0.22f * smooth);
+                gunPuppet.transform.rotation = Quaternion.Euler(65f * smooth, 35f * smooth, -55f * smooth) * gunPuppet.transform.rotation;
             }
         }
 
@@ -407,20 +539,36 @@ namespace LR2.World
                 gunPuppet.transform.SetPositionAndRotation(Vector3.Lerp(a.weaponPos, b.weaponPos, t), Quaternion.Slerp(a.weaponRot, b.weaponRot, t));
         }
 
-        /// <summary>Render-only copy (no colliders, physics, scripts, animators) of a soldier's SWAT body or weapon.</summary>
-        private static GameObject MakePuppet(GameObject source, string name, bool hideHead)
+        /// <summary>Render-only copy (no colliders, physics, scripts, animators) of a soldier's SWAT body or weapon; preserves MuzzleFlash if requested.</summary>
+        private static GameObject MakePuppet(GameObject source, string name, bool hideHead, bool keepMuzzleFlash = false)
         {
             if (source == null) return null;
             var p = Instantiate(source);
             p.name = name;
-            foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true)) DestroyImmediate(mb);
+            foreach (var mb in p.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (keepMuzzleFlash && mb is MuzzleFlash) continue;
+                DestroyImmediate(mb);
+            }
             foreach (var j in p.GetComponentsInChildren<Joint>(true)) DestroyImmediate(j);
             foreach (var rb in p.GetComponentsInChildren<Rigidbody>(true)) DestroyImmediate(rb);
             foreach (var c in p.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
             foreach (var an in p.GetComponentsInChildren<Animator>(true)) DestroyImmediate(an);
             foreach (var au in p.GetComponentsInChildren<AudioSource>(true)) DestroyImmediate(au);
-            foreach (var l in p.GetComponentsInChildren<Light>(true)) l.enabled = false;
-            foreach (var ps in p.GetComponentsInChildren<ParticleSystem>(true)) ps.gameObject.SetActive(false);
+            if (!keepMuzzleFlash)
+            {
+                foreach (var l in p.GetComponentsInChildren<Light>(true)) l.enabled = false;
+                foreach (var ps in p.GetComponentsInChildren<ParticleSystem>(true)) ps.gameObject.SetActive(false);
+            }
+            else
+            {
+                foreach (var ps in p.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = ps.main;
+                    main.playOnAwake = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+            }
             foreach (var r in p.GetComponentsInChildren<Renderer>(true))
             {
                 r.enabled = true;
@@ -444,9 +592,10 @@ namespace LR2.World
             _victimPuppetBones = _victimPuppet.GetComponentsInChildren<Transform>(true);
             var kGun = _killer.ActiveFirearm;
             var vGun = _victim.ActiveFirearm;
-            _killerGunPuppet = kGun != null ? MakePuppet(kGun.gameObject, "KillcamPuppet_KillerGun", false) : null;
+            _killerGunPuppet = kGun != null ? MakePuppet(kGun.gameObject, "KillcamPuppet_KillerGun", false, keepMuzzleFlash: true) : null;
             _victimGunPuppet = vGun != null ? MakePuppet(vGun.gameObject, "KillcamPuppet_VictimGun", false) : null;
             _puppetMuzzle = null;
+            _puppetMuzzleFlashes = _killerGunPuppet != null ? _killerGunPuppet.GetComponentsInChildren<MuzzleFlash>(true) : null;
             if (_killerGunPuppet != null)
                 foreach (var t in _killerGunPuppet.GetComponentsInChildren<Transform>(true))
                     if (t.name == "Muzzle") { _puppetMuzzle = t; break; }
@@ -467,6 +616,7 @@ namespace LR2.World
             _killerPuppet = _victimPuppet = _killerGunPuppet = _victimGunPuppet = null;
             _killerPuppetBones = _victimPuppetBones = null;
             _puppetMuzzle = null;
+            _puppetMuzzleFlashes = null;
             _puppets = false;
         }
 
@@ -487,8 +637,11 @@ namespace LR2.World
                         bodyPos = Vector3.Lerp(a.bodyPos, b.bodyPos, t),
                         bodyRot = Quaternion.Slerp(a.bodyRot, b.bodyRot, t),
                         eyePos = Vector3.Lerp(a.eyePos, b.eyePos, t),
+                        eyeRot = Quaternion.Slerp(a.eyeRot, b.eyeRot, t),
+                        fov = Mathf.Lerp(a.fov, b.fov, t),
                         pitch = Mathf.LerpAngle(a.pitch, b.pitch, t),
-                        yaw = Mathf.LerpAngle(a.yaw, b.yaw, t)
+                        yaw = Mathf.LerpAngle(a.yaw, b.yaw, t),
+                        localPlayer = a.localPlayer
                     };
                 }
             }

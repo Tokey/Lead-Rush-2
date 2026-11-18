@@ -160,7 +160,10 @@ namespace LR2.AI
                     _targetAnchor = bb.targetLastKnown;
                     _targetAnchorTime = now;
                 }
-                if (d != null && now - _targetAnchorTime > 6f && now > _nextFlankAllowed && Random.value < d.flankChance
+                float antiCampFlankWindow = _bot != null && _bot.IsAdaptiveMode
+                    ? Mathf.Lerp(4.0f, 7.2f, AdaptiveDifficultyTracker.PlayerRushTendency01)
+                    : 6f;
+                if (d != null && now - _targetAnchorTime > antiCampFlankWindow && now > _nextFlankAllowed && Random.value < d.flankChance
                     && TryPickFlank(bb, out var flank))
                 {
                     _flankDest = flank;
@@ -178,17 +181,20 @@ namespace LR2.AI
             // ---------------------------------------------------------- 4. flank in progress
             if (now < _flankUntil) return Flank(bb, intent, now);
 
-            // ---------------------------------------------------------- 5. hunt last known position
+            // ---------------------------------------------------------- 5. hunt last known position (with tactical corner slicing & peek discipline)
             if (bb.target != null && bb.TimeSinceSeen < 10f)
             {
                 SetGoal(BotGoal.Hunt, now);
                 intent.goal = BotGoal.Hunt;
                 intent.target = bb.target;
-                intent.hasDestination = true;
+                float huntDist = Vector3.Distance(bb.position, bb.targetLastKnown);
+                bool slicingCorner = huntDist < 10f && huntDist > 2.5f && bb.TimeSinceSeen > 0.9f && bb.TimeSinceSeen < 4.5f;
+                intent.hasDestination = !slicingCorner || (huntDist > 4.2f);
                 intent.destination = bb.targetLastKnown;
-                intent.allowSprint = Vector3.Distance(bb.position, bb.targetLastKnown) > 16f && aggression > 0.5f;
+                intent.allowSprint = huntDist > 16f && aggression > 0.5f;
+                intent.crouch = slicingCorner && (Mathf.FloorToInt(now * 0.9f) % 3 == 0);
                 intent.hasLookPoint = true;
-                intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.4f; // pre-aim
+                intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.42f; // pre-aim angle while slicing corner
                 return intent;
             }
 
@@ -203,6 +209,35 @@ namespace LR2.AI
                 intent.hasLookPoint = true;
                 intent.lookPoint = bb.noisePosition + Vector3.up * 1.4f;
                 return intent;
+            }
+
+            // ---------------------------------------------------------- 6.5 active rotating Flag Zone (Capture The Flag DM)
+            var flag = LR2.Game.FlagZoneController.Instance;
+            if (flag != null)
+            {
+                Vector3 fPos = flag.ActiveFlagPosition;
+                float distToFlag = Vector3.Distance(bb.position, fPos);
+                // When nobody close or not actively pinned, push into the inner BF6 capture core (<= 2.6m) for 2.25x capture speed
+                if (!bb.targetVisible && (bb.target == null || bb.TimeSinceSeen > 3.2f || distToFlag > flag.ActiveRadius * 0.7f))
+                {
+                    SetGoal(BotGoal.MoveTo, now);
+                    intent.goal = BotGoal.MoveTo;
+                    int angleSlot = (_bot != null && _bot.Combatant != null ? _bot.Combatant.DisplayName.GetHashCode() : 0) & 7;
+                    Vector3 offsetDir = Quaternion.Euler(0f, angleSlot * 45f, 0f) * Vector3.forward;
+                    float holdRad = flag.State == LR2.Game.FlagZoneController.ZoneState.Contested ? Mathf.Min(flag.ActiveRadius * 0.5f, 4.5f) : Mathf.Max(1.0f, flag.CoreRadius * 0.65f);
+                    Vector3 desired = fPos + offsetDir * holdRad;
+                    if (NavMesh.SamplePosition(desired, out var nh, 3f, NavMesh.AllAreas)) desired = nh.position;
+                    intent.hasDestination = Vector3.Distance(bb.position, desired) > 1.3f;
+                    intent.destination = desired;
+                    intent.allowSprint = distToFlag > flag.ActiveRadius + 4f;
+                    intent.crouch = distToFlag <= flag.CoreRadius + 1.2f && _cover != null && _cover.crouchCover;
+                    if (distToFlag <= flag.ActiveRadius + 1f && bb.target != null)
+                    {
+                        intent.hasLookPoint = true;
+                        intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.4f;
+                    }
+                    return intent;
+                }
             }
 
             // ---------------------------------------------------------- 7. support the squad leader (TDM)

@@ -32,8 +32,9 @@ namespace LR2.Core
         public static bool ShowFps { get => GetB("ShowFps", false); set => SetB("ShowFps", value); }
         public static bool MotionBlur { get => GetB("v2.MotionBlur", false); set => SetB("v2.MotionBlur", value); }
         public static bool FilmGrain { get => GetB("FilmGrain", true); set => SetB("FilmGrain", value); }
+        public static bool RayTracing { get => GetB("RayTracing", false); set => SetB("RayTracing", value); }
         public static bool HitmarkerSound { get => GetB("HitmarkerSound", true); set => SetB("HitmarkerSound", value); }
-        public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 3)); }
+        public static int BotDifficulty { get => GetI("BotDifficulty", 1); set => SetI("BotDifficulty", Mathf.Clamp(value, 0, 4)); }
         /// <summary>Bodycam lens look (distortion, grain, aberration, grade).</summary>
         public static bool BodycamLook { get => GetB("v2.BodycamLook", false); set => SetB("v2.BodycamLook", value); }
         /// <summary>Bodycam camera motion (head bob, inertia sway, handheld shake). On by default (user asked for visible bodycam motion);
@@ -56,7 +57,7 @@ namespace LR2.Core
         {
             foreach (var key in new[] { "MouseSensitivity", "v2.MouseSensitivity", "AdsSens", "v2.AdsSens", "FOV", "InvertY",
                          "MasterVol", "SfxVol", "MusicVol", "UiVol", "Quality", "VSync", "FpsLimit", "ShowFps",
-                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "HitmarkerSound", "BotDifficulty",
+                         "MotionBlur", "v2.MotionBlur", "FilmGrain", "RayTracing", "HitmarkerSound", "BotDifficulty",
                          "BodycamLook", "v2.BodycamLook", "BodycamMotion", "v2.BodycamMotion", "v3.BodycamMotion" })
                 PlayerPrefs.DeleteKey(Prefix + key);
             Notify();

@@ -22,7 +22,7 @@ namespace LR2.Weapons
     public static class Ballistics
     {
         private static readonly RaycastHit[] Hits = new RaycastHit[48];
-        private const float NearMissRadius = 2.5f;
+        private const float NearMissRadius = 4.2f;
 
         public static ShotResult Fire(Combatant shooter, WeaponDefinition def, Vector3 origin, Vector3 direction,
             Vector3 visualMuzzle, bool spawnTracer, GameObject source)
@@ -193,17 +193,23 @@ namespace LR2.Weapons
                 Vector3 head = c.HeadPosition;
                 Vector3 closest = LR2Math.ClosestPointOnSegment(origin, end, head);
                 float dist = Vector3.Distance(closest, head);
-                if (dist > NearMissRadius || Vector3.Distance(closest, origin) < 2f) continue;
-                if (Vector3.Distance(end, head) < 0.4f) continue; // it hit them
+                if (dist > NearMissRadius || Vector3.Distance(closest, origin) < 1.0f) continue;
+                if (Vector3.Distance(end, head) < 0.35f) continue; // it hit them
 
                 GameEvents.RaiseNearMiss(new NearMissEvent { shooter = shooter, listener = c, closestPoint = closest, distance = dist });
                 if (c.IsLocalPlayer)
                 {
+                    float closeness = 1f - Mathf.Clamp01(dist / NearMissRadius);
+                    LR2MusicDirector.Instance?.NotifyCombatEvent(Mathf.Lerp(0.16f, 0.34f, closeness), 3.2f);
                     var sounds = LR2CommonSounds.Instance;
                     if (sounds == null) continue;
                     float shooterDist = Vector3.Distance(origin, head);
-                    LR2Audio.PlayAt(shooterDist > 18f && sounds.bulletCrack.IsValid ? sounds.bulletCrack : sounds.bulletWhizz,
-                        closest, Mathf.Lerp(1f, 0.55f, dist / NearMissRadius));
+                    float whizPitch = Mathf.Lerp(0.92f, 1.12f, closeness);
+                    // Open-air bullet flyby bypasses cover occlusion so passing whiz and supersonic snap stay crisp
+                    if (sounds.bulletWhizz.IsValid)
+                        LR2Audio.PlayAt(sounds.bulletWhizz, closest, Mathf.Lerp(0.42f, 1.0f, closeness), 0f, true, whizPitch);
+                    if (sounds.bulletCrack.IsValid && (shooterDist > 8f || dist < 2.2f))
+                        LR2Audio.PlayAt(sounds.bulletCrack, closest, Mathf.Lerp(0.45f, 0.96f, closeness), 0.01f, true, Mathf.Lerp(0.96f, 1.06f, closeness));
                 }
             }
         }

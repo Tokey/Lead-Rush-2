@@ -19,8 +19,8 @@ MonoBehaviour:
     velocity: 0
     velocitySmoothing: 6.5
   prone:
-    velocity: 0.6
-    velocitySmoothing: 2
+    velocity: 1.35
+    velocitySmoothing: 12
   crouching:
     velocity: 2
     velocitySmoothing: 13
@@ -55,7 +55,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   crouchRatio: 0.65
-  proneTransitionDuration: 1
+  proneTransitionDuration: 0.32
   jumpHeight: 5.2
   airFriction: 0.3
   airVelocity: 0.4

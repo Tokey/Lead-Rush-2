@@ -118,6 +118,7 @@ namespace LR2.Characters
         private Vector2 _kick, _kickApplied;
         private int _sensIndex = -1;
         private bool _initialized;
+        private float _nextHurtVoiceAt;
 
         // death cam / weapon drop
         private Transform _camParent;
@@ -284,7 +285,27 @@ namespace LR2.Characters
         {
             _items.Clear();
             if (settings == null || settings.weaponPrefabs == null) return;
-            foreach (var prefab in settings.weaponPrefabs)
+
+            // Loadout slots: weaponPrefabs holds [0:AK12, 1:Mk23, 2:AK74N, 3:Mk18, 4:FAL].
+            // Equip the player's chosen primary rifle cleanly in slot 0 + Mk23 suppressed sidearm in slot 1.
+            var spawnList = new List<GameObject>(2);
+            if (settings.weaponPrefabs.Count >= 2)
+            {
+                int[] rifleSlotMap = { 0, 2, 3, 4 };
+                int choice = IsLocalPlayer ? LR2.Game.LR2Session.SelectedPrimaryWeapon : 0;
+                int primaryIdx = choice >= 0 && choice < rifleSlotMap.Length && rifleSlotMap[choice] < settings.weaponPrefabs.Count
+                    ? rifleSlotMap[choice]
+                    : 0;
+                if (settings.weaponPrefabs[primaryIdx] != null) spawnList.Add(settings.weaponPrefabs[primaryIdx]);
+                if (settings.weaponPrefabs[1] != null) spawnList.Add(settings.weaponPrefabs[1]);
+            }
+            else
+            {
+                foreach (var p in settings.weaponPrefabs)
+                    if (p != null) spawnList.Add(p);
+            }
+
+            foreach (var prefab in spawnList)
             {
                 if (prefab == null) continue;
                 var go = Instantiate(prefab, transform.position, Quaternion.identity);
@@ -570,9 +591,21 @@ namespace LR2.Characters
             _flinch += new Vector2(UnityEngine.Random.Range(-1f, 1f), -UnityEngine.Random.Range(0.4f, 1f)) * scale;
 
             var s = LR2CommonSounds.Instance;
-            if (s == null) return;
-            if (IsLocalPlayer) LR2Audio.Play2D(s.playerHurt, 0.8f);
-            else if (UnityEngine.Random.value < 0.45f) LR2Audio.PlayAt(s.painGrunt, transform.position + Vector3.up * 1.5f);
+            if (s == null || Time.time < _nextHurtVoiceAt) return;
+            _nextHurtVoiceAt = Time.time + 0.92f;
+            // Suppressed strained agony: quiet exhales for grazing shots, clenched low-pitched grunts for heavy torso/head hits
+            bool heavy = info.amount >= 28f;
+            Vector3 headPos = transform.position + Vector3.up * 1.55f;
+            if (IsLocalPlayer)
+            {
+                var set = heavy && s.playerHurt.IsValid ? s.playerHurt : (s.lowHealthLoop.IsValid ? s.lowHealthLoop : s.playerHurt);
+                if (set.IsValid) LR2Audio.PlayClip(set.Pick(), Vector3.zero, heavy ? 0.34f : 0.28f, UnityEngine.Random.Range(0.84f, 0.93f), 1f, 500f, 0f, AudioCategory.Voice, 95, 0.03f);
+            }
+            else if (heavy || UnityEngine.Random.value < 0.45f)
+            {
+                var set = heavy && s.painGrunt.IsValid ? s.painGrunt : (s.lowHealthLoop.IsValid ? s.lowHealthLoop : s.painGrunt);
+                if (set.IsValid) LR2Audio.PlayClip(set.Pick(), headPos, heavy ? 0.38f : 0.30f, UnityEngine.Random.Range(0.83f, 0.92f), set.minDistance, set.maxDistance, 1f, AudioCategory.Voice, 120, 0.03f);
+            }
         }
 
         private void OnDied(DamageInfo info)

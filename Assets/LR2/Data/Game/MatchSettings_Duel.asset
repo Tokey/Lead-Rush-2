@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08abf749f46b7de4d8756fd48f6a454d, type: 3}
   m_Name: MatchSettings_Duel
   m_EditorClassIdentifier: LR2.Runtime::LR2.Game.MatchSettings
-  displayName: Duel
-  description: 1v1 against a bot. First to 15 kills.
+  displayName: 1v1 Deathmatch
+  description: 1v1 Deathmatch against an adaptive enemy operator. First to 15 kills.
   mode: 0
   scoreLimit: 15
   timeLimitSeconds: 480

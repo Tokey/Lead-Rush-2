@@ -42,7 +42,7 @@ namespace LR2.Audio
                 case AudioCategory.Weapons: return LR2Settings.SfxVolume;
                 case AudioCategory.Voice: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.2f);
                 case AudioCategory.Ambience: return LR2Settings.SfxVolume * 0.68f * (1f - DuckFactor * 0.85f);
-                case AudioCategory.Footsteps:
+                case AudioCategory.Footsteps: return LR2Settings.SfxVolume * 0.24f * (1f - DuckFactor * 0.55f);
                 case AudioCategory.Sfx: return LR2Settings.SfxVolume * (1f - DuckFactor * 0.45f);
                 default: return LR2Settings.SfxVolume;
             }
@@ -57,11 +57,12 @@ namespace LR2.Audio
 
         internal static void TickDuck(float dt) => DuckFactor = Mathf.MoveTowards(DuckFactor, 0f, DuckRecovery * dt);
 
-        public static AudioSource PlayAt(SoundSet set, Vector3 position, float volumeScale = 1f, float delay = 0f)
+        public static AudioSource PlayAt(SoundSet set, Vector3 position, float volumeScale = 1f, float delay = 0f,
+            bool ignoreOcclusion = false, float pitchMultiplier = 1f)
         {
             if (set == null || !set.IsValid) return null;
-            return PlayClip(set.Pick(), position, set.volume * volumeScale, set.PickPitch(), set.minDistance, set.maxDistance,
-                set.spatialBlend, set.category, set.priority, delay, null);
+            return PlayClip(set.Pick(), position, set.volume * volumeScale, set.PickPitch() * pitchMultiplier, set.minDistance, set.maxDistance,
+                set.spatialBlend, set.category, set.priority, delay, null, ignoreOcclusion);
         }
 
         public static AudioSource Play2D(SoundSet set, float volumeScale = 1f, float delay = 0f)
@@ -86,7 +87,8 @@ namespace LR2.Audio
         }
 
         public static AudioSource PlayClip(AudioClip clip, Vector3 position, float volume, float pitch, float minDistance,
-            float maxDistance, float spatialBlend, AudioCategory category, int priority = 128, float delay = 0f, Transform parent = null)
+            float maxDistance, float spatialBlend, AudioCategory category, int priority = 128, float delay = 0f, Transform parent = null,
+            bool ignoreOcclusion = false)
         {
             if (clip == null) return null;
             var src = GetVoice(priority);
@@ -99,8 +101,19 @@ namespace LR2.Audio
 
             float cutoff = 22000f;
             float vol = volume;
-            if (spatialBlend > 0.5f && category != AudioCategory.UI && category != AudioCategory.Music)
+            if (!ignoreOcclusion && spatialBlend > 0.5f && category != AudioCategory.UI && category != AudioCategory.Music)
                 ApplyDepth(parent != null ? parent.position : position, ref vol, ref cutoff);
+            if (category == AudioCategory.Footsteps)
+            {
+                // Soften harsh upper-mid / treble concrete heel transients while preserving step timing
+                cutoff = Mathf.Min(cutoff, 4800f);
+                priority = Mathf.Max(priority, 175);
+            }
+            else if (category == AudioCategory.Voice)
+            {
+                // Restrained, mask-muffled vocal presence for suppressed agony grunts
+                cutoff = Mathf.Min(cutoff, 3200f);
+            }
 
             src.clip = clip;
             src.volume = Mathf.Clamp01(vol * CategoryVolume(category));

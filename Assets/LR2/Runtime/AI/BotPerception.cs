@@ -138,7 +138,7 @@ namespace LR2.AI
 
         private void UpdateVision(float step)
         {
-            var diff = _bot.Difficulty;
+            var diff = _bot.ActiveDifficulty;
             float range = diff != null ? diff.visionRange : 70f;
             float halfFov = (diff != null ? diff.fieldOfView : 110f) * 0.5f;
             float speedMul = diff != null ? diff.detectionSpeed : 1f;

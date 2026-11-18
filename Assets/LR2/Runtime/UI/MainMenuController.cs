@@ -15,11 +15,13 @@ namespace LR2.UI
     {
         [Header("Modes")]
         public MatchSettings duelSettings;
+        public MatchSettings ctfSettings;
         public MatchSettings ffaSettings;
         public MatchSettings tdmSettings;
 
         [Header("Buttons")]
         public Button duelButton;
+        public Button ctfButton;
         public Button ffaButton;
         public Button tdmButton;
         public Button modeRulesButton;
@@ -29,9 +31,32 @@ namespace LR2.UI
 
         [Header("Panels")]
         public CanvasGroup mainPanel;
+        public CanvasGroup deployPanel;
         public CanvasGroup modeRulesPanel;
         public CanvasGroup settingsPanel;
         public CanvasGroup loadingPanel;
+
+        [Header("Layer 2 Deployment Lobby")]
+        public TMP_Text deployModeTitleText;
+        public TMP_Text deployModeDescText;
+        public Image deployMapPreviewImage;
+        public Button deployWeaponPrevButton;
+        public Button deployWeaponNextButton;
+        public TMP_Text deployWeaponValueText;
+        public TMP_Text deployWeaponInfoText;
+        public Button deployMapPrevButton;
+        public Button deployMapNextButton;
+        public TMP_Text deployMapValueText;
+        public Button deployDiffPrevButton;
+        public Button deployDiffNextButton;
+        public TMP_Text deployDiffValueText;
+        public Slider deployScoreSlider;
+        public TMP_Text deployScoreValueText;
+        public Slider deployBotsSlider;
+        public TMP_Text deployBotsValueText;
+        public Button deployStartButton;
+        public Button deployRulesButton;
+        public Button deployBackButton;
 
         [Header("Map Preview Card")]
         public Image mapPreviewImage;
@@ -44,6 +69,7 @@ namespace LR2.UI
 
         [Header("Mode Rules Customizer")]
         public Button modeRulesDuelTab;
+        public Button modeRulesCtfTab;
         public Button modeRulesFfaTab;
         public Button modeRulesTdmTab;
         public Button modeRulesBackButton;
@@ -83,18 +109,29 @@ namespace LR2.UI
         public TMP_Text versionText;
         public string mapScene = LR2Session.MapScene;
 
-        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN" };
+        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
+        private static readonly string[] WeaponBlurbs =
+        {
+            "5.45x39 ASSAULT RIFLE  ·  CONTROLLABLE AUTO · BALANCED ERGONOMICS",
+            "5.45x39 KALASHNIKOV  ·  HIGH RATE OF FIRE · CRISP MIDRANGE BURST",
+            "5.56x45 CARBINE  ·  TIGHT CLOSE-QUARTERS HANDLING · LOW RECOIL",
+            "7.62x51 BATTLE RIFLE  ·  HIGH-CALIBER STOPPING POWER · HEAVY KICK"
+        };
 
         private bool _isLoading;
         private bool _loadingRules;
         private GameModeType _editingMode = GameModeType.Duel;
+        private GameModeType _deployMode = GameModeType.Duel;
         private ModeRuleConfig _editingRules;
+        private CanvasGroup _activeLayer;
+        private readonly Dictionary<CanvasGroup, Coroutine> _layerAnims = new Dictionary<CanvasGroup, Coroutine>();
 
         private readonly List<Texture2D> _generatedTexs = new List<Texture2D>();
         private readonly List<Sprite> _generatedSprites = new List<Sprite>();
         private Sprite[] _cachedMapSprites;
 
         private string _duelBaseLabel;
+        private string _ctfBaseLabel;
         private string _ffaBaseLabel;
         private string _tdmBaseLabel;
 
@@ -109,18 +146,21 @@ namespace LR2.UI
             LR2Settings.Apply();
 
             Show(mainPanel, true);
+            Show(deployPanel, false);
             Show(modeRulesPanel, false);
             Show(settingsPanel, false);
             Show(loadingPanel, false);
-            if (versionText != null) versionText.text = $"LEADRUSH 2  v{Application.version}";
+            _activeLayer = mainPanel;
+            if (versionText != null) versionText.text = $"LR2.{Application.version}";
 
             CacheBaseModeLabels();
 
-            if (duelButton != null) duelButton.onClick.AddListener(() => Play(duelSettings));
-            if (ffaButton != null) ffaButton.onClick.AddListener(() => Play(ffaSettings));
-            if (tdmButton != null) tdmButton.onClick.AddListener(() => Play(tdmSettings));
+            if (duelButton != null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
+            if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
+            if (ffaButton != null) ffaButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAll, ffaSettings));
+            if (tdmButton != null) tdmButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.TeamDeathmatch, tdmSettings));
             if (modeRulesButton != null) modeRulesButton.onClick.AddListener(() => OpenModeRules(_editingMode));
-            if (settingsButton != null) settingsButton.onClick.AddListener(() => { Show(mainPanel, false); Show(settingsPanel, true); });
+            if (settingsButton != null) settingsButton.onClick.AddListener(() => SwitchLayer(settingsPanel, 1f));
             if (settingsBackButton != null) settingsBackButton.onClick.AddListener(ReturnFromSettings);
             if (quitButton != null) quitButton.onClick.AddListener(Quit);
 
@@ -130,6 +170,7 @@ namespace LR2.UI
             if (difficultyPrevButton != null) difficultyPrevButton.onClick.AddListener(() => StepDifficulty(-1));
             if (difficultyNextButton != null) difficultyNextButton.onClick.AddListener(() => StepDifficulty(1));
 
+            BindDeployLobbyUI();
             BindModeRulesUI();
             SelectMap(LR2Session.SelectedMapIndex);
             RefreshDifficultyLabel();
@@ -159,14 +200,22 @@ namespace LR2.UI
             {
                 if (settingsPanel != null && settingsPanel.alpha > 0.5f) ReturnFromSettings();
                 else if (modeRulesPanel != null && modeRulesPanel.alpha > 0.5f) ReturnFromModeRules();
+                else if (deployPanel != null && deployPanel.alpha > 0.5f) ReturnFromDeploy();
             }
         }
 
         private void ReturnFromSettings()
         {
             LR2Settings.Save();
-            Show(settingsPanel, false);
-            Show(mainPanel, true);
+            SwitchLayer(mainPanel, -1f);
+            RefreshDifficultyLabel();
+            RefreshDeployLabels();
+            RefreshPreviewStatus();
+        }
+
+        private void ReturnFromDeploy()
+        {
+            SwitchLayer(mainPanel, -1f);
             RefreshDifficultyLabel();
             RefreshPreviewStatus();
         }
@@ -208,8 +257,11 @@ namespace LR2.UI
                 mapPreviewIndexText.text = $"SECTOR {idx + 1:00} / {LR2Session.MapScenes.Length:00}";
             if (mapPreviewImage != null)
                 mapPreviewImage.sprite = GetMapPreviewSprite(idx);
+            if (deployMapPreviewImage != null)
+                deployMapPreviewImage.sprite = GetMapPreviewSprite(idx);
 
             RefreshPreviewStatus();
+            RefreshDeployLabels();
         }
 
         private Sprite GetMapPreviewSprite(int idx)
@@ -279,6 +331,7 @@ namespace LR2.UI
         // ------------------------------------------------------------------ per-mode rule customizer
         private MatchSettings SettingsFor(GameModeType mode) => mode switch
         {
+            GameModeType.CaptureTheFlag => ctfSettings,
             GameModeType.FreeForAll => ffaSettings,
             GameModeType.TeamDeathmatch => tdmSettings,
             _ => duelSettings,
@@ -286,7 +339,8 @@ namespace LR2.UI
 
         private void CacheBaseModeLabels()
         {
-            _duelBaseLabel = ReadButtonLabel(duelButton, "DUEL  -  1V1 VS BOT");
+            _duelBaseLabel = ReadButtonLabel(duelButton, "1V1 DEATHMATCH");
+            _ctfBaseLabel = ReadButtonLabel(ctfButton, "CAPTURE THE FLAG DM");
             _ffaBaseLabel = ReadButtonLabel(ffaButton, "FREE FOR ALL");
             _tdmBaseLabel = ReadButtonLabel(tdmButton, "TEAM DEATHMATCH");
         }
@@ -308,6 +362,7 @@ namespace LR2.UI
         private void RefreshModeButtons()
         {
             SetButtonLabel(duelButton, _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
+            SetButtonLabel(ctfButton, _ctfBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.CaptureTheFlag) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ffaButton, _ffaBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAll) ? "  [CUSTOM]" : ""));
             SetButtonLabel(tdmButton, _tdmBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.TeamDeathmatch) ? "  [CUSTOM]" : ""));
             RefreshPreviewStatus();
@@ -321,9 +376,10 @@ namespace LR2.UI
             int mins = Mathf.RoundToInt(cfg.timeLimitSeconds / 60f);
             string modeLabel = _editingMode switch
             {
+                GameModeType.CaptureTheFlag => "CTF DM",
                 GameModeType.FreeForAll => "FFA",
                 GameModeType.TeamDeathmatch => "TDM",
-                _ => "DUEL",
+                _ => "1V1 DM",
             };
             string bots = _editingMode == GameModeType.TeamDeathmatch
                 ? $"{cfg.friendlyBots + 1}V{cfg.enemyBots}"
@@ -332,25 +388,129 @@ namespace LR2.UI
             mapPreviewStatusText.text = $"{modeLabel} RULES  ·  {bots}  ·  FIRST TO {cfg.scoreLimit}  ·  {mins} MIN  ·  {cfg.respawnDelay:0.0}S RESPAWN  ·  {drones}";
         }
 
+        // ------------------------------------------------------------------ Layer 2 Deployment Lobby
+        private void OpenDeployLobbyOrPlay(GameModeType mode, MatchSettings fallbackSettings)
+        {
+            _deployMode = mode;
+            _editingMode = mode;
+            if (deployPanel == null)
+            {
+                Play(SettingsFor(mode) ?? fallbackSettings);
+                return;
+            }
+            LoadDeployLobby(mode);
+            SwitchLayer(deployPanel, 1f);
+        }
+
+        private void BindDeployLobbyUI()
+        {
+            if (deployWeaponPrevButton != null) deployWeaponPrevButton.onClick.AddListener(() => StepWeapon(-1));
+            if (deployWeaponNextButton != null) deployWeaponNextButton.onClick.AddListener(() => StepWeapon(1));
+            if (deployMapPrevButton != null) deployMapPrevButton.onClick.AddListener(() => StepMap(-1));
+            if (deployMapNextButton != null) deployMapNextButton.onClick.AddListener(() => StepMap(1));
+            if (deployDiffPrevButton != null) deployDiffPrevButton.onClick.AddListener(() => { StepDifficulty(-1); RefreshDeployLabels(); });
+            if (deployDiffNextButton != null) deployDiffNextButton.onClick.AddListener(() => { StepDifficulty(1); RefreshDeployLabels(); });
+            if (deployBackButton != null) deployBackButton.onClick.AddListener(ReturnFromDeploy);
+            if (deployRulesButton != null) deployRulesButton.onClick.AddListener(() => OpenModeRules(_deployMode));
+            if (deployStartButton != null) deployStartButton.onClick.AddListener(() => Play(SettingsFor(_deployMode) ?? duelSettings));
+
+            HookDeploySlider(deployScoreSlider, v => _editingRules.scoreLimit = Mathf.RoundToInt(v));
+            HookDeploySlider(deployBotsSlider, v => _editingRules.enemyBots = Mathf.RoundToInt(v));
+        }
+
+        private void HookDeploySlider(Slider s, System.Action<float> setter)
+        {
+            if (s == null) return;
+            s.onValueChanged.AddListener(v =>
+            {
+                if (_loadingRules) return;
+                setter(v);
+                LR2Session.SaveModeRules(_deployMode, _editingRules);
+                RefreshModeButtons();
+                RefreshDeployLabels();
+            });
+        }
+
+        private void StepWeapon(int delta)
+        {
+            int count = LR2Session.PrimaryWeaponNames.Length;
+            int cur = LR2Session.SelectedPrimaryWeapon;
+            LR2Session.SelectedPrimaryWeapon = (cur + delta % count + count) % count;
+            RefreshDeployLabels();
+        }
+
+        private void LoadDeployLobby(GameModeType mode)
+        {
+            _loadingRules = true;
+            _editingMode = mode;
+            _editingRules = LR2Session.LoadModeRules(SettingsFor(mode));
+            if (deployModeTitleText != null)
+            {
+                deployModeTitleText.text = mode switch
+                {
+                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DEATHMATCH",
+                    GameModeType.FreeForAll => "FREE FOR ALL  ·  STAGING",
+                    GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD STAGING",
+                    _ => "1V1 DEATHMATCH  ·  STAGING",
+                };
+            }
+            if (deployModeDescText != null)
+            {
+                deployModeDescText.text = mode switch
+                {
+                    GameModeType.CaptureTheFlag => "Strategic rotating flags with Battlefield-6 proximity capture speed: close core captures 2.25x fast; perimeter edge slows to 0.28x.",
+                    GameModeType.FreeForAll => "Every operator for themselves. Outshoot hostile fighters across dynamic weather and destructible cover.",
+                    GameModeType.TeamDeathmatch => "Squad coordination against enemy fireteams. Support your teammate or push objective lanes.",
+                    _ => "Head-to-head 1v1 tactical duel against a responsive human-input enemy bot.",
+                };
+            }
+            SetRuleSlider(deployScoreSlider, 5f, 100f, _editingRules.scoreLimit, true);
+            SetRuleSlider(deployBotsSlider, 1f, 8f, _editingRules.enemyBots, true);
+            if (deployMapPreviewImage != null) deployMapPreviewImage.sprite = GetMapPreviewSprite(LR2Session.SelectedMapIndex);
+            RefreshDeployLabels();
+            _loadingRules = false;
+        }
+
+        private void RefreshDeployLabels()
+        {
+            int wIdx = LR2Session.SelectedPrimaryWeapon;
+            if (deployWeaponValueText != null && wIdx < LR2Session.PrimaryWeaponNames.Length)
+                deployWeaponValueText.text = LR2Session.PrimaryWeaponNames[wIdx];
+            if (deployWeaponInfoText != null && wIdx < WeaponBlurbs.Length)
+                deployWeaponInfoText.text = WeaponBlurbs[wIdx];
+
+            int mIdx = LR2Session.SelectedMapIndex;
+            if (deployMapValueText != null && mIdx < LR2Session.MapDisplayNames.Length)
+                deployMapValueText.text = LR2Session.MapDisplayNames[mIdx];
+
+            int dIdx = Mathf.Clamp(LR2Settings.BotDifficulty, 0, DifficultyLabels.Length - 1);
+            if (deployDiffValueText != null)
+                deployDiffValueText.text = DifficultyLabels[dIdx];
+
+            if (deployScoreValueText != null) deployScoreValueText.text = $"{_editingRules.scoreLimit} PTS";
+            bool canEditBots = _deployMode != GameModeType.Duel;
+            if (deployBotsSlider != null) deployBotsSlider.interactable = canEditBots;
+            if (deployBotsValueText != null) deployBotsValueText.text = canEditBots ? $"{_editingRules.enemyBots} BOTS" : "1 (1V1)";
+        }
+
         private void OpenModeRules(GameModeType mode)
         {
             _editingMode = mode;
-            Show(mainPanel, false);
-            Show(settingsPanel, false);
-            Show(modeRulesPanel, true);
+            SwitchLayer(modeRulesPanel, 1f);
             LoadModeIntoEditor(mode);
         }
 
         private void ReturnFromModeRules()
         {
-            Show(modeRulesPanel, false);
-            Show(mainPanel, true);
+            SwitchLayer(deployPanel != null && _deployMode == _editingMode ? deployPanel : mainPanel, -1f);
             RefreshModeButtons();
+            if (deployPanel != null) LoadDeployLobby(_deployMode);
         }
 
         private void BindModeRulesUI()
         {
             if (modeRulesDuelTab != null) modeRulesDuelTab.onClick.AddListener(() => { _editingMode = GameModeType.Duel; LoadModeIntoEditor(_editingMode); });
+            if (modeRulesCtfTab != null) modeRulesCtfTab.onClick.AddListener(() => { _editingMode = GameModeType.CaptureTheFlag; LoadModeIntoEditor(_editingMode); });
             if (modeRulesFfaTab != null) modeRulesFfaTab.onClick.AddListener(() => { _editingMode = GameModeType.FreeForAll; LoadModeIntoEditor(_editingMode); });
             if (modeRulesTdmTab != null) modeRulesTdmTab.onClick.AddListener(() => { _editingMode = GameModeType.TeamDeathmatch; LoadModeIntoEditor(_editingMode); });
             if (modeRulesBackButton != null) modeRulesBackButton.onClick.AddListener(ReturnFromModeRules);
@@ -369,8 +529,9 @@ namespace LR2.UI
             void StepRulesDifficulty(int delta)
             {
                 if (_loadingRules) return;
-                int cur = Mathf.Clamp(_editingRules.botDifficulty + 1, 0, 4);
-                _editingRules.botDifficulty = (cur + delta % 5 + 5) % 5 - 1;
+                int total = DifficultyLabels.Length + 1; // -1 (Global) + 5 difficulties
+                int cur = Mathf.Clamp(_editingRules.botDifficulty + 1, 0, total - 1);
+                _editingRules.botDifficulty = (cur + delta % total + total) % total - 1;
                 SaveCurrentRules();
                 RefreshRulesLabels();
             }
@@ -416,6 +577,7 @@ namespace LR2.UI
             _editingRules = LR2Session.LoadModeRules(SettingsFor(mode));
 
             HighlightTab(modeRulesDuelTab, mode == GameModeType.Duel);
+            HighlightTab(modeRulesCtfTab, mode == GameModeType.CaptureTheFlag);
             HighlightTab(modeRulesFfaTab, mode == GameModeType.FreeForAll);
             HighlightTab(modeRulesTdmTab, mode == GameModeType.TeamDeathmatch);
 
@@ -423,9 +585,10 @@ namespace LR2.UI
             {
                 string label = mode switch
                 {
+                    GameModeType.CaptureTheFlag => "CAPTURE THE FLAG DM  ·  STRATEGIC RADIUS RULES",
                     GameModeType.FreeForAll => "FREE FOR ALL  ·  SOLO ARENA RULES",
                     GameModeType.TeamDeathmatch => "TEAM DEATHMATCH  ·  SQUAD RULES",
-                    _ => "DUEL  ·  1V1 COMPETITIVE RULES",
+                    _ => "1V1 DEATHMATCH  ·  COMPETITIVE RULES",
                 };
                 modeRulesTitleText.text = label;
             }
@@ -515,6 +678,8 @@ namespace LR2.UI
             LR2Session.PrepareConfiguredMatch(settings);
             LR2Settings.Save();
             Show(mainPanel, false);
+            Show(deployPanel, false);
+            Show(settingsPanel, false);
             Show(modeRulesPanel, false);
             Show(loadingPanel, true);
             StartCoroutine(LoadMapRoutine(targetScene));
@@ -544,6 +709,7 @@ namespace LR2.UI
                 {
                     if (loadingBarFill != null) loadingBarFill.fillAmount = 1f;
                     if (loadingStatusText != null) loadingStatusText.text = $"DEPLOYING TO {niceName}... 100%";
+                    LR2LoadingIntro.BeginSceneTransition(niceName);
                     op.allowSceneActivation = true;
                 }
                 yield return null;
@@ -559,12 +725,68 @@ namespace LR2.UI
 #endif
         }
 
+        private void SwitchLayer(CanvasGroup next, float slideDir)
+        {
+            if (next == null) return;
+            var prev = _activeLayer != next ? _activeLayer : null;
+            if (prev == null)
+            {
+                if (mainPanel != null && mainPanel != next && mainPanel.alpha > 0.05f) prev = mainPanel;
+                else if (deployPanel != null && deployPanel != next && deployPanel.alpha > 0.05f) prev = deployPanel;
+                else if (modeRulesPanel != null && modeRulesPanel != next && modeRulesPanel.alpha > 0.05f) prev = modeRulesPanel;
+                else if (settingsPanel != null && settingsPanel != next && settingsPanel.alpha > 0.05f) prev = settingsPanel;
+            }
+            _activeLayer = next;
+
+            if (prev != null) AnimatePanel(prev, false, -slideDir * 72f);
+            AnimatePanel(next, true, slideDir * 72f);
+        }
+
+        private void AnimatePanel(CanvasGroup g, bool show, float slideOffsetX)
+        {
+            if (g == null) return;
+            if (_layerAnims.TryGetValue(g, out var c) && c != null) StopCoroutine(c);
+            if (!gameObject.activeInHierarchy)
+            {
+                Show(g, show);
+                return;
+            }
+            _layerAnims[g] = StartCoroutine(AnimatePanelRoutine(g, show, slideOffsetX));
+        }
+
+        private IEnumerator AnimatePanelRoutine(CanvasGroup g, bool show, float slideOffsetX)
+        {
+            var rt = g.transform as RectTransform;
+            float startA = g.alpha;
+            float endA = show ? 1f : 0f;
+            Vector2 startPos = show ? new Vector2(slideOffsetX, 0f) : (rt != null ? rt.anchoredPosition : Vector2.zero);
+            Vector2 endPos = show ? Vector2.zero : new Vector2(slideOffsetX, 0f);
+            g.interactable = false;
+            g.blocksRaycasts = false;
+            const float duration = 0.22f;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float u = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / duration));
+                g.alpha = Mathf.Lerp(startA, endA, u);
+                if (rt != null) rt.anchoredPosition = Vector2.Lerp(startPos, endPos, u);
+                yield return null;
+            }
+            g.alpha = endA;
+            if (rt != null) rt.anchoredPosition = Vector2.zero;
+            g.interactable = show;
+            g.blocksRaycasts = show;
+            _layerAnims[g] = null;
+        }
+
         private static void Show(CanvasGroup g, bool show)
         {
             if (g == null) return;
             g.alpha = show ? 1f : 0f;
             g.interactable = show;
             g.blocksRaycasts = show;
+            if (g.transform is RectTransform rt) rt.anchoredPosition = Vector2.zero;
         }
     }
 }

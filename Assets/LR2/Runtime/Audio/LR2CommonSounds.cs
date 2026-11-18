@@ -32,8 +32,8 @@ namespace LR2.Audio
         public SoundSet hitmarkerArmor = new SoundSet(AudioCategory.UI, 0.8f, 10f, 0f);
 
         [Header("Incoming fire (local player)")]
-        public SoundSet bulletWhizz = new SoundSet(AudioCategory.Weapons, 1f, 6f, 1f);
-        public SoundSet bulletCrack = new SoundSet(AudioCategory.Weapons, 1f, 6f, 1f);
+        public SoundSet bulletWhizz = new SoundSet(AudioCategory.Weapons, 1f, 16f, 1f);
+        public SoundSet bulletCrack = new SoundSet(AudioCategory.Weapons, 1f, 18f, 1f);
         public SoundSet playerHurt = new SoundSet(AudioCategory.Voice, 0.9f, 10f, 0f);
         public SoundSet lowHealthLoop = new SoundSet(AudioCategory.Sfx, 0.6f, 10f, 0f);
         public SoundSet playerDeath = new SoundSet(AudioCategory.Voice, 1f, 10f, 0f);
@@ -52,9 +52,9 @@ namespace LR2.Audio
         public SoundSet ammoPickup = new SoundSet(AudioCategory.Sfx, 0.9f, 12f, 1f);
 
         [Header("UI")]
-        public SoundSet uiHover = new SoundSet(AudioCategory.UI, 0.5f, 10f, 0f);
-        public SoundSet uiClick = new SoundSet(AudioCategory.UI, 0.8f, 10f, 0f);
-        public SoundSet uiBack = new SoundSet(AudioCategory.UI, 0.7f, 10f, 0f);
+        public SoundSet uiHover = new SoundSet(AudioCategory.UI, 0.10f, 10f, 0f);
+        public SoundSet uiClick = new SoundSet(AudioCategory.UI, 0.20f, 10f, 0f);
+        public SoundSet uiBack = new SoundSet(AudioCategory.UI, 0.18f, 10f, 0f);
         public SoundSet medal = new SoundSet(AudioCategory.UI, 0.9f, 10f, 0f);
         public SoundSet matchStart = new SoundSet(AudioCategory.UI, 1f, 10f, 0f);
         public SoundSet victory = new SoundSet(AudioCategory.Music, 1f, 10f, 0f);
@@ -74,6 +74,16 @@ namespace LR2.Audio
         {
             _instance = null;
             _searched = false;
+        }
+
+        private void OnEnable()
+        {
+            // Guard serialized asset defaults against harsh/loud menu click bursts and ensure wide bullet flyby reach
+            if (uiHover != null) uiHover.volume = Mathf.Min(uiHover.volume, 0.14f);
+            if (uiClick != null) uiClick.volume = Mathf.Min(uiClick.volume, 0.24f);
+            if (uiBack != null) uiBack.volume = Mathf.Min(uiBack.volume, 0.22f);
+            if (bulletWhizz != null) { bulletWhizz.minDistance = Mathf.Max(bulletWhizz.minDistance, 2.5f); bulletWhizz.maxDistance = Mathf.Max(bulletWhizz.maxDistance, 16f); }
+            if (bulletCrack != null) { bulletCrack.minDistance = Mathf.Max(bulletCrack.minDistance, 2.5f); bulletCrack.maxDistance = Mathf.Max(bulletCrack.maxDistance, 18f); }
         }
     }
 }

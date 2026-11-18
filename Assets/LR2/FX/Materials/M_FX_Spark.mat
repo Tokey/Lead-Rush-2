@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _Cull: 0
     - _DstBlend: 1
-    - _Intensity: 9
+    - _Intensity: 3.2
     - _PremultiplyAlpha: 0
     - _SrcBlend: 5
     m_Colors:

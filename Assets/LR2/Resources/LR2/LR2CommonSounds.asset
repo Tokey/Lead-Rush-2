@@ -62,10 +62,10 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 1461d1b3c2b336c458603d52513a337a, type: 3}
     - {fileID: 8300000, guid: 0236e50881ba84e4ab5a868ea4fec428, type: 3}
     volume: 1
-    pitch: {x: 0.97, y: 1.03}
+    pitch: {x: 0.94, y: 1.08}
     spatialBlend: 1
-    minDistance: 1.5
-    maxDistance: 6
+    minDistance: 2.5
+    maxDistance: 16
     category: 1
     priority: 128
   bulletCrack:
@@ -77,10 +77,10 @@ MonoBehaviour:
     - {fileID: 8300000, guid: a6206d0b333e50541a26d25b4c660167, type: 3}
     - {fileID: 8300000, guid: 4d25eb575e2bef24d841b6ee0d444769, type: 3}
     volume: 1
-    pitch: {x: 0.97, y: 1.03}
+    pitch: {x: 0.95, y: 1.06}
     spatialBlend: 1
-    minDistance: 1.5
-    maxDistance: 6
+    minDistance: 2.5
+    maxDistance: 18
     category: 1
     priority: 128
   playerHurt:
@@ -91,8 +91,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: e86f23f4dfffb364d81af5708cc5e460, type: 3}
     - {fileID: 8300000, guid: 83dc8e60c08730f4996cc0e80ae2415d, type: 3}
     - {fileID: 8300000, guid: e592f8c239f0e1a4eaa9f257908fb043, type: 3}
-    volume: 0.9
-    pitch: {x: 0.97, y: 1.03}
+    volume: 0.34
+    pitch: {x: 0.85, y: 0.94}
     spatialBlend: 0
     minDistance: 1.5
     maxDistance: 10
@@ -151,8 +151,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 0f5f71f0915ae634cacea5110756b01a, type: 3}
     - {fileID: 8300000, guid: c6917673910330745afdc4f93f655e24, type: 3}
     - {fileID: 8300000, guid: 37f3814c575a282449db9a136d4a6bff, type: 3}
-    volume: 0.8
-    pitch: {x: 0.97, y: 1.03}
+    volume: 0.36
+    pitch: {x: 0.84, y: 0.93}
     spatialBlend: 1
     minDistance: 1.5
     maxDistance: 25
@@ -279,7 +279,7 @@ MonoBehaviour:
   uiHover:
     clips:
     - {fileID: 8300000, guid: 8b6a6a97261d8ea48a8c86abf66a44c5, type: 3}
-    volume: 0.5
+    volume: 0.14
     pitch: {x: 0.97, y: 1.03}
     spatialBlend: 0
     minDistance: 1.5
@@ -289,7 +289,7 @@ MonoBehaviour:
   uiClick:
     clips:
     - {fileID: 8300000, guid: 51e3108d6ae6f384788f46ada865cb3f, type: 3}
-    volume: 0.8
+    volume: 0.24
     pitch: {x: 0.97, y: 1.03}
     spatialBlend: 0
     minDistance: 1.5
@@ -299,7 +299,7 @@ MonoBehaviour:
   uiBack:
     clips:
     - {fileID: 8300000, guid: f8929102e945fbd4b821abe1a00a88b5, type: 3}
-    volume: 0.7
+    volume: 0.22
     pitch: {x: 0.97, y: 1.03}
     spatialBlend: 0
     minDistance: 1.5

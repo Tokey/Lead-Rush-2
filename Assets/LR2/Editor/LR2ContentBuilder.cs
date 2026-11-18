@@ -167,8 +167,8 @@ namespace LR2.EditorTools
             var flashTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/UnityTechnologies/ParticlePack/EffectExamples/Weapon Effects/Textures/MuzzleFlashFront.tif") ?? softDot;
             var sparkTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/UnityTechnologies/ParticlePack/EffectExamples/Misc Effects/Textures/SparkParticle.tif") ?? softDot;
 
-            var mFlash = SaveMaterial(NewParticle(flashTex, new Color(1f, 0.78f, 0.5f), 7f, true), matDir + "/M_FX_MuzzleFlash.mat");
-            var mSpark = SaveMaterial(NewParticle(sparkTex, new Color(1f, 0.72f, 0.38f), 9f, true), matDir + "/M_FX_Spark.mat");
+            var mFlash = SaveMaterial(NewParticle(flashTex, new Color(1f, 0.78f, 0.5f), 2.4f, true), matDir + "/M_FX_MuzzleFlash.mat");
+            var mSpark = SaveMaterial(NewParticle(sparkTex, new Color(1f, 0.72f, 0.38f), 3.2f, true), matDir + "/M_FX_Spark.mat");
             var mGlow = SaveMaterial(NewParticle(softDot, new Color(1f, 0.6f, 0.25f), 5f, true), matDir + "/M_FX_Glow.mat");
             var mDust = SaveMaterial(NewParticle(puff, new Color(0.62f, 0.6f, 0.57f, 0.55f), 1f, false), matDir + "/M_FX_Dust.mat");
             var mSmoke = SaveMaterial(NewParticle(puff, new Color(0.3f, 0.3f, 0.3f, 0.6f), 1f, false), matDir + "/M_FX_Smoke.mat");
@@ -191,12 +191,12 @@ namespace LR2.EditorTools
                 return SavePrefab(root, pfDir + "/" + name + ".prefab");
             }
 
-            var impConcrete = Impact("FX_Impact_Concrete", new Color(0.66f, 0.64f, 0.6f, 0.6f), 0.35f, false, new Color(0.35f, 0.34f, 0.32f, 1f), 1.4f);
-            var impMetal = Impact("FX_Impact_Metal", new Color(0.4f, 0.4f, 0.42f, 0.35f), 0.2f, true, new Color(0.2f, 0.2f, 0.2f, 1f), 1.5f);
-            var impWood = Impact("FX_Impact_Wood", new Color(0.55f, 0.45f, 0.33f, 0.5f), 0.28f, false, new Color(0.45f, 0.32f, 0.18f, 1f), 1.2f);
-            var impDirt = Impact("FX_Impact_Dirt", new Color(0.5f, 0.43f, 0.33f, 0.7f), 0.5f, false, new Color(0.3f, 0.24f, 0.17f, 1f), 1.6f);
-            var impGlass = Impact("FX_Impact_Glass", new Color(0.85f, 0.88f, 0.9f, 0.3f), 0.15f, true, new Color(0.8f, 0.9f, 0.95f, 1f), 1.4f);
-            var impWater = Impact("FX_Impact_Water", new Color(0.85f, 0.9f, 0.95f, 0.65f), 0.4f, false, new Color(0.9f, 0.95f, 1f, 0.8f), 1.2f);
+            var impConcrete = Impact("FX_Impact_Concrete", new Color(0.68f, 0.66f, 0.62f, 0.65f), 0.38f, true, new Color(0.35f, 0.34f, 0.32f, 1f), 1.4f);
+            var impMetal = Impact("FX_Impact_Metal", new Color(0.42f, 0.42f, 0.45f, 0.38f), 0.24f, true, new Color(0.2f, 0.2f, 0.2f, 1f), 1.5f);
+            var impWood = Impact("FX_Impact_Wood", new Color(0.55f, 0.45f, 0.33f, 0.56f), 0.32f, false, new Color(0.45f, 0.32f, 0.18f, 1f), 1.2f);
+            var impDirt = Impact("FX_Impact_Dirt", new Color(0.5f, 0.43f, 0.33f, 0.74f), 0.54f, false, new Color(0.3f, 0.24f, 0.17f, 1f), 1.6f);
+            var impGlass = Impact("FX_Impact_Glass", new Color(0.85f, 0.88f, 0.9f, 0.35f), 0.18f, true, new Color(0.8f, 0.9f, 0.95f, 1f), 1.4f);
+            var impWater = Impact("FX_Impact_Water", new Color(0.85f, 0.9f, 0.95f, 0.68f), 0.45f, false, new Color(0.9f, 0.95f, 1f, 0.8f), 1.2f);
 
             // Blood (vivid arterial crimson mist cloud + high-velocity splatter droplets)
             GameObject Blood(string name, float scale)
@@ -213,25 +213,25 @@ namespace LR2.EditorTools
             var bloodFx = Blood("FX_Blood", 1.55f);
             var bloodHead = Blood("FX_Blood_Headshot", 2.5f);
 
-            // Muzzle flash
+            // Muzzle flash (subtle tactical flash & localized illumination, swirling heated barrel smoke wisps)
             var flash = new GameObject("FX_MuzzleFlash");
-            var f1 = AddPS(flash, "FlashFront", mFlash, 0.03f, 0.05f, 0f, 0f, 0.22f, 0.36f, 1, Color.white, new Color(1f, 0.9f, 0.7f), 0f, 0f, false, 1.3f);
+            var f1 = AddPS(flash, "FlashFront", mFlash, 0.025f, 0.04f, 0f, 0f, 0.10f, 0.16f, 1, Color.white, new Color(1f, 0.88f, 0.68f), 0f, 0f, false, 0.85f);
             var f1Main = f1.main;
             f1Main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            var side = AddPS(flash, "FlashSide", mFlash, 0.03f, 0.045f, 7f, 11f, 0.08f, 0.14f, 3, Color.white, new Color(1f, 0.85f, 0.6f), 0f, 12f, true, 1f);
+            var side = AddPS(flash, "FlashSide", mFlash, 0.025f, 0.038f, 6f, 9f, 0.045f, 0.08f, 2, Color.white, new Color(1f, 0.85f, 0.6f), 0f, 12f, true, 0.8f);
             var sideMain = side.main;
             sideMain.simulationSpace = ParticleSystemSimulationSpace.Local;
-            AddPS(flash, "Smoke", mSmoke, 0.5f, 1.1f, 0.3f, 1.1f, 0.06f, 0.14f, 3, new Color(0.6f, 0.6f, 0.6f, 0.22f), new Color(0.5f, 0.5f, 0.5f, 0.15f), -0.03f, 18f, false, 4.5f);
-            AddPS(flash, "Sparks", mSpark, 0.05f, 0.14f, 6f, 14f, 0.01f, 0.025f, 6, Color.white, new Color(1f, 0.75f, 0.4f), 0.2f, 14f, true, 0.4f);
+            AddPS(flash, "Smoke", mSmoke, 0.65f, 1.25f, 0.35f, 1.15f, 0.06f, 0.14f, 4, new Color(0.65f, 0.65f, 0.65f, 0.22f), new Color(0.5f, 0.5f, 0.5f, 0.14f), -0.05f, 22f, false, 4.4f);
+            AddPS(flash, "Sparks", mSpark, 0.05f, 0.13f, 5f, 12f, 0.010f, 0.022f, 7, Color.white, new Color(1f, 0.75f, 0.4f), 0.2f, 16f, true, 0.35f);
             var lightGo = new GameObject("FlashLight");
             lightGo.transform.SetParent(flash.transform, false);
             lightGo.transform.localPosition = new Vector3(0f, 0f, 0.05f);
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Point;
             light.color = new Color(1f, 0.72f, 0.45f);
-            light.range = 20f;
+            light.range = 7.5f;
             light.lightUnit = LightUnit.Lumen;
-            light.intensity = 90000f;   // dark map: the flash lights up the room for a frame or two
+            light.intensity = 3200f;    // localized warm muzzle spill without blinding room whiteout
             light.shadows = LightShadows.None; // point-light shadows on every shot caused frame spikes
             lightGo.AddComponent<HDAdditionalLightData>();
             flash.AddComponent<MuzzleFlash>();
@@ -489,10 +489,15 @@ namespace LR2.EditorTools
             if (common.hitmarker != null) { common.hitmarker.volume = 1f; common.hitmarker.pitch = new Vector2(0.97f, 1.04f); }
             if (common.hitmarkerHeadshot != null) { common.hitmarkerHeadshot.volume = 1f; common.hitmarkerHeadshot.pitch = new Vector2(0.98f, 1.03f); }
             if (common.killConfirm != null) { common.killConfirm.volume = 1f; }
+            if (common.painGrunt != null) { common.painGrunt.volume = 0.36f; common.painGrunt.pitch = new Vector2(0.84f, 0.93f); }
+            if (common.playerHurt != null) { common.playerHurt.volume = 0.34f; common.playerHurt.pitch = new Vector2(0.85f, 0.94f); }
+            if (common.bulletWhizz != null) { common.bulletWhizz.minDistance = 2.5f; common.bulletWhizz.maxDistance = 16f; common.bulletWhizz.pitch = new Vector2(0.94f, 1.08f); }
+            if (common.bulletCrack != null) { common.bulletCrack.minDistance = 2.5f; common.bulletCrack.maxDistance = 18f; common.bulletCrack.pitch = new Vector2(0.95f, 1.06f); }
             EditorUtility.SetDirty(common);
 
             var foley = LoadOrCreate<FoleyLibrary>(ResDir + "/FoleyLibrary.asset");
             FillSoundSets(foley, audio + "/Foley");
+            if (foley.pain != null) { foley.pain.volume = 0.32f; foley.pain.pitch = new Vector2(0.84f, 0.93f); }
             EditorUtility.SetDirty(foley);
 
             var wa = LoadOrCreate<WeaponAudioProfile>(DataDir + "/Weapons/WA_AK12.asset");
@@ -529,8 +534,9 @@ namespace LR2.EditorTools
             if (flesh.Length > 0) lib.fleshImpact = new SoundSet(AudioCategory.Sfx, 0.95f, 30f, 1f) { clips = flesh };
             if (head.Length > 0) lib.headshotImpact = new SoundSet(AudioCategory.Sfx, 1f, 35f, 1f) { clips = head };
             EditorUtility.SetDirty(lib);
+            LR2MusicGenerator.EnsureGenerated(true);
             AssetDatabase.SaveAssets();
-            Debug.Log("[LR2] Audio wired (common sounds, AK-12 layered audio, surface impacts/footsteps).");
+            Debug.Log("[LR2] Audio wired (common sounds, AK-12 layered audio, surface impacts/footsteps, adaptive music stems).");
         }
 
         private static void FillSoundSets(object target, string folderRoot)
@@ -578,22 +584,29 @@ namespace LR2.EditorTools
             public float hip = 2.6f, ads = 0.06f, adsTime = 0.26f, sprintToFire = 0.24f, adsFov = 0.72f;
             public int mag = 30, reserve = 120, maxReserve = 210;
             public bool auto = true, akMaterials;
-            public Vector2 kick = new Vector2(0.2f, 0.12f);
+            public Vector2 kick = new Vector2(0.12f, 0.06f);
+            // Kinemation demo recoil patterns climb 3-4 deg/shot; scale to ~1-1.3 deg (hip). ADS multiplies pattern + kick.
+            public float pattern = 0.33f, patternH = 0.3f, adsRecoil = 0.55f, adsKick = 0.5f;
         }
 
         /// <summary>Every gun comes from a Kinemation demo weapon (its own grip pose, ADS, reload and equip animations) made
         /// for the humanoid driver rig. Loadout = weaponPrefabs order (1 = primary, 2 = sidearm).</summary>
         private static readonly WeaponSpec[] Guns =
         {
-            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true },
+            // TTK (100 HP): AK-12 3 body shots <= ~20 m (171 ms), 4 to ~40 m (257 ms), 5 beyond. Mk23 4 body shots (450 ms), 2 headshots.
+            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true, near = 35f, mid = 29f, far = 24f, hip = 2.2f },
             new WeaponSpec { id = "Mk23", display = "MK23", source = DemoDir + "/Prefabs/Humanoid/Mk23Mod0_Scriptable_Humanoid.prefab", audio = "Pistol",
-                             cls = WeaponClass.Pistol, rpm = 400f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 38f, mid = 30f, far = 22f,
-                             head = 1.8f, range = 18f, hip = 1.6f, ads = 0.08f, adsTime = 0.18f, sprintToFire = 0.12f, adsFov = 0.82f, kick = new Vector2(0.45f, 0.1f) },
-            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", rpm = 650f, near = 30f, mid = 26f, far = 22f },
+                             cls = WeaponClass.Pistol, rpm = 400f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 30f, mid = 25f, far = 18f,
+                             head = 1.8f, range = 18f, hip = 1.6f, ads = 0.08f, adsTime = 0.18f, sprintToFire = 0.12f, adsFov = 0.82f, kick = new Vector2(0.4f, 0.1f),
+                             pattern = 1f, patternH = 1f },
+            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", rpm = 650f, near = 33f, mid = 28f, far = 23f,
+                             pattern = 0.36f },
             new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4",
-                             rpm = 850f, near = 28f, mid = 24f, far = 20f, range = 26f, hip = 2.2f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.16f, 0.1f) },
+                             rpm = 850f, near = 30f, mid = 25f, far = 21f, range = 26f, hip = 2.0f, adsTime = 0.22f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
+                             pattern = 0.3f },
             new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
-                             near = 45f, mid = 40f, far = 34f, range = 45f, hip = 3.2f, adsTime = 0.32f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.34f, 0.16f) },
+                             near = 48f, mid = 42f, far = 36f, range = 45f, hip = 3.0f, adsTime = 0.32f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
+                             pattern = 0.5f, patternH = 0.4f },
         };
 
         public static void BuildWeapons()
@@ -632,6 +645,10 @@ namespace LR2.EditorTools
             def.sprintToFireTime = spec.sprintToFire;
             def.adsFovMultiplier = spec.adsFov;
             def.cameraKick = spec.kick;
+            def.adsKickMultiplier = spec.adsKick;
+            def.recoilPatternScale = spec.pattern;
+            def.recoilPatternHorizontalScale = spec.patternH;
+            def.adsRecoilMultiplier = spec.adsRecoil;
             def.audio = AssetDatabase.LoadAssetAtPath<WeaponAudioProfile>(DataDir + $"/Weapons/WA_{spec.audio}.asset")
                         ?? AssetDatabase.LoadAssetAtPath<WeaponAudioProfile>(DataDir + "/Weapons/WA_AK12.asset");
             def.shellPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/FX/FX_Shell_Rifle.prefab");
@@ -654,14 +671,35 @@ namespace LR2.EditorTools
             if (spec.akMaterials) ApplyWeaponMaterials(go);
             foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.updateWhenOffscreen = true;
 
-            // Attach weapon Animator (mag, charging handle, safety selector during reload & fire).
+            // Ensure a single weapon Animator on the child node that owns the rig (never shadow AK12's W_AK12_ReloadEmpty child Animator with a root Animator).
             var weaponCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(WeaponAnimControllerPath);
-            if (weaponCtrl != null && spec.id == "AK12")
+            Animator chosenAnim = null;
+            foreach (var cand in go.GetComponentsInChildren<Animator>(true))
             {
-                var wAnim = go.GetComponent<Animator>();
-                if (wAnim == null) wAnim = go.AddComponent<Animator>();
-                wAnim.runtimeAnimatorController = weaponCtrl;
-                wAnim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                if (cand.transform.Find("AK12Rig") != null || cand.transform.Find("FAL") != null ||
+                    cand.transform.Find("Mk18") != null || cand.transform.Find("Mk23Mod0Rig") != null)
+                {
+                    chosenAnim = cand;
+                    break;
+                }
+            }
+            if (chosenAnim == null) chosenAnim = go.GetComponentInChildren<Animator>(true);
+            foreach (var extra in go.GetComponentsInChildren<Animator>(true))
+            {
+                if (chosenAnim != null && extra != chosenAnim && extra.gameObject == go)
+                    Object.DestroyImmediate(extra);
+            }
+            if (chosenAnim == null && weaponCtrl != null && spec.id == "AK12")
+            {
+                var rigParent = System.Array.Find(go.GetComponentsInChildren<Transform>(true), t => t.name == "AK12Rig")?.parent;
+                var targetGo = rigParent != null ? rigParent.gameObject : go;
+                chosenAnim = targetGo.GetComponent<Animator>() ?? targetGo.AddComponent<Animator>();
+            }
+            if (chosenAnim != null)
+            {
+                if (chosenAnim.runtimeAnimatorController == null && weaponCtrl != null)
+                    chosenAnim.runtimeAnimatorController = weaponCtrl;
+                chosenAnim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             }
 
             var demoType = FindType("Demo.Scripts.Runtime.Item.Weapon");
@@ -1400,6 +1438,12 @@ namespace LR2.EditorTools
                 foreach (var cs in sm.states)
                 {
                     var st = cs.state;
+                    bool isProneState = st.name.IndexOf("Prone", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                    foreach (var tr in st.transitions)
+                    {
+                        if (isProneState || (tr.destinationState != null && tr.destinationState.name.IndexOf("Prone", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                            tr.duration = Mathf.Min(tr.duration, 0.16f);
+                    }
                     if (!UsesMove(st.motion)) continue;
                     st.speedParameterActive = true;
                     st.speedParameter = "LocoSpeed";
@@ -1632,13 +1676,22 @@ namespace LR2.EditorTools
                 var sso = new SerializedObject(soldierSettings);
                 var list = sso.FindProperty("weaponPrefabs");
                 list.ClearArray();
-                list.InsertArrayElementAtIndex(0);
-                list.GetArrayElementAtIndex(0).objectReferenceValue = weapon;
-                var sidearm = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/Weapons/LR2_Mk23.prefab");
-                if (sidearm != null && UseKinemationDriver)
+                string[] order =
                 {
-                    list.InsertArrayElementAtIndex(1);
-                    list.GetArrayElementAtIndex(1).objectReferenceValue = sidearm;
+                    PrefabDir + "/Weapons/LR2_AK12.prefab",
+                    PrefabDir + "/Weapons/LR2_Mk23.prefab",
+                    PrefabDir + "/Weapons/LR2_AK74N.prefab",
+                    PrefabDir + "/Weapons/LR2_Mk18.prefab",
+                    PrefabDir + "/Weapons/LR2_FAL.prefab",
+                };
+                int inserted = 0;
+                foreach (var wPath in order)
+                {
+                    var wObj = AssetDatabase.LoadAssetAtPath<GameObject>(wPath);
+                    if (wObj == null) continue;
+                    list.InsertArrayElementAtIndex(inserted);
+                    list.GetArrayElementAtIndex(inserted).objectReferenceValue = wObj;
+                    inserted++;
                 }
                 sso.FindProperty("equipDelay").floatValue = 0.3f;
                 var wbIdx = sso.FindProperty("weaponBone.index");
@@ -1653,10 +1706,12 @@ namespace LR2.EditorTools
                 Gait("walking", 3.5f, 13f);   // realistic pace, snappy response
                 Gait("sprinting", 6.1f, 9f);
                 Gait("crouching", 2.0f, 13f);
+                Gait("prone", 1.35f, 12f);     // brisk crawl + quick stance response
                 void F(string n, float v) { var p = mso.FindProperty(n); if (p != null) p.floatValue = v; }
                 F("jumpHeight", 5.2f);
                 F("gravity", 17f);
                 F("slideSpeed", 8.5f);
+                F("proneTransitionDuration", 0.32f);
                 var gm = mso.FindProperty("groundMask");
                 if (gm != null) gm.intValue = LR2Layers.EnvironmentMask;
                 mso.ApplyModifiedPropertiesWithoutUndo();
@@ -1753,6 +1808,7 @@ namespace LR2.EditorTools
                 visuals.FriendlyMarkerMaterial = markerMat;
                 var gear = MakeGear();
                 visuals.SetGear(gear[0], gear[1], gear[2]);
+                visuals.ApplyMaterialsNow(player); // Pre-bake uniform & balaclava texture onto prefab so frame 0 never flashes old model textures
 
                 var head = bodyAnim.GetBoneTransform(HumanBodyBones.Head);
                 var chest = bodyAnim.GetBoneTransform(HumanBodyBones.Chest) ?? bodyAnim.GetBoneTransform(HumanBodyBones.Spine);
@@ -1970,7 +2026,8 @@ namespace LR2.EditorTools
                 m.orbSpawnInterval = 30f;
                 EditorUtility.SetDirty(m);
             }
-            Match("MatchSettings_Duel", "Duel", "1v1 against a bot. First to 15 kills.", GameModeType.Duel, 15, 480f, 0, 1);
+            Match("MatchSettings_Duel", "1v1 Deathmatch", "1v1 Deathmatch against an adaptive enemy operator. First to 15 kills.", GameModeType.Duel, 15, 480f, 0, 1);
+            Match("MatchSettings_CTF", "Capture The Flag DM", "Rotating strategic flag Deathmatch. BF6 radius: close core captures 2.25x faster.", GameModeType.CaptureTheFlag, 25, 480f, 0, 3);
             Match("MatchSettings_FFA", "Free For All", "You against three bots. First to 20 kills.", GameModeType.FreeForAll, 20, 600f, 0, 3);
             Match("MatchSettings_TDM", "Team Deathmatch", "You and a bot squadmate against two bots. First team to 40.", GameModeType.TeamDeathmatch, 40, 600f, 1, 2);
 

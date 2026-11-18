@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LR2.Combat;
 using UnityEngine;
 
@@ -58,6 +59,16 @@ namespace LR2.Characters
         private bool _offsetsReady;
         private int _frames;
         private static readonly int ProneWeightHash = Animator.StringToHash("ProneWeight");
+        private static readonly List<int> _lProxIdx = new List<int>();
+        private static readonly List<int> _lFingerIdx = new List<int>();
+        private static readonly List<int> _lThumbProxIdx = new List<int>();
+        private static readonly List<int> _lThumbDistIdx = new List<int>();
+        private static readonly List<int> _rIndexIdx = new List<int>();
+        private static readonly List<int> _rFingerIdx = new List<int>();
+        private static readonly List<int> _rThumbProxIdx = new List<int>();
+        private static readonly List<int> _rThumbDistIdx = new List<int>();
+        private static readonly List<int> _spreadIdx = new List<int>();
+        private static bool _fingerCacheReady;
 
         public Animator Driver => driver;
         public Animator Visual => visual;
@@ -142,6 +153,44 @@ namespace LR2.Characters
             _rShin = visual.GetBoneTransform(HumanBodyBones.RightLowerLeg);
             _rFoot = visual.GetBoneTransform(HumanBodyBones.RightFoot);
             _bridge = new ReloadMotionBridge(driver.transform, _soldier != null ? _soldier.Playables : null);
+            EnsureFingerCache();
+        }
+
+        private static void EnsureFingerCache()
+        {
+            if (_fingerCacheReady) return;
+            _fingerCacheReady = true;
+            string[] names = HumanTrait.MuscleName;
+            for (int i = 0; i < names.Length; i++)
+            {
+                string n = names[i];
+                bool isLeft = n.StartsWith("Left ");
+                bool isRight = n.StartsWith("Right ");
+                if (!isLeft && !isRight) continue;
+
+                if (n.Contains("Spread") && (n.Contains("Index") || n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")))
+                {
+                    _spreadIdx.Add(i);
+                    continue;
+                }
+                if (!n.Contains("Stretched")) continue;
+
+                if (n.Contains("Thumb"))
+                {
+                    if (isLeft) { if (n.Contains("1 Stretched")) _lThumbProxIdx.Add(i); else _lThumbDistIdx.Add(i); }
+                    else { if (n.Contains("1 Stretched")) _rThumbProxIdx.Add(i); else _rThumbDistIdx.Add(i); }
+                }
+                else if (isLeft && (n.Contains("Index") || n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")))
+                {
+                    if (n.Contains("1 Stretched")) _lProxIdx.Add(i);
+                    else _lFingerIdx.Add(i);
+                }
+                else if (isRight)
+                {
+                    if (n.Contains("Index")) _rIndexIdx.Add(i);
+                    else if (n.Contains("Middle") || n.Contains("Ring") || n.Contains("Little")) _rFingerIdx.Add(i);
+                }
+            }
         }
 
         /// <summary>The head's end bone (Mixamo "HeadTop_End"): the child furthest from the head joint, skipping eyes/jaw.</summary>
@@ -169,6 +218,13 @@ namespace LR2.Characters
         private bool IsFirstPerson =>
             _soldier != null && _soldier.IsLocalPlayer && _soldier.ViewCamera != null && _soldier.ViewCamera.isActiveAndEnabled;
 
+        /// <summary>Forces an immediate pose synchronization (used during startup preload so frame 0 renders cleanly).</summary>
+        public void SyncPoseNow()
+        {
+            if (_driverHandler == null || !enabled) return;
+            LateUpdate();
+        }
+
         private void LateUpdate()
         {
             if (_driverHandler == null) return;
@@ -180,6 +236,7 @@ namespace LR2.Characters
 
             _driverHandler.GetHumanPose(ref _pose);
             ToVisualSpace(ref _pose);
+            RelaxGlovedFingerMuscles(ref _pose);
             _visualHandler.SetHumanPose(ref _pose);
 
             if (!_offsetsReady && _dL != null && _dR != null && _lHand != null && _rHand != null)
@@ -200,6 +257,7 @@ namespace LR2.Characters
                 _bridge?.Apply(_soldier != null ? _soldier.ActiveFirearm : null, itemTf, _dL, _dR,
                                ref lPos, ref lRot, ref rPos, ref rRot);
                 ApplyProneWeaponPose(itemTf, ref lPos, ref lRot, ref rPos, ref rRot);
+                ApplyGloveClearance(itemTf, ref lPos, ref lRot, ref rPos);
                 Solve(_rUpper, _rLower, _rHand, rPos, rRot * _rOffset, handIKWeight);
                 Solve(_lUpper, _lLower, _lHand, lPos, lRot * _lOffset, handIKWeight);
                 HandErrorRight = _rHand != null ? Vector3.Distance(_rHand.position, rPos) : -1f;
@@ -262,6 +320,106 @@ namespace LR2.Characters
             rPos = Xform(rPos);
             lRot = rotDelta * lRot;
             rRot = rotDelta * rRot;
+        }
+
+        private bool IsHoldingPistol =>
+            _soldier != null && _soldier.ActiveFirearm != null && _soldier.ActiveFirearm.Definition != null &&
+            _soldier.ActiveFirearm.Definition.weaponClass == LR2.Weapons.WeaponClass.Pistol;
+
+        /// <summary>Keep SWAT gloved fingers &amp; thumbs curled snugly into the grip/trigger (negative HumanTrait muscle = curled; positive = extended).</summary>
+        private void RelaxGlovedFingerMuscles(ref HumanPose pose)
+        {
+            if (pose.muscles == null || _soldier == null || _soldier.ActiveItem == null) return;
+            float reloadHand = _bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f;
+            bool pistol = IsHoldingPistol;
+
+            // Left fingers: snug C-clamp around rifle handguard or wrapped over right grip on pistol; softly open on reload.
+            float lProxMax = pistol ? -0.48f : Mathf.Lerp(-0.34f, -0.14f, reloadHand);
+            float lDistMax = pistol ? -0.58f : Mathf.Lerp(-0.42f, -0.18f, reloadHand);
+            for (int i = 0; i < _lProxIdx.Count; i++)
+            {
+                int idx = _lProxIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.92f, lProxMax);
+            }
+            for (int i = 0; i < _lFingerIdx.Count; i++)
+            {
+                int idx = _lFingerIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.94f, lDistMax);
+            }
+
+            // Left & right thumbs: prevent upward "thumbs-up" horns while staying tucked flat against frame/handguard.
+            float lThumbProxMax = pistol ? -0.05f : Mathf.Lerp(0.05f, 0.14f, reloadHand);
+            float lThumbDistMax = pistol ? -0.14f : Mathf.Lerp(-0.04f, 0.08f, reloadHand);
+            for (int i = 0; i < _lThumbProxIdx.Count; i++)
+            {
+                int idx = _lThumbProxIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.35f, lThumbProxMax);
+            }
+            for (int i = 0; i < _lThumbDistIdx.Count; i++)
+            {
+                int idx = _lThumbDistIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.45f, lThumbDistMax);
+            }
+
+            // Right hand: wrapped firmly on pistol grip; index lightly curved on trigger guard (never sticking upward).
+            float rGripMax = pistol ? -0.56f : -0.52f;
+            float rIndexMin = pistol ? -0.48f : -0.44f;
+            float rIndexMax = pistol ? -0.22f : -0.18f;
+            for (int i = 0; i < _rFingerIdx.Count; i++)
+            {
+                int idx = _rFingerIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.94f, rGripMax);
+            }
+            for (int i = 0; i < _rIndexIdx.Count; i++)
+            {
+                int idx = _rIndexIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], rIndexMin, rIndexMax);
+            }
+            for (int i = 0; i < _rThumbProxIdx.Count; i++)
+            {
+                int idx = _rThumbProxIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.32f, pistol ? -0.04f : 0.02f);
+            }
+            for (int i = 0; i < _rThumbDistIdx.Count; i++)
+            {
+                int idx = _rThumbDistIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.42f, pistol ? -0.10f : -0.02f);
+            }
+
+            // Pull wide sideways finger splay cleanly inward for pistol two-handed grip & compact rifle grip
+            float spreadCap = pistol ? 0.06f : 0.14f;
+            for (int i = 0; i < _spreadIdx.Count; i++)
+            {
+                int idx = _spreadIdx[i];
+                if (idx < pose.muscles.Length) pose.muscles[idx] = Mathf.Clamp(pose.muscles[idx], -0.25f, spreadCap);
+            }
+        }
+
+        /// <summary>Keep wrist targets snug on the handguard/pistol grip, stepping outward cleanly during magazine removal/insertion.</summary>
+        private void ApplyGloveClearance(Transform item, ref Vector3 lPos, ref Quaternion lRot, ref Vector3 rPos)
+        {
+            if (item == null) return;
+            float reloadHand = _bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f;
+            Vector3 wRight = item.right;
+            Vector3 wUp = item.up;
+            Vector3 wFwd = item.forward;
+
+            if (IsHoldingPistol)
+            {
+                Vector3 pistolOff = -wRight * 0.004f - wUp * 0.003f + wFwd * 0.002f;
+                Vector3 magClear = -wRight * 0.010f - wUp * 0.008f;
+                lPos += Vector3.Lerp(pistolOff, magClear, reloadHand);
+                lRot = Quaternion.AngleAxis(Mathf.Lerp(3.0f, 6.5f, reloadHand), wFwd) * lRot;
+                rPos += wRight * 0.001f;
+            }
+            else
+            {
+                Vector3 rifleSnug = -wRight * 0.004f - wUp * 0.003f;
+                Vector3 magClear = -wRight * 0.012f - wUp * 0.008f;
+                lPos += Vector3.Lerp(rifleSnug, magClear, reloadHand);
+                lRot = Quaternion.AngleAxis(Mathf.Lerp(2.5f, 8.0f, reloadHand), wFwd) * lRot;
+                rPos += wRight * 0.001f;
+            }
         }
 
         private void AlignBody()

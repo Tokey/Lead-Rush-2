@@ -30,3 +30,6 @@ MonoBehaviour:
   weaponPrefabs:
   - {fileID: 1711597703121779645, guid: 7426d7d346c71ae49acded4005c27ef3, type: 3}
   - {fileID: 660625103486061043, guid: 7ed794419211ab648899353048e4e1e2, type: 3}
+  - {fileID: 4162073670658945821, guid: c647d94ea5b7c884e91a40f3808b77ae, type: 3}
+  - {fileID: 6416719708325613158, guid: 71c17a3bb223ffc48a7ca014db1704e5, type: 3}
+  - {fileID: 9067424349527152674, guid: 20693bcee220de349a4f4a93646d1b44, type: 3}

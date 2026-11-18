@@ -49,23 +49,25 @@ namespace LR2.EditorTools
                 c.fogAlbedo = new Color(0.6f, 0.68f, 0.66f);
                 c.fogAnisotropy = 0.78f;
                 c.fogDepthExtent = 70f;
-                c.contrast = 34f;
+                c.contrast = 20f;
                 c.saturation = -14f;
                 c.temperature = 2f;
-                c.bloom = 0.45f;
+                c.bloom = 0.06f;
                 c.practicalLights = false;
                 c.forest = true;
             }
-            c.presetVersion = 4;
+            c.presetVersion = 5;
             c.lensDistortion = 0f;
             c.motionBlur = 0.1f;
             c.chromaticAberration = 0.04f;
             c.filmGrain = 0.18f;
-            c.vignette = 0.26f;
-            c.exposureCompensation = -0.35f;
-            c.exposureLimitMin = 6.5f;
-            c.exposureLimitMax = 14.2f;
-            c.indoorDarkness = 0.65f;
+            c.vignette = 0.22f;
+            c.bloom = 0.06f;
+            c.contrast = 20f;
+            c.exposureCompensation = -0.1f;
+            c.exposureLimitMin = 4.6f;
+            c.exposureLimitMax = 13.6f;
+            c.indoorDarkness = 0.28f;
             EditorUtility.SetDirty(c);
         }
 
@@ -451,8 +453,8 @@ namespace LR2.EditorTools
             var parent = Child(_lighting, "InteriorDarkness");
             var indoorProfile = NewProfile(LightDir + "/LR2_Indoor_Profile.asset");
             var ilc = indoorProfile.Add<IndirectLightingController>(true);
-            ilc.indirectDiffuseLightingMultiplier.Override(1f - _cfg.indoorDarkness * 0.55f);
-            ilc.reflectionLightingMultiplier.Override(1f - _cfg.indoorDarkness * 0.5f);
+            ilc.indirectDiffuseLightingMultiplier.Override(Mathf.Max(0.88f, 1f - _cfg.indoorDarkness * 0.4f));
+            ilc.reflectionLightingMultiplier.Override(Mathf.Max(0.85f, 1f - _cfg.indoorDarkness * 0.4f));
             SaveProfile(indoorProfile);
             for (int i = 0; i < Interiors.Length; i++)
             {

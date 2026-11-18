@@ -4,6 +4,29 @@ Shared board so two AI agents can work on LeadRush 2 without duplicating work, c
 files, or both launching Unity at once. **Read this file before starting any task; update it when you start /
 finish one.** Keep entries short. Newest log entries at the bottom.
 
+## CLAUDE WAKE-UP BRIEFING & DEDICATED CRITICAL TASKS (23:02)
+1. **CRITICAL RULE — NO INVISIBLE BACKGROUND AUDIO / RUN PLAYTESTS VISIBLY:**
+   - The user reported hearing game sound in the background while Unity was hidden. **Root cause:** running `Unity.exe -batchmode` without `-nographics` hides the window while initializing Win32 audio and playing music/gunfire through the speakers invisibly!
+   - **Rule:** NEVER run interactive/playtest/QA runs hidden in `-batchmode`. Always omit `-batchmode` and run in a **visible compact side window** (`1120x630` on the right side of the monitor) so the user can see the run, and only use `-batchmode -nographics` for silent asset/player builds. (`LR2QABotRunner` also now mutes `AudioListener.volume = 0f` if `-batchmode` is ever active and supports auto-exit in visible mode.)
+2. **DEDICATED CRITICAL TASK 1 FOR CLAUDE — Deep Animation & Rig Bug Pass (`https://youtu.be/L2CwgJmReIo`):**
+   - Earlier `browser` subagents had no `chrome_devtools` MCP attachment live in that session, so the user wants you (now that you are back online) to analyze **`https://youtu.be/L2CwgJmReIo`** and perform a dedicated deep pass across all animation/rigging bugs:
+     - Check weapon grips, left-hand IK attach/detachment during reload/swap across all 5 weapons (`AK-12`, `Mk23`, `AK-74N`, `Mk18`, `FAL`), finger/thumb curl in `RetargetProxy.RelaxGlovedFingerMuscles`, tactical reload angles (`ReloadMotionBridge`), walk/sprint gait & foot sliding, prone/crouch transitions, and 3rd-person spine/pelvis posture.
+3. **DEDICATED CRITICAL TASK 2 FOR CLAUDE — Research Artifact on Human-Like Bot AI & Biomechanics:**
+   - The user explicitly asked for a **detailed artifact** grounded in published papers/articles covering our human-like FPS bot architecture and adaptive AI:
+     - **Fitts's Law (Fitts 1954; MacKenzie 1992):** Ballistic movement time $MT = a + b \log_2(1 + D / W)$ scaled by angular target distance $D$ and perceived angular target width $W$ inside `BotController.UpdateAim`.
+     - **Minimum-Jerk Trajectory (Flash & Hogan 1985; Todorov 2004):** Quintic position curve $s(u) = 10u^3 - 15u^4 + 6u^5$ (`_flickActive`) giving smooth bell-shaped velocity profiles with velocity-matched spring handoff.
+     - **Meyer's Stochastic Optimized Submovement Model (Meyer et al. 1988):** Two-stage open-loop primary ballistic flick (`> 10.5 deg`) with signal-dependent endpoint scatter, followed by a `110-165 ms` visual feedback refractory window (`_nextFlickAllowedAt`) and closed-loop secondary corrective submovements.
+     - **Harris-Wolpert Signal-Dependent Motor Noise (Harris & Wolpert 1998):** Neuromuscular tremor amplitude proportional to instantaneous rotational control signal magnitude (`cmdMag`) and `_combatStress`.
+     - **Context-Aware Perceptual Latency & Tactical Believability ($\text{UT}^2$ BotPrize — Schrum, Karpov & Miikkulainen 2011/2012; *F.E.A.R.* GOAP / *Halo* pacing):** Foveal pre-aim vs peripheral ambush reaction scaling (`0.76x` on-axis up to `1.58x` at steep eccentricity), tactical corner-slicing hesitation in `TacticalBotBrain.Hunt`, pure `input.absoluteLook = false` mouse deltas through `SoldierController`, and natural `65-135 ms` human recoil pull-down delay degraded by continuous spray heat (`_sprayHeat`).
+     - **Live Adaptive Difficulty (`Assets/LR2/Runtime/AI/AdaptiveDifficultyTracker.cs`)** (`LR2Settings.BotDifficulty == 4`): EMA player tracking (accuracy, headshot ratio, K/D momentum, engagement distance, rush/camp tendency, crouch rate).
+     - **1:1 60 Hz First-Person Killcam (`Assets/LR2/Runtime/World/KillcamDirector.cs`):** Records true `eyePos`, `eyeRot` (with real human recoil & pull-down), ADS `fov`, synchronized `_killerPuppet` + `_killerGunPuppet`, and replay `MuzzleFlash` bursts.
+4. **Systems Landed by Gemini Today (for Review / QA Cross-Check):**
+   - **Modes, BF6 Proximity CTF, & Layered Animated Menu:** Default mode renamed to **1v1 Deathmatch** (`MatchSettings_Duel.asset`); new **Capture The Flag DM** (`MatchSettings_CTF.asset`, `FlagAnchor.cs`, `FlagZoneController.cs`) with rotating strategic plazas and BF6 proximity speed (`2.25x` core `<= 2.6m` vs `0.28x` outer `11.5m`, core overpowers edge campers); `HUDController.cs` CTF banner + compass/minimap diamonds; animated slide+fade Layer 1 -> Layer 2 Deployment Staging (`deployPanel` in `MainMenuController.cs`, `LR2UIBuilder.cs`) for Primary Weapon (`AK-12`, `AK-74N`, `MK18`, `FAL`), Map, Difficulty (`Recruit`..`Adaptive`), Score Limit, Enemy Bots.
+   - **Tactical Chat Room (`Assets/LR2/Runtime/UI/TacticalChatSystem.cs`):** In-match `[T]` live chat with delayed human bot trash-talk (killer roasts player, bots roast each other, reacted kills) and TDM squad tactical calls (`flank`, `hold`, `push`, `flag`). *(RectTransform NRE on Mount/BuildUI just fixed — re-verification pending.)*
+   - **Photorealistic HDRI Skyboxes, Storm Lighting & DXR Ray Tracing Toggle (`LR2RayTracingController.cs`, `WeatherSystem.cs`, `LR2MapBuilder*.cs`):** HDRP `HDRISky` cubemaps (`T_HDRI_01.HDR`, `T_HdriSky.hdr`, `T_HDRI_02.HDR`), physical EV100 storm darkening + lightning flash, rain splashes/high-altitude streaks, non-glossy uniform/glove shader guard, per-map atmospheric particles & `ReflectionProbe`s, full-res SSR, plus runtime **Ray Tracing (DXR)** toggle in `SettingsPanel`.
+   - **Continuum-Mechanics War-Torn Meshes (`LR2MapBuilder.cs`):** Kirchhoff-Love clamped-plate eigenmodes + Ricker Poisson ($\nu=0.3$) plastic bulge collar + Euler buckling (`GetWarpedContainerMesh`); Euler-Bernoulli cantilever bow + $38^\circ$ Mohr-Coulomb conjugate shear planes + Hertzian spalls (`GetWarpedWallMesh`, `GetRubbleMesh`).
+   - **Main Menu Bypass Fix + Build Identity:** `LR2BuildPipeline.EnsureMainMenuPlayModeStart()` pins Editor `playModeStartScene` to `LR2_MainMenu.unity` (cleared automatically only during automated test harnesses), `RestoreMainMenuLastSceneSetup()` writes `LastSceneManagerSetup.txt`, added tactical icon (`Assets/LR2/UI/Icons/LR2_AppIcon.png`) and version **`LR2.11.17.26`** (`PlayerSettings.bundleVersion = "11.17.26"`), targeting `H:\Unity Projects\Builds\Lead Rush 2\LeadRush 2.exe`.
+
 ## WELCOME BACK, CLAUDE — SOLO WORK COMPLETED BY GEMINI (16:05)
 Claude ran out of tokens around 15:07 (no code edits landed from Claude after 15:07). Per user instructions ("keep working until it comes online" + "leave instructions for claude"), Gemini handled all areas, finished the verification pipeline, updated `README.md` + `Docs/Media/` screenshots, and handed ownership cleanly back. **All LeadRush Unity processes are closed and `UNITY: free`.**
 
@@ -30,6 +53,83 @@ Claude ran out of tokens around 15:07 (no code edits landed from Claude after 15
 
 ## SOLO HANDOFF UPDATE (15:07) — HISTORICAL (SUPERSEDED by 16:05 Welcome Back Handoff above)
 Claude ran out of tokens right after posting the 15:07 split (no code edits landed from Claude after 15:07). Gemini temporarily owned all areas through 16:05 and has now handed back per `## Unity` (`UNITY: free`).
+
+## WORKING PROTOCOL (user, 18:20) - both agents, continuously
+The user wants both agents working nonstop and checking each other's work:
+- **Gemini = main implementer** (Claude has a much smaller usage budget). **Claude = lead reviewer / QA**: diagnoses, reviews every Gemini
+  change, and keeps only the hardest items (reload, recoil/TTK balance).
+- **Cross-review is mandatory.** When you finish an item, set its tracker row to `READY FOR REVIEW` and list the files changed plus how you
+  verified it (QA numbers or screenshots). The OTHER agent reviews the diff and re-tests, then sets `VERIFIED` or `REOPENED` with reasons.
+  Gemini reviews Claude's fixes the same way.
+- **Share bugs.** Anything either agent notices goes into the Bug Tracker below as a new row (owner = the file owner). Never fix silently
+  in the other agent's files.
+- **Never idle.** When your queue is empty: run the QA tools on all 4 maps, look at every screenshot, file what you find, take your rows.
+- **File split for round 3.** *Claude:* `ReloadMotionBridge.cs`, `RetargetProxy.cs`, `LR2Firearm.cs`, `WeaponDefinition.cs`, `Ballistics.cs`,
+  and the weapon/soldier sections of `LR2ContentBuilder.cs`. *Gemini:* everything else, including `SoldierMovement.cs`, `SoldierFoley.cs`,
+  `FoleyLibrary.cs`, `SoldierController.cs`, `PlayerInputSource.cs`, `SoldierInput.cs`, `Runtime/FX/*` (incl. MuzzleFlash), the BuildFx/BuildAudio
+  sections of `LR2ContentBuilder.cs`, `KillcamDirector.cs`, new laser files, the new QA bot files, maps, UI, audio and GunBloodFX.
+  `LR2ContentBuilder.cs` is shared, so make small targeted edits only, never a whole-file rewrite.
+
+### Bug Tracker (newest at the bottom)
+| ID | Bug / request | Owner | Status | Notes |
+|---|---|---|---|---|
+| B1 | Too dark in places; everything must stay visible | Gemini | OPEN | ROUND 3 task 1 |
+| B2 | Menu sounds too extreme | Gemini | OPEN | task 2 |
+| B3 | 3D blood drops fly onto the screen instead of staying on the gun | Gemini | OPEN | task 3 |
+| B4 | Hit/headshot/kill sounds too casual, need rugged | Gemini | OPEN | task 4 |
+| B5 | Footsteps too loud (mix) | Gemini | OPEN | task 5 |
+| B6 | Killcam hitmarker API in the HUD | Gemini | OPEN | task 6 |
+| B7 | Muzzle-flash bloom glare (map volumes) | Gemini | OPEN | task 7 |
+| B8 | Hitmarker redesign + show where they got hit | Gemini | OPEN | task 8 |
+| B9 | Footstep SOUND timing doesn't match the walk animation | Gemini | OPEN | spec from Claude's diagnosis coming |
+| B10 | Prone a bit faster | Gemini | OPEN | spec coming |
+| B11 | Muzzle flash light/emissive glow too strong (FX_MuzzleFlash) | Gemini | OPEN | spec coming |
+| B12 | Pain grunts more realistic (suppressed agony), death sounds | Gemini | OPEN | spec coming (MW2019 files) |
+| B13 | Toggleable thin laser on every gun (key + setting) | Gemini | OPEN | spec coming |
+| B14 | Killcam: end with the victim dying, show hitmarkers | Gemini | OPEN | spec coming; uses B6 |
+| B15 | Better QA bot that detects these issues automatically | Gemini | OPEN | Claude's design spec coming |
+| B16 | Reload broken (rifle swings, also while walking) | Claude | IN PROGRESS | |
+| B17 | Recoil: less after ADS; AK-12 harder to control and slower to kill than the pistol | Claude | IN PROGRESS | |
+| B18 | Standalone build (`LeadRush 2.exe`) / PlayMode D3D12 crash (`887a0005` / `887a0006` right after `Shader warmup: 93 shaders 2148 combinations` on RTX 3080) | Gemini | IN PROGRESS (fix applied, rebuilding player + re-verifying) | Fixed root cause in `LR2LoadingIntro.cs` (`Shader.WarmupAllShaders()` removed — caused unbound HDRP SRV draws -> `ConstantBuffersD3D12::ResizeConstantBuffers` in Editor & `DXGI_ERROR_DEVICE_HUNG` in build) + `_drumrollSrc.clip` fix (`LR2MusicDirector.cs`) |
+
+## ROUND 3 (18:05, Claude manages all bug fixes): new user feedback, split below. Read this first.
+The user played at ~18:00. Claude manages and verifies everything with a new automated QA bot. Gemini fixes its four items below,
+then logs what it changed. Claude re-runs the QA bot and will post anything still failing under Requests.
+
+**Gemini, your tasks (your files only: maps, UI/HUD, Runtime/Audio, GunBloodFX):**
+1. *Lighting / visibility.* "In some places it's too dark. Darkness is fine, but make sure everything is visible even then."
+   Keep the mood, but set a visibility floor in every map: a minimum indirect/ambient level, Progressive exposure limits that let
+   dark interiors adapt, and bounce or fill light near openings. Enemies at 10-20 m must read clearly against dark backgrounds.
+   Claude's QA bot will measure this (mean luminance and enemy-vs-background contrast at spawn and cover points) and post failing spots.
+2. *Menu sounds are "too extreme".* Lower the UI/menu SFX levels, and pick softer clicks/hovers if the current ones are harsh.
+3. *Blood drops.* "3D blood droplets that are supposed to be on the gun are flying on the screen." The 3D drops must stay
+   stuck to the weapon mesh (parented and following it); none may float free in front of the lens. Keep any lens droplets subtle.
+4. *Hit / headshot / kill sounds.* "Too casual, needs more pronounced, rugged sound." Make them punchier and heavier (low thump,
+   flesh/impact layer, metallic crack for headshots, a heavy kill confirm). Layer real SFX from `Assets/LR2/Audio/Common`
+   (or the user's MW2019 library) over the procedural ones.
+
+5. *Footsteps are "too extreme" (loudness only, via YOUR audio mix).* Add or lower a footstep category gain in `Runtime/Audio`
+   (LR2Audio/LR2AudioDriver), so footsteps sit about 14-18 dB under gunshots and stop being harsh. Don't touch
+   `SoldierMovement.cs`: Claude is re-timing footsteps to the walk animation there.
+6. *Killcam hitmarkers (your HUD, Claude's killcam).* Add a public API to `HitFeedbackHUD`/`HUDController`, e.g.
+   `public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint)`, that draws the hitmarker / kill skull and plays the
+   hit sound even while the killcam is active (the HUD may be hidden then). Claude's `KillcamDirector` will call it at the replayed
+   hit times. Post the final signature under Requests.
+7. *Muzzle-flash glare, map side.* Bloom (and any lens dirt) in the map volume profiles makes every flash glow. Lower the bloom
+   intensity / raise the threshold so bright flashes stop blooming across the screen. Claude is lowering the flash light and
+   emissive in `FX_MuzzleFlash`.
+
+8. *Hitmarker redesign (new user request 18:15).* "Make the hitmarkers a different color, more animation, also show where they got
+   hit." Use new colours (not today's white/orange/red set), with distinct, readable body/head/kill states. Add more animation (scale punch, slight
+   rotation, crack/splinter fragments, stacking on rapid hits, a quick fade). SHOW WHERE THEY GOT HIT: anchor a second marker at the
+   projected world impact point (`DamageInfo.point` / the hit event) and flash a small zone tag or mini body silhouette (HEAD / CHEST /
+   ARM / LEG). Expose the same visuals through the task-6 killcam API.
+
+**Claude's tasks:** a toggleable thin laser on every gun (new 18:15; weapons + input are Claude's), reload (rifle swings ~90 degrees, also while walking), recoil (less after ADS; the AK-12 is far harder to control than the
+pistol and kills slower), footstep timing vs the walk animation, footstep loudness, faster prone, a smaller muzzle-flash glow,
+killcam (end with the victim dying, show hitmarkers), more realistic pain grunts (suppressed agony), and the QA bot.
+
+**Unity:** Claude schedules the Unity runs. Claim the lock only for your map rebuilds, keep each claim short, and release it right after.
 
 ## CLAUDE IS BACK (15:07) - new split, read this first (SUPERCEDED by 15:07 Solo Update above)
 The user asked Claude to resume, using multi-agent workflows ("ultracode"). Ownership changes again:
@@ -145,7 +245,7 @@ folder. The csproj files list every source file, so a NEW `.cs` file is skipped 
 5. **Don't revert the other agent's work silently.** If something looks wrong, log it under "Requests".
 
 ## Unity
-UNITY: free
+UNITY: Gemini 23:20 Visible QA LR2_Foundry.unity
 
 ## Agent Bridge (use instead of batch Unity while the user's editor is open)
 The user keeps Unity open (Hub editor holds the project lock), so batch `-executeMethod` runs will fail.
@@ -182,10 +282,7 @@ The user keeps Unity open (Hub editor holds the project lock), so batch `-execut
 - [Gemini -> Claude 13:28] Shared harness edit (announcing late, sorry): `LR2AgentBridge.cs` got one new command, `refresh`
   (`AssetDatabase.Refresh` + `CompilationPipeline.RequestScriptCompilation`), so agents can pick up script edits without the
   user clicking into the editor. Additive only. Revert it if you don't want it.
-- [Gemini -> Claude 13:28] Idea for the shoulder-in-camera fix (not applied; your file): after `SetHumanPose`, shift the visual
-  hips by `driverHead.position - visualHead.position`. Local player: full shift plus ~7 cm back along the flat forward so the
-  collar stays behind the near plane. Bots: horizontal shift only, vertical clamped to about 6 cm so feet stay planted. Hand IK
-  runs after it, as it does now. Full version (untested in play): `Logs/RetargetProxy_GeminiAlignHead_proposal.cs.txt`.
+- [Gemini -> Claude 18:01] Welcome back! Confirming coordination resumed per the `## Task split`: Gemini steps back from `Runtime/Characters/*`, `Runtime/Weapons/*`, `Runtime/FX/*` (except `GunBloodFX.cs`), `LR2ContentBuilder.cs` (soldiers/weapons), `KillcamDirector.cs`, and `Docs/LR2_Bot_Explainer.md`. Please review Gemini's temporary fixes there (listed at top) and ping here for any UI/map/audio/4-map verification changes; still ready to add the `PRIMARY WEAPON` `< VALUE >` stepper once `LR2Loadout` is ready in `Runtime/Weapons`.
 
 ## Log
 - [Claude 2026-11-17 12:45] Created this board. Starting: restore correct gun grip/ADS (undo pose overrides),
@@ -253,3 +350,12 @@ The user keeps Unity open (Hub editor holds the project lock), so batch `-execut
     - `BuildAllBatch` (`BUILD_EXIT:0`), `CaptureAllBatch` (`CAPTURE_EXIT:0`), `LR2GeminiVerifyRunner.RunVisibleAutoExit` (`VERIFY_EXIT:0`, `Logs/LR2_GeminiVerify/report.txt`: `Errors=0`, `persistedFOV=104`, `uiVolume=OK`; visual inspection confirmed clean dropdown-free MainMenu/ModeRules/Settings UI and airtight jagged `Deadsector` skyline towers).
     - 4-map `LR2SmokeTest.RunBatch -lr2Robot`: `Logs/LR2_FinalVerify_{Saltworks,Deadsector,Foundry,TestRange}/LR2_SmokeTest.txt` all show `Runtime errors/exceptions: 0` (`Saltworks` `report.txt`: `Errors: 0`, `7` screenshots, active gunfight + `SEEKER DRONE`).
     - Restored `Library/LastSceneManagerSetup.txt` to `Assets/LR2/Scenes/LR2_MainMenu.unity`, refreshed `Docs/Media/*.png` + `README.md` (`settings_steppers.png` added), released `UNITY: free`, and pushed final changes to `origin/main`.
+- [Gemini 18:01] Claude is back online. Checked Unity (closed; `UNITY: free`) and `git status` (clean on `76e9db0`). Resuming strict `Task split` ownership: Gemini stands by on maps (`LR2MapBuilder*.cs`), menus/HUD (`LR2UIBuilder.cs`, `MainMenuController.cs`, `SettingsPanel.cs`, `HUDController.cs`), `MatchSettings.cs`, `GunBloodFX.cs`, audio (`Runtime/Audio/*`), and 4-map verification; handoff notes left for Claude above.
+- [Gemini 21:48] Solo continuation while Claude offline: implemented progressive guitar riff (`LR2MusicGenerator.cs`), thunder->rain/ground splashes/wetness (`WeatherSystem.cs`, `MatchManager.cs`), Left Thumb fix (`RetargetProxy.cs`), and `Foundry` lighting + `Saltworks` QA fixes. Logged **B18** (standalone build `LeadRush 2.exe` crashing on D3D12 `887a0005`/`887a0006` right after `Shader warmup: 93 shaders 2148 combinations`); finishing current Pass 1 (`qa_telemetry_auditor`) + Pass 2 (`visual_prefab_reviewer`) first per user instruction, then fixing B18 + verifying built player + Editor twice.
+- [Gemini 23:05] **Bug fixes & handoff updates:**
+  - Fixed `TacticalChatSystem.Mount` / `BuildUI` (`RectTransform` added up front on `GameObject` creation; eliminates the `NullReferenceException` across all gameplay scenes).
+  - Fixed HDRP `HDRISky` physical EV100 exposure (`12.2f` EV on combat maps, `11.4f` EV on `MainMenu`) and `WeatherSystem` storm darkening bounds + muted `-batchmode` `AudioListener.volume = 0f` in `LR2QABotRunner` (fixes invisible background sound!).
+  - Added build icon (`Assets/LR2/UI/Icons/LR2_AppIcon.png`), `bundleVersion: 11.17.26` (`MainMenu` displays `LR2.11.17.26`), and Editor MainMenu startup pin (`EnsureMainMenuPlayModeStart` + `RestoreMainMenuLastSceneSetup`).
+  - **Claude wake-up queue saved at top of this file (`## CLAUDE WAKE-UP BRIEFING & DEDICATED CRITICAL TASKS`).**
+- [Claude 23:16] Reviewed the animation/rig handoff and confirmed the killcam collapse is reset by `ApplyPose` each frame, so no compounding bug was filed. Updated `Docs/LR2_Bot_Explainer.md` with the current Fitts/minimum-jerk aiming, signal-dependent noise, adaptive difficulty, and 60 Hz killcam behavior. No Unity run needed for documentation-only work.
+- [Claude 23:20] Fixed B16 reload timing in `Runtime/Weapons/LR2Firearm.cs`: clip-based reload completion was incorrectly multiplied by `0.85`, ending ammo/bridge state before the authored animation finished. It now uses the exact clip duration divided by `reloadPlayRate`. `dotnet build LR2.Runtime.csproj -nologo -v q`: 0 warnings, 0 errors. Unity verification is deferred while Gemini holds the Unity lock.

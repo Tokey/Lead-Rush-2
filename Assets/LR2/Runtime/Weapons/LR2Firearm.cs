@@ -151,6 +151,36 @@ namespace LR2.Weapons
             _fireMode = (definition != null ? definition.allowAuto : supportsAuto) ? FireMode.Auto : FireMode.Semi;
         }
 
+        private Animator ResolveWeaponAnimator()
+        {
+            var all = GetComponentsInChildren<Animator>(true);
+            Animator chosen = null;
+            foreach (var cand in all)
+            {
+                if (cand == null) continue;
+                if (cand.transform.Find("AK12Rig") != null || cand.transform.Find("FAL") != null ||
+                    cand.transform.Find("Mk18") != null || cand.transform.Find("Mk23Mod0Rig") != null)
+                {
+                    chosen = cand;
+                    break;
+                }
+            }
+            if (chosen == null && all.Length > 0) chosen = all[all.Length - 1];
+            foreach (var extra in all)
+            {
+                if (chosen != null && extra != null && extra != chosen && extra.gameObject == gameObject)
+                    extra.enabled = false;
+            }
+            if (chosen != null)
+            {
+                chosen.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                chosen.Rebind();
+                chosen.Play("Empty", 0, 0f);
+                chosen.Update(0f);
+            }
+            return chosen;
+        }
+
         // ------------------------------------------------------------------ equip / FOV
         public override void OnEquip(SoldierController owner)
         {
@@ -160,7 +190,7 @@ namespace LR2.Weapons
 
             _fpsAnimator = owner.FPSAnimator;
             _entity = GetComponent<FPSAnimatorEntity>();
-            _weaponAnimator = GetComponentInChildren<Animator>();
+            _weaponAnimator = ResolveWeaponAnimator();
             _controllerAnimator = owner.Animator;
             _userInput = owner.UserInput;
             _playables = owner.Playables;
@@ -181,7 +211,7 @@ namespace LR2.Weapons
             }
 
             if (_recoilAnimation != null) _recoilAnimation.Init(recoilData, Rpm, _fireMode);
-            if (_recoilPattern != null) _recoilPattern.Init(recoilPatternSettings);
+            if (_recoilPattern != null) _recoilPattern.Init(RuntimePattern());
             if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(equipMotion);
 
             _equipReadyAt = Time.time + (definition != null ? definition.equipTime : 0.5f);
@@ -288,6 +318,38 @@ namespace LR2.Weapons
             return true;
         }
 
+        private RecoilPatternSettings _patternRuntime;
+        private Vector2 _patternBaseV, _patternBaseH;
+
+        /// <summary>Per-gun copy of the Kinemation recoil pattern, so per-weapon and ADS scaling never touch the shared demo asset.</summary>
+        private RecoilPatternSettings RuntimePattern()
+        {
+            if (recoilPatternSettings == null) return null;
+            if (_patternRuntime == null)
+            {
+                _patternRuntime = Instantiate(recoilPatternSettings);
+                _patternRuntime.name = recoilPatternSettings.name + " (LR2 runtime)";
+                _patternBaseV = recoilPatternSettings.verticalRecoil;
+                _patternBaseH = recoilPatternSettings.horizontalRecoil;
+            }
+            ScalePatternForShot(false);
+            return _patternRuntime;
+        }
+
+        /// <summary>Per-shot climb = demo pattern x weapon scale x (ADS multiplier while aiming). Read by RecoilPattern.OnFireStart.</summary>
+        private void ScalePatternForShot(bool aiming)
+        {
+            if (_patternRuntime == null) return;
+            float v = definition != null ? definition.recoilPatternScale : 1f;
+            float h = definition != null ? definition.recoilPatternHorizontalScale : 1f;
+            float ads = aiming && definition != null ? definition.adsRecoilMultiplier : 1f;
+            _patternRuntime.verticalRecoil = _patternBaseV * (v * ads);
+            _patternRuntime.horizontalRecoil = _patternBaseH * (h * ads);
+        }
+
+        /// <summary>Current per-shot vertical climb range in degrees (QA).</summary>
+        public Vector2 PatternVerticalPerShot => _patternRuntime != null ? _patternRuntime.verticalRecoil : Vector2.zero;
+
         private void StopRecoil()
         {
             if (!_recoilActive) return;
@@ -361,7 +423,11 @@ namespace LR2.Weapons
             if (_cameraController != null) _cameraController.PlayCameraShake(cameraShake);
             if (fireClip != null && _playables != null) _playables.PlayAnimation(fireClip);
             if (_recoilAnimation != null && recoilData != null) _recoilAnimation.Play();
-            if (_recoilPattern != null) _recoilPattern.OnFireStart();
+            if (_recoilPattern != null)
+            {
+                ScalePatternForShot(owner.IsAiming);
+                _recoilPattern.OnFireStart();
+            }
             _recoilActive = true;
 
             if (definition != null)
@@ -463,7 +529,7 @@ namespace LR2.Weapons
                 _reloadRuntime.blendTime = bt;
             }
             _reloadDuration = hasClip
-                ? reloadClip.clip.length / Mathf.Max(0.1f, reloadPlayRate) * 0.85f
+                ? reloadClip.clip.length / Mathf.Max(0.1f, reloadPlayRate)
                 : (definition != null ? (_reloadEmpty ? definition.emptyReloadTime : definition.reloadTime) : 2.4f);
             _reloadStart = Time.time;
             IsReloading = true;
@@ -473,9 +539,11 @@ namespace LR2.Weapons
             if (hasClip && _playables != null) _playables.PlayAnimation(_reloadRuntime, 0f);
             if (_weaponAnimator != null)
             {
+                _weaponAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 _weaponAnimator.Rebind();
                 _weaponAnimator.speed = reloadPlayRate;
                 _weaponAnimator.Play("Reload", 0, 0f);
+                _weaponAnimator.Update(0f);
             }
             if (_cameraController != null) _cameraController.PlayCameraAnimation(cameraReloadAnimation);
 
@@ -492,7 +560,7 @@ namespace LR2.Weapons
             {
                 if (!_magOutPlayed && t >= a.magOutAt) { _magOutPlayed = true; LR2Audio.PlayAt(a.magOut, transform.position); }
                 if (!_magInPlayed && t >= a.magInAt) { _magInPlayed = true; LR2Audio.PlayAt(a.magIn, transform.position); }
-                if (_reloadEmpty && !_boltPlayed && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); }
+                if (!_boltPlayed && t >= a.boltAt) { _boltPlayed = true; LR2Audio.PlayAt(a.boltCharge, transform.position); }
             }
             if (t < 1f) return;
 
@@ -512,7 +580,13 @@ namespace LR2.Weapons
             StopRecoil();
             if (!IsReloading) return;
             IsReloading = false;
-            if (_weaponAnimator != null) _weaponAnimator.speed = 1f;
+            if (_weaponAnimator != null)
+            {
+                _weaponAnimator.speed = 1f;
+                _weaponAnimator.Rebind();
+                _weaponAnimator.Play("Empty", 0, 0f);
+                _weaponAnimator.Update(0f);
+            }
             if (_playables != null) _playables.StopAnimation(0.15f);
         }
 

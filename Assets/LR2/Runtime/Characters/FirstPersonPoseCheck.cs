@@ -132,23 +132,44 @@ namespace LR2.Characters
             _cmd.aim = false;
             yield return Wait(0.6f);
 
-            // reload: spend a few rounds first so a tactical reload is allowed
+            // reload: spend a few rounds first so a tactical reload is allowed, then verify & photograph BOTH mag-out and charge-rack
             _cmd.fire = true;
             yield return Wait(0.3f);
             _cmd.fire = false;
             yield return Wait(0.4f);
+            var akTf = _soldier.ActiveFirearm != null ? _soldier.ActiveFirearm.transform : null;
+            var magTf = akTf != null ? FindDeep(akTf, "Mag") : null;
+            var chargeTf = akTf != null ? FindDeep(akTf, "Charge") : null;
+            Vector3 magRestLocal = magTf != null && akTf != null ? akTf.InverseTransformPoint(magTf.position) : Vector3.zero;
+            Vector3 chargeRestLocal = chargeTf != null && akTf != null ? akTf.InverseTransformPoint(chargeTf.position) : Vector3.zero;
+            float maxMagDisp = 0f, maxChargeDisp = 0f;
+
+            void SampleReloadParts()
+            {
+                if (akTf == null) return;
+                if (magTf != null) maxMagDisp = Mathf.Max(maxMagDisp, Vector3.Distance(magRestLocal, akTf.InverseTransformPoint(magTf.position)));
+                if (chargeTf != null) maxChargeDisp = Mathf.Max(maxChargeDisp, Vector3.Distance(chargeRestLocal, akTf.InverseTransformPoint(chargeTf.position)));
+            }
+            IEnumerator WaitAndSample(float sec)
+            {
+                float end = Time.time + sec;
+                while (Time.time < end) { SampleReloadParts(); yield return null; }
+            }
+
             _cmd.reload = true;
-            yield return Wait(0.3f);
+            yield return WaitAndSample(0.3f);
             DiagnoseReload("+0.3s");
-            yield return Wait(0.25f);
-            yield return Capture("fp_05_reload_a", "reload +0.55s");
+            yield return WaitAndSample(0.55f); // ~0.85s real (~0.72s clip time): left hand grasps & detaches AK-12 mag visibly in view
+            yield return Capture("fp_05_reload_a", "reload mag out (+0.85s)");
             yield return Capture("tp_06_reload_front", null, View.Front, true);
-            yield return Wait(0.8f);
-            yield return Capture("fp_06_reload_b", "reload +1.4s");
-            LogDriverWeaponBones("reload +1.4s");
-            yield return Wait(0.6f);
-            DiagnoseReload("+2.0s");
-            yield return Wait(1.6f);
+            LogDriverWeaponBones("reload +0.85s");
+            yield return WaitAndSample(2.65f); // ~3.55s real (~3.02s clip time): AK-12 charging handle pulled back
+            yield return Capture("fp_06_reload_b", "reload charge rack (+3.55s)");
+            DiagnoseReload("+3.55s");
+            yield return WaitAndSample(1.15f);
+            Note($"RELOAD-PARTS-AK12 magMaxDisp={maxMagDisp:0.000}m chargeMaxDisp={maxChargeDisp:0.000}m (expect mag>=0.05m, charge>=0.03m)");
+            if (magTf != null && maxMagDisp < 0.05f) Note("ERROR [PoseCheck] Mag did not detach during AK-12 reload!");
+            if (chargeTf != null && maxChargeDisp < 0.02f) Note("ERROR [PoseCheck] Charging handle (Charge) did not cycle during AK-12 reload!");
 
             // weapon swap to the sidearm and back
             _cmd.weaponSlot = 1;

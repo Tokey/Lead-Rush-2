@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LR2.Game
 {
-    public enum GameModeType { Duel, FreeForAll, TeamDeathmatch }
+    public enum GameModeType { Duel, FreeForAll, TeamDeathmatch, CaptureTheFlag }
 
     /// <summary>Per-mode customizable match rules stored persistently per GameModeType.</summary>
     [System.Serializable]
@@ -88,8 +88,8 @@ namespace LR2.Game
     public class MatchSettings : ScriptableObject
     {
         [Header("Mode")]
-        public string displayName = "DUEL";
-        [TextArea] public string description = "1v1 against a bot. First to the score limit wins.";
+        public string displayName = "1V1 DEATHMATCH";
+        [TextArea] public string description = "1v1 Deathmatch against an adaptive rival. First to 15 kills wins.";
         public GameModeType mode = GameModeType.Duel;
 
         [Header("Limits")]
@@ -143,7 +143,20 @@ namespace LR2.Game
         };
 
         private const string MapPrefKey = "LR2.SelectedMap";
+        private const string WeaponPrefKey = "LR2.SelectedPrimaryWeapon";
+        public static readonly string[] PrimaryWeaponNames = { "AK-12", "AK-74N", "MK18", "FAL" };
         private static MatchSettings _runtimeCopy;
+
+        public static int SelectedPrimaryWeapon
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetInt(WeaponPrefKey, 0), 0, PrimaryWeaponNames.Length - 1);
+            set
+            {
+                int v = Mathf.Clamp(value, 0, PrimaryWeaponNames.Length - 1);
+                PlayerPrefs.SetInt(WeaponPrefKey, v);
+                PlayerPrefs.Save();
+            }
+        }
 
         public static int SelectedMapIndex
         {

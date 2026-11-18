@@ -104,3 +104,73 @@ Because low-level aiming, cover, and pathing stay inside `BotController` + `Tact
    - Available `BotOrder` values: `None`, `FreeRoam`, `HoldPosition`, `MoveTo`, `Attack`, `FollowLeader`, `Flank`, `Retreat`.
 2. **Full Brain Replacement (`IBotBrain`)**:
    - Implement `Initialize(BotController)`, `Think(BotBlackboard, float deltaTime) -> BotIntent`, and `Reset()`, then assign `bot.Brain = yourBrain;` for complete custom tactical control while still reusing `BotController`'s NavMesh motor, aim spring, and trigger logic.
+
+---
+
+## 7. Human-Like Motor Control
+
+The bot does not write camera rotations directly. It emits look deltas through
+`ISoldierInputSource`, so aiming, recoil, body motion, and weapon sway pass through the
+same `SoldierController` path as the human player.
+
+### Target acquisition
+
+For large angular errors, `BotController` uses a two-stage movement:
+
+1. A ballistic flick whose duration follows Fitts's law:
+   `MT = a + b * log2(1 + D / W)`, where `D` is angular target distance and
+   `W` is the perceived angular width of the target.
+2. A closed-loop correction after a short visual-feedback refractory period.
+
+The ballistic segment uses the minimum-jerk quintic profile
+`10u^3 - 15u^4 + 6u^5`. This avoids constant-speed snaps and gives the handoff to
+tracking a continuous velocity. Endpoint scatter and corrective motion increase with
+combat stress, movement, and target eccentricity.
+
+### Recoil and motor noise
+
+Recoil compensation is intentionally delayed by a human-scale reaction window rather
+than cancelling recoil on the firing frame. Pull-down strength is reduced by sustained
+spray heat, movement, and combat stress. Small tracking tremor is signal-dependent:
+large rotational corrections create more noise than slow fine tracking, following the
+Harris-Wolpert motor-noise principle.
+
+### Why this matters
+
+These constraints preserve counter-play. A bot can still acquire a target quickly, but
+it cannot rotate instantaneously, perfectly cancel recoil, or produce identical
+frame-perfect aim corrections across difficulty levels.
+
+## 8. Adaptive Difficulty
+
+When `LR2Settings.BotDifficulty == 4`, `AdaptiveDifficultyTracker` maintains a runtime
+profile without changing the authored Recruit, Regular, Hardened, or Veteran assets.
+It tracks player accuracy, headshot rate, close-range/rush tendency, crouch tendency,
+and win/loss momentum using event-driven updates. `BotController` refreshes the runtime
+profile every `0.75 s`; the resulting reaction, aim, aggression, cover, strafe, burst,
+and flank parameters remain bounded so difficulty changes are gradual rather than
+teleporting between presets.
+
+## 9. Killcam Fidelity
+
+`KillcamDirector` records soldier snapshots and full visual-puppet poses at `60 Hz`.
+Replay uses the recorded eye position, eye rotation, ADS field of view, weapon pose,
+tracers, muzzle flashes, and hit events. The victim puppet is collapsed after the fatal
+hit so the replay ends with the actual death rather than cutting away at the shot.
+
+## References
+
+1. Fitts, P. M. (1954), *The information capacity of the human motor system in
+   controlling the amplitude of movement*, Journal of Experimental Psychology 47(6).
+2. MacKenzie, I. S. (1992), *Fitts' law as a research and design tool in human-computer
+   interaction*, Human-Computer Interaction 7(1).
+3. Flash, T. & Hogan, N. (1985), *The coordination of arm movements: an experimentally
+   confirmed mathematical model*, Journal of Neuroscience 5(7).
+4. Meyer, D. E. et al. (1988), *Optimality in human motor performance: ideal control of
+   rapid aimed movements*, Psychological Review 95(3).
+5. Harris, C. M. & Wolpert, D. M. (1998), *Signal-dependent noise determines motor
+   planning*, Nature 394.
+6. Todorov, E. (2004), *Optimality principles in sensorimotor control*, Nature
+   Neuroscience 7.
+7. Schrum, J., Karpov, I. V. & Miikkulainen, R. (2011/2012), *UT2: Human-like
+   behavior via neuroevolution of combat behavior and replay of human traces*.

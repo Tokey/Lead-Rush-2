@@ -29,12 +29,23 @@ namespace LR2.Characters
 
         private void Awake() => _combatant = GetComponent<Combatant>();
 
+        private void Start()
+        {
+            // Apply final faction uniform immediately on spawn frame so no default model texture flashes on frame 0
+            if (!_uniformApplied)
+            {
+                var lp = Combatant.FindLocalPlayer();
+                if (_combatant != null && (_combatant.IsLocalPlayer || lp != null))
+                    ApplyUniform(lp);
+            }
+        }
+
         /// <summary>Re-evaluates which uniform this soldier wears (call after team changes).</summary>
         public void RefreshUniform() => _uniformApplied = false;
 
-        private void ApplyUniform(Combatant local)
+        /// <summary>Applies baked uniform materials immediately (used both in prefab build and pre-reveal warmup).</summary>
+        public void ApplyMaterialsNow(bool friendly)
         {
-            bool friendly = _combatant != null && (_combatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, _combatant)));
             var uniform = friendly ? friendlyUniform : enemyUniform;
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
@@ -50,6 +61,21 @@ namespace LR2.Characters
                 if (changed) r.sharedMaterials = mats;
             }
             _uniformApplied = true;
+        }
+
+        public static void ApplyAllNow()
+        {
+            var lp = Combatant.FindLocalPlayer();
+            foreach (var sv in FindObjectsByType<SoldierVisuals>())
+            {
+                if (sv != null) sv.ApplyUniform(lp);
+            }
+        }
+
+        private void ApplyUniform(Combatant local)
+        {
+            bool friendly = _combatant != null && (_combatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, _combatant)));
+            ApplyMaterialsNow(friendly);
         }
 
         private void LateUpdate()

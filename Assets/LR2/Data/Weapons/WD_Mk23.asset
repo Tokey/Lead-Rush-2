@@ -26,11 +26,11 @@ MonoBehaviour:
   maxReserve: 72
   damageSteps:
   - maxDistance: 11.16
-    damage: 38
-  - maxDistance: 22.5
     damage: 30
+  - maxDistance: 22.5
+    damage: 25
   - maxDistance: 999
-    damage: 22
+    damage: 18
   headMultiplier: 1.8
   neckMultiplier: 1.2
   upperTorsoMultiplier: 1.1
@@ -54,8 +54,11 @@ MonoBehaviour:
   bloomPerShot: 0.4
   maxBloom: 2.8
   bloomRecovery: 7
-  cameraKick: {x: 0.45, y: 0.1}
-  adsKickMultiplier: 0.7
+  cameraKick: {x: 0.4, y: 0.1}
+  adsKickMultiplier: 0.5
+  recoilPatternScale: 1
+  recoilPatternHorizontalScale: 1
+  adsRecoilMultiplier: 0.55
   audibleRadius: 70
   suppressed: 0
   audio: {fileID: 11400000, guid: 449ca98b514483d4ea5c8387dba52d12, type: 2}

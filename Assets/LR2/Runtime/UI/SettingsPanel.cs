@@ -31,6 +31,7 @@ namespace LR2.UI
         [Header("Graphics")]
         public Toggle vsync;
         public Toggle showFps;
+        public Toggle rayTracing;
         public Button qualityPrev, qualityNext;
         public TMP_Text qualityValue;
         public Button frameLimitPrev, frameLimitNext;
@@ -54,7 +55,7 @@ namespace LR2.UI
         public TMP_Text uiVolumeValue;
 
         private static readonly int[] FrameLimits = { 0, 60, 120, 144, 165, 240 };
-        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN" };
+        private static readonly string[] DifficultyLabels = { "RECRUIT", "REGULAR", "HARDENED", "VETERAN", "ADAPTIVE" };
         private bool _loading;
 
         private static int WrapStep(int cur, int count, int delta) => count > 0 ? (cur + delta % count + count) % count : 0;
@@ -79,6 +80,12 @@ namespace LR2.UI
             if (hitmarkerSound != null) hitmarkerSound.isOn = LR2Settings.HitmarkerSound;
             if (vsync != null) vsync.isOn = LR2Settings.VSync;
             if (showFps != null) showFps.isOn = LR2Settings.ShowFps;
+            if (rayTracing != null)
+            {
+                bool supported = SystemInfo.supportsRayTracing;
+                rayTracing.interactable = supported;
+                rayTracing.isOn = supported && LR2Settings.RayTracing;
+            }
             UpdateLabels();
             _loading = false;
         }
@@ -100,6 +107,7 @@ namespace LR2.UI
             Hook(hitmarkerSound, v => LR2Settings.HitmarkerSound = v);
             Hook(vsync, v => { LR2Settings.VSync = v; LR2Settings.Apply(); });
             Hook(showFps, v => LR2Settings.ShowFps = v);
+            Hook(rayTracing, v => { LR2Settings.RayTracing = v && SystemInfo.supportsRayTracing; LR2Settings.Apply(); });
             HookStep(qualityPrev, qualityNext, () => Mathf.Max(0, LR2Settings.QualityLevel >= 0 ? LR2Settings.QualityLevel : QualitySettings.GetQualityLevel()),
                 () => QualitySettings.names.Length, i => { LR2Settings.QualityLevel = i; LR2Settings.Apply(); });
             HookStep(frameLimitPrev, frameLimitNext, () => Mathf.Max(0, System.Array.IndexOf(FrameLimits, LR2Settings.FrameRateLimit)),

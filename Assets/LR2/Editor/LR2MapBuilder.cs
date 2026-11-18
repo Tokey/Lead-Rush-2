@@ -336,37 +336,43 @@ namespace LR2.EditorTools
         {
             int v = Mathf.Abs(variant) % 4;
             float s = v * 17.3f + 3.1f;
-            return GetOrBuildProcMesh($"SM_LR2_Container_Warp{v}", 16, 6, 6, (p, _) =>
+            return GetOrBuildProcMesh($"SM_LR2_Container_Warp{v}", 18, 7, 6, (p, _) =>
             {
-                // Keep vertical corner posts crisper while corroding/denting corrugated sides & roof panels.
-                // Pure position-only deformation keeps every cube seam 100% watertight.
-                float edgeMaskX = Mathf.Clamp01((0.48f - Mathf.Abs(p.x)) * 12f);
-                float edgeMaskY = Mathf.Clamp01((0.46f - Mathf.Abs(p.y)) * 10f);
-                float edgeMaskZ = Mathf.Clamp01((0.46f - Mathf.Abs(p.z)) * 10f);
-                float panelMask = edgeMaskX * edgeMaskY;
+                // Continuum thin-shell mechanics: Kirchhoff-Love clamped rectangular plate mode + volume-conserving
+                // Poisson (nu=0.3) annular bulge collar + Euler column flange buckling; bottom sill kept flush.
+                float ny = Mathf.Clamp01(p.y + 0.5f);
+                float baseClamp = Mathf.Clamp01((ny - 0.04f) * 8f);
+                float modeX = Mathf.Sin(Mathf.PI * Mathf.Clamp01(p.x + 0.5f));
+                float modeY = Mathf.Sin(Mathf.PI * ny);
+                float modeZ = Mathf.Sin(Mathf.PI * Mathf.Clamp01(p.z + 0.5f));
+                float plateMode = (modeX * modeX) * (modeY * modeY) * baseClamp;
+                float roofMode = (modeX * modeX) * (modeZ * modeZ);
 
                 if (Mathf.Abs(p.z) > 0.35f)
-                    p.z += Mathf.Sign(p.z) * Mathf.Sin(p.x * 28f * Mathf.PI) * 0.013f * panelMask;
+                    p.z += Mathf.Sign(p.z) * Mathf.Sin(p.x * 28f * Mathf.PI) * 0.013f * (modeX * modeY);
                 if (p.y > 0.45f)
-                    p.y += Mathf.Sin(p.x * 22f * Mathf.PI) * 0.008f * edgeMaskX * edgeMaskZ;
+                    p.y += Mathf.Sin(p.x * 22f * Mathf.PI) * 0.008f * roofMode;
 
-                // 3 localized blast/forklift dents per variant
-                float dent = 0f;
+                // 3 localized blast/shrapnel craters modeled via Ricker Poisson-collar profile w(r) = (1 - 1.4 r^2) exp(-r^2)
+                float shellDeflect = 0f;
                 for (int k = 0; k < 3; k++)
                 {
-                    float cx = Mathf.Sin(s + k * 2.4f) * 0.34f;
-                    float cy = Mathf.Cos(s * 0.7f + k * 3.1f) * 0.22f;
+                    float cx = Mathf.Sin(s + k * 2.4f) * 0.32f;
+                    float cy = Mathf.Cos(s * 0.7f + k * 3.1f) * 0.20f;
                     float cz = (k % 2 == 0 ? 1f : -1f) * 0.5f;
-                    float dx = (p.x - cx) * 3.8f, dy = (p.y - cy) * 3.2f, dz = (p.z - cz) * 2.6f;
-                    dent += Mathf.Exp(-(dx * dx + dy * dy + dz * dz) * 3.2f) * (0.045f + k * 0.014f);
+                    float dx = (p.x - cx) * 4.2f, dy = (p.y - cy) * 3.5f, dz = (p.z - cz) * 2.5f;
+                    float r2 = dx * dx + dy * dy + dz * dz;
+                    float ricker = (1f - 1.4f * r2) * Mathf.Exp(-r2 * 2.6f);
+                    shellDeflect += ricker * (0.048f + k * 0.012f);
                 }
-                if (Mathf.Abs(p.z) > 0.35f) p.z -= Mathf.Sign(p.z) * dent * panelMask;
-                if (p.y > 0.45f) p.y -= dent * 0.45f * edgeMaskX * edgeMaskZ;
+                if (Mathf.Abs(p.z) > 0.35f) p.z -= Mathf.Sign(p.z) * shellDeflect * plateMode;
+                if (p.y > 0.45f) p.y -= shellDeflect * 0.42f * roofMode;
 
-                // Subtle frame twist / beam sag along length
-                float bow = (Mathf.PerlinNoise(p.x * 2.3f + s, p.y * 1.9f + s) - 0.5f) * 0.026f;
-                p.z += bow;
-                p.y += (Mathf.PerlinNoise(p.x * 1.7f + s + 5f, p.z * 2.1f) - 0.55f) * 0.022f * (p.y > 0f ? 1f : 0.25f);
+                // Euler elastic flange buckling along container span + torsion twist increasing with height
+                float eulerBuckle = Mathf.Cos((2f + v) * Mathf.PI * p.x) * plateMode * 0.016f;
+                float torsion = Mathf.Sin(p.x * 2.2f + s) * 0.018f * baseClamp;
+                p.z += eulerBuckle + torsion;
+                p.y -= Mathf.Max(0f, Mathf.Sin(p.x * Mathf.PI * (2f + (v & 1)))) * 0.016f * roofMode;
                 return p;
             });
         }
@@ -376,36 +382,46 @@ namespace LR2.EditorTools
             int v = Mathf.Abs(variant) % 4;
             float s = v * 23.7f + 7.4f;
             string tag = brokenTop ? $"SM_LR2_Wall_Broken{v}_{Mathf.RoundToInt(breakDepth * 100f)}" : $"SM_LR2_Masonry_Warp{v}";
-            return GetOrBuildProcMesh(tag, brokenTop ? 18 : 10, 6, brokenTop ? 4 : 2, (p, _) =>
+            return GetOrBuildProcMesh(tag, brokenTop ? 20 : 12, 7, brokenTop ? 4 : 2, (p, _) =>
             {
-                float ny = p.y + 0.5f; // 0 bottom .. 1 top
-                // Pure position-only masonry warp keeps all vertical corner seams watertight (zero corner slits)
-                float hFade = Mathf.Clamp01(ny * 1.8f);
-                float wobbleZ = (Mathf.PerlinNoise(p.x * 3.4f + s, ny * 2.8f + s) - 0.5f) * 2f * warpAmp * hFade;
-                float wobbleX = (Mathf.PerlinNoise(p.z * 3.4f + s + 11.3f, ny * 2.8f + s) - 0.5f) * 1.1f * warpAmp * hFade;
-                p.z += wobbleZ * Mathf.Clamp01(Mathf.Abs(p.z) * 2f);
-                p.x += wobbleX * Mathf.Clamp01(Mathf.Abs(p.x) * 2f);
+                float ny = Mathf.Clamp01(p.y + 0.5f); // 0 bottom footing .. 1 top parapet
+                // Euler-Bernoulli cantilever beam blast deflection: delta(eta) = eta^2 * (1.5 - 0.5 * eta), clamped at floor
+                float cantilever = ny * ny * (1.5f - 0.5f * ny);
+                float bowZ = (Mathf.PerlinNoise(p.x * 3.1f + s, ny * 2.4f + s) - 0.5f) * 2.2f * warpAmp * cantilever;
+                float bowX = (Mathf.PerlinNoise(p.z * 3.1f + s + 11.3f, ny * 2.4f + s) - 0.5f) * 1.15f * warpAmp * cantilever;
+                p.z += bowZ * Mathf.Clamp01(Mathf.Abs(p.z) * 2f);
+                p.x += bowX * Mathf.Clamp01(Mathf.Abs(p.x) * 2f);
 
-                if (brokenTop && p.y > 0.12f)
+                if (brokenTop && p.y > 0.08f)
                 {
-                    float topFade = Mathf.Clamp01((p.y - 0.12f) / 0.38f);
-                    float ridgeA = Mathf.PerlinNoise(p.x * 3.1f + s, s * 0.37f);
-                    float ridgeB = Mathf.PerlinNoise(p.x * 7.8f + s * 1.9f, p.z * 2.5f + 1.1f);
-                    // Sharp angular craters/bite-outs along the upper coping
-                    float bite = Mathf.Min(0.24f, Mathf.Pow(Mathf.Clamp01(ridgeA * 0.72f + ridgeB * 0.48f), 1.45f) * breakDepth);
+                    float topFade = Mathf.Clamp01((p.y - 0.08f) / 0.42f);
+                    // Mohr-Coulomb 38-deg conjugated brittle masonry shear planes + Hertzian impact craters
+                    const float cos38 = 0.7880f, sin38 = 0.6157f;
+                    float shearA = Mathf.Abs(Mathf.Sin((p.x * cos38 + p.y * sin38 + s * 0.13f) * 7.5f));
+                    float shearB = Mathf.Abs(Mathf.Sin((p.x * cos38 - p.y * sin38 + s * 0.27f) * 6.2f));
+                    float fractureField = Mathf.Min(shearA, shearB);
+
+                    float c1x = Mathf.Sin(s * 0.7f) * 0.24f;
+                    float c2x = Mathf.Cos(s * 1.3f) * 0.30f;
+                    float hertz1 = Mathf.Exp(-((p.x - c1x) * (p.x - c1x)) * 22f);
+                    float hertz2 = Mathf.Exp(-((p.x - c2x) * (p.x - c2x)) * 18f);
+                    float fineNoise = Mathf.PerlinNoise(p.x * 8.4f + s * 1.7f, p.z * 3.2f + 0.5f);
+
+                    float bite = Mathf.Min(0.27f, (fractureField * 0.45f + (hertz1 + hertz2) * 0.55f + fineNoise * 0.25f) * breakDepth);
                     p.y -= bite * topFade;
-                    if (topFade > 0.6f && Mathf.Abs(p.z) > 0.42f)
-                        p.z *= 1f - ridgeB * 0.08f * topFade;
+                    if (topFade > 0.55f && Mathf.Abs(p.z) > 0.40f)
+                        p.z *= 1f - (0.04f + fineNoise * 0.07f) * topFade;
                 }
                 else if (!brokenTop)
                 {
-                    // Mild chipped corners & weathered edge bevel on structural piers/blocks (position-only)
-                    float chip = Mathf.PerlinNoise(p.x * 5.1f + s, p.y * 5.7f + p.z * 3.3f + s);
+                    // Brittle corner spall clamped away from base footing (ny < 0.08 keeps floor contact flush)
+                    float baseMask = Mathf.Clamp01((ny - 0.08f) * 6f);
+                    float chip = Mathf.PerlinNoise(p.x * 5.4f + s, p.y * 5.9f + p.z * 3.5f + s);
                     Vector3 inDir = new Vector3(
                         Mathf.Abs(p.x) > 0.38f ? Mathf.Sign(p.x) * Mathf.Clamp01((Mathf.Abs(p.x) - 0.38f) * 8f) : 0f,
                         Mathf.Abs(p.y) > 0.35f ? Mathf.Sign(p.y) * Mathf.Clamp01((Mathf.Abs(p.y) - 0.35f) * 6f) : 0f,
                         Mathf.Abs(p.z) > 0.38f ? Mathf.Sign(p.z) * Mathf.Clamp01((Mathf.Abs(p.z) - 0.38f) * 8f) : 0f);
-                    p -= inDir * (chip * 0.025f);
+                    p -= inDir * (chip * 0.028f * baseMask);
                 }
                 return p;
             });
@@ -415,13 +431,19 @@ namespace LR2.EditorTools
         {
             int v = Mathf.Abs(variant) % 3;
             float s = v * 31.1f + 4.9f;
-            return GetOrBuildProcMesh($"SM_LR2_Rubble{v}", 4, 3, 4, (p, n) =>
+            Vector3 plane1 = new Vector3(Mathf.Sin(s), 0.75f, Mathf.Cos(s)).normalized;
+            Vector3 plane2 = new Vector3(-Mathf.Cos(s * 1.4f), 0.55f, Mathf.Sin(s * 0.8f)).normalized;
+            return GetOrBuildProcMesh($"SM_LR2_Rubble{v}", 4, 3, 4, (p, _) =>
             {
-                float d = Mathf.PerlinNoise(p.x * 2.8f + p.z * 1.9f + s, p.y * 3.1f + s);
-                float rock = 0.62f + d * 0.65f;
-                p.x *= rock;
-                p.z *= rock;
-                if (p.y > 0f) p.y *= 0.45f + d * 0.75f;
+                // Mohr-Coulomb cleavage planes producing sharp faceted concrete rubble chunks
+                float d1 = Vector3.Dot(p, plane1);
+                if (d1 > 0.22f) p -= plane1 * ((d1 - 0.22f) * 0.85f);
+                float d2 = Vector3.Dot(p, plane2);
+                if (d2 > 0.20f) p -= plane2 * ((d2 - 0.20f) * 0.85f);
+                float rough = Mathf.PerlinNoise(p.x * 3.4f + s, p.z * 3.1f + s);
+                p.x *= 0.72f + rough * 0.48f;
+                p.z *= 0.72f + rough * 0.48f;
+                if (p.y > -0.3f) p.y *= 0.52f + rough * 0.58f;
                 return p;
             });
         }
@@ -1143,13 +1165,15 @@ namespace LR2.EditorTools
             hdSun.SetShadowResolution(4096);
             RenderSettings.sun = sun;
 
-            // Global volume (photoreal grade + atmosphere)
+            // Global volume (photoreal grade + HDRI skybox + atmosphere + reflection probe)
             var profile = NewProfile(LightDir + "/LR2_Saltworks_Profile.asset");
             var ve = profile.Add<VisualEnvironment>(true);
-            ve.skyType.Override((int)SkyType.PhysicallyBased);
             ve.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
-            var sky = profile.Add<PhysicallyBasedSky>(true);
-            sky.aerosolDensity.Override(0.22f);
+            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 12.2f, rotationDeg: 38f);
+            // Global indirect/sky visibility floor so dark shadows & sheltered walls keep clear enemy silhouettes
+            var ilcGlobal = profile.Add<IndirectLightingController>(true);
+            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.65f);
+            ilcGlobal.reflectionLightingMultiplier.Override(1.22f);
             var fog = profile.Add<Fog>(true);
             fog.enabled.Override(true);
             fog.meanFreePath.Override(_cfg.fogMeanFreePath);
@@ -1162,26 +1186,28 @@ namespace LR2.EditorTools
             fog.maxFogDistance.Override(3000f);
             var exposure = profile.Add<Exposure>(true);
             exposure.mode.Override(ExposureMode.AutomaticHistogram);
-            exposure.compensation.Override(_cfg.exposureCompensation);
-            exposure.limitMin.Override(7.8f);
-            exposure.limitMax.Override(12.8f);
+            exposure.compensation.Override(Mathf.Max(_cfg.exposureCompensation, -0.10f));
+            exposure.limitMin.Override(Mathf.Min(_cfg.exposureLimitMin, 4.0f));
+            exposure.limitMax.Override(_cfg.exposureLimitMax);
             exposure.adaptationMode.Override(AdaptationMode.Progressive);
-            exposure.adaptationSpeedDarkToLight.Override(2.6f);
-            exposure.adaptationSpeedLightToDark.Override(1.5f);
+            exposure.adaptationSpeedDarkToLight.Override(2.8f);
+            exposure.adaptationSpeedLightToDark.Override(1.8f);
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var bloom = profile.Add<Bloom>(true);
-            bloom.intensity.Override(Mathf.Min(_cfg.bloom, 0.16f));
-            bloom.threshold.Override(1.1f);
-            bloom.scatter.Override(0.6f);
+            bloom.intensity.Override(Mathf.Min(_cfg.bloom, 0.06f));
+            bloom.threshold.Override(2.8f);
+            bloom.scatter.Override(0.35f);
+            bloom.dirtIntensity.Override(0f);
+            bloom.dirtTexture.Override(null);
             var color = profile.Add<ColorAdjustments>(true);
             color.contrast.Override(_cfg.contrast);
             color.saturation.Override(_cfg.saturation);
             var wb = profile.Add<WhiteBalance>(true);
             wb.temperature.Override(_cfg.temperature);
             var smh = profile.Add<ShadowsMidtonesHighlights>(true);
-            smh.shadows.Override(new Vector4(0.92f, 0.98f, 1.05f, -0.06f));
-            smh.highlights.Override(new Vector4(1.04f, 1f, 0.95f, 0.04f));
+            smh.shadows.Override(new Vector4(0.97f, 0.99f, 1.02f, 0.015f));
+            smh.highlights.Override(new Vector4(1.03f, 1f, 0.96f, 0.02f));
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(_cfg.vignette);
             vig.smoothness.Override(0.45f);
@@ -1190,16 +1216,16 @@ namespace LR2.EditorTools
             ao.radius.Override(1.5f);
             ao.directLightingStrength.Override(0.2f);
             var ssr = profile.Add<ScreenSpaceReflection>(true);
-            ssr.enabled.Override(false); // half-res SSR shimmered on wet/rough surfaces; sky/probe reflections stay stable
+            ssr.enabled.Override(true);
             var gi = profile.Add<GlobalIllumination>(true);
-            gi.enable.Override(false); // SSGI caused noisy flicker on foliage
+            gi.enable.Override(false); // controllable via LR2RayTracingController DXR toggle at runtime
             var contact = profile.Add<ContactShadows>(true);
             contact.enable.Override(true);
-            contact.length.Override(0.18f);
+            contact.length.Override(0.22f);
             var micro = profile.Add<MicroShadowing>(true);
             micro.enable.Override(true);
             var shadows = profile.Add<HDShadowSettings>(true);
-            shadows.maxShadowDistance.Override(90f);
+            shadows.maxShadowDistance.Override(95f);
             shadows.cascadeShadowSplitCount.Override(4);
             DisableMotionBlur(profile);
             SaveProfile(profile);
@@ -1210,6 +1236,7 @@ namespace LR2.EditorTools
             v.isGlobal = true;
             v.priority = 0f;
             v.sharedProfile = profile;
+            AddArenaReflectionProbe(_lighting, new Vector3(0f, 3.5f, 0f), new Vector3(85f, 30f, 85f));
 
             // Bodycam lens volume (player-toggleable)
             var bodycam = NewProfile(LightDir + "/LR2_Bodycam_Profile.asset");
@@ -1235,12 +1262,20 @@ namespace LR2.EditorTools
             bv.sharedProfile = bodycam;
             bvGo.AddComponent<BodycamPostFX>();
 
-            // Warm subtle indoor emergency point lights (keeps sheltered rooms readable without decal flicker)
-            AddLight(_lighting, "EmergencyHouse", new Vector3(0f, 2.9f, 2f), Quaternion.identity, LightType.Point, 3200f, 2200f, 11f, 0f, false);
-            AddLight(_lighting, "EmergencyWorkshopDown", new Vector3(-21f, 2.9f, -2f), Quaternion.identity, LightType.Point, 3200f, 2400f, 12f, 0f, false);
-            AddLight(_lighting, "EmergencyWorkshopUp", new Vector3(-21f, 6.2f, -2f), Quaternion.identity, LightType.Point, 3200f, 1800f, 10f, 0f, false);
-            AddLight(_lighting, "EmergencyWarehouseW", new Vector3(-7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3300f, 2800f, 15f, 0f, false);
-            AddLight(_lighting, "EmergencyWarehouseE", new Vector3(7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3300f, 2800f, 15f, 0f, false);
+            // Warm indoor lights + doorway bounce fills (keeps sheltered interiors & dark pockets readable without blowing out mood)
+            AddLight(_lighting, "EmergencyHouse", new Vector3(0f, 2.9f, 2f), Quaternion.identity, LightType.Point, 3600f, 3400f, 14f, 0f, false);
+            AddLight(_lighting, "EmergencyWorkshopDown", new Vector3(-21f, 2.9f, -2f), Quaternion.identity, LightType.Point, 3600f, 3600f, 15f, 0f, false);
+            AddLight(_lighting, "EmergencyWorkshopUp", new Vector3(-21f, 6.2f, -2f), Quaternion.identity, LightType.Point, 3600f, 2800f, 13f, 0f, false);
+            AddLight(_lighting, "EmergencyWarehouseW", new Vector3(-7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 4400f, 18f, 0f, false);
+            AddLight(_lighting, "EmergencyWarehouseE", new Vector3(7f, 5.6f, -17f), Quaternion.identity, LightType.Point, 3800f, 4400f, 18f, 0f, false);
+            AddLight(_lighting, "HouseBounceW", new Vector3(-4.9f, 2.8f, 2f), Quaternion.identity, LightType.Point, 5000f, 2400f, 13f, 0f, false);
+            AddLight(_lighting, "HouseBounceE", new Vector3(4.9f, 2.8f, 2f), Quaternion.identity, LightType.Point, 5000f, 2400f, 13f, 0f, false);
+            AddLight(_lighting, "WorkshopDoorBounce", new Vector3(-16.5f, 3.0f, -2f), Quaternion.identity, LightType.Point, 5200f, 2600f, 14f, 0f, false);
+            AddLight(_lighting, "WarehouseBayW", new Vector3(-7f, 3.8f, -11.2f), Quaternion.identity, LightType.Point, 5200f, 2800f, 15f, 0f, false);
+            AddLight(_lighting, "WarehouseBayE", new Vector3(7f, 3.8f, -11.2f), Quaternion.identity, LightType.Point, 5200f, 2800f, 15f, 0f, false);
+            AddLight(_lighting, "LoadingDockBounce", new Vector3(0f, 4.0f, -5.5f), Quaternion.identity, LightType.Point, 5400f, 2600f, 15f, 0f, false);
+            AddLight(_lighting, "ContainerYardFillNE", new Vector3(16.5f, 4.4f, 6.5f), Quaternion.identity, LightType.Point, 5400f, 2800f, 16f, 0f, false);
+            AddLight(_lighting, "ContainerYardFillNW", new Vector3(-15f, 4.4f, 12f), Quaternion.identity, LightType.Point, 5400f, 2600f, 16f, 0f, false);
 
             if (!_cfg.practicalLights) return; // abandoned for a century: no power anywhere
             // Practical lights: sodium lamp poles + warehouse/house interiors
@@ -1464,6 +1499,16 @@ namespace LR2.EditorTools
                     c.transform.position = G(p);
                 }
             }
+
+            // Capture The Flag DM strategic zones (NavMesh plaza anchors) + harbour windblown mist & steam particles
+            AddFlagAnchor(_gameplay, "Harbour Centre Plaza", G(new Vector3(0f, 0f, 8f)));
+            AddFlagAnchor(_gameplay, "Warehouse Bay Floor", new Vector3(0f, 0.05f, -17f));
+            AddFlagAnchor(_gameplay, "West Workshop Yard", G(new Vector3(-12.5f, 0f, 2f)));
+            AddFlagAnchor(_gameplay, "East Container Alley", G(new Vector3(12.5f, 0f, 0f)));
+            AddAmbientParticles(_lighting, "SaltworksSeaMist", true, new Vector3(0f, 3.2f, 4f), new Vector3(44f, 5.5f, 38f),
+                new Color(0.76f, 0.82f, 0.88f, 0.16f), new Color(0.62f, 0.68f, 0.74f, 0.08f), 85, 14f, 3.5f, 6.0f, 0.65f, 1.35f, new Vector3(1.1f, 0.08f, 0.35f), 0f);
+            AddAmbientParticles(_lighting, "WorkshopSparksMist", false, new Vector3(-17f, 1.6f, -2f), new Vector3(8f, 3f, 8f),
+                new Color(1f, 0.7f, 0.35f, 0.72f), new Color(1f, 0.45f, 0.18f, 0.35f), 32, 6f, 1.8f, 3.2f, 0.025f, 0.055f, new Vector3(0.4f, 0.55f, -0.2f), -0.05f);
 
             // Systems
             var mmGo = new GameObject("MatchManager");
@@ -2164,8 +2209,11 @@ namespace LR2.EditorTools
 
             var profile = NewProfile(LightDir + "/LR2_Menu_Profile.asset");
             var ve = profile.Add<VisualEnvironment>(true);
-            ve.skyType.Override((int)SkyType.PhysicallyBased);
-            profile.Add<PhysicallyBasedSky>(true);
+            ve.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
+            ApplyHdriSky(ve, profile, "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", exposureEv: 11.4f, rotationDeg: 28f);
+            var ilcMenu = profile.Add<IndirectLightingController>(true);
+            ilcMenu.indirectDiffuseLightingMultiplier.Override(1.35f);
+            ilcMenu.reflectionLightingMultiplier.Override(1.25f);
             var fog = profile.Add<Fog>(true);
             fog.enabled.Override(true);
             fog.enableVolumetricFog.Override(true);
@@ -2182,7 +2230,10 @@ namespace LR2.EditorTools
             color.contrast.Override(30f);
             color.saturation.Override(-12f);
             var bloom = profile.Add<Bloom>(true);
-            bloom.intensity.Override(0.4f);
+            bloom.intensity.Override(0.08f);
+            bloom.threshold.Override(2.5f);
+            bloom.scatter.Override(0.35f);
+            bloom.dirtIntensity.Override(0f);
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(0.38f);
             var grain = profile.Add<FilmGrain>(true);

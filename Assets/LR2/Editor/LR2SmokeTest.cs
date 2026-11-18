@@ -69,6 +69,7 @@ namespace LR2.EditorTools
             SessionState.SetBool(KeyDone, false);
             SessionState.SetInt(KeyErrors, 0);
             SessionState.SetFloat(KeyStart, -1f);
+            EditorSceneManager.playModeStartScene = null; // automated playtest starts in requested test scene
             EditorSceneManager.OpenScene(scenePath);
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
@@ -125,7 +126,11 @@ namespace LR2.EditorTools
             EditorApplication.playModeStateChanged -= OnPlayMode;
             if (!done) return;
             // Restore MainMenu as the active scene so opening Unity later lands on the menu.
-            if (Application.isBatchMode)
+            var args = System.Environment.GetCommandLineArgs();
+            bool autoExit = Application.isBatchMode
+                || System.Array.IndexOf(args, "-lr2PoseCheck") >= 0
+                || System.Array.IndexOf(args, "-lr2AutoExit") >= 0;
+            if (autoExit)
             {
                 if (File.Exists(LR2MapBuilder.MenuScenePath))
                 {
@@ -139,6 +144,7 @@ namespace LR2.EditorTools
             {
                 EditorSceneManager.OpenScene(LR2MapBuilder.MenuScenePath, OpenSceneMode.Single);
             }
+            LR2BuildPipeline.EnsureMainMenuPlayModeStart();
         }
 
         private static void WriteReport()

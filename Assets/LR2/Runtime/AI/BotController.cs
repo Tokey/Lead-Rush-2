@@ -43,7 +43,14 @@ namespace LR2.AI
         private float _lastThink;
         private float _nextDirectivePoll;
 
-        // aim
+        private BotDifficulty _runtimeAdaptiveDiff;
+        private bool _isAdaptiveMode;
+        private float _nextAdaptiveRefresh;
+
+        public bool IsAdaptiveMode => _isAdaptiveMode;
+        public BotDifficulty ActiveDifficulty => _isAdaptiveMode && _runtimeAdaptiveDiff != null ? _runtimeAdaptiveDiff : difficulty;
+
+        // aim, biomechanical mouse kinematics (Fitts's law / minimum-jerk / Meyer submovements / Harris-Wolpert SDN) & recoil pull-down
         private float _aimYaw, _aimPitch, _yawVel, _pitchVel;
         private float _aimError;
         private float _noiseSeed;
@@ -52,6 +59,20 @@ namespace LR2.AI
         private bool _wasVisible;
         private float _lostSightTime;
         private float _reactionReadyAt;
+        private float _recoilReactAt;
+        private float _sprayHeat;
+        private float _combatStress;
+        private float _glanceOffsetYaw;
+        private float _nextGlanceAt;
+
+        // Primary ballistic saccade + secondary closed-loop correction state (Meyer 1988; Flash & Hogan 1985)
+        private bool _flickActive;
+        private float _flickStartTime;
+        private float _flickDuration;
+        private float _flickStartYaw, _flickStartPitch;
+        private float _flickGoalYaw, _flickGoalPitch;
+        private float _nextFlickAllowedAt;
+        private float _sdnPhase;
 
         // trigger discipline
         private int _burstShotsLeft;
@@ -86,6 +107,27 @@ namespace LR2.AI
             _noiseSeed = Random.value * 100f;
         }
 
+        private void RefreshAdaptiveProfile(float now)
+        {
+            _isAdaptiveMode = LR2Settings.BotDifficulty == 4;
+            if (!_isAdaptiveMode) return;
+            if (_runtimeAdaptiveDiff == null)
+            {
+                _runtimeAdaptiveDiff = ScriptableObject.CreateInstance<BotDifficulty>();
+                _runtimeAdaptiveDiff.hideFlags = HideFlags.HideAndDontSave;
+            }
+            if (now >= _nextAdaptiveRefresh)
+            {
+                _nextAdaptiveRefresh = now + 0.75f;
+                AdaptiveDifficultyTracker.FillAdaptiveProfile(_runtimeAdaptiveDiff, difficulty);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_runtimeAdaptiveDiff != null) Destroy(_runtimeAdaptiveDiff);
+        }
+
         private void OnEnable()
         {
             _lastSteer = Vector3.zero;
@@ -116,6 +158,10 @@ namespace LR2.AI
             _aimYaw = s.Yaw;
             _aimPitch = 0f;
             _yawVel = _pitchVel = 0f;
+            _flickActive = false;
+            _nextFlickAllowedAt = 0f;
+            _sprayHeat = 0f;
+            _combatStress = 0f;
             _lastSteer = Vector3.zero;
             _stuckTimer = 0f;
             _slideUsed = false;
@@ -159,6 +205,7 @@ namespace LR2.AI
 
             float dt = Time.deltaTime;
             float now = Time.time;
+            RefreshAdaptiveProfile(now);
             EnsureGunSubscription();
             Perception.Tick(dt);
             UpdateBlackboard(now);
@@ -178,7 +225,9 @@ namespace LR2.AI
 
             Vector3 fwd = transform.forward, right = transform.right;
             input.move = Vector2.ClampMagnitude(new Vector2(Vector3.Dot(worldMove, right), Vector3.Dot(worldMove, fwd)), 1f);
-            input.sprint = _slideFrame || (_intent.allowSprint && !Blackboard.targetVisible && input.move.y > 0.75f && Mathf.Abs(input.move.x) < 0.4f);
+            bool threatClose = (Blackboard.target != null && Blackboard.targetDistance < 16f) ||
+                               (Blackboard.hasNoise && now - Blackboard.noiseTime < 3f && Vector3.Distance(transform.position, Blackboard.noisePosition) < 16f);
+            input.sprint = _slideFrame || (_intent.allowSprint && !Blackboard.targetVisible && !threatClose && input.move.y > 0.75f && Mathf.Abs(input.move.x) < 0.4f);
             UpdateStuck(ref input, now, dt);
         }
 
@@ -191,7 +240,7 @@ namespace LR2.AI
             bb.time = now;
             bb.position = transform.position;
             bb.yaw = Soldier.Yaw;
-            bb.difficulty = difficulty;
+            bb.difficulty = ActiveDifficulty;
             bb.health01 = health != null ? health.Normalized : 1f;
             bb.ammoInMagazine = gun != null ? gun.AmmoInMagazine : 0;
             bb.ammo01 = gun != null ? (float)gun.AmmoInMagazine / Mathf.Max(1, gun.MagazineSize) : 0f;
@@ -316,23 +365,32 @@ namespace LR2.AI
             }
         }
 
-        // ------------------------------------------------------------------ aim
+        // ------------------------------------------------------------------ aim (human mouse deltas + realistic recoil pull-down)
         private void UpdateAim(ref SoldierInput input, Vector3 worldMove, float now, float dt)
         {
             var bb = Blackboard;
-            var d = difficulty;
+            var d = ActiveDifficulty;
             Vector3 eye = Soldier.AimOrigin;
             Combatant target = _intent.target != null ? _intent.target : bb.target;
             bool engaging = _intent.goal == BotGoal.Engage || (bb.targetVisible && target != null && _intent.allowFire);
 
-            // Reaction time on new target / re-acquisition after losing sight.
+            // Decay burst fatigue and combat stress smoothly; rise when firing or under incoming bullets
+            _sprayHeat = Mathf.MoveTowards(_sprayHeat, 0f, dt * 0.95f);
+            float stressTarget = bb.recentlyDamaged ? 1f : (bb.underFire ? 0.65f : 0f);
+            _combatStress = Mathf.MoveTowards(_combatStress, stressTarget, dt * (stressTarget > _combatStress ? 5.0f : 0.7f));
+
+            // Context-aware perceptual-cognitive reaction latency: foveal pre-aimed targets register faster than surprise peripheral ambushes.
             if (bb.targetVisible && target != null)
             {
                 if (target != _lastTarget || (!_wasVisible && now - _lostSightTime > 1.5f))
                 {
-                    _reactionReadyAt = now + (d != null ? d.RandomReaction() : 0.4f);
+                    float baseReact = d != null ? d.RandomReaction() : 0.4f;
+                    float eccDeg = Vector3.Angle(Soldier.AimDirection, (target.ChestPosition - eye));
+                    float eccFactor = Mathf.Lerp(0.76f, 1.58f, Mathf.Clamp01(eccDeg / 115f));
+                    _reactionReadyAt = now + baseReact * eccFactor;
                     _aimError = d != null ? d.initialAimError : 4f;
                     _useHead = d != null && Random.value < d.headshotChance;
+                    _flickActive = false; // Allow immediate ballistic saccade toward the newly acquired contact
                 }
                 _lastTarget = target;
             }
@@ -344,11 +402,34 @@ namespace LR2.AI
             if (engaging && target != null && bb.targetVisible)
             {
                 Vector3 aimPoint = _useHead ? target.HeadPosition : target.ChestPosition;
-                aimPoint += target.Velocity * Random.Range(0.03f, 0.09f); // slight lead
+                aimPoint += target.Velocity * Random.Range(0.03f, 0.08f); // human slight velocity lead
                 lookPoint = aimPoint;
             }
             else if (_intent.hasLookPoint) lookPoint = _intent.lookPoint;
-            else if (worldMove.sqrMagnitude > 0.01f) lookPoint = eye + worldMove * 6f;
+            else if (Agent != null && Agent.hasPath && Agent.path != null && Agent.path.corners != null && Agent.path.corners.Length >= 2)
+            {
+                // Slice corners & periodically scan open flanks instead of staring blindly at feet
+                if (now >= _nextGlanceAt)
+                {
+                    _nextGlanceAt = now + Random.Range(1.8f, 3.4f);
+                    _glanceOffsetYaw = Random.value < 0.55f ? Random.Range(-28f, 28f) : 0f;
+                }
+                Vector3 corner = Agent.path.corners[1];
+                Vector3 lookDir = corner - eye;
+                lookDir.y = 0f;
+                if (lookDir.sqrMagnitude < 0.25f && worldMove.sqrMagnitude > 0.01f) lookDir = worldMove;
+                if (lookDir.sqrMagnitude > 0.01f)
+                    lookDir = Quaternion.AngleAxis(_glanceOffsetYaw, Vector3.up) * lookDir.normalized;
+                else
+                    lookDir = transform.forward;
+                lookPoint = eye + lookDir * 8f;
+                lookPoint.y = eye.y - 0.12f; // natural head-height horizon gaze
+            }
+            else if (worldMove.sqrMagnitude > 0.01f)
+            {
+                lookPoint = eye + worldMove * 6f;
+                lookPoint.y = eye.y - 0.10f;
+            }
             else
             {
                 lookPoint = eye + Soldier.AimDirection * 6f;
@@ -357,47 +438,123 @@ namespace LR2.AI
 
             Vector2 desired = LR2Math.DirectionToYawPitch(lookPoint - eye);
             if (!hasLook) desired.y = Mathf.Lerp(Soldier.Pitch, 0f, 0.05f);
-            if (!engaging && worldMove.sqrMagnitude > 0.01f && !_intent.hasLookPoint) desired.y = 2f; // look slightly down the path
 
-            // Aim error: large on acquisition, settles while tracking, grows with target strafe / own damage.
+            // Dynamic human accuracy & intensity modulation: weapon spread, spray heat, movement, stance, and stress
             if (d != null)
             {
-                float settle = d.settledAimError;
+                var gun = Soldier.ActiveFirearm;
+                float gunSpread = gun != null ? gun.CurrentSpread : 0.8f;
+                float settle = d.settledAimError + _sprayHeat * 1.35f + Mathf.Max(0f, gunSpread - 0.8f) * 0.45f;
                 if (target != null)
                 {
                     Vector3 lateral = Vector3.ProjectOnPlane(target.Velocity, (lookPoint - eye).normalized);
                     settle += Mathf.Clamp(lateral.magnitude * 0.25f, 0f, 2f);
                 }
-                if (bb.recentlyDamaged) settle += 1.2f;
-                if (Soldier.Movement != null && Soldier.Movement.Speed > 2f) settle += 0.4f;
+                settle += _combatStress * 1.15f;
+                if (Soldier.Movement != null && Soldier.Movement.Speed > 2f) settle += 0.45f;
+                if (Soldier.IsCrouching || Soldier.IsAiming) settle *= 0.80f;
                 _aimError = Mathf.MoveTowards(_aimError, settle, d.errorDecay * dt);
-                float t = now * 1.7f;
+
+                float swayFreq = 1.65f + _combatStress * 1.4f + _sprayHeat * 0.9f;
+                float t = now * swayFreq;
                 desired.x += (Mathf.PerlinNoise(t, _noiseSeed) - 0.5f) * 2f * _aimError;
-                desired.y += (Mathf.PerlinNoise(_noiseSeed, t * 1.13f) - 0.5f) * 2f * _aimError * 0.7f;
+                desired.y += (Mathf.PerlinNoise(_noiseSeed, t * 1.13f) - 0.5f) * 2f * _aimError * 0.72f;
             }
 
-            // Critically damped spring that starts from the ACTUAL view (so recoil/flinch must be fought, like a human).
+            // Human biomechanical aiming (pure input.look mouse deltas, NEVER absoluteLook teleport):
+            // 1. Meyer Optimized Submovement + Flash-Hogan Minimum Jerk + Fitts's Law for large saccadic flicks (> 10 deg)
+            // 2. Harris-Wolpert Signal-Dependent Noise (variance proportional to motor angular speed)
+            // 3. Human recoil pull-down after 65-135ms cognitive latency
             _aimYaw = Soldier.Yaw;
             _aimPitch = Soldier.Pitch;
             float w = d != null ? d.aimSpeed : 6f;
-            float zeta = engaging ? 0.82f : 1f;   // slight overshoot on combat flicks
-            float yawErr = Mathf.DeltaAngle(_aimYaw, desired.x);
-            float pitchErr = desired.y - _aimPitch;
-            _yawVel += (w * w * yawErr - 2f * zeta * w * _yawVel) * dt;
-            _pitchVel += (w * w * pitchErr - 2f * zeta * w * _pitchVel) * dt;
-            _yawVel = Mathf.Clamp(_yawVel, -900f, 900f);
-            _pitchVel = Mathf.Clamp(_pitchVel, -600f, 600f);
+            float rawYawErr = Mathf.DeltaAngle(_aimYaw, desired.x);
+            float rawPitchErr = desired.y - _aimPitch;
+            float angularDist = Mathf.Sqrt(rawYawErr * rawYawErr + rawPitchErr * rawPitchErr);
 
-            input.absoluteLook = true;
-            input.aimYaw = _aimYaw + _yawVel * dt;
-            input.aimPitch = Mathf.Clamp(_aimPitch + _pitchVel * dt, -75f, 75f);
+            // Start a ballistic primary submovement when snapping onto a distant angle (refractory cooldown 140ms prevents robot jitter)
+            if (!_flickActive && angularDist > 10.5f && now >= _nextFlickAllowedAt)
+            {
+                float targetDist = target != null ? Mathf.Max(1.5f, bb.targetDistance) : 12f;
+                float halfWidthDeg = Mathf.Atan2(_useHead ? 0.16f : 0.34f, targetDist) * Mathf.Rad2Deg;
+                float id = Mathf.Log(1f + angularDist / Mathf.Max(0.4f, halfWidthDeg), 2f); // Fitts's ID = log2(2D/W + 1)
+                float skillScale = Mathf.Clamp(7.5f / Mathf.Max(2.5f, w), 0.62f, 1.55f);
+                _flickDuration = Mathf.Clamp((0.065f + 0.042f * id) * skillScale, 0.085f, 0.38f);
+                _flickStartTime = now;
+                _flickStartYaw = _aimYaw;
+                _flickStartPitch = _aimPitch;
+
+                // Signal-dependent primary saccade undershoot/overshoot bias (larger jumps carry wider endpoint scatter)
+                float sdnSigma = Mathf.Clamp(angularDist * (0.045f + 0.045f * _combatStress) * skillScale, 0.35f, 6.5f);
+                float endErrYaw = (Random.value - 0.5f) * 2f * sdnSigma;
+                float endErrPitch = (Random.value - 0.5f) * 1.4f * sdnSigma;
+                _flickGoalYaw = _aimYaw + rawYawErr + endErrYaw;
+                _flickGoalPitch = Mathf.Clamp(_aimPitch + rawPitchErr + endErrPitch, -82f, 82f);
+                _flickActive = true;
+                _nextFlickAllowedAt = now + _flickDuration + Random.Range(0.11f, 0.165f); // human visual feedback refractory period
+            }
+
+            float yawStepDeg, pitchStepDeg;
+            if (_flickActive)
+            {
+                float u = Mathf.Clamp01((now - _flickStartTime) / Mathf.Max(0.05f, _flickDuration));
+                // Flash & Hogan (1985) minimum-jerk quintic s(u) = 10u^3 - 15u^4 + 6u^5
+                float s = u * u * u * (10f + u * (-15f + 6f * u));
+                float subYaw = Mathf.LerpAngle(_flickStartYaw, _flickGoalYaw, s);
+                float subPitch = Mathf.Lerp(_flickStartPitch, _flickGoalPitch, s);
+                yawStepDeg = Mathf.DeltaAngle(_aimYaw, subYaw);
+                pitchStepDeg = subPitch - _aimPitch;
+
+                // Synchronize spring velocity so handoff from ballistic flick into closed-loop tracking has zero jerk spike
+                _yawVel = yawStepDeg / Mathf.Max(0.001f, dt);
+                _pitchVel = pitchStepDeg / Mathf.Max(0.001f, dt);
+
+                if (u >= 1f || angularDist < 2.2f)
+                    _flickActive = false;
+            }
+            else
+            {
+                // Closed-loop foveal tracking + corrective submovement + Harris-Wolpert Signal-Dependent Noise
+                float zeta = engaging ? 0.80f : 1f;
+                float yawErr = rawYawErr;
+                float pitchErr = rawPitchErr;
+
+                // Human recoil pull-down delay & continuous-spray compensation fatigue
+                if (pitchErr > 0.2f && now < _recoilReactAt)
+                    pitchErr *= 0.12f;
+                else if (pitchErr > 0.3f && _sprayHeat > 0.1f)
+                {
+                    float compEfficiency = d != null ? Mathf.Clamp(d.aimSpeed / 10.5f, 0.55f, 0.92f) : 0.74f;
+                    pitchErr *= Mathf.Clamp(compEfficiency * (1f - _sprayHeat * 0.22f), 0.45f, 0.94f);
+                }
+
+                // Harris-Wolpert SDN: high motor command magnitude amplifies execution tremor proportionally
+                _sdnPhase += dt * (7.5f + _combatStress * 4f);
+                float cmdMag = Mathf.Sqrt(yawErr * yawErr + pitchErr * pitchErr);
+                float sdnAmp = Mathf.Min(1.6f, cmdMag * 0.032f * (0.55f + _combatStress * 0.65f));
+                yawErr += Mathf.Sin(_sdnPhase * 1.37f + _noiseSeed) * sdnAmp;
+                pitchErr += Mathf.Cos(_sdnPhase * 1.71f + _noiseSeed) * sdnAmp * 0.72f;
+
+                _yawVel += (w * w * yawErr - 2f * zeta * w * _yawVel) * dt;
+                _pitchVel += (w * w * pitchErr - 2f * zeta * w * _pitchVel) * dt;
+                _yawVel = Mathf.Clamp(_yawVel, -900f, 900f);
+                _pitchVel = Mathf.Clamp(_pitchVel, -600f, 600f);
+                yawStepDeg = _yawVel * dt;
+                pitchStepDeg = _pitchVel * dt;
+            }
+
+            float maxStep = Soldier.maxBotTurnSpeed * dt;
+            input.absoluteLook = false;
+            input.look = new Vector2(
+                Mathf.Clamp(yawStepDeg, -maxStep, maxStep),
+                Mathf.Clamp(pitchStepDeg, -maxStep, maxStep));
         }
 
         // ------------------------------------------------------------------ trigger, ADS, stance
         private void UpdateCombatInputs(ref SoldierInput input, ref Vector3 worldMove, float now)
         {
             var bb = Blackboard;
-            var d = difficulty;
+            var d = ActiveDifficulty;
             var gun = Soldier.ActiveFirearm;
             Combatant target = bb.target;
             float dist = bb.targetDistance;
@@ -432,10 +589,20 @@ namespace LR2.AI
                     }
                 }
             }
+            else if (!visible && _intent.allowFire && target != null && gun != null && !gun.IsReloading &&
+                     bb.TimeSinceSeen < 0.85f && bb.ammo01 > 0.35f && d != null && d.aggression > 0.45f &&
+                     now >= _burstPauseUntil && Vector3.Angle(Soldier.AimDirection, (bb.targetLastKnown + Vector3.up * 1.3f) - Soldier.AimOrigin) < 8f)
+            {
+                // Brief suppressive burst on the corner where the target just ducked into cover
+                if (_burstShotsLeft <= 0) _burstShotsLeft = 2;
+                fire = true;
+            }
             input.fire = fire;
 
-            // ADS beyond close range, or when pre-aiming a corner during a hunt.
-            bool wantAds = (visible && dist > 9f) || (_intent.goal == BotGoal.Hunt && dist < 25f && dist > 6f);
+            // ADS beyond close range, or when pre-aiming a corner during a hunt or recently lost cover edge.
+            bool wantAds = (visible && dist > 9f) ||
+                           (_intent.goal == BotGoal.Hunt && dist < 25f && dist > 6f) ||
+                           (!visible && target != null && bb.TimeSinceSeen < 1.8f && dist < 28f);
             input.aim = wantAds && !input.sprint;
 
             // Combat strafing (ADAD) and range keeping.
@@ -499,11 +666,17 @@ namespace LR2.AI
 
         private void OnGunFired()
         {
-            if (Blackboard.targetDistance < 13f) return;
+            var d = ActiveDifficulty;
+            // Track sustained fire recoil stress & reaction lag (~65-135ms) before human hand starts pulling mouse down
+            bool firstShotOfBurst = _sprayHeat < 0.08f;
+            _sprayHeat = Mathf.Clamp01(_sprayHeat + (Soldier.IsAiming ? 0.13f : 0.19f));
+            if (firstShotOfBurst)
+                _recoilReactAt = Time.time + Random.Range(0.065f, 0.135f);
+
+            if (Blackboard.targetDistance < 13f && _sprayHeat < 0.72f) return;
             _burstShotsLeft--;
             if (_burstShotsLeft <= 0)
             {
-                var d = difficulty;
                 _burstPauseUntil = Time.time + (d != null ? Random.Range(d.burstPause.x, d.burstPause.y) : 0.3f);
             }
         }

@@ -16,9 +16,30 @@ namespace LR2.EditorTools
         [InitializeOnLoadMethod]
         private static void ScheduleAutoRebuildOnScriptReload()
         {
+            if (!Application.isBatchMode) EnsureMainMenuPlayModeStart();
             if (Application.isBatchMode) return;
             if (File.Exists(StampPath) && File.ReadAllText(StampPath).Trim() == AutoBuildVersion) return;
             EditorApplication.delayCall += RunAutoRebuildIfReady;
+        }
+
+        /// <summary>Ensures Editor Play always boots into LR2_MainMenu unless an automated test harness temporarily clears it.</summary>
+        public static void EnsureMainMenuPlayModeStart()
+        {
+            if (Application.isBatchMode || Application.isPlaying) return;
+            if (SessionState.GetBool("LR2Smoke.Active", false) || SessionState.GetBool("LR2GeminiVerify.Active", false)) return;
+            var menuAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(LR2MapBuilder.MenuScenePath);
+            if (menuAsset != null && EditorSceneManager.playModeStartScene != menuAsset)
+                EditorSceneManager.playModeStartScene = menuAsset;
+        }
+
+        public static void RestoreMainMenuLastSceneSetup()
+        {
+            string setupPath = Path.Combine(Directory.GetCurrentDirectory(), "Library", "LastSceneManagerSetup.txt");
+            if (File.Exists(LR2MapBuilder.MenuScenePath))
+            {
+                File.WriteAllText(setupPath,
+                    "sceneSetups:\n- path: " + LR2MapBuilder.MenuScenePath.Replace('\\', '/') + "\n  isLoaded: 1\n  isActive: 1\n  isSubScene: 0\n");
+            }
         }
 
         private static void RunAutoRebuildIfReady()
@@ -93,6 +114,112 @@ namespace LR2.EditorTools
             }
         }
 
+        /// <summary>Builds the Windows 64-bit standalone executable into the configured build location.</summary>
+        public static void BuildWindowsPlayerBatch()
+        {
+            ConfigureBuildIdentity();
+            const string outExe = "H:/Unity Projects/Builds/Lead Rush 2/LeadRush 2.exe";
+            var scenes = Array.FindAll(EditorBuildSettings.scenes, s => s != null && s.enabled && File.Exists(s.path));
+            var scenePaths = Array.ConvertAll(scenes, s => s.path);
+            Directory.CreateDirectory(Path.GetDirectoryName(outExe));
+
+            var opts = new BuildPlayerOptions
+            {
+                scenes = scenePaths,
+                locationPathName = outExe,
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.None
+            };
+            var report = BuildPipeline.BuildPlayer(opts);
+            bool ok = report != null && report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
+            Debug.Log($"[LR2] Windows Build result={report?.summary.result} size={report?.summary.totalSize} errors={report?.summary.totalErrors} -> {outExe}");
+            if (Application.isBatchMode) EditorApplication.Exit(ok ? 0 : 1);
+        }
+
+        [MenuItem("LR2/Configure Build Icon & Version", priority = 35)]
+        public static void ConfigureBuildIdentity()
+        {
+            PlayerSettings.bundleVersion = "11.17.26";
+            const string iconPath = "Assets/LR2/UI/Icons/LR2_AppIcon.png";
+            Directory.CreateDirectory(Path.GetDirectoryName(iconPath));
+            if (!File.Exists(iconPath))
+            {
+                const int size = 256;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                var px = new Color32[size * size];
+                var bgOuter = new Color(0.055f, 0.068f, 0.090f, 1f);
+                var bgInner = new Color(0.095f, 0.118f, 0.155f, 1f);
+                var amber = new Color(0.95f, 0.65f, 0.18f, 1f);
+                var bright = new Color(0.98f, 0.94f, 0.86f, 1f);
+                Vector2 c = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dx = x - c.x, dy = y - c.y;
+                        float r = Mathf.Sqrt(dx * dx + dy * dy) / (size * 0.5f);
+                        Color col = Color.Lerp(bgInner, bgOuter, Mathf.Clamp01(r));
+
+                        // Outer metallic bevel border
+                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) > size * 0.44f && Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) < size * 0.465f)
+                            col = amber * 0.72f;
+
+                        // Precision ring reticle
+                        if (Mathf.Abs(r - 0.62f) < 0.032f && (Mathf.Abs(dx) > 14f || Mathf.Abs(dy) > 14f))
+                            col = amber;
+
+                        // Crosshair ticks
+                        if (Mathf.Abs(dy) < 5f && Mathf.Abs(dx) > 38f && Mathf.Abs(dx) < 102f)
+                            col = bright;
+                        if (Mathf.Abs(dx) < 5f && Mathf.Abs(dy) > 38f && Mathf.Abs(dy) < 102f)
+                            col = bright;
+
+                        // Tactical chevron in lower quadrant
+                        float chy = dy + 16f;
+                        if (chy > -24f && chy < 4f && Mathf.Abs(Mathf.Abs(dx) - (4f - chy) * 1.15f) < 6f)
+                            col = amber;
+
+                        // Crisp center dot
+                        if (r < 0.045f) col = amber;
+
+                        px[y * size + x] = col;
+                    }
+                }
+                tex.SetPixels32(px);
+                tex.Apply();
+                File.WriteAllBytes(iconPath, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(iconPath, ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            if (AssetImporter.GetAtPath(iconPath) is TextureImporter ti)
+            {
+                bool dirty = ti.textureType != TextureImporterType.GUI || !ti.isReadable || ti.mipmapEnabled;
+                if (dirty)
+                {
+                    ti.textureType = TextureImporterType.GUI;
+                    ti.isReadable = true;
+                    ti.mipmapEnabled = false;
+                    ti.SaveAndReimport();
+                }
+            }
+
+            var iconTex = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
+            if (iconTex != null)
+            {
+                PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Unknown, new[] { iconTex }, IconKind.Any);
+                int[] sizes = PlayerSettings.GetIconSizes(UnityEditor.Build.NamedBuildTarget.Standalone, IconKind.Any);
+                if (sizes != null && sizes.Length > 0)
+                {
+                    var list = new Texture2D[sizes.Length];
+                    for (int i = 0; i < sizes.Length; i++) list[i] = iconTex;
+                    PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Standalone, list, IconKind.Any);
+                }
+            }
+            AssetDatabase.SaveAssets();
+        }
+
         /// <summary>
         /// Batch entry (no -quit): rebuild FX, audio, weapons and soldiers (no maps), then start the play-mode smoke test in
         /// the same process. Honours -lr2Scene, -lr2Duration, -lr2OutDir and the -lr2Robot / -lr2PoseCheck harness flags.
@@ -119,6 +246,7 @@ namespace LR2.EditorTools
         private static bool Run(bool interactive)
         {
             if (interactive && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return false;
+            ConfigureBuildIdentity();
             bool ok = true;
             ok &= Step("Convert Kinemation demo materials", LR2ContentBuilder.ConvertDemoMaterials);
             ok &= Step("Data presets (difficulty, modes, fonts)", LR2ContentBuilder.BuildData);
@@ -136,7 +264,11 @@ namespace LR2.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log(ok ? "[LR2] BUILD EVERYTHING: SUCCESS" : "[LR2] BUILD EVERYTHING: FINISHED WITH ERRORS (see log)");
-            if (ok) EditorSceneManager.OpenScene(LR2MapBuilder.MenuScenePath);
+            if (ok)
+            {
+                EditorSceneManager.OpenScene(LR2MapBuilder.MenuScenePath);
+                RestoreMainMenuLastSceneSetup();
+            }
             return ok;
         }
 

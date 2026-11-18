@@ -112,6 +112,15 @@ namespace LR2.UI
         private readonly List<Image> _iconPool = new List<Image>();
         private readonly List<(TMP_Text label, float angle)> _compassLabels = new List<(TMP_Text, float)>();
 
+        // BF6-style Flag Zone capture HUD + compass/minimap beacon
+        private CanvasGroup _flagHudGroup;
+        private TMP_Text _flagTitleText;
+        private TMP_Text _flagSubText;
+        private Image _flagFillFriendly;
+        private Image _flagFillHostile;
+        private TMP_Text _flagCompassMarker;
+        private Image _flagMinimapIcon;
+
         private void Awake()
         {
             _theme = Resources.Load<UITheme>("LR2/UITheme");
@@ -122,6 +131,8 @@ namespace LR2.UI
             if (hitmarker != null) hitmarker.color = new Color(1f, 1f, 1f, 0f);
             if (medalGroup != null) medalGroup.alpha = 0f;
             BuildCompass();
+            BuildFlagHud();
+            TacticalChatSystem.Mount(hudGroup != null ? hudGroup.transform : transform);
             // BF6-style hit feedback (thick X, kill skull, layered hit/kill sounds) replaces the old small hitmarker
             _hitFeedback = GetComponentInChildren<HitFeedbackHUD>(true);
             if (_hitFeedback == null)
@@ -134,6 +145,10 @@ namespace LR2.UI
         }
 
         private HitFeedbackHUD _hitFeedback;
+
+        /// <summary>Draws killcam/replay hitmarker &amp; kill skull and plays the rugged hit confirm sound even if HUD is hidden.</summary>
+        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default) =>
+            HitFeedbackHUD.ShowReplayHit(headshot, kill, worldPoint);
 
         private void OnEnable()
         {
@@ -177,6 +192,7 @@ namespace LR2.UI
             UpdatePopups();
             UpdateMatchStatus(dt);
             UpdateCenter();
+            UpdateFlagZoneHud(dt);
             UpdateMinimap();
             UpdateCompass();
             UpdateMisc(dt);
@@ -585,6 +601,29 @@ namespace LR2.UI
                 icon.color = baseCol;
             }
             for (int i = used; i < _iconPool.Count; i++) _iconPool[i].gameObject.SetActive(false);
+
+            var flag = FlagZoneController.Instance;
+            if (_flagMinimapIcon != null)
+            {
+                if (flag != null)
+                {
+                    Vector3 fOff = flag.ActiveFlagPosition - _soldier.transform.position;
+                    Vector3 fLoc = inv * fOff;
+                    Vector2 fp = new Vector2(fLoc.x, fLoc.z) * scale;
+                    if (fp.magnitude > minimapRadius - 8f) fp = fp.normalized * (minimapRadius - 8f);
+                    _flagMinimapIcon.gameObject.SetActive(true);
+                    _flagMinimapIcon.rectTransform.anchoredPosition = fp;
+                    float pulse = 1f + 0.18f * Mathf.Sin(Time.unscaledTime * 5f);
+                    _flagMinimapIcon.rectTransform.localScale = Vector3.one * pulse;
+                    _flagMinimapIcon.color = flag.State == FlagZoneController.ZoneState.Contested
+                        ? Accent
+                        : (flag.Progress >= 0f ? new Color(0.24f, 0.78f, 1f, 1f) : Enemy);
+                }
+                else
+                {
+                    _flagMinimapIcon.gameObject.SetActive(false);
+                }
+            }
         }
 
         private void BuildCompass()
@@ -618,6 +657,161 @@ namespace LR2.UI
                 label.rectTransform.anchoredPosition = new Vector2(rel / half * compassWidth * 0.5f, 0f);
                 label.alpha = 1f - Mathf.Pow(Mathf.Abs(rel) / half, 3f);
             }
+
+            if (_flagCompassMarker != null)
+            {
+                var flag = FlagZoneController.Instance;
+                if (flag != null && _soldier != null)
+                {
+                    Vector3 dir = flag.ActiveFlagPosition - _soldier.transform.position;
+                    dir.y = 0f;
+                    float flagYaw = LR2Math.DirectionToYawPitch(dir.sqrMagnitude > 0.01f ? dir : Vector3.forward).x;
+                    float rel = Mathf.DeltaAngle(yaw, flagYaw);
+                    bool vis = Mathf.Abs(rel) < half;
+                    _flagCompassMarker.enabled = vis;
+                    if (vis)
+                    {
+                        _flagCompassMarker.rectTransform.anchoredPosition = new Vector2(rel / half * compassWidth * 0.5f, -18f);
+                        _flagCompassMarker.text = $"◆ {dir.magnitude:0}m";
+                        _flagCompassMarker.color = flag.State == FlagZoneController.ZoneState.Contested ? Accent : new Color(0.28f, 0.85f, 1f, 1f);
+                    }
+                }
+                else
+                {
+                    _flagCompassMarker.enabled = false;
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ BF6 Flag Zone Capture HUD
+        private void BuildFlagHud()
+        {
+            Transform parent = hudGroup != null ? hudGroup.transform : transform;
+            var root = new GameObject("BF6FlagCaptureHUD");
+            root.transform.SetParent(parent, false);
+            var rt = root.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -124f);
+            rt.sizeDelta = new Vector2(440f, 54f);
+            _flagHudGroup = root.AddComponent<CanvasGroup>();
+            _flagHudGroup.alpha = 0f;
+            _flagHudGroup.interactable = false;
+            _flagHudGroup.blocksRaycasts = false;
+
+            var bg = root.AddComponent<Image>();
+            bg.color = new Color(0.04f, 0.06f, 0.09f, 0.72f);
+
+            var titleGo = new GameObject("Title").AddComponent<TextMeshProUGUI>();
+            titleGo.transform.SetParent(root.transform, false);
+            titleGo.fontSize = 15f;
+            titleGo.fontStyle = FontStyles.Bold;
+            titleGo.alignment = TextAlignmentOptions.Center;
+            titleGo.color = Color.white;
+            var tRt = titleGo.rectTransform;
+            tRt.anchorMin = new Vector2(0f, 0.52f);
+            tRt.anchorMax = new Vector2(1f, 1f);
+            tRt.offsetMin = tRt.offsetMax = Vector2.zero;
+            _flagTitleText = titleGo;
+
+            var barBg = new GameObject("BarBg").AddComponent<Image>();
+            barBg.transform.SetParent(root.transform, false);
+            barBg.color = new Color(0.14f, 0.16f, 0.2f, 0.9f);
+            var bRt = barBg.rectTransform;
+            bRt.anchorMin = new Vector2(0.08f, 0.34f);
+            bRt.anchorMax = new Vector2(0.92f, 0.48f);
+            bRt.offsetMin = bRt.offsetMax = Vector2.zero;
+
+            var fImg = new GameObject("FillFriendly").AddComponent<Image>();
+            fImg.transform.SetParent(barBg.transform, false);
+            fImg.color = new Color(0.18f, 0.78f, 1f, 0.96f);
+            fImg.type = Image.Type.Filled;
+            fImg.fillMethod = Image.FillMethod.Horizontal;
+            fImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            var fRt = fImg.rectTransform;
+            fRt.anchorMin = new Vector2(0.5f, 0f);
+            fRt.anchorMax = new Vector2(1f, 1f);
+            fRt.offsetMin = fRt.offsetMax = Vector2.zero;
+            _flagFillFriendly = fImg;
+
+            var hImg = new GameObject("FillHostile").AddComponent<Image>();
+            hImg.transform.SetParent(barBg.transform, false);
+            hImg.color = new Color(0.96f, 0.34f, 0.2f, 0.96f);
+            hImg.type = Image.Type.Filled;
+            hImg.fillMethod = Image.FillMethod.Horizontal;
+            hImg.fillOrigin = (int)Image.OriginHorizontal.Right;
+            var hRt = hImg.rectTransform;
+            hRt.anchorMin = new Vector2(0f, 0f);
+            hRt.anchorMax = new Vector2(0.5f, 1f);
+            hRt.offsetMin = hRt.offsetMax = Vector2.zero;
+            _flagFillHostile = hImg;
+
+            var subGo = new GameObject("Sub").AddComponent<TextMeshProUGUI>();
+            subGo.transform.SetParent(root.transform, false);
+            subGo.fontSize = 12.5f;
+            subGo.alignment = TextAlignmentOptions.Center;
+            subGo.color = new Color(0.8f, 0.85f, 0.9f, 0.92f);
+            var sRt = subGo.rectTransform;
+            sRt.anchorMin = new Vector2(0f, 0f);
+            sRt.anchorMax = new Vector2(1f, 0.34f);
+            sRt.offsetMin = sRt.offsetMax = Vector2.zero;
+            _flagSubText = subGo;
+
+            if (compassRoot != null)
+            {
+                var cGo = new GameObject("FlagCompassMarker").AddComponent<TextMeshProUGUI>();
+                cGo.transform.SetParent(compassRoot, false);
+                cGo.fontSize = 14f;
+                cGo.fontStyle = FontStyles.Bold;
+                cGo.alignment = TextAlignmentOptions.Center;
+                cGo.enabled = false;
+                cGo.rectTransform.sizeDelta = new Vector2(100f, 24f);
+                _flagCompassMarker = cGo;
+            }
+
+            if (minimapIconRoot != null && minimapIconTemplate != null)
+            {
+                _flagMinimapIcon = Instantiate(minimapIconTemplate, minimapIconRoot);
+                _flagMinimapIcon.name = "MinimapFlagIcon";
+                _flagMinimapIcon.rectTransform.sizeDelta = new Vector2(13f, 13f);
+                _flagMinimapIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                _flagMinimapIcon.gameObject.SetActive(false);
+            }
+        }
+
+        private void UpdateFlagZoneHud(float dt)
+        {
+            if (_flagHudGroup == null) return;
+            var flag = FlagZoneController.Instance;
+            var mm = MatchManager.Instance;
+            bool show = flag != null && mm != null && mm.State != MatchState.Ended;
+            _flagHudGroup.alpha = Mathf.MoveTowards(_flagHudGroup.alpha, show ? 1f : 0f, dt * 6f);
+            if (!show) return;
+
+            float prog = flag.Progress;
+            if (_flagFillFriendly != null) _flagFillFriendly.fillAmount = Mathf.Clamp01(prog);
+            if (_flagFillHostile != null) _flagFillHostile.fillAmount = Mathf.Clamp01(-prog);
+
+            string multNote = flag.LocalPlayerInside
+                ? (flag.LocalPlayerDistance <= flag.CoreRadius
+                    ? $"CORE {flag.LocalPlayerSpeedMult:0.0}x FAST"
+                    : $"PERIMETER {flag.LocalPlayerSpeedMult:0.0}x")
+                : $"{flag.LocalPlayerDistance:0}m AWAY";
+
+            string stateStr = flag.State switch
+            {
+                FlagZoneController.ZoneState.Contested => "CONTESTED — GET CLOSER!",
+                FlagZoneController.ZoneState.Capturing => $"CAPTURING  ({multNote})",
+                FlagZoneController.ZoneState.Losing => "ENEMY CAPTURING",
+                _ => multNote
+            };
+
+            if (_flagTitleText != null)
+            {
+                _flagTitleText.text = $"◆ FLAG // {flag.ActiveSectorName.ToUpperInvariant()}";
+                _flagTitleText.color = flag.State == FlagZoneController.ZoneState.Contested ? Accent : Color.white;
+            }
+            if (_flagSubText != null)
+                _flagSubText.text = $"{stateStr}   |   NEXT ROTATION {Mathf.CeilToInt(flag.RotationRemaining)}s";
         }
 
         // ------------------------------------------------------------------ misc

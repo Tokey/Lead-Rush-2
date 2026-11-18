@@ -1,20 +1,24 @@
 using LR2.Audio;
 using LR2.Combat;
 using LR2.Core;
+using LR2.FX;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace LR2.UI
 {
     /// <summary>
-    /// Battlefield-style hit feedback for the local player, built entirely at runtime (no UI rebuild needed):
-    /// - a thick, outlined X hitmarker that punches in on every hit: white = body, orange = headshot, red = kill;
-    /// - a kill marker (red skull, gold rim for headshot kills) that pops at the crosshair, then shrinks and fades;
-    /// - layered procedural sounds: crisp body "tk", metallic headshot "tink", kill = sub thump + two-tone chime.
-    /// HUDController adds this automatically and hands its hitmarker/hit sounds over to it.
+    /// Tactile Battlefield/MW-inspired hit feedback for the local player and killcam replays:
+    /// - thick outlined X hitmarker (white = body, orange = headshot, red = kill);
+    /// - kill skull badge (gold rim on headshot kills);
+    /// - rugged layered acoustics mixing real MW2019 hit/flesh/headshot/kill SFX over deep procedural punch;
+    /// - <see cref="ShowReplayHit"/> keeps working cleanly during killcam replays even when the HUD is hidden.
     /// </summary>
     public class HitFeedbackHUD : MonoBehaviour
     {
+        public static HitFeedbackHUD Instance { get; private set; }
+        private static HitFeedbackHUD _replayOverlay;
+
         [Header("Hitmarker")]
         public float armLength = 15f;
         public float armThickness = 4f;
@@ -39,19 +43,63 @@ namespace LR2.UI
         private float _hitTime = -10f, _killTime = -10f;
         private Color _color;
         private float _scale = 1f, _thick = 1f;
-        private int _streak; // rapid consecutive hits grow the marker a little
+        private int _streak;
         private bool _headKill;
         private Combatant _player;
+        private bool _isReplayOverlay;
 
-        private static AudioClip _bodyTick, _headTink, _killThump, _killChime, _headKillDing;
+        private static SurfaceLibrary _surfaceLib;
+        private static AudioClip _bodyPunch, _headCrack, _killSlam, _killStamp;
         private static Sprite _skullSprite, _skullRimSprite;
 
         public static HitFeedbackHUD Create(Transform parent)
         {
             var go = new GameObject("HitFeedback", typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            var hf = go.AddComponent<HitFeedbackHUD>();
-            return hf;
+            return go.AddComponent<HitFeedbackHUD>();
+        }
+
+        /// <summary>
+        /// Triggers hitmarker visuals and rugged impact/kill sounds from killcam replays even when main HUD is hidden.
+        /// </summary>
+        public static void ShowReplayHit(bool headshot, bool kill, Vector3 worldPoint = default)
+        {
+            HitFeedbackHUD target = Instance;
+            if (target == null || !IsVisibleForReplay(target.transform))
+                target = EnsureReplayOverlay();
+            if (target == null) return;
+            target.TriggerFeedback(headshot, kill, worldPoint);
+        }
+
+        private static bool IsVisibleForReplay(Transform t)
+        {
+            if (t == null || !t.gameObject.activeInHierarchy) return false;
+            for (Transform p = t; p != null; p = p.parent)
+            {
+                var cg = p.GetComponent<CanvasGroup>();
+                if (cg != null && cg.alpha < 0.85f) return false;
+                var cv = p.GetComponent<Canvas>();
+                if (cv != null && !cv.enabled) return false;
+            }
+            return true;
+        }
+
+        private static HitFeedbackHUD EnsureReplayOverlay()
+        {
+            if (_replayOverlay != null && _replayOverlay.gameObject.activeInHierarchy) return _replayOverlay;
+            var rootGo = new GameObject("[LR2 ReplayHitFeedback]", typeof(RectTransform));
+            var canvas = rootGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 25;
+            var scaler = rootGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var hf = Create(rootGo.transform);
+            hf._isReplayOverlay = true;
+            _replayOverlay = hf;
+            return _replayOverlay;
         }
 
         private void Awake()
@@ -75,7 +123,7 @@ namespace LR2.UI
             }
 
             if (_skullSprite == null) BuildSkullSprites();
-            _skullRT = NewRect("KillMarker", _root, new Vector2(0f, 0f));
+            _skullRT = NewRect("KillMarker", _root, Vector2.zero);
             _skullRT.sizeDelta = new Vector2(skullSize, skullSize);
             _skullRim = NewRect("Rim", _skullRT, Vector2.zero).gameObject.AddComponent<Image>();
             _skullRim.rectTransform.sizeDelta = new Vector2(skullSize, skullSize) * 1.18f;
@@ -90,10 +138,28 @@ namespace LR2.UI
             so.effectDistance = new Vector2(1.5f, -1.5f);
 
             SetAlpha(0f, 0f);
+            if (!_isReplayOverlay && Instance == null) Instance = this;
         }
 
-        private void OnEnable() => GameEvents.Hit += OnHit;
-        private void OnDisable() => GameEvents.Hit -= OnHit;
+        private void OnEnable()
+        {
+            if (!_isReplayOverlay)
+            {
+                Instance = this;
+                GameEvents.Hit += OnHit;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (!_isReplayOverlay) GameEvents.Hit -= OnHit;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+            if (_replayOverlay == this) _replayOverlay = null;
+        }
 
         private static RectTransform NewRect(string name, Transform parent, Vector2 pos)
         {
@@ -109,32 +175,34 @@ namespace LR2.UI
         {
             if (_player == null) _player = Combatant.FindLocalPlayer();
             if (_player == null || e.attacker != _player || e.victim == _player || e.damage <= 0f) return;
+            TriggerFeedback(e.zone == HitZone.Head, e.killed, e.point);
+        }
 
-            bool head = e.zone == HitZone.Head;
+        private void TriggerFeedback(bool head, bool killed, Vector3 worldPoint)
+        {
             float now = Time.unscaledTime;
             _streak = now - _hitTime < 0.25f ? Mathf.Min(_streak + 1, 6) : 0;
             _hitTime = now;
-            _color = e.killed ? killColor : head ? headColor : bodyColor;
-            _scale = e.killed ? 1.45f : head ? 1.18f : 1f + _streak * 0.03f;
-            _thick = e.killed ? 1.5f : head ? 1.2f : 1f;
-            if (e.killed)
+            _color = killed ? killColor : head ? headColor : bodyColor;
+            _scale = killed ? 1.45f : head ? 1.18f : 1f + _streak * 0.03f;
+            _thick = killed ? 1.5f : head ? 1.2f : 1f;
+            if (killed)
             {
                 _killTime = now;
                 _headKill = head;
                 _skullRim.color = head ? new Color(1f, 0.72f, 0.2f, 1f) : new Color(0f, 0f, 0f, 0f);
             }
 
-            if (LR2Settings.HitmarkerSound) PlaySounds(head, e.killed);
+            if (LR2Settings.HitmarkerSound) PlaySounds(head, killed);
         }
 
         private void Update()
         {
             float now = Time.unscaledTime;
 
-            // X hitmarker: punch in (fast overshoot), hold, fade
             float t = now - _hitTime;
             float a = t < holdTime ? 1f : 1f - Mathf.Clamp01((t - holdTime) / fadeTime);
-            float punch = 1f + 0.55f * Mathf.Exp(-t * 28f);           // starts big, snaps to size
+            float punch = 1f + 0.55f * Mathf.Exp(-t * 28f);
             float gap = armGap * _scale * (1f + 0.35f * Mathf.Exp(-t * 20f));
             float len = armLength * _scale * punch;
             float thick = armThickness * _thick;
@@ -151,7 +219,6 @@ namespace LR2.UI
                 _arms[i].color = c;
             }
 
-            // kill marker: pop with overshoot, hold, shrink + fade
             float k = now - _killTime;
             float ka = k < skullHold ? 1f : 1f - Mathf.Clamp01((k - skullHold) / skullFade);
             float pop = k < 0.12f ? Mathf.Lerp(1.9f, 0.92f, k / 0.12f) : k < 0.2f ? Mathf.Lerp(0.92f, 1f, (k - 0.12f) / 0.08f) : 1f;
@@ -173,86 +240,115 @@ namespace LR2.UI
             if (_skullRim != null) _skullRim.color = new Color(1f, 1f, 1f, 0f);
         }
 
-        // ------------------------------------------------------------------ audio
+        // ------------------------------------------------------------------ rugged layered combat SFX
         private void PlaySounds(bool head, bool killed)
         {
             EnsureClips();
+            var common = LR2CommonSounds.Instance;
+            if (_surfaceLib == null) _surfaceLib = Resources.Load<SurfaceLibrary>("LR2/SurfaceLibrary");
+
             float v = volume;
+            float streakPitch = Random.Range(0.96f, 1.03f) + _streak * 0.012f;
+
             if (killed)
             {
-                Play(_killThump, 1.0f * v, 1f, 0f);
-                Play(head ? _headTink : _bodyTick, 0.8f * v, 1f, 0f);
-                Play(_killChime, 0.75f * v, 1f, 0.035f);
-                if (head) Play(_headKillDing, 0.6f * v, 1f, 0.07f);
+                if (common != null)
+                {
+                    if (common.killConfirm.IsValid) PlaySet(common.killConfirm, 1.0f * v, Random.Range(0.98f, 1.02f), 0f);
+                    var hitSet = head && common.hitmarkerHeadshot.IsValid ? common.hitmarkerHeadshot : common.hitmarker;
+                    if (hitSet.IsValid) PlaySet(hitSet, 0.92f * v, head ? 1.02f : 0.96f, 0f);
+                }
+                if (_surfaceLib != null)
+                {
+                    var flesh = head && _surfaceLib.headshotImpact.IsValid ? _surfaceLib.headshotImpact : _surfaceLib.fleshImpact;
+                    if (flesh.IsValid) PlaySet(flesh, 0.80f * v, Random.Range(0.95f, 1.04f), 0f);
+                }
+                PlayRaw(_killSlam, 0.98f * v, Random.Range(0.97f, 1.02f), 0f);
+                PlayRaw(_killStamp, 0.60f * v, 1f, 0.025f);
+                if (head) PlayRaw(_headCrack, 0.78f * v, Random.Range(0.98f, 1.03f), 0f);
             }
             else if (head)
             {
-                Play(_headTink, 0.95f * v, Random.Range(0.98f, 1.03f), 0f);
-                Play(_bodyTick, 0.55f * v, 0.9f, 0f);
+                if (common != null)
+                {
+                    if (common.hitmarkerHeadshot.IsValid) PlaySet(common.hitmarkerHeadshot, 0.96f * v, Random.Range(0.98f, 1.03f), 0f);
+                    if (common.hitmarkerArmor.IsValid) PlaySet(common.hitmarkerArmor, 0.55f * v, 1.04f, 0f);
+                }
+                if (_surfaceLib != null && _surfaceLib.headshotImpact.IsValid)
+                    PlaySet(_surfaceLib.headshotImpact, 0.72f * v, Random.Range(0.96f, 1.04f), 0f);
+                PlayRaw(_headCrack, 0.80f * v, Random.Range(0.97f, 1.03f), 0f);
+                PlayRaw(_bodyPunch, 0.45f * v, 1.08f, 0f);
             }
             else
             {
-                Play(_bodyTick, 0.9f * v, Random.Range(0.95f, 1.06f) + _streak * 0.015f, 0f);
+                if (common != null && common.hitmarker.IsValid)
+                    PlaySet(common.hitmarker, 0.88f * v, streakPitch, 0f);
+                if (_surfaceLib != null && _surfaceLib.fleshImpact.IsValid)
+                    PlaySet(_surfaceLib.fleshImpact, 0.62f * v, Random.Range(0.95f, 1.05f), 0f);
+                PlayRaw(_bodyPunch, 0.68f * v, streakPitch, 0f);
             }
         }
 
-        private static void Play(AudioClip clip, float vol, float pitch, float delay)
+        private static void PlaySet(SoundSet set, float vol, float pitch, float delay)
         {
-            LR2Audio.PlayClip(clip, Vector3.zero, vol, pitch, 1f, 500f, 0f, AudioCategory.UI, 0, delay);
+            if (set == null || !set.IsValid) return;
+            // Use Weapons category with priority 0 and spatialBlend 0 so player gunfire ducking never silences hit confirms
+            LR2Audio.PlayClip(set.Pick(), Vector3.zero, vol, pitch, 1f, 500f, 0f, AudioCategory.Weapons, 0, delay);
+        }
+
+        private static void PlayRaw(AudioClip clip, float vol, float pitch, float delay)
+        {
+            LR2Audio.PlayClip(clip, Vector3.zero, vol, pitch, 1f, 500f, 0f, AudioCategory.Weapons, 0, delay);
         }
 
         private static void EnsureClips()
         {
-            if (_bodyTick != null && _headTink != null && _killThump != null && _killChime != null && _headKillDing != null) return;
+            if (_bodyPunch != null && _headCrack != null && _killSlam != null && _killStamp != null) return;
             const int sr = 44100;
             var rng = new System.Random(1337);
 
-            // body hit: very short noise click + 1.9 kHz blip + small low knock
-            _bodyTick = Synth("LR2_HF_BodyTick", 0.07f, sr, t =>
+            // Heavy chest/flesh impact punch: low-end sweep + saturated meaty snap (no high toy blip)
+            _bodyPunch = Synth("LR2_HF_BodyPunch", 0.085f, sr, t =>
             {
                 float n = (float)(rng.NextDouble() * 2.0 - 1.0);
-                return n * Mathf.Exp(-t * 420f) * 0.55f
-                     + Mathf.Sin(2f * Mathf.PI * 1900f * t) * Mathf.Exp(-t * 90f) * 0.45f
-                     + Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(180f, 70f, t * 14f) * t) * Mathf.Exp(-t * 55f) * 0.5f;
+                float f = Mathf.Lerp(165f, 44f, Mathf.Clamp01(t * 22f));
+                float thump = (float)System.Math.Tanh(Mathf.Sin(2f * Mathf.PI * f * t) * 1.9f) * Mathf.Exp(-t * 42f);
+                float snap = n * Mathf.Exp(-t * 210f) * 0.65f;
+                float meat = Mathf.Sin(2f * Mathf.PI * 520f * t) * Mathf.Exp(-t * 95f) * 0.25f;
+                return thump * 0.78f + snap + meat;
             });
 
-            // headshot: metallic inharmonic "tink" (helmet ping)
-            _headTink = Synth("LR2_HF_HeadTink", 0.26f, sr, t =>
+            // Rugged helmet crack + metallic shear + skull snap
+            _headCrack = Synth("LR2_HF_HeadCrack", 0.14f, sr, t =>
             {
                 float n = (float)(rng.NextDouble() * 2.0 - 1.0);
-                return n * Mathf.Exp(-t * 500f) * 0.4f
-                     + Mathf.Sin(2f * Mathf.PI * 2950f * t) * Mathf.Exp(-t * 16f) * 0.38f
-                     + Mathf.Sin(2f * Mathf.PI * 4730f * t) * Mathf.Exp(-t * 24f) * 0.26f
-                     + Mathf.Sin(2f * Mathf.PI * 7150f * t) * Mathf.Exp(-t * 38f) * 0.16f
-                     + Mathf.Sin(2f * Mathf.PI * 1210f * t) * Mathf.Exp(-t * 30f) * 0.2f;
+                float crack = n * Mathf.Exp(-t * 170f) * 0.72f;
+                float metal = (Mathf.Sin(2f * Mathf.PI * 1980f * t) * 0.42f
+                             + Mathf.Sin(2f * Mathf.PI * 3140f * t) * 0.34f
+                             + Mathf.Sin(2f * Mathf.PI * 4620f * t) * 0.20f) * Mathf.Exp(-t * 36f);
+                float jaw = (float)System.Math.Tanh(Mathf.Sin(2f * Mathf.PI * 220f * t) * 1.8f) * Mathf.Exp(-t * 50f) * 0.55f;
+                return crack + metal + jaw;
             });
 
-            // kill: deep punchy thump (pitch-dropping sine + click), felt more than heard
-            _killThump = Synth("LR2_HF_KillThump", 0.22f, sr, t =>
+            // Deep visceral kill confirm thud
+            _killSlam = Synth("LR2_HF_KillSlam", 0.24f, sr, t =>
             {
-                float f = Mathf.Lerp(150f, 46f, Mathf.Clamp01(t * 9f));
-                float body = Mathf.Sin(2f * Mathf.PI * f * t) * Mathf.Exp(-t * 17f);
-                float click = (float)(rng.NextDouble() * 2.0 - 1.0) * Mathf.Exp(-t * 300f) * 0.5f;
-                return Mathf.Clamp(body * 1.25f, -0.9f, 0.9f) + click;
+                float n = (float)(rng.NextDouble() * 2.0 - 1.0);
+                float f = Mathf.Lerp(175f, 36f, Mathf.Clamp01(t * 11f));
+                float sub = (float)System.Math.Tanh(Mathf.Sin(2f * Mathf.PI * f * t) * 2.1f) * Mathf.Exp(-t * 14f);
+                float crunch = n * Mathf.Exp(-t * 140f) * 0.55f;
+                return sub * 0.92f + crunch;
             });
 
-            // kill confirm chime: two quick rising bell tones
-            _killChime = Synth("LR2_HF_KillChime", 0.5f, sr, t =>
+            // Authoritative low-mid steel lock-in stab (replaces bright bell chime)
+            _killStamp = Synth("LR2_HF_KillStamp", 0.16f, sr, t =>
             {
-                float s = Bell(t, 1318.5f, 7f) * 0.42f;                       // E6
-                float t2 = t - 0.07f;
-                if (t2 > 0f) s += Bell(t2, 1975.5f, 6f) * 0.38f;             // B6
-                return s;
+                float n = (float)(rng.NextDouble() * 2.0 - 1.0);
+                float low = Mathf.Sin(2f * Mathf.PI * 185f * t) * Mathf.Exp(-t * 24f) * 0.55f;
+                float mid = (Mathf.Sin(2f * Mathf.PI * 620f * t) + 0.4f * Mathf.Sin(2f * Mathf.PI * 930f * t)) * Mathf.Exp(-t * 28f) * 0.42f;
+                float bite = n * Mathf.Exp(-t * 260f) * 0.35f;
+                return (float)System.Math.Tanh((low + mid + bite) * 1.35f);
             });
-
-            // extra sparkle for headshot kills
-            _headKillDing = Synth("LR2_HF_HeadKillDing", 0.45f, sr, t => Bell(t, 2637f, 8f) * 0.35f); // E7
-        }
-
-        private static float Bell(float t, float f, float decay)
-        {
-            float env = Mathf.Exp(-t * decay) * Mathf.Clamp01(t * 600f);
-            return (Mathf.Sin(2f * Mathf.PI * f * t) + 0.35f * Mathf.Sin(2f * Mathf.PI * f * 2.76f * t) * Mathf.Exp(-t * 6f)) * env;
         }
 
         private static AudioClip Synth(string name, float seconds, int sr, System.Func<float, float> fn)
@@ -262,7 +358,7 @@ namespace LR2.UI
             for (int i = 0; i < n; i++)
             {
                 float t = i / (float)sr;
-                float fadeOut = Mathf.Clamp01((n - i) / (sr * 0.01f)); // 10 ms tail fade, no clicks
+                float fadeOut = Mathf.Clamp01((n - i) / (sr * 0.01f));
                 data[i] = Mathf.Clamp(fn(t) * fadeOut, -0.98f, 0.98f);
             }
             var clip = AudioClip.Create(name, n, 1, sr, false);
@@ -270,7 +366,7 @@ namespace LR2.UI
             return clip;
         }
 
-        // ------------------------------------------------------------------ skull sprite (procedural, white = tintable)
+        // ------------------------------------------------------------------ skull sprite
         private static void BuildSkullSprites()
         {
             const int S = 128;
@@ -281,14 +377,12 @@ namespace LR2.UI
             for (int y = 0; y < S; y++)
             for (int x = 0; x < S; x++)
             {
-                // centred coords, y up, unit = half size
                 float u = (x + 0.5f) / S * 2f - 1f;
                 float v = (y + 0.5f) / S * 2f - 1f;
                 float d = SkullSdf(u, v);
                 float aa = 2f / S;
                 byte a = (byte)(Mathf.Clamp01(0.5f - d / aa) * 255f);
                 px[y * S + x] = new Color32(255, 255, 255, a);
-                // rim = ring around the skull silhouette
                 float ring = Mathf.Abs(Mathf.Sqrt(u * u + v * v) - 0.93f) - 0.045f;
                 byte ra = (byte)(Mathf.Clamp01(0.5f - ring / aa) * 255f);
                 rpx[y * S + x] = new Color32(255, 255, 255, ra);
@@ -301,7 +395,6 @@ namespace LR2.UI
             _skullRimSprite = Sprite.Create(rim, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), 100f);
         }
 
-        /// <summary>Signed distance (negative inside) of a stylised skull: cranium + jaw minus eyes, nose and tooth gaps.</summary>
         private static float SkullSdf(float u, float v)
         {
             float cranium = Ellipse(u, v - 0.18f, 0.62f, 0.56f);
@@ -314,7 +407,6 @@ namespace LR2.UI
             float nose = Triangle(u, v + 0.17f, 0.075f, 0.1f);
             float holes = Mathf.Min(Mathf.Min(eyeL, eyeR), nose);
 
-            // tooth gaps: thin vertical slots + a horizontal bite line on the jaw
             float teeth = 1f;
             for (int i = -2; i <= 2; i++)
                 teeth = Mathf.Min(teeth, Box(u - i * 0.13f, v + 0.45f, 0.018f, 0.13f, 0f));
@@ -337,10 +429,9 @@ namespace LR2.UI
             return Mathf.Sqrt(ox * ox + oy * oy) + Mathf.Min(Mathf.Max(qx, qy), 0f) - r;
         }
 
-        /// <summary>Nasal cavity: triangle with the point at the top, half-width w at the bottom, half-height h.</summary>
         private static float Triangle(float x, float y, float w, float h)
         {
-            float k = (h - y) / (2f * h); // 0 at the top, 1 at the bottom
+            float k = (h - y) / (2f * h);
             float edge = Mathf.Abs(x) - w * Mathf.Clamp01(k);
             return Mathf.Max(edge, Mathf.Max(-h - y, y - h));
         }
@@ -348,7 +439,10 @@ namespace LR2.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
-            _bodyTick = _headTink = _killThump = _killChime = _headKillDing = null;
+            Instance = null;
+            _replayOverlay = null;
+            _surfaceLib = null;
+            _bodyPunch = _headCrack = _killSlam = _killStamp = null;
             _skullSprite = _skullRimSprite = null;
         }
     }

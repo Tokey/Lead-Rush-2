@@ -1241,7 +1241,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: fe20c74718d68a04cac02278988e872f, type: 2}
+  - {fileID: 2100000, guid: 955f9196c1fa84e4faea39239a3b6708, type: 2}
   - {fileID: 2100000, guid: b5ae1eb354dd24490b2608a1a5fa1ffe, type: 2}
   - {fileID: 2100000, guid: 4e768f218e154254381b0a6baeb8d9a0, type: 2}
   m_StaticBatchInfo:
@@ -4186,10 +4186,10 @@ MonoBehaviour:
   mantleMaxHeight: 1.85
   mantleReach: 0.85
   mantleDuration: 0.42
-  strideWalk: 1.75
-  strideSprint: 2.5
-  strideCrouch: 1.25
-  strideProne: 0.8
+  strideWalk: 1.12
+  strideSprint: 1.48
+  strideCrouch: 0.85
+  strideProne: 0.65
   noiseWalk: 9
   noiseSprint: 18
   noiseCrouch: 3
@@ -6991,7 +6991,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3cecdab1291daca4e8881bdafc99ebb2, type: 2}
+  - {fileID: 2100000, guid: 955f9196c1fa84e4faea39239a3b6708, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7390,8 +7390,8 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3cecdab1291daca4e8881bdafc99ebb2, type: 2}
-  - {fileID: 2100000, guid: d745d079e61a38041ab0d63f4d6b1eca, type: 2}
+  - {fileID: 2100000, guid: 955f9196c1fa84e4faea39239a3b6708, type: 2}
+  - {fileID: 2100000, guid: be01c6750352845459637bbcefefb9c7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

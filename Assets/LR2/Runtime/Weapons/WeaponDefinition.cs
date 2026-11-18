@@ -90,7 +90,15 @@ namespace LR2.Weapons
         [Header("Camera feel")]
         [Tooltip("Extra camera kick per shot (pitch up, yaw random) on top of the Kinemation recoil pattern.")]
         public Vector2 cameraKick = new Vector2(0.18f, 0.12f);
-        [Range(0f, 1f)] public float adsKickMultiplier = 0.7f;
+        [Range(0f, 1f)] public float adsKickMultiplier = 0.5f;
+
+        [Header("Recoil pattern (Kinemation camera climb)")]
+        [Tooltip("Scales the vertical climb of the Kinemation recoil pattern per shot (the demo AK pattern climbs 3-4 deg/shot, far too much).")]
+        [Range(0f, 2f)] public float recoilPatternScale = 1f;
+        [Tooltip("Scales the horizontal drift of the Kinemation recoil pattern per shot.")]
+        [Range(0f, 2f)] public float recoilPatternHorizontalScale = 1f;
+        [Tooltip("While aiming down sights, the recoil pattern AND the extra camera kick are multiplied by this.")]
+        [Range(0.2f, 1f)] public float adsRecoilMultiplier = 0.55f;
 
         [Header("Noise / AI")]
         public float audibleRadius = 70f;

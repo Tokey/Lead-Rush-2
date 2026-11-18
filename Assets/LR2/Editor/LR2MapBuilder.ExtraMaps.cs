@@ -3,6 +3,7 @@ using LR2.AI;
 using LR2.Audio;
 using LR2.Combat;
 using LR2.Core;
+using LR2.Game;
 using LR2.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -91,7 +92,8 @@ namespace LR2.EditorTools
                 Box("Desk", b, new Vector3(cx - 1.5f, 0.54f, cz + 1.2f), new Vector3(2.0f, 0.8f, 0.85f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
                 Box("Crate", b, new Vector3(cx + 1.8f, 0.59f, cz - 1.4f), new Vector3(0.95f, 0.9f, 0.95f), _m.wood, LR2Layers.Default, SurfaceType.Wood);
                 Box("Lockers", b, new Vector3(cx - 2.2f, 1.14f, cz - 2.0f), new Vector3(0.6f, 2.0f, 1.6f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
-                AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3100f, 2400f, 13f, 0f, false);
+                AddLight(_lighting, "Emergency_" + name, new Vector3(cx, 3.4f, cz), Quaternion.identity, LightType.Point, 3600f, 3800f, 16f, 0f, false);
+                AddLight(_lighting, "OpeningBounce_" + name, new Vector3(cx - Mathf.Sign(cx) * 3.6f, 2.8f, cz - Mathf.Sign(cz) * 5.2f), Quaternion.identity, LightType.Point, 5000f, 2800f, 15f, 0f, false);
             }
             CornerRuins("TransitDepot_NW", -24f, -11f, 11f, 23f, true, true);
             CornerRuins("Pharmacy_NE", 11f, 24f, 11f, 23f, false, true);
@@ -211,6 +213,19 @@ namespace LR2.EditorTools
             foreach (var fp in new[] { new Vector3(-8.5f, 0f, 4.5f), new Vector3(8.5f, 0f, -4.5f), new Vector3(4.5f, 0f, 19f), new Vector3(-4.5f, 0f, -19f) })
                 SpawnBurningBarrel(_lighting, _props, fp);
 
+            // Central intersection CTF cover ring + strategic FlagAnchors + ash/ember atmosphere
+            Prop("SM_Jersey", _props, new Vector3(-4.5f, 0.04f, 0f), 90f);
+            Prop("SM_Jersey", _props, new Vector3(4.5f, 0.04f, 0f), 90f);
+            AddFlagAnchor(_gameplay, "Central Intersection", new Vector3(0f, 0.04f, 0f));
+            AddFlagAnchor(_gameplay, "Northwest Plaza", new Vector3(-15.5f, 0.14f, 15.5f));
+            AddFlagAnchor(_gameplay, "Northeast Court", new Vector3(15.5f, 0.14f, 15.5f));
+            AddFlagAnchor(_gameplay, "Southwest Alley", new Vector3(-15.5f, 0.14f, -15.5f));
+            AddFlagAnchor(_gameplay, "Southeast Crossing", new Vector3(15.5f, 0.14f, -15.5f));
+            AddAmbientParticles(_lighting, "DeadsectorEmbers", false, new Vector3(0f, 2.2f, 0f), new Vector3(40f, 4.5f, 40f),
+                new Color(1f, 0.56f, 0.18f, 0.85f), new Color(1f, 0.30f, 0.08f, 0.45f), 65, 11f, 2.4f, 4.4f, 0.028f, 0.06f, new Vector3(0.45f, 0.72f, 0.2f), -0.04f);
+            AddAmbientParticles(_lighting, "DeadsectorAsh", true, new Vector3(0f, 3.0f, 0f), new Vector3(42f, 5.5f, 42f),
+                new Color(0.55f, 0.55f, 0.58f, 0.18f), new Color(0.35f, 0.35f, 0.38f, 0.10f), 55, 9f, 3.8f, 6.2f, 0.35f, 0.85f, new Vector3(0.6f, -0.15f, -0.35f), 0.01f);
+
             // Spawns, TacticalPoints & AmmoCrates
             AddSpawn(new Vector3(-25f, 0.15f, -3f), 90f, TeamId.Alpha, true, false);
             AddSpawn(new Vector3(-22f, 0.15f, 7f), 110f, TeamId.Alpha, true, false);
@@ -236,16 +251,16 @@ namespace LR2.EditorTools
             AddAmmoCrate(new Vector3(-5.5f, 0.01f, -2.5f));
             AddAmmoCrate(new Vector3(5.5f, 0.01f, 2.5f));
 
-            // Moody overcast dusk HDRP lighting + warm streetlamps + weather rain (safe curve modes)
+            // Moody overcast dusk HDRP lighting + streetlamps + alleyway/visibility fill + weather rain
             foreach (var (sx, sz) in new[] { (-8f, 8f), (8f, 8f), (-8f, -8f), (8f, -8f) })
                 AddLight(_lighting, $"StreetLamp_{(sx < 0 ? "W" : "E")}_{(sz < 0 ? "S" : "N")}",
-                    new Vector3(sx, 4.5f, sz), Quaternion.identity, LightType.Point, 2800f, 4800f, 22f, 0f, false);
+                    new Vector3(sx, 4.5f, sz), Quaternion.identity, LightType.Point, 4800f, 4200f, 24f, 0f, false);
             foreach (float oz in new[] { -14f, 14f })
                 AddLight(_lighting, $"Overhead_{(oz < 0 ? "S" : "N")}",
-                    new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 3200f, 4500f, 22f, 0f, false);
-            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 14500f, sunTemp: 4300f,
-                fogMfp: 85f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.15f, contrast: 18f, saturation: -16f,
-                rainDefaultPreset: 2, evMin: 7.0f, evMax: 12.5f);
+                    new Vector3(0f, 5.5f, oz), Quaternion.identity, LightType.Point, 4700f, 4400f, 24f, 0f, false);
+            BuildCustomLighting("LR2_Deadsector_Profile", sunElev: 25f, sunAz: 225f, sunLux: 16500f, sunTemp: 4300f,
+                fogMfp: 130f, fogColor: new Color(0.46f, 0.50f, 0.54f), exposureComp: 0.05f, contrast: 14f, saturation: -14f,
+                rainDefaultPreset: 2, evMin: 3.8f, evMax: 12.2f);
             PlaceMapDecals(pMin, pMax, 140);
             AddMatchSystems(40f);
             MarkStatic(env);
@@ -322,7 +337,9 @@ namespace LR2.EditorTools
                 Box("GeneratorW", h, new Vector3(-6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 Box("GeneratorE", h, new Vector3(6.5f, 1.0f, zCenter), new Vector3(3.4f, 2.0f, 1.8f), _m.darkMetal, LR2Layers.Default, SurfaceType.Metal);
                 Box("ControlConsole", h, new Vector3(0f, 0.6f, zCenter), new Vector3(2.4f, 1.2f, 0.9f), _m.metal, LR2Layers.Default, SurfaceType.Metal);
-                AddLight(_lighting, "HallLamp_" + name, new Vector3(0f, 5.2f, zCenter), Quaternion.identity, LightType.Point, 3500f, 3600f, 18f, 0f, false);
+                AddLight(_lighting, "HallLamp_" + name, new Vector3(0f, 5.2f, zCenter), Quaternion.identity, LightType.Point, 4200f, 4800f, 20f, 0f, false);
+                AddLight(_lighting, "HallBayW_" + name, new Vector3(-6.5f, 3.6f, zCenter), Quaternion.identity, LightType.Point, 5000f, 2800f, 16f, 0f, false);
+                AddLight(_lighting, "HallBayE_" + name, new Vector3(6.5f, 3.6f, zCenter), Quaternion.identity, LightType.Point, 5000f, 2800f, 16f, 0f, false);
             }
             IndustrialHall("NorthPumpHall", 20.5f);
             IndustrialHall("SouthTurbineShed", -20.5f);
@@ -406,12 +423,26 @@ namespace LR2.EditorTools
             AddAmmoCrate(new Vector3(0f, -1.5f, -1.8f));
             AddAmmoCrate(new Vector3(21.5f, 3.02f, 2.2f));
 
+            AddFlagAnchor(_gameplay, "Sunken Pipe Trench", new Vector3(0f, -1.48f, 0f));
+            AddFlagAnchor(_gameplay, "North Refinery Bay", new Vector3(0f, 0.04f, 17.5f));
+            AddFlagAnchor(_gameplay, "South Refinery Bay", new Vector3(0f, 0.04f, -17.5f));
+            AddFlagAnchor(_gameplay, "West Turbine Aisle", new Vector3(-16.0f, 0.04f, 0f));
+            AddFlagAnchor(_gameplay, "East Catwalk Overlook", new Vector3(18.0f, 3.04f, 0f));
+            AddAmbientParticles(_lighting, "FoundryTrenchSteam", true, new Vector3(0f, 0.6f, 0f), new Vector3(6f, 1.5f, 16f),
+                new Color(0.75f, 0.78f, 0.80f, 0.22f), new Color(0.58f, 0.62f, 0.66f, 0.10f), 45, 8f, 2.5f, 4.5f, 0.75f, 1.55f, new Vector3(0.15f, 0.95f, 0.1f), -0.05f);
+            AddAmbientParticles(_lighting, "FoundrySparks", false, new Vector3(0f, 2.5f, 0f), new Vector3(36f, 5f, 36f),
+                new Color(1f, 0.68f, 0.24f, 0.85f), new Color(1f, 0.42f, 0.12f, 0.45f), 55, 10f, 1.8f, 3.6f, 0.022f, 0.052f, new Vector3(0.35f, 0.4f, -0.35f), 0.08f);
+
             foreach (var (fx, fz) in new[] { (-18f, 18f), (18f, 18f), (-18f, -18f), (18f, -18f) })
                 AddLight(_lighting, $"YardFlood_{(fx < 0 ? "W" : "E")}_{(fz < 0 ? "S" : "N")}",
-                    new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 3800f, 4500f, 22f, 0f, false);
-            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 18000f, sunTemp: 4300f,
-                fogMfp: 85f, fogColor: new Color(0.55f, 0.56f, 0.54f), exposureComp: 0.1f, contrast: 18f, saturation: -6f,
-                rainDefaultPreset: 0, evMin: 7.2f, evMax: 12.8f);
+                    new Vector3(fx, 5.5f, fz), Quaternion.identity, LightType.Point, 4600f, 4400f, 24f, 0f, false);
+            AddLight(_lighting, "TrenchFillN", new Vector3(0f, 1.8f, 6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
+            AddLight(_lighting, "TrenchFillS", new Vector3(0f, 1.8f, -6.5f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
+            AddLight(_lighting, "ContAlleyFillW", new Vector3(-19.5f, 3.8f, 0f), Quaternion.identity, LightType.Point, 5200f, 2600f, 15f, 0f, false);
+            BuildCustomLighting("LR2_Foundry_Profile", sunElev: 34f, sunAz: 245f, sunLux: 15800f, sunTemp: 4300f,
+                fogMfp: 140f, fogColor: new Color(0.46f, 0.49f, 0.50f), exposureComp: -0.25f, contrast: 16f, saturation: -6f,
+                rainDefaultPreset: 0, evMin: 4.0f, evMax: 13.8f,
+                hdriAssetPath: "Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr", skyExposure: 12.2f);
             PlaceMapDecals(pMin, pMax, 130);
             AddMatchSystems(38f);
             MarkStatic(env);
@@ -523,10 +554,21 @@ namespace LR2.EditorTools
             AddAmmoCrate(new Vector3(-14f, 0.01f, -22f));
             AddAmmoCrate(new Vector3(14f, 0.01f, 22f));
 
-            // Crisp balanced 6200K daylight (prevents blown-out concrete highlights while keeping shadows readable)
-            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 26000f, sunTemp: 6200f,
-                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: -0.4f, contrast: 14f, saturation: -2f,
-                rainDefaultPreset: -1, evMin: 9.8f, evMax: 13.0f);
+            AddFlagAnchor(_gameplay, "Range Centre Line", new Vector3(0f, 0.04f, 0f));
+            AddFlagAnchor(_gameplay, "West Overwatch Deck", new Vector3(-18f, 1.62f, 0f));
+            AddFlagAnchor(_gameplay, "East Shatter Yard", new Vector3(17f, 0.04f, 0f));
+            AddFlagAnchor(_gameplay, "North Proving Court", new Vector3(0f, 0.04f, 14.5f));
+            AddFlagAnchor(_gameplay, "South Proving Court", new Vector3(0f, 0.04f, -14.5f));
+            AddAmbientParticles(_lighting, "TestRangeDustMotes", true, new Vector3(0f, 2.4f, 0f), new Vector3(44f, 4.2f, 44f),
+                new Color(0.92f, 0.90f, 0.84f, 0.14f), new Color(0.82f, 0.80f, 0.75f, 0.06f), 50, 8f, 4.0f, 7.0f, 0.25f, 0.55f, new Vector3(0.35f, 0.05f, 0.15f), 0f);
+
+            // Crisp balanced 6200K daylight + shadow-side sky bounce fills (keeps shaded cover clear against dark concrete)
+            foreach (var bp in new[] { new Vector3(-12f, 3.8f, 0f), new Vector3(12f, 3.8f, 0f), new Vector3(0f, 4.0f, 12f), new Vector3(0f, 4.0f, -12f) })
+                AddLight(_lighting, $"ShadowBounce_{(int)bp.x}_{(int)bp.z}", bp, Quaternion.identity, LightType.Point, 5800f, 3200f, 22f, 0f, false);
+            BuildCustomLighting("LR2_TestRange_Profile", sunElev: 46f, sunAz: 215f, sunLux: 16500f, sunTemp: 6200f,
+                fogMfp: 400f, fogColor: new Color(0.75f, 0.80f, 0.85f), exposureComp: -1.05f, contrast: 12f, saturation: -2f,
+                rainDefaultPreset: -1, evMin: 7.0f, evMax: 12.8f,
+                hdriAssetPath: "Assets/LeartesStudios/Art/Textures/T_HDRI_02.HDR", skyExposure: 12.2f);
             AddMatchSystems(30f);
             MarkStatic(env);
 
@@ -631,7 +673,8 @@ namespace LR2.EditorTools
 
         private static void BuildCustomLighting(string profileName, float sunElev, float sunAz, float sunLux, float sunTemp,
             float fogMfp, Color fogColor, float exposureComp, float contrast, float saturation, int rainDefaultPreset,
-            float evMin = 6.5f, float evMax = 12.8f)
+            float evMin = 6.5f, float evMax = 12.8f,
+            string hdriAssetPath = "Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR", float skyExposure = 12.2f)
         {
             var sunGo = new GameObject("Sun");
             sunGo.transform.SetParent(_lighting, false);
@@ -652,10 +695,12 @@ namespace LR2.EditorTools
 
             var profile = NewProfile($"{LightDir}/{profileName}.asset");
             var ve = profile.Add<VisualEnvironment>(true);
-            ve.skyType.Override((int)SkyType.PhysicallyBased);
             ve.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
-            var sky = profile.Add<PhysicallyBasedSky>(true);
-            sky.aerosolDensity.Override(rainDefaultPreset >= 0 ? 0.28f : 0.10f);
+            ApplyHdriSky(ve, profile, hdriAssetPath, skyExposure, rotationDeg: sunAz * 0.4f);
+            // Global indirect/sky visibility floor so dark cover & interiors never swallow enemy silhouettes
+            var ilcGlobal = profile.Add<IndirectLightingController>(true);
+            ilcGlobal.indirectDiffuseLightingMultiplier.Override(1.65f);
+            ilcGlobal.reflectionLightingMultiplier.Override(1.22f);
             var fog = profile.Add<Fog>(true);
             fog.enabled.Override(rainDefaultPreset >= 0);
             fog.meanFreePath.Override(fogMfp);
@@ -671,27 +716,32 @@ namespace LR2.EditorTools
             exposure.limitMin.Override(evMin);
             exposure.limitMax.Override(evMax);
             exposure.adaptationMode.Override(AdaptationMode.Progressive);
-            exposure.adaptationSpeedDarkToLight.Override(2.6f);
-            exposure.adaptationSpeedLightToDark.Override(1.5f);
+            exposure.adaptationSpeedDarkToLight.Override(2.8f);
+            exposure.adaptationSpeedLightToDark.Override(1.8f);
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var bloom = profile.Add<Bloom>(true);
-            bloom.intensity.Override(0.15f);
-            bloom.threshold.Override(1.1f);
+            bloom.intensity.Override(0.06f);
+            bloom.threshold.Override(2.8f);
+            bloom.scatter.Override(0.35f);
+            bloom.dirtIntensity.Override(0f);
+            bloom.dirtTexture.Override(null);
             var color = profile.Add<ColorAdjustments>(true);
             color.contrast.Override(contrast);
             color.saturation.Override(saturation);
+            var smh = profile.Add<ShadowsMidtonesHighlights>(true);
+            smh.shadows.Override(new Vector4(0.97f, 0.99f, 1.02f, 0.015f));
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(rainDefaultPreset >= 0 ? 0.25f : 0.14f);
             var ao = profile.Add<ScreenSpaceAmbientOcclusion>(true);
             ao.intensity.Override(0.65f);
             ao.radius.Override(1.4f);
-            profile.Add<ScreenSpaceReflection>(true).enabled.Override(false); // disable half-res SSR flicker
+            profile.Add<ScreenSpaceReflection>(true).enabled.Override(true);
             profile.Add<GlobalIllumination>(true).enable.Override(false);
             profile.Add<ContactShadows>(true).enable.Override(true);
             profile.Add<MicroShadowing>(true).enable.Override(true);
             var shadows = profile.Add<HDShadowSettings>(true);
-            shadows.maxShadowDistance.Override(90f);
+            shadows.maxShadowDistance.Override(95f);
             shadows.cascadeShadowSplitCount.Override(4);
             DisableMotionBlur(profile);
             SaveProfile(profile);
@@ -702,6 +752,7 @@ namespace LR2.EditorTools
             v.isGlobal = true;
             v.priority = 0f;
             v.sharedProfile = profile;
+            AddArenaReflectionProbe(_lighting, new Vector3(0f, 3.5f, 0f), new Vector3(85f, 30f, 85f));
 
             if (rainDefaultPreset >= 0)
             {
@@ -714,6 +765,113 @@ namespace LR2.EditorTools
                 ws.randomStart = false;
                 ws.dynamicCycle = true;
             }
+        }
+
+        private static void ApplyHdriSky(VisualEnvironment ve, VolumeProfile profile, string preferredPath, float exposureEv, float rotationDeg)
+        {
+            var cube = AssetDatabase.LoadAssetAtPath<Cubemap>(preferredPath)
+                ?? AssetDatabase.LoadAssetAtPath<Cubemap>("Assets/LeartesStudios/Art/Textures/T_HDRI_01.HDR")
+                ?? AssetDatabase.LoadAssetAtPath<Cubemap>("Assets/LeartesStudios/AbandonedFactory/HDRP/Art/Textures/T_HdriSky.hdr");
+            if (cube != null)
+            {
+                ve.skyType.Override((int)SkyType.HDRI);
+                var hdri = profile.Add<HDRISky>(true);
+                hdri.hdriSky.Override(cube);
+                hdri.skyIntensityMode.Override(SkyIntensityMode.Exposure);
+                hdri.exposure.Override(exposureEv);
+                hdri.rotation.Override(rotationDeg);
+            }
+            else
+            {
+                ve.skyType.Override((int)SkyType.PhysicallyBased);
+                profile.Add<PhysicallyBasedSky>(true).aerosolDensity.Override(0.22f);
+            }
+        }
+
+        private static void AddArenaReflectionProbe(Transform parent, Vector3 pos, Vector3 size)
+        {
+            var go = new GameObject("ArenaReflectionProbe");
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var rp = go.AddComponent<ReflectionProbe>();
+            rp.mode = ReflectionProbeMode.Realtime;
+            rp.refreshMode = ReflectionProbeRefreshMode.OnAwake;
+            rp.timeSlicingMode = ReflectionProbeTimeSlicingMode.NoTimeSlicing;
+            rp.size = size;
+            rp.boxProjection = true;
+            rp.resolution = 256;
+            rp.importance = 1;
+            go.AddComponent<HDAdditionalReflectionData>();
+        }
+
+        private static void AddFlagAnchor(Transform parent, string sectorName, Vector3 pos, float outerRadius = 11.5f, float coreRadius = 2.6f)
+        {
+            var go = new GameObject("FlagAnchor_" + sectorName.Replace(" ", ""));
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var fa = go.AddComponent<FlagAnchor>();
+            fa.sectorName = sectorName;
+            fa.captureRadius = outerRadius;
+            fa.coreRadius = coreRadius;
+        }
+
+        private static void AddAmbientParticles(Transform parent, string name, bool smokeMaterial, Vector3 center, Vector3 boxSize,
+            Color colA, Color colB, int maxParticles, float rateOverTime, float lifeMin, float lifeMax,
+            float sizeMin, float sizeMax, Vector3 baseVel, float gravity)
+        {
+            string matPath = smokeMaterial ? "Assets/LR2/Materials/FX/M_FX_Smoke.mat" : "Assets/LR2/Materials/FX/M_FX_Spark.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null) return;
+
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = center;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = ps.main;
+            main.duration = 6f;
+            main.loop = true;
+            main.prewarm = true;
+            main.playOnAwake = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = maxParticles;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(lifeMin, lifeMax);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0f, 0.08f);
+            main.startSize = new ParticleSystem.MinMaxCurve(sizeMin, sizeMax);
+            main.startColor = new ParticleSystem.MinMaxGradient(colA, colB);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.gravityModifier = gravity;
+
+            var em = ps.emission;
+            em.rateOverTime = rateOverTime;
+
+            var sh = ps.shape;
+            sh.enabled = true;
+            sh.shapeType = ParticleSystemShapeType.Box;
+            sh.scale = boxSize;
+
+            var vel = ps.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space = ParticleSystemSimulationSpace.World;
+            vel.x = new ParticleSystem.MinMaxCurve(baseVel.x * 0.6f, baseVel.x * 1.4f + 0.15f);
+            vel.y = new ParticleSystem.MinMaxCurve(baseVel.y - 0.1f, baseVel.y + 0.2f);
+            vel.z = new ParticleSystem.MinMaxCurve(baseVel.z * 0.6f, baseVel.z * 1.4f + 0.15f);
+
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.85f, 0.2f), new GradientAlphaKey(0.85f, 0.78f), new GradientAlphaKey(0f, 1f) });
+            col.color = grad;
+
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = mat;
+            r.renderMode = ParticleSystemRenderMode.Billboard;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            ps.Play(true);
         }
 
         private static void PlaceMapDecals(Vector2 playMin, Vector2 playMax, int tries)

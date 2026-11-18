@@ -36,10 +36,10 @@ namespace LR2.Characters
         [SerializeField] private float mantleDuration = 0.42f;
 
         [Header("Footsteps")]
-        [SerializeField] private float strideWalk = 1.75f;
-        [SerializeField] private float strideSprint = 2.5f;
-        [SerializeField] private float strideCrouch = 1.25f;
-        [SerializeField] private float strideProne = 0.8f;
+        [SerializeField] private float strideWalk = 1.12f;
+        [SerializeField] private float strideSprint = 1.48f;
+        [SerializeField] private float strideCrouch = 0.85f;
+        [SerializeField] private float strideProne = 0.65f;
         [SerializeField] private float noiseWalk = 9f;
         [SerializeField] private float noiseSprint = 18f;
         [SerializeField] private float noiseCrouch = 3f;
@@ -131,6 +131,10 @@ namespace LR2.Characters
         [SerializeField] private float proneAnimReferenceSpeed = 0.8f;
         private float _locoSpeed = 1f;
         private float _proneTransitionUntil;
+        private Transform _leftFoot, _rightFoot;
+        private bool _lFootLifted, _rFootLifted;
+        private float _footGroundY = 0.14f;
+        private float _lastStepAt = -10f;
 
         // ------------------------------------------------------------------ API used by SoldierController
         public void SetMoveInput(Vector2 move) => _inputDirection = Vector2.ClampMagnitude(move, 1f);
@@ -324,8 +328,8 @@ namespace LR2.Characters
                 _animator.SetBool(ProningHash, true);
             }
             _desiredGait = Gait(GaitKind.Prone);
-            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.65f;
-            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.7f);
+            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.32f;
+            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.26f);
             onProneStarted?.Invoke();
         }
 
@@ -342,8 +346,8 @@ namespace LR2.Characters
                 UnCrouch();
                 _desiredGait = IsMoving ? Gait(GaitKind.Walk) : Gait(GaitKind.Idle);
             }
-            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.65f;
-            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.7f);
+            float lockSec = movementSettings != null ? movementSettings.proneTransitionDuration : 0.32f;
+            _proneTransitionUntil = Time.time + Mathf.Min(lockSec, 0.26f);
             onProneEnded?.Invoke();
         }
 
@@ -591,25 +595,43 @@ namespace LR2.Characters
         {
             if (State is SoldierMoveState.InAir or SoldierMoveState.Mantling) return;
             float planar = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-            float minSpeed = Stance == SoldierStance.Prone ? 0.25f : 0.6f;
-            if (planar < minSpeed) return;
+            float minSpeed = Stance == SoldierStance.Prone ? 0.25f : 0.55f;
+            if (planar < minSpeed || State == SoldierMoveState.Sliding) return;
             _strideAccum += planar * Time.deltaTime;
 
             float stride = State == SoldierMoveState.Sprinting ? strideSprint
                 : Stance == SoldierStance.Prone ? strideProne
                 : Stance == SoldierStance.Crouching ? strideCrouch : strideWalk;
-            if (State == SoldierMoveState.Sliding) return;
-            if (_strideAccum < stride) return;
+
+            // Synchronize footsteps to actual Humanoid driver foot touchdowns within [0.48*stride .. 1.25*stride]
+            bool plantedByAnim = false;
+            if (Stance != SoldierStance.Prone && _leftFoot != null && _rightFoot != null && Time.time - _lastStepAt >= 0.20f)
+            {
+                float ly = _leftFoot.position.y - transform.position.y;
+                float ry = _rightFoot.position.y - transform.position.y;
+                float minNow = Mathf.Min(ly, ry);
+                _footGroundY = Mathf.Lerp(_footGroundY, Mathf.Clamp(minNow, 0.04f, 0.22f), Time.deltaTime * 4f);
+                float liftH = _footGroundY + (State == SoldierMoveState.Sprinting ? 0.055f : 0.032f);
+                float plantH = _footGroundY + 0.018f;
+                if (ly > liftH) _lFootLifted = true;
+                else if (_lFootLifted && ly <= plantH) { _lFootLifted = false; if (_strideAccum >= stride * 0.48f) plantedByAnim = true; }
+                if (ry > liftH) _rFootLifted = true;
+                else if (_rFootLifted && ry <= plantH) { _rFootLifted = false; if (_strideAccum >= stride * 0.48f) plantedByAnim = true; }
+            }
+
+            float fallbackCap = (_leftFoot != null && _rightFoot != null && Stance != SoldierStance.Prone) ? stride * 1.25f : stride;
+            if (!plantedByAnim && _strideAccum < fallbackCap) return;
             _strideAccum = 0f;
+            _lastStepAt = Time.time;
             Footstep?.Invoke(planar);
 
             float noise = State == SoldierMoveState.Sprinting ? noiseSprint
                 : Stance == SoldierStance.Prone ? noiseProne
                 : Stance == SoldierStance.Crouching ? noiseCrouch : noiseWalk;
             if (IsAimingSlowdown) noise *= 0.6f;
-            float intensity = State == SoldierMoveState.Sprinting ? 1f
+            float intensity = State == SoldierMoveState.Sprinting ? 0.92f
                 : Stance == SoldierStance.Prone ? 0.2f
-                : Stance == SoldierStance.Crouching ? 0.35f : 0.7f;
+                : Stance == SoldierStance.Crouching ? 0.35f : 0.68f;
             PlayFootstep(intensity);
             GameEvents.RaiseNoise(_combatant, transform.position, noise, NoiseType.Footstep);
         }
@@ -662,6 +684,11 @@ namespace LR2.Characters
         {
             _originalHeight = _controller.height;
             _originalCenter = _controller.center;
+            if (_animator != null && _animator.isHuman)
+            {
+                _leftFoot = _animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+                _rightFoot = _animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            }
             _cachedState = State = SoldierMoveState.Idle;
             Stance = SoldierStance.Standing;
             _desiredGait = _cachedGait = Gait(GaitKind.Idle);

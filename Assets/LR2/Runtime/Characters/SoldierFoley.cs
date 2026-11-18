@@ -70,12 +70,13 @@ namespace LR2.Characters
 
         private void OnStep(float speed)
         {
+            // Keep per-step gear rattle subtle (-15 dB range under gunshots) so steps & footsteps stay crisp, not harsh
             bool sprint = _s.IsSprinting;
-            float k = Mathf.Lerp(0.4f, 1f, Mathf.Clamp01(speed / 6f));
+            float k = Mathf.Lerp(0.4f, 1f, Mathf.Clamp01(speed / 6f)) * 0.28f;
             Play(sprint ? _lib.gearSprint : _lib.gearWalk, Chest, k);
-            Play(_lib.weaponRattle, Chest, sprint ? 0.9f : 0.45f, 0.03f);
-            if (_m.Stance == SoldierStance.Crouching || Random.value < 0.35f) Play(_lib.clothWalk, Chest, 0.6f);
-            if (Random.value < 0.15f) Play(_lib.accent, Chest, 0.55f, 0.06f);
+            Play(_lib.weaponRattle, Chest, (sprint ? 0.8f : 0.4f) * 0.26f, 0.03f);
+            if (_m.Stance == SoldierStance.Crouching || Random.value < 0.35f) Play(_lib.clothWalk, Chest, 0.6f * 0.26f);
+            if (Random.value < 0.15f) Play(_lib.accent, Chest, 0.5f * 0.25f, 0.06f);
         }
 
         private void OnJump()
@@ -91,7 +92,7 @@ namespace LR2.Characters
             Play(_lib.weaponLand, Chest, Mathf.Clamp01(speed / 8f) + 0.35f);
             bool dirt = Physics.Raycast(transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, LR2Layers.EnvironmentMask)
                         && hit.collider is TerrainCollider;
-            Play(dirt ? _lib.landDirt : _lib.landConcrete, transform.position, Mathf.Clamp01(speed / 9f) + 0.3f);
+            Play(dirt ? _lib.landDirt : _lib.landConcrete, transform.position, (Mathf.Clamp01(speed / 9f) + 0.3f) * 0.5f);
         }
 
         private void OnMantle()
@@ -102,9 +103,10 @@ namespace LR2.Characters
 
         private void OnDamaged(DamageInfo d)
         {
+            // Vocal suppressed pain response is handled exclusively by SoldierController.OnDamaged (prevents double yelps)
             if (Time.time < _nextPain || _h == null || !_h.IsAlive) return;
-            _nextPain = Time.time + 0.7f;
-            Play(_lib.pain, Head, 1f, 0.04f);
+            _nextPain = Time.time + 0.85f;
+            Play(_lib.clothWalk, Chest, 0.35f, 0.02f);
         }
 
         private void OnShot(ShotEvent e)

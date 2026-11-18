@@ -274,8 +274,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 9f91f12078a65f3408bf7a2045bed8a0, type: 3}
     - {fileID: 8300000, guid: bd9a5666ab813794dbb6a93371c42172, type: 3}
     - {fileID: 8300000, guid: 050bf13ec26f58e48a5b4fd91f921b11, type: 3}
-    volume: 0.9
-    pitch: {x: 0.97, y: 1.03}
+    volume: 0.32
+    pitch: {x: 0.84, y: 0.93}
     spatialBlend: 1
     minDistance: 1.5
     maxDistance: 22

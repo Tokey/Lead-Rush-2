@@ -353,13 +353,13 @@ namespace LR2.EditorTools
 
             Txt("Title", t, "SETTINGS", 58f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(900f, 72f), true);
             Img("TitleRule", t, _white, accent, new Vector2(0.5f, 1f), new Vector2(0f, -104f), new Vector2(220f, 2f));
-            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -374f), new Vector2(700f, 530f), accent);
+            CardBacking(t, "LeftColCard", new Vector2(0.5f, 1f), new Vector2(-448f, -404f), new Vector2(700f, 588f), accent);
             CardBacking(t, "RightColCard", new Vector2(0.5f, 1f), new Vector2(392f, -432f), new Vector2(700f, 646f), accent);
 
             var s = group.gameObject.AddComponent<SettingsPanel>();
             const float leftCol = -770f;
             const float rightCol = 70f;
-            const float step = 58f;
+            const float step = 56f;
 
             var lHdr = Txt("HeaderLeft", t, "CONTROLS & CAMERA", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(leftCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)lHdr.transform).pivot = new Vector2(0f, 0.5f);
@@ -371,7 +371,8 @@ namespace LR2.EditorTools
             s.bodycamLook = ToggleColRow(t, "BODYCAM LENS LOOK", leftCol, y); y -= step;
             s.bodycamMotion = SliderColRow(t, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= step;
             s.motionBlur = ToggleColRow(t, "MOTION BLUR", leftCol, y); y -= step;
-            s.filmGrain = ToggleColRow(t, "FILM GRAIN", leftCol, y);
+            s.filmGrain = ToggleColRow(t, "FILM GRAIN", leftCol, y); y -= step;
+            s.rayTracing = ToggleColRow(t, "RAY TRACING (DXR)", leftCol, y);
 
             var rHdr = Txt("HeaderRight", t, "AUDIO, DISPLAY & BOTS", 22f, TextAlignmentOptions.MidlineLeft, new Vector2(0.5f, 1f), new Vector2(rightCol, -142f), new Vector2(520f, 30f), true, accent);
             ((RectTransform)rHdr.transform).pivot = new Vector2(0f, 0.5f);
@@ -590,16 +591,17 @@ namespace LR2.EditorTools
                 rt.anchoredPosition = new Vector2(320f, y);
                 return b;
             }
-            mm.duelButton = MenuBtn("Duel  -  1v1 vs Bot", 192f, 62f);
-            mm.ffaButton = MenuBtn("Free For All", 120f, 62f);
-            mm.tdmButton = MenuBtn("Team Deathmatch", 48f, 62f);
-            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -40f, 54f);
-            mm.settingsButton = MenuBtn("Settings", -110f, 54f);
-            mm.quitButton = MenuBtn("Quit", -180f, 54f);
+            mm.duelButton = MenuBtn("1v1 Deathmatch", 214f, 54f);
+            mm.ctfButton = MenuBtn("Capture The Flag DM", 152f, 54f);
+            mm.ffaButton = MenuBtn("Free For All", 90f, 54f);
+            mm.tdmButton = MenuBtn("Team Deathmatch", 28f, 54f);
+            mm.modeRulesButton = MenuBtn("Mode Rules  -  Customize", -46f, 48f);
+            mm.settingsButton = MenuBtn("Settings", -102f, 48f);
+            mm.quitButton = MenuBtn("Quit", -158f, 48f);
 
             // Bot difficulty roster selector (left/right stepper matching the Map Recon card; map dropdown removed)
-            Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -242f), new Vector2(455f, 24f), true, accent);
-            var diffRoster = Rect("BotDifficultyRoster", main, left, left, new Vector2(320f, -280f), new Vector2(455f, 48f));
+            Txt("BotDifficultyLabel", main, "BOT DIFFICULTY", 17f, TextAlignmentOptions.MidlineLeft, left, new Vector2(320f, -216f), new Vector2(455f, 24f), true, accent);
+            var diffRoster = Rect("BotDifficultyRoster", main, left, left, new Vector2(320f, -254f), new Vector2(455f, 48f));
             BuildStepper(diffRoster, 48f, out mm.difficultyPrevButton, out mm.difficultyNextButton, out mm.difficultyValueText, 22f, accent);
 
             // Right-hand Map Preview Card (kept clear of center Operator silhouette)
@@ -651,7 +653,8 @@ namespace LR2.EditorTools
             mm.versionText = Txt("Version", root, "", 18f, TextAlignmentOptions.BottomRight, new Vector2(1f, 0f), new Vector2(-30f, 20f), new Vector2(500f, 24f), false, dim);
             ((RectTransform)mm.versionText.transform).pivot = new Vector2(1f, 0f);
 
-            // Per-mode rules customizer panel
+            // Layer 2 Deployment Lobby + Per-mode rules customizer panel
+            BuildDeployPanel(root, mm, accent, dim);
             BuildModeRulesPanel(root, mm, accent, dim);
 
             var settings = BuildSettings(root, out var back);
@@ -670,9 +673,49 @@ namespace LR2.EditorTools
             mm.loadingStatusText = Txt("LoadingStatus", mm.loadingPanel.transform, "INITIALIZING...", 22f, TextAlignmentOptions.Center, mid, new Vector2(0f, -92f), new Vector2(900f, 34f), false, dim);
 
             mm.duelSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_Duel.asset");
+            mm.ctfSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_CTF.asset");
             mm.ffaSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_FFA.asset");
             mm.tdmSettings = AssetDatabase.LoadAssetAtPath<MatchSettings>("Assets/LR2/Data/Game/MatchSettings_TDM.asset");
             SavePrefab(canvas.gameObject, PrefabDir + "/LR2_MainMenuUI.prefab");
+        }
+
+        private static void BuildDeployPanel(Transform root, MainMenuController mm, Color accent, Color dim)
+        {
+            mm.deployPanel = Panel("DeployPanel", root, new Color(0.015f, 0.02f, 0.028f, 0.94f));
+            var t = mm.deployPanel.transform;
+            Vector2 topC = new Vector2(0.5f, 1f);
+
+            mm.deployModeTitleText = Txt("DeployTitle", t, "1V1 DEATHMATCH  ·  STAGING", 56f, TextAlignmentOptions.Center, topC, new Vector2(0f, -72f), new Vector2(1200f, 68f), true);
+            Img("DeployRule", t, _white, accent, topC, new Vector2(0f, -112f), new Vector2(260f, 2f));
+            mm.deployModeDescText = Txt("DeployDesc", t, "", 20f, TextAlignmentOptions.Center, topC, new Vector2(0f, -148f), new Vector2(1180f, 44f), false, dim);
+            mm.deployModeDescText.textWrappingMode = TextWrappingModes.Normal;
+
+            CardBacking(t, "DeployLeftCard", topC, new Vector2(-392f, -458f), new Vector2(730f, 466f), accent);
+            CardBacking(t, "DeployRightCard", topC, new Vector2(392f, -458f), new Vector2(730f, 466f), accent);
+
+            const float leftCol = -730f;
+            float y = -286f;
+            const float step = 76f;
+            SelectorColRow(t, "PRIMARY WEAPON", leftCol, y, out mm.deployWeaponPrevButton, out mm.deployWeaponNextButton, out mm.deployWeaponValueText); y -= 42f;
+            mm.deployWeaponInfoText = Txt("WeaponBlurb", t, "", 14.5f, TextAlignmentOptions.MidlineLeft, topC, new Vector2(leftCol, y), new Vector2(680f, 22f), false, accent);
+            ((RectTransform)mm.deployWeaponInfoText.transform).pivot = new Vector2(0f, 0.5f);
+            y -= 52f;
+            SelectorColRow(t, "SECTOR / MAP", leftCol, y, out mm.deployMapPrevButton, out mm.deployMapNextButton, out mm.deployMapValueText); y -= step;
+            SelectorColRow(t, "BOT DIFFICULTY", leftCol, y, out mm.deployDiffPrevButton, out mm.deployDiffNextButton, out mm.deployDiffValueText); y -= step;
+            mm.deployScoreSlider = SliderColRow(t, "SCORE LIMIT", leftCol, y, out mm.deployScoreValueText); y -= step;
+            mm.deployBotsSlider = SliderColRow(t, "ENEMY BOTS", leftCol, y, out mm.deployBotsValueText);
+
+            var rightCenter = topC;
+            Txt("PreviewLbl", t, "LIVE SECTOR RECON", 18f, TextAlignmentOptions.MidlineLeft, rightCenter, new Vector2(64f, -264f), new Vector2(400f, 26f), true, accent);
+            Img("DeployPreviewFrame", t, _white, new Color(1f, 1f, 1f, 0.14f), rightCenter, new Vector2(392f, -474f), new Vector2(668f, 376f));
+            mm.deployMapPreviewImage = Img("DeployPreviewImg", t, _white, Color.white, rightCenter, new Vector2(392f, -474f), new Vector2(660f, 368f));
+            mm.deployMapPreviewImage.preserveAspect = false;
+
+            mm.deployBackButton = Btn("Back", t, new Vector2(-360f, -364f), new Vector2(280f, 56f));
+            mm.deployRulesButton = Btn("All Mode Rules", t, new Vector2(0f, -364f), new Vector2(300f, 56f));
+            mm.deployStartButton = Btn("Deploy Now", t, new Vector2(360f, -364f), new Vector2(320f, 58f));
+            var startImg = mm.deployStartButton.GetComponent<Image>();
+            if (startImg != null) startImg.color = new Color(0.28f, 0.21f, 0.10f, 0.96f);
         }
 
         private static void BuildModeRulesPanel(Transform root, MainMenuController mm, Color accent, Color dim)
@@ -681,21 +724,22 @@ namespace LR2.EditorTools
             var t = mm.modeRulesPanel.transform;
 
             Txt("Title", t, "MODE RULES & MATCH SETUP", 56f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(960f, 68f), true);
-            mm.modeRulesTitleText = Txt("SubTitle", t, "DUEL  ·  1V1 COMPETITIVE RULES", 22f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(900f, 32f), false, accent);
+            mm.modeRulesTitleText = Txt("SubTitle", t, "1V1 DEATHMATCH  ·  COMPETITIVE RULES", 22f, TextAlignmentOptions.Center, new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(900f, 32f), false, accent);
             CardBacking(t, "RulesLeftCard", new Vector2(0.5f, 1f), new Vector2(-448f, -404f), new Vector2(700f, 358f), accent);
             CardBacking(t, "RulesRightCard", new Vector2(0.5f, 1f), new Vector2(392f, -404f), new Vector2(700f, 358f), accent);
 
             Button Tab(string label, float x)
             {
-                var b = Btn(label, t, Vector2.zero, new Vector2(330f, 50f));
+                var b = Btn(label, t, Vector2.zero, new Vector2(260f, 50f));
                 var rt = (RectTransform)b.transform;
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
                 rt.anchoredPosition = new Vector2(x, -174f);
                 return b;
             }
-            mm.modeRulesDuelTab = Tab("Duel (1v1)", -350f);
-            mm.modeRulesFfaTab = Tab("Free For All", 0f);
-            mm.modeRulesTdmTab = Tab("Team Deathmatch", 350f);
+            mm.modeRulesDuelTab = Tab("1v1 Deathmatch", -420f);
+            mm.modeRulesCtfTab = Tab("Capture Flag DM", -140f);
+            mm.modeRulesFfaTab = Tab("Free For All", 140f);
+            mm.modeRulesTdmTab = Tab("Team Deathmatch", 420f);
 
             const float leftCol = -770f;
             const float rightCol = 70f;

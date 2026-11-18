@@ -7,8 +7,8 @@ namespace LR2.FX
     {
         [SerializeField] private ParticleSystem[] particles;
         [SerializeField] private Light flashLight;
-        [SerializeField, Min(0.005f)] private float lightDuration = 0.045f;
-        [SerializeField] private Vector2 intensityRange = new Vector2(0.75f, 1.15f);
+        [SerializeField, Min(0.005f)] private float lightDuration = 0.028f;
+        [SerializeField] private Vector2 intensityRange = new Vector2(0.70f, 1.00f);
         [SerializeField] private bool randomRoll = true;
 
         private float _baseIntensity;
@@ -20,7 +20,8 @@ namespace LR2.FX
             if (flashLight == null) flashLight = GetComponentInChildren<Light>(true);
             if (flashLight != null)
             {
-                _baseIntensity = flashLight.intensity;
+                _baseIntensity = Mathf.Min(flashLight.intensity, 3600f);
+                flashLight.intensity = _baseIntensity;
                 flashLight.enabled = false;
             }
         }

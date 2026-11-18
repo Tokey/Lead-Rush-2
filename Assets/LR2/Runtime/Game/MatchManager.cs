@@ -97,6 +97,8 @@ namespace LR2.Game
             _teamScore[TeamId.Alpha] = 0;
             _teamScore[TeamId.Bravo] = 0;
             SpawnParticipants();
+            if (Settings.mode == GameModeType.CaptureTheFlag && FlagZoneController.Instance == null)
+                new GameObject("[LR2 FlagZone]").AddComponent<FlagZoneController>();
             TimeRemaining = Settings.timeLimitSeconds;
             CountdownRemaining = Settings.countdownSeconds;
             SetControls(false);
@@ -125,6 +127,7 @@ namespace LR2.Game
                         SetState(MatchState.Playing);
                         var s = LR2CommonSounds.Instance;
                         if (s != null) LR2Audio.Play2D(s.matchStart);
+                        LR2.World.WeatherSystem.Instance?.TriggerThunderRain(0.90f, 38f);
                     }
                     break;
 
@@ -420,6 +423,17 @@ namespace LR2.Game
             }
 
             CheckScoreLimit(killer);
+        }
+
+        public void AwardFlagCapture(Combatant capturer, string sectorName)
+        {
+            if (capturer == null || State == MatchState.Ended) return;
+            capturer.stats.kills += 3;
+            if (IsTeamMode && capturer.Team != TeamId.None)
+                _teamScore[capturer.Team] = TeamScore(capturer.Team) + 3;
+            Award(capturer, 300, "FLAG CAPTURE");
+            Medal(capturer, "flag_cap", $"FLAG SECURED · {sectorName} (+3)", 0);
+            CheckScoreLimit(capturer);
         }
 
         private void Award(Combatant c, int points, string reason)

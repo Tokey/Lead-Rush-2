@@ -176,7 +176,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4419597588594961815}
   - component: {fileID: 3439030276706503369}
-  - component: {fileID: 6510246857694947965}
   - component: {fileID: 5703642536469653580}
   m_Layer: 0
   m_Name: LR2_AK12
@@ -219,28 +218,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animatorProfile: {fileID: 11400000, guid: 47f71d3d06d0eea408769a2b405d56c0, type: 2}
   defaultAimPoint: {fileID: 5025819625814507287}
---- !u!95 &6510246857694947965
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1711597703121779645}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 22100000, guid: 0919fe45341d7d0a82b5987774b3fdab, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &5703642536469653580
 MonoBehaviour:
   m_ObjectHideFlags: 0

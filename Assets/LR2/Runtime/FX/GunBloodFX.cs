@@ -8,16 +8,15 @@ using UnityEngine.UI;
 namespace LR2.FX
 {
     /// <summary>
-    /// Visceral wet crimson blood droplets on both the player's held weapon (3D glistening beads &amp; splatters)
-    /// and screen/bodycam lens (viscoelastic gravity-dripping droplets) after taking damage or scoring CQB kills.
-    /// Auto-bootstraps cleanly in gameplay scenes without requiring prefab modifications.
+    /// Wet crimson 3D blood droplets welded tightly onto the held weapon's receiver/barrel (parented to ActiveItem,
+    /// strictly forward of camera near plane) plus subtle peripheral lens specks on taking damage.
     /// </summary>
     public class GunBloodFX : MonoBehaviour
     {
         public static GunBloodFX Instance { get; private set; }
 
-        private const int MaxScreenDroplets = 28;
-        private const int MaxGunDroplets = 32;
+        private const int MaxScreenDroplets = 12;
+        private const int MaxGunDroplets = 24;
 
         private struct ScreenDroplet
         {
@@ -71,8 +70,6 @@ namespace LR2.FX
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoBoot()
         {
-            // Only activate automatically when a player combatant or gameplay HUD is likely present;
-            // menu scenes have no Combatant and stay completely untouched.
             if (Combatant.FindLocalPlayer() != null) EnsureInstance();
         }
 
@@ -135,7 +132,6 @@ namespace LR2.FX
                 }
                 _wasDead = dead;
 
-                // Weapon changed -> hide/clear stale drops from old weapon transform
                 var curItem = _soldier != null ? _soldier.ActiveItem : null;
                 if (curItem != _lastItem)
                 {
@@ -143,12 +139,12 @@ namespace LR2.FX
                     _lastItem = curItem;
                 }
 
-                // Subtle persistent bleeding droplets while critically wounded
-                if (!dead && _player.Health != null && _player.Health.Normalized < 0.4f && Time.unscaledTime >= _nextLowHealthDrip)
+                // Very subtle edge drip when critically wounded
+                if (!dead && _player.Health != null && _player.Health.Normalized < 0.35f && Time.unscaledTime >= _nextLowHealthDrip)
                 {
-                    _nextLowHealthDrip = Time.unscaledTime + Random.Range(0.9f, 1.7f);
+                    _nextLowHealthDrip = Time.unscaledTime + Random.Range(2.2f, 3.6f);
                     float edgeX = Random.value < 0.5f ? -1f : 1f;
-                    SplashScreenDroplets(1, 0.35f, edgeX, Random.Range(-0.8f, 0.8f));
+                    SplashScreenDroplets(1, 0.25f, edgeX, Random.Range(-0.8f, 0.8f));
                 }
             }
 
@@ -169,25 +165,24 @@ namespace LR2.FX
 
             if (e.victim == _player)
             {
-                float sev = Mathf.Clamp01(e.damage / 32f);
+                float sev = Mathf.Clamp01(e.damage / 35f);
                 ComputeHitScreenBias(e.point, e.direction, out float biasX, out float biasY);
 
-                int screenCount = Mathf.RoundToInt(Mathf.Lerp(4f, 11f, sev));
+                // Subtle peripheral lens droplets (1-3)
+                int screenCount = e.damage >= 22f ? 3 : e.damage >= 12f ? 2 : 1;
                 SplashScreenDroplets(screenCount, sev, biasX, biasY);
 
-                int gunCount = Mathf.RoundToInt(Mathf.Lerp(5f, 12f, sev));
+                int gunCount = Mathf.RoundToInt(Mathf.Lerp(4f, 9f, sev));
                 SplashGunDroplets(gunCount, sev);
             }
             else if (e.attacker == _player && e.victim != _player)
             {
-                // Point-blank close-quarters arterial mist on gun/visor when blasting someone right in front of you
+                // Point-blank CQB splatter on gun metal only (never floating in front of lens)
                 float dist = Vector3.Distance(_player.Position, e.point);
-                if (dist < 3.6f)
+                if (dist < 3.4f)
                 {
-                    float closeFactor = Mathf.Clamp01(1f - dist / 3.6f);
-                    SplashGunDroplets(Mathf.RoundToInt(Mathf.Lerp(1f, 5f, closeFactor)), closeFactor * 0.7f);
-                    if (dist < 2.2f)
-                        SplashScreenDroplets(Mathf.RoundToInt(Mathf.Lerp(1f, 4f, closeFactor)), closeFactor * 0.55f, 0f, -0.35f);
+                    float closeFactor = Mathf.Clamp01(1f - dist / 3.4f);
+                    SplashGunDroplets(Mathf.RoundToInt(Mathf.Lerp(2f, 5f, closeFactor)), closeFactor * 0.75f);
                 }
             }
         }
@@ -197,13 +192,13 @@ namespace LR2.FX
             if (_player == null) return;
             if (e.victim == _player)
             {
-                SplashScreenDroplets(8, 1f, 0f, 0f);
+                SplashScreenDroplets(2, 0.7f, 0f, 0f);
                 return;
             }
             if (e.killer == _player && e.victim != null)
             {
                 float dist = Vector3.Distance(_player.Position, e.victim.Position);
-                if (dist < 4f) SplashGunDroplets(e.headshot ? 5 : 3, 0.85f);
+                if (dist < 3.6f) SplashGunDroplets(e.headshot ? 4 : 2, 0.8f);
             }
         }
 
@@ -222,14 +217,14 @@ namespace LR2.FX
             biasY = Mathf.Clamp(local.y, -1f, 1f);
         }
 
-        // ------------------------------------------------------------------ screen blood drops
+        // ------------------------------------------------------------------ subtle peripheral screen blood specks
         private void BuildScreenCanvas()
         {
             var go = new GameObject("[LR2 ScreenBloodCanvas]", typeof(RectTransform));
             go.transform.SetParent(transform, false);
             _screenCanvas = go.AddComponent<Canvas>();
             _screenCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _screenCanvas.sortingOrder = 6; // Behind LR2_GameUI (order 10) so reticle & HUD stay readable
+            _screenCanvas.sortingOrder = 6;
 
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -261,39 +256,38 @@ namespace LR2.FX
                 int slot = PickScreenSlot();
                 ref var d = ref _screenPool[slot];
 
-                // Place around edges/quadrants leaving central sightline open for aiming
                 float angle = Random.Range(0f, Mathf.PI * 2f);
-                if (Mathf.Abs(biasX) + Mathf.Abs(biasY) > 0.25f && Random.value < 0.72f)
+                if (Mathf.Abs(biasX) + Mathf.Abs(biasY) > 0.25f && Random.value < 0.75f)
                 {
                     float baseAng = Mathf.Atan2(biasY, biasX);
-                    angle = baseAng + Random.Range(-0.95f, 0.95f);
+                    angle = baseAng + Random.Range(-0.85f, 0.85f);
                 }
 
-                float radiusX = Random.Range(340f, 890f);
-                float radiusY = Random.Range(210f, 495f);
-                float x = Mathf.Clamp(Mathf.Cos(angle) * radiusX, -900f, 900f);
-                float y = Mathf.Clamp(Mathf.Sin(angle) * radiusY, -490f, 490f);
+                // Keep lens specks strictly near screen perimeter so center sightline stays unobstructed
+                float radiusX = Random.Range(560f, 910f);
+                float radiusY = Random.Range(340f, 505f);
+                float x = Mathf.Clamp(Mathf.Cos(angle) * radiusX, -920f, 920f);
+                float y = Mathf.Clamp(Mathf.Sin(angle) * radiusY, -505f, 505f);
 
-                // Push slightly outward if somehow inside center aim cone
-                if (Mathf.Abs(x) < 230f && Mathf.Abs(y) < 170f)
+                if (Mathf.Abs(x) < 460f && Mathf.Abs(y) < 280f)
                 {
-                    if (Mathf.Abs(x) > Mathf.Abs(y)) x = (x >= 0f ? 1f : -1f) * Random.Range(260f, 520f);
-                    else y = (y >= 0f ? 1f : -1f) * Random.Range(210f, 380f);
+                    if (Mathf.Abs(x) > Mathf.Abs(y)) x = (x >= 0f ? 1f : -1f) * Random.Range(480f, 720f);
+                    else y = (y >= 0f ? 1f : -1f) * Random.Range(300f, 440f);
                 }
 
-                float size = Random.Range(26f, 84f) * Mathf.Lerp(0.7f, 1.35f, severity);
+                float size = Random.Range(12f, 26f) * Mathf.Lerp(0.8f, 1.15f, severity);
                 float aspect = Random.Range(0.75f, 1.25f);
                 d.baseWidth = size * aspect;
                 d.baseHeight = size / aspect;
                 d.rt.anchoredPosition = new Vector2(x, y);
                 d.rt.sizeDelta = new Vector2(d.baseWidth, d.baseHeight);
-                d.rt.localEulerAngles = new Vector3(0f, 0f, Random.Range(-18f, 18f));
+                d.rt.localEulerAngles = new Vector3(0f, 0f, Random.Range(-16f, 16f));
                 d.img.texture = _screenTexs[Random.Range(0, _screenTexs.Length)];
 
                 d.age = 0f;
-                d.lifetime = Random.Range(4.8f, 8.6f) * Mathf.Lerp(0.85f, 1.25f, severity);
-                d.dripSpeed = Random.Range(6f, 24f) * (size > 48f ? 1.35f : 0.75f);
-                d.maxAlpha = Random.Range(0.62f, 0.9f);
+                d.lifetime = Random.Range(3.4f, 6.0f);
+                d.dripSpeed = Random.Range(3f, 9f);
+                d.maxAlpha = Random.Range(0.14f, 0.28f) * Mathf.Lerp(0.7f, 1f, severity);
                 d.active = true;
                 d.rt.gameObject.SetActive(true);
             }
@@ -318,7 +312,7 @@ namespace LR2.FX
 
         private void UpdateScreenDroplets(float dt)
         {
-            float healMult = (_player != null && _player.Health != null && _player.Health.Normalized > 0.88f) ? 1.55f : 1f;
+            float healMult = (_player != null && _player.Health != null && _player.Health.Normalized > 0.88f) ? 1.6f : 1f;
             for (int i = 0; i < _screenPool.Length; i++)
             {
                 ref var d = ref _screenPool[i];
@@ -332,18 +326,16 @@ namespace LR2.FX
                 }
 
                 float t = d.age / d.lifetime;
-                float pop = Mathf.Clamp01(d.age / 0.07f);
-                float popScale = Mathf.Lerp(1.38f, 1f, pop * pop);
-                float fade = t < 0.55f ? 1f : Mathf.Clamp01((1f - t) / 0.45f);
+                float pop = Mathf.Clamp01(d.age / 0.08f);
+                float popScale = Mathf.Lerp(1.2f, 1f, pop * pop);
+                float fade = t < 0.45f ? 1f : Mathf.Clamp01((1f - t) / 0.55f);
 
-                // Gravity viscoelastic drip downwards & slight vertical teardrop stretch
-                float drip = Mathf.Max(0f, d.age - 0.35f);
-                float stretchY = 1f + Mathf.Clamp01(drip * 0.14f) * 0.55f;
-                d.rt.anchoredPosition -= new Vector2(0f, d.dripSpeed * dt * Mathf.Clamp01(drip * 0.9f));
+                float drip = Mathf.Max(0f, d.age - 0.4f);
+                float stretchY = 1f + Mathf.Clamp01(drip * 0.1f) * 0.35f;
+                d.rt.anchoredPosition -= new Vector2(0f, d.dripSpeed * dt * Mathf.Clamp01(drip * 0.8f));
                 d.rt.sizeDelta = new Vector2(d.baseWidth * popScale, d.baseHeight * popScale * stretchY);
 
-                // Fresh bright crimson darkens slightly as it dries on the lens
-                Color c = Color.Lerp(new Color(0.88f, 0.08f, 0.08f, 1f), new Color(0.36f, 0.02f, 0.03f, 1f), t);
+                Color c = Color.Lerp(new Color(0.82f, 0.07f, 0.07f, 1f), new Color(0.36f, 0.02f, 0.03f, 1f), t);
                 c.a = d.maxAlpha * pop * fade;
                 d.img.color = c;
             }
@@ -360,38 +352,49 @@ namespace LR2.FX
 
         public int ActiveGunDropletCount => _gunDrops.Count;
 
-        // ------------------------------------------------------------------ gun blood drops
+        // ------------------------------------------------------------------ 3D gun blood drops welded onto weapon mesh
         private void SplashGunDroplets(int count, float severity)
         {
-            if (_soldier == null || _soldier.IsDead) return;
+            if (_soldier == null || _soldier.IsDead || _soldier.ActiveItem == null) return;
+            Transform weaponRoot = _soldier.ActiveItem.transform;
+            if (weaponRoot == null || !weaponRoot.gameObject.activeInHierarchy) return;
+
             Camera viewCam = _soldier.ViewCamera;
             Transform camT = viewCam != null ? viewCam.transform : _soldier.transform;
-            int viewMask = viewCam != null ? viewCam.cullingMask : ~0;
 
-            var validFilters = new List<MeshFilter>();
-            var visibleRenderers = new List<Renderer>();
+            // Locate structural landmarks in weaponRoot's 1:1 meter local space (never scaled 100x FBX SkinnedMesh containers)
+            Transform muzzleT = FindDeepChild(weaponRoot, "Muzzle");
+            Transform ejectT = FindDeepChild(weaponRoot, "EjectionPort");
+            Transform aimT = FindDeepChild(weaponRoot, "AimPoint");
 
-            void CollectFrom(Transform root, bool requireWeaponNameFallback)
+            Vector3 ejectLocal = ejectT != null ? weaponRoot.InverseTransformPoint(ejectT.position) : new Vector3(0.01f, 0.0f, 0.06f);
+            Vector3 muzzleLocal = muzzleT != null ? weaponRoot.InverseTransformPoint(muzzleT.position) : ejectLocal + Vector3.forward * 0.40f;
+            Vector3 aimLocal = aimT != null ? weaponRoot.InverseTransformPoint(aimT.position) : new Vector3(0f, 0.055f, -0.25f);
+
+            Vector3 boreDir = muzzleLocal - ejectLocal;
+            float boreLen = boreDir.magnitude;
+            Vector3 fwd = boreLen > 0.05f ? boreDir / boreLen : Vector3.forward;
+            bool isCompactPistol = boreLen < 0.28f;
+
+            // Receiver-to-handguard span strictly ahead of rear AimPoint eye clearance
+            Vector3 spineStart = ejectLocal - fwd * (isCompactPistol ? 0.04f : 0.06f);
+            Vector3 spineEnd = ejectLocal + fwd * Mathf.Clamp(boreLen * 0.62f, 0.09f, 0.26f);
+            float hullRadiusX = isCompactPistol ? 0.012f : 0.018f;
+            float hullRadiusY = isCompactPistol ? 0.013f : 0.019f;
+
+            Vector3 lossy = weaponRoot.lossyScale;
+            float invScale = 1f / Mathf.Max(0.25f, (Mathf.Abs(lossy.x) + Mathf.Abs(lossy.y) + Mathf.Abs(lossy.z)) / 3f);
+            int targetLayer = weaponRoot.gameObject.layer;
+
+            // Pick a visible renderer layer on weapon if different
+            foreach (var r in weaponRoot.GetComponentsInChildren<Renderer>(false))
             {
-                if (root == null) return;
-                foreach (var r in root.GetComponentsInChildren<Renderer>(false))
+                if (r != null && r.enabled && r.gameObject.activeInHierarchy && !r.gameObject.name.Contains("[LR2_Blood"))
                 {
-                    if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
-                    if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
-                    if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
-                    if ((viewMask & (1 << r.gameObject.layer)) == 0) continue;
-                    if (r.gameObject.name.Contains("[LR2_Blood")) continue;
-                    if (requireWeaponNameFallback && !IsLikelyWeaponRenderer(r)) continue;
-
-                    visibleRenderers.Add(r);
-                    var mf = r.GetComponent<MeshFilter>();
-                    if (mf != null && mf.sharedMesh != null) validFilters.Add(mf);
+                    targetLayer = r.gameObject.layer;
+                    break;
                 }
             }
-
-            if (_soldier.ActiveItem != null) CollectFrom(_soldier.ActiveItem.transform, false);
-            if (visibleRenderers.Count == 0) CollectFrom(_soldier.transform, true);
-            if (visibleRenderers.Count == 0) return;
 
             Vector3 worldDown = Vector3.down;
 
@@ -403,53 +406,55 @@ namespace LR2.FX
                     _gunDrops.RemoveAt(0);
                 }
 
-                bool placed = false;
                 Vector3 localPos = Vector3.zero;
                 Vector3 localNormal = Vector3.up;
-                Transform host = visibleRenderers[0].transform;
+                bool valid = false;
 
-                if (validFilters.Count > 0)
+                for (int attempt = 0; attempt < 12; attempt++)
                 {
-                    var mf = validFilters[Random.Range(0, validFilters.Count)];
-                    host = mf.transform;
-                    placed = TrySampleMeshSurface(mf, camT, out localPos, out localNormal);
+                    float tAlong = Random.Range(0.12f, 0.98f);
+                    Vector3 spine = Vector3.Lerp(spineStart, spineEnd, tAlong);
+
+                    // Favor left receiver wall & forward upper handguard (clearly visible in 1P without blocking ADS rear aperture)
+                    bool placeOnTop = tAlong > 0.42f && Random.value < 0.45f;
+                    if (placeOnTop)
+                    {
+                        float rx = Random.Range(-0.55f, 0.55f) * hullRadiusX;
+                        localNormal = new Vector3(rx / Mathf.Max(0.005f, hullRadiusX) * 0.35f, 1f, 0f).normalized;
+                        localPos = spine + new Vector3(rx, hullRadiusY * 0.95f, 0f);
+                    }
+                    else
+                    {
+                        float side = Random.value < 0.72f ? -1f : 1f;
+                        float upOff = Random.Range(-0.25f, 0.55f) * hullRadiusY;
+                        localNormal = new Vector3(side * 0.92f, 0.38f, 0f).normalized;
+                        localPos = spine + new Vector3(side * hullRadiusX, upOff, 0f);
+                    }
+
+                    // Keep clear of AimPoint ocular sight axis during ADS
+                    if (Vector3.Distance(localPos, aimLocal) < 0.085f) continue;
+
+                    // Verify live camera clearance: strictly ahead of lens (>= 24 cm forward) so drops never float across screen
+                    Vector3 worldPos = weaponRoot.TransformPoint(localPos);
+                    Vector3 camLocal = camT.InverseTransformPoint(worldPos);
+                    if (camLocal.z >= 0.24f && Mathf.Sqrt(camLocal.x * camLocal.x + camLocal.y * camLocal.y + camLocal.z * camLocal.z) >= 0.26f)
+                    {
+                        valid = true;
+                        break;
+                    }
                 }
 
-                if (!placed)
-                {
-                    var r = visibleRenderers[Random.Range(0, visibleRenderers.Count)];
-                    host = r.transform;
-                    var mfFallback = r.GetComponent<MeshFilter>();
-                    Bounds b = (r is MeshRenderer && mfFallback != null && mfFallback.sharedMesh != null)
-                        ? mfFallback.sharedMesh.bounds
-                        : r.localBounds;
-                    if (b.size.sqrMagnitude < 1e-5f) b = new Bounds(Vector3.zero, Vector3.one * 0.12f);
+                if (!valid) continue;
 
-                    // Project toward camera/upward-left side of weapon receiver/handguard rather than outer bounding corners
-                    Vector3 localToCam = host.InverseTransformDirection(-camT.forward);
-                    Vector3 localUp = host.InverseTransformDirection(Vector3.up);
-                    Vector3 sideDir = Vector3.Cross(localUp, localToCam).normalized;
-                    if (sideDir.sqrMagnitude < 0.01f) sideDir = Vector3.right;
-                    Vector3 faceDir = (localToCam * 0.65f + localUp * 0.85f).normalized;
-
-                    localPos = b.center
-                        + Vector3.Scale(faceDir, b.extents * 0.36f)
-                        + Vector3.Scale(localToCam, b.extents * Random.Range(-0.22f, 0.28f))
-                        + Vector3.Scale(sideDir, b.extents * Random.Range(-0.22f, 0.22f));
-                    localNormal = faceDir.sqrMagnitude > 0.01f ? faceDir : Vector3.up;
-                }
-
-                bool bead = Random.value < 0.52f;
+                bool bead = Random.value < 0.58f;
                 var go = new GameObject(bead ? "[LR2_BloodBead]" : "[LR2_BloodSplat]");
-                go.layer = host.gameObject.layer;
-                go.transform.SetParent(host, false);
-                go.transform.localPosition = localPos + localNormal * (bead ? 0.0015f : 0.002f);
+                go.layer = targetLayer;
+                go.transform.SetParent(weaponRoot, false);
+                go.transform.localPosition = localPos + localNormal * 0.0008f;
 
-                // Unity PrimitiveType.Quad fronts point toward -Z, so align -forward to localNormal
                 Vector3 lookDir = bead ? localNormal : -localNormal;
-                Vector3 upHint = Mathf.Abs(Vector3.Dot(lookDir.normalized, Vector3.up)) > 0.95f ? Vector3.forward : Vector3.up;
-                Quaternion rot = Quaternion.LookRotation(lookDir, upHint) * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-                go.transform.localRotation = rot;
+                Vector3 upHint = Mathf.Abs(Vector3.Dot(lookDir, Vector3.up)) > 0.95f ? fwd : Vector3.up;
+                go.transform.localRotation = Quaternion.LookRotation(lookDir, upHint) * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
 
                 var mfDrop = go.AddComponent<MeshFilter>();
                 mfDrop.sharedMesh = bead ? _sphereMesh : _quadMesh;
@@ -458,19 +463,16 @@ namespace LR2.FX
                 mrDrop.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mrDrop.receiveShadows = true;
 
-                Vector3 lossy = host.lossyScale;
-                float invScale = 1f / Mathf.Max(0.05f, (Mathf.Abs(lossy.x) + Mathf.Abs(lossy.y) + Mathf.Abs(lossy.z)) / 3f);
-
                 float worldRadius = bead
-                    ? Random.Range(0.007f, 0.014f) * Mathf.Lerp(0.85f, 1.35f, severity)
-                    : Random.Range(0.018f, 0.044f) * Mathf.Lerp(0.85f, 1.4f, severity);
+                    ? Random.Range(0.0032f, 0.0062f) * Mathf.Lerp(0.85f, 1.25f, severity)
+                    : Random.Range(0.0085f, 0.0175f) * Mathf.Lerp(0.85f, 1.25f, severity);
 
                 float localBase = worldRadius * invScale;
                 go.transform.localScale = bead
-                    ? new Vector3(localBase, localBase * Random.Range(0.85f, 1.25f), localBase * 0.45f)
-                    : new Vector3(localBase, localBase * Random.Range(0.85f, 1.25f), localBase);
+                    ? new Vector3(localBase, localBase * Random.Range(0.85f, 1.2f), localBase * 0.34f)
+                    : new Vector3(localBase, localBase * Random.Range(0.85f, 1.2f), localBase);
 
-                Vector3 hostGravity = host.InverseTransformDirection(worldDown).normalized;
+                Vector3 hostGravity = weaponRoot.InverseTransformDirection(worldDown).normalized;
                 Vector3 slip = Vector3.ProjectOnPlane(hostGravity, localNormal);
                 if (slip.sqrMagnitude > 0.01f) slip.Normalize();
                 else slip = Vector3.zero;
@@ -478,67 +480,24 @@ namespace LR2.FX
                 _gunDrops.Add(new GunDroplet
                 {
                     go = go,
-                    host = host,
+                    host = weaponRoot,
                     baseLocalPos = go.transform.localPosition,
                     localSlipDir = slip,
                     baseScale = localBase,
-                    slideSpeed = bead ? Random.Range(0.0007f, 0.002f) * invScale : 0f,
-                    maxSlide = Random.Range(0.008f, 0.022f) * invScale,
+                    slideSpeed = bead ? Random.Range(0.00035f, 0.0009f) * invScale : 0f,
+                    maxSlide = Random.Range(0.002f, 0.0045f) * invScale,
                     age = 0f,
                     lifetime = Random.Range(14f, 24f),
                 });
             }
         }
 
-        private static bool IsLikelyWeaponRenderer(Renderer r)
+        private static Transform FindDeepChild(Transform root, string exactName)
         {
-            string n = r.gameObject.name.ToLowerInvariant();
-            if (n.Contains("swat") || n.Contains("head") || n.Contains("body") || n.Contains("helmet") || n.Contains("vest"))
-                return false;
-            return n.Contains("ak") || n.Contains("mk") || n.Contains("fal") || n.Contains("gun") || n.Contains("rifle")
-                || n.Contains("receiver") || n.Contains("barrel") || n.Contains("mag") || n.Contains("weapon");
-        }
-
-        private static bool TrySampleMeshSurface(MeshFilter mf, Transform camT, out Vector3 localPos, out Vector3 localNormal)
-        {
-            localPos = Vector3.zero;
-            localNormal = Vector3.up;
-            var mesh = mf.sharedMesh;
-            if (mesh == null || !mesh.isReadable) return false;
-            var tris = mesh.triangles;
-            var verts = mesh.vertices;
-            if (tris == null || tris.Length < 3 || verts == null || verts.Length < 3) return false;
-
-            int triCount = tris.Length / 3;
-            Vector3 toCamWorld = camT != null ? -camT.forward : Vector3.up;
-
-            // Sample up to 10 candidate triangles and keep one facing camera/upward so droplets appear visibly on top/sides
-            float bestScore = float.MinValue;
-            for (int attempt = 0; attempt < 10; attempt++)
-            {
-                int tIdx = Random.Range(0, triCount) * 3;
-                Vector3 v0 = verts[tris[tIdx]];
-                Vector3 v1 = verts[tris[tIdx + 1]];
-                Vector3 v2 = verts[tris[tIdx + 2]];
-                Vector3 n = Vector3.Cross(v1 - v0, v2 - v0);
-                float area = n.magnitude;
-                if (area < 1e-6f) continue;
-                n /= area;
-
-                Vector3 worldN = mf.transform.TransformDirection(n).normalized;
-                float facing = Vector3.Dot(worldN, toCamWorld) * 0.65f + Vector3.Dot(worldN, Vector3.up) * 0.55f;
-                if (facing > bestScore)
-                {
-                    bestScore = facing;
-                    float a = Random.value;
-                    float b = Random.value;
-                    if (a + b > 1f) { a = 1f - a; b = 1f - b; }
-                    float c = 1f - a - b;
-                    localPos = v0 * a + v1 * b + v2 * c;
-                    localNormal = n;
-                }
-            }
-            return bestScore > -0.25f;
+            if (root == null) return null;
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t != null && t.name == exactName) return t;
+            return null;
         }
 
         private void UpdateGunDroplets(float dt)
@@ -572,7 +531,7 @@ namespace LR2.FX
                     float remain = Mathf.Clamp01(1f - (d.age - shrinkStart) / (d.lifetime - shrinkStart));
                     bool bead = d.go.name.Contains("Bead");
                     float s = d.baseScale * remain;
-                    d.go.transform.localScale = bead ? new Vector3(s, s, s * 0.42f) : new Vector3(s, s, s);
+                    d.go.transform.localScale = bead ? new Vector3(s, s, s * 0.34f) : new Vector3(s, s, s);
                 }
 
                 _gunDrops[i] = d;
@@ -597,7 +556,6 @@ namespace LR2.FX
             };
             _gunSplatTex = CreateDropletTexture(128, 109);
 
-            // Built-in primitives safely yield Unity's shared Quad and Sphere meshes
             var tmpQ = GameObject.CreatePrimitive(PrimitiveType.Quad);
             _quadMesh = tmpQ.GetComponent<MeshFilter>().sharedMesh;
             Destroy(tmpQ);
@@ -610,23 +568,23 @@ namespace LR2.FX
 
             _gunBeadMat = new Material(lit);
             _gunBeadMat.hideFlags = HideFlags.HideAndDontSave;
-            if (_gunBeadMat.HasProperty("_BaseColor")) _gunBeadMat.SetColor("_BaseColor", new Color(0.65f, 0.02f, 0.02f, 1f));
-            if (_gunBeadMat.HasProperty("_Color")) _gunBeadMat.SetColor("_Color", new Color(0.65f, 0.02f, 0.02f, 1f));
-            if (_gunBeadMat.HasProperty("_Smoothness")) _gunBeadMat.SetFloat("_Smoothness", 0.95f);
+            if (_gunBeadMat.HasProperty("_BaseColor")) _gunBeadMat.SetColor("_BaseColor", new Color(0.58f, 0.018f, 0.018f, 1f));
+            if (_gunBeadMat.HasProperty("_Color")) _gunBeadMat.SetColor("_Color", new Color(0.58f, 0.018f, 0.018f, 1f));
+            if (_gunBeadMat.HasProperty("_Smoothness")) _gunBeadMat.SetFloat("_Smoothness", 0.94f);
             if (_gunBeadMat.HasProperty("_Metallic")) _gunBeadMat.SetFloat("_Metallic", 0.04f);
-            if (_gunBeadMat.HasProperty("_EmissiveColor")) _gunBeadMat.SetColor("_EmissiveColor", new Color(0.14f, 0.004f, 0.004f, 1f));
+            if (_gunBeadMat.HasProperty("_EmissiveColor")) _gunBeadMat.SetColor("_EmissiveColor", Color.black);
 
             _gunSplatMat = new Material(lit);
             _gunSplatMat.hideFlags = HideFlags.HideAndDontSave;
-            if (_gunSplatMat.HasProperty("_BaseColor")) _gunSplatMat.SetColor("_BaseColor", new Color(0.62f, 0.02f, 0.02f, 1f));
-            if (_gunSplatMat.HasProperty("_Color")) _gunSplatMat.SetColor("_Color", new Color(0.62f, 0.02f, 0.02f, 1f));
+            if (_gunSplatMat.HasProperty("_BaseColor")) _gunSplatMat.SetColor("_BaseColor", new Color(0.55f, 0.018f, 0.018f, 1f));
+            if (_gunSplatMat.HasProperty("_Color")) _gunSplatMat.SetColor("_Color", new Color(0.55f, 0.018f, 0.018f, 1f));
             if (_gunSplatMat.HasProperty("_BaseColorMap")) _gunSplatMat.SetTexture("_BaseColorMap", _gunSplatTex);
             if (_gunSplatMat.HasProperty("_MainTex")) _gunSplatMat.SetTexture("_MainTex", _gunSplatTex);
-            if (_gunSplatMat.HasProperty("_Smoothness")) _gunSplatMat.SetFloat("_Smoothness", 0.92f);
+            if (_gunSplatMat.HasProperty("_Smoothness")) _gunSplatMat.SetFloat("_Smoothness", 0.90f);
             if (_gunSplatMat.HasProperty("_Metallic")) _gunSplatMat.SetFloat("_Metallic", 0.02f);
-            if (_gunSplatMat.HasProperty("_EmissiveColor")) _gunSplatMat.SetColor("_EmissiveColor", new Color(0.12f, 0.003f, 0.003f, 1f));
+            if (_gunSplatMat.HasProperty("_EmissiveColor")) _gunSplatMat.SetColor("_EmissiveColor", Color.black);
             if (_gunSplatMat.HasProperty("_AlphaCutoffEnable")) _gunSplatMat.SetFloat("_AlphaCutoffEnable", 1f);
-            if (_gunSplatMat.HasProperty("_AlphaCutoff")) _gunSplatMat.SetFloat("_AlphaCutoff", 0.28f);
+            if (_gunSplatMat.HasProperty("_AlphaCutoff")) _gunSplatMat.SetFloat("_AlphaCutoff", 0.30f);
             if (_gunSplatMat.HasProperty("_DoubleSidedEnable")) _gunSplatMat.SetFloat("_DoubleSidedEnable", 1f);
             _gunSplatMat.EnableKeyword("_ALPHATEST_ON");
             _gunSplatMat.EnableKeyword("_DOUBLESIDED_ON");
@@ -646,7 +604,7 @@ namespace LR2.FX
 
             var rng = new System.Random(seed);
             int lobeCount = 9;
-            var lobes = new Vector3[lobeCount]; // x, y, radius
+            var lobes = new Vector3[lobeCount];
             for (int i = 0; i < lobeCount; i++)
             {
                 float a = (float)i / lobeCount * Mathf.PI * 2f + (float)rng.NextDouble() * 0.55f;
@@ -671,17 +629,16 @@ namespace LR2.FX
                         field = Mathf.Max(field, Mathf.Clamp01(1f - r / lobes[i].z));
                     }
 
-                    // Strict zero outside droplet silhouette so screen overlays never show rectangular edges
-                    float alpha = SmoothStep01(0.14f, 0.34f, field);
+                    float alpha = SmoothStep01(0.16f, 0.36f, field);
                     float rim = Mathf.Clamp01(1f - Mathf.Abs(field - 0.28f) * 4f) * alpha;
                     float specDx = u + 0.13f;
                     float specDy = v - 0.14f;
                     float spec = Mathf.Clamp01(1f - Mathf.Sqrt(specDx * specDx + specDy * specDy) / 0.16f);
                     spec = Mathf.Pow(spec, 3f) * alpha;
 
-                    float rCol = Mathf.Clamp01(0.68f + spec * 0.30f + rim * 0.16f);
-                    float gCol = Mathf.Clamp01(0.03f + spec * 0.45f);
-                    float bCol = Mathf.Clamp01(0.035f + spec * 0.45f);
+                    float rCol = Mathf.Clamp01(0.62f + spec * 0.25f + rim * 0.14f);
+                    float gCol = Mathf.Clamp01(0.025f + spec * 0.35f);
+                    float bCol = Mathf.Clamp01(0.03f + spec * 0.35f);
 
                     pixels[py * size + px] = new Color(rCol, gCol, bCol, alpha);
                 }
