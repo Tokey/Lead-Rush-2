@@ -7,7 +7,6 @@ using LR2.Core;
 using LR2.FX;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -33,7 +32,6 @@ namespace LR2.UI
         private TMP_Text _eyebrowText;
         private TMP_Text _titleText;
         private TMP_Text _statusText;
-        private TMP_Text _pressStartText;
         private TMP_Text _tipText;
         private Image _progressFill;
         private RectTransform _scanLine;
@@ -150,7 +148,6 @@ namespace LR2.UI
             if (_statusText != null) _statusText.text = _pendingSub;
             if (_progressFill != null) _progressFill.fillAmount = Mathf.Clamp01(progress);
             if (_eyebrowText != null) _eyebrowText.gameObject.SetActive(false);
-            if (_pressStartText != null) _pressStartText.gameObject.SetActive(false);
             if (_barBg != null) _barBg.gameObject.SetActive(true);
             if (_bg != null) _bg.color = new Color(0.032f, 0.041f, 0.052f, 1f);
             _titlePromptActive = false;
@@ -217,12 +214,7 @@ namespace LR2.UI
             if (_statusText != null) _statusText.text = "DEPLOYMENT READY";
             yield return new WaitForSecondsRealtime(0.12f);
 
-            bool showTitleGate = _initialBoot && !isGameplay && !IsAutomatedRunner();
             _initialBoot = false;
-            if (showTitleGate)
-            {
-                yield return RunStarterTitleScreenRoutine();
-            }
 
             float fade = 0f;
             while (fade < 0.36f)
@@ -240,53 +232,6 @@ namespace LR2.UI
             _titlePromptActive = false;
             _covering = false;
             _activeRoutine = null;
-        }
-
-        private static bool WasAnyStartInputPressed()
-        {
-            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
-            if (Mouse.current != null && (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame)) return true;
-            if (Gamepad.current != null && (Gamepad.current.buttonSouth.wasPressedThisFrame || Gamepad.current.startButton.wasPressedThisFrame)) return true;
-            return false;
-        }
-
-        private IEnumerator RunStarterTitleScreenRoutine()
-        {
-            _titlePromptActive = true;
-            if (_bg != null) _bg.color = new Color(0.024f, 0.031f, 0.042f, 0.84f);
-            if (_barBg != null) _barBg.gameObject.SetActive(false);
-            if (_eyebrowText != null)
-            {
-                _eyebrowText.text = $"TACTICAL COMBAT SIMULATION // BUILD LR2.{Application.version}";
-                _eyebrowText.gameObject.SetActive(true);
-            }
-            if (_titleText != null) _titleText.text = "LEADRUSH II";
-            if (_statusText != null) _statusText.text = "CLOSE-QUARTERS BALLISTIC SANDBOX";
-            if (_pressStartText != null)
-            {
-                _pressStartText.text = "[ PRESS ANY KEY OR CLICK TO ENTER TACTICAL HQ ]";
-                _pressStartText.gameObject.SetActive(true);
-            }
-
-            // Hold cleanly on the interactive LeadRush 2 starter title screen until key/click (or 7.5s unattended timeout)
-            float waitUntil = Time.unscaledTime + 7.5f;
-            while (Time.unscaledTime < waitUntil)
-            {
-                if (_pressStartText != null)
-                {
-                    float pulse = 0.52f + 0.48f * Mathf.Sin(Time.unscaledTime * 3.4f);
-                    _pressStartText.color = new Color(0.95f, 0.72f, 0.25f, pulse);
-                }
-                if (WasAnyStartInputPressed())
-                {
-                    var common = LR2CommonSounds.Instance;
-                    if (common != null && common.uiClick.IsValid)
-                        LR2Audio.PlayClip(common.uiClick.Pick(), Vector3.zero, common.uiClick.volume, 1f, 1f, 100f, 0f, AudioCategory.UI, 0, 0f);
-                    break;
-                }
-                yield return null;
-            }
-            _titlePromptActive = false;
         }
 
         private void Update()
@@ -380,9 +325,6 @@ namespace LR2.UI
                 FontStyles.Bold, new Color(0.95f, 0.96f, 0.97f, 1f));
             _statusText = MakeText("Status", new Vector2(0.5f, 0.53f), new Vector2(1000f, 40f), 22f,
                 FontStyles.Normal, new Color(0.89f, 0.64f, 0.22f, 0.95f));
-            _pressStartText = MakeText("PressStart", new Vector2(0.5f, 0.38f), new Vector2(1200f, 48f), 24f,
-                FontStyles.Bold, new Color(0.95f, 0.72f, 0.25f, 1f));
-            _pressStartText.gameObject.SetActive(false);
             _tipText = MakeText("Tip", new Vector2(0.5f, 0.14f), new Vector2(1300f, 44f), 17f,
                 FontStyles.Italic, new Color(0.62f, 0.68f, 0.74f, 0.85f));
 
