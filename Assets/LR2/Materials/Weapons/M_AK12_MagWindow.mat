@@ -203,7 +203,7 @@ Material:
     - _ReceivesSSR: 1
     - _ReceivesSSRTransparent: 0
     - _RefractionModel: 0
-    - _Smoothness: 0.34000206
+    - _Smoothness: 0.34000117
     - _SmoothnessRemapMax: 1
     - _SmoothnessRemapMin: 0
     - _SpecularAAScreenSpaceVariance: 0.1
@@ -243,7 +243,7 @@ Material:
     - _ZTestTransparent: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.17052808, g: 0.13322501, b: 0.085263975, a: 1}
+    - _BaseColor: {r: 0.1599807, g: 0.124984846, b: 0.079990275, a: 1}
     - _Color: {r: 0.17052805, g: 0.13322496, b: 0.085263945, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}

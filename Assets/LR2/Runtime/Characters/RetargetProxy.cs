@@ -330,8 +330,52 @@ namespace LR2.Characters
             _soldier.ActiveFirearm.Definition.weaponClass == LR2.Weapons.WeaponClass.Pistol;
 
         /// <summary>Keep SWAT gloved fingers &amp; thumbs curled snugly into the grip/trigger (negative HumanTrait muscle = curled; positive = extended).</summary>
+        /// <summary>
+        /// B26 finger mode. 1 (default) = keep the AUTHORED Kinemation finger shapes and add a modest extra curl, with soft thumb limits.
+        /// 0 = legacy hard clamps (Gemini, 11-17 20:44): every joint forced into one band and the thumbs pulled from their authored
+        /// wrap (about -2.5) up to about -0.3, which flattened the grip. Static so the pose check can capture both.
+        /// </summary>
+        public static int FingerMode = 1;
+        [Header("Grip fingers (FingerMode 1)")]
+        [Tooltip("Extra curl added to the right-hand grip fingers (middle, ring, little). Negative muscle = curled.")]
+        [Range(-0.6f, 0f)] public float rightGripCurl = -0.18f;
+        [Tooltip("Extra curl for the trigger finger (kept small so it rests along the frame).")]
+        [Range(-0.6f, 0f)] public float triggerCurl = -0.05f;
+        [Tooltip("Extra curl for the left hand on the handguard / support grip.")]
+        [Range(-0.6f, 0f)] public float leftGripCurl = -0.12f;
+        [Tooltip("Soft limits for the thumbs' first joint: allows a real wrap without the extreme authored rotation.")]
+        public Vector2 thumbBaseRange = new Vector2(-1.6f, 0.3f);
+        [Tooltip("Soft limits for the thumbs' outer joints.")]
+        public Vector2 thumbTipRange = new Vector2(-1.0f, 0.6f);
+
+        private void SnugAuthoredFingers(ref HumanPose pose)
+        {
+            if (pose.muscles == null || _soldier == null || _soldier.ActiveItem == null) return;
+            float reloadHand = _bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f;
+            float[] mus = pose.muscles; // array is a reference: edits land in the pose (ref params can't be captured)
+            void Add(List<int> list, float bias)
+            {
+                for (int i = 0; i < list.Count; i++) { int idx = list[i]; if (idx < mus.Length) mus[idx] = Mathf.Clamp(mus[idx] + bias, -3f, 1f); }
+            }
+            void Soft(List<int> list, Vector2 range)
+            {
+                for (int i = 0; i < list.Count; i++) { int idx = list[i]; if (idx < mus.Length) mus[idx] = Mathf.Clamp(mus[idx], range.x, range.y); }
+            }
+            float leftBias = leftGripCurl * (1f - reloadHand); // the left hand opens while it handles the magazine
+            Add(_rFingerIdx, rightGripCurl);
+            Add(_rIndexIdx, triggerCurl);
+            Add(_lProxIdx, leftBias);
+            Add(_lFingerIdx, leftBias);
+            Soft(_lThumbProxIdx, thumbBaseRange);
+            Soft(_rThumbProxIdx, thumbBaseRange);
+            Soft(_lThumbDistIdx, thumbTipRange);
+            Soft(_rThumbDistIdx, thumbTipRange);
+            Soft(_spreadIdx, new Vector2(-0.25f, IsHoldingPistol ? 0.06f : 0.14f)); // keep the compact spread (that part of the old clamp was fine)
+        }
+
         private void RelaxGlovedFingerMuscles(ref HumanPose pose)
         {
+            if (FingerMode == 1) { SnugAuthoredFingers(ref pose); return; }
             if (pose.muscles == null || _soldier == null || _soldier.ActiveItem == null) return;
             float reloadHand = _bridge != null ? Mathf.Clamp01(_bridge.HandWeight) : 0f;
             bool pistol = IsHoldingPistol;
