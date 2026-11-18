@@ -872,3 +872,8 @@ graphics overhaul with ownership tags; do not touch Claude files. Gemini deliver
 BuildAllBatch, visible 4-map QA, then B20 README screenshots (menu with the masked enemy, deploy, ADS, armour HUD, lasers, heat
 FX, atmospheric map shots). The first attempt at 09:45 failed: Windows PowerShell 5.1 split the prompt at its quotation marks.
 
+### Antigravity ("Gemini") Session Transition (`03:09–09:29 ET`)
+- `03:09–03:12` (Menu Screenshot, Incremental Version `MM.DD.YY.N`, Half & Half CTF & Faction Uniforms): *"main menu img in the github is using an very old versions image fix that. also in the version after the date add 1/2/3/4... incremental after each fix/push."*
+- `03:29` (Wake-Up Note for Claude ETA `04:10`): *"add a note for claude when it wakes up it should check all visual effects fix it and bug fixes and check your work and then create new tasks if all other tasks are done. eta 4.10"*
+- `09:29` (`gemini-4-hydrogen-high` resuming alongside Claude): *"join claude"* -> `B75` props overhaul, `B72` HDRP graphics pass, `B74b` disengaged bot resupply, `0`-failure 5-scene visible QA sweep, `11.18.26.3` open-courtyard README media + `gameplay_combat.gif` & push.
+

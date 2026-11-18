@@ -516,7 +516,7 @@ a { color: var(--bot) }
 
     <section id="ai-quality">
       <div class="chapter-head"><div class="tag">Empirical Process Telemetry · B56 Token &amp; Quality Audit</div><h2>Model quality, defect attribution &amp; 4-agent token/limit telemetry</h2>
-        <p>Every delivered task (<code>tasks.csv</code>, 93+ rows) and bug (<code>bugs.csv</code>, 39+ rows) records which agent &amp; model wrote it, who reviewed it, its explicit <code>source</code> (prompt, board row, or evidence), and whether it escaped to the developer or was caught in review (+3 cross-catch, +2 own catch, +3 adopted suggestion, +1 verified task, -2 escaped defect). An <b>Endurance-Normalized Score</b> (<code>Score + 1.5 × Hrs − 3.0 × QuotaStops</code>) also surfaces multi-hour reliability alongside raw Score/Hr. Client IDE API billing totals are <b>never guessed</b>: where a client does not export raw token counts into the repository, the table explicitly marks telemetry as <i>not recorded</i> instead of inventing numbers.</p></div>
+        <p>Every delivered task (<code>tasks.csv</code>, 117 rows) and bug (<code>bugs.csv</code>, 51 rows) records which agent &amp; model wrote it, who reviewed it, its explicit <code>source</code> (prompt, board row, or evidence), and whether it escaped to the developer or was caught in review (+3 cross-catch, +2 own catch, +3 adopted suggestion, +1 verified task, -2 escaped defect). An <b>Endurance-Normalized Score</b> (<code>Score + 1.5 × Hrs − 3.0 × QuotaStops</code>) also surfaces multi-hour reliability alongside raw Score/Hr. Client IDE API billing totals are <b>never guessed</b>: where a client does not export raw token counts into the repository, the table explicitly marks telemetry as <i>not recorded</i> instead of inventing numbers. Also explore the live 8-scenario <a href="bot-lab.html"><b>LR2 Bot Lab</b></a>.</p></div>
       <div class="instrument">
         <canvas id="cv-quality" aria-label="Bar chart of contribution score and defect rates by agent and model"></canvas>
         <div class="controls">
@@ -551,17 +551,17 @@ a { color: var(--bot) }
             <tr style="border-bottom:1px solid var(--line)">
               <td style="padding:6px 8px"><b>Claude</b> · Claude Code</td>
               <td style="padding:6px 8px"><code>claude-opus-5-5</code></td>
-              <td style="padding:6px 8px">11-16 11:19 → 11-18 00:45 (4.8h session span)</td>
-              <td style="padding:6px 8px"><b>6 quota stops</b> (11-16 pm 97% cap alert, 14:55, 15:07, 18:13 8-agent wave, 23:14 9-agent weekly cap, 00:44 token handoff)</td>
-              <td style="padding:6px 8px">21 delivered tasks (<code>C01–C21</code>), 10 bug finds, Protocol v2/v3 (Endurance Score <b>43.3</b>)</td>
+              <td style="padding:6px 8px">11-16 11:19 → 11-18 10:22+ (4.8h recorded span)</td>
+              <td style="padding:6px 8px"><b>6 quota stops</b> (11-16 pm 97% cap, 14:55, 15:07, 18:13, 23:14, 00:44–04:13, 04:30–09:13 reset + 20m auto-ticks)</td>
+              <td style="padding:6px 8px">32 delivered tasks (<code>C01–C32</code>: Killcam <code>B14.1</code>, Reload Ease-Out <code>B16</code>, Armour <code>B74</code>, Bot Lab + 8 GIFs), 17 bug finds (Endurance Score <b>65.8</b>)</td>
               <td style="padding:6px 8px">User-reported <code>97%</code> + quota cap timestamps verified; raw vendor token count not recorded in repo</td>
             </tr>
             <tr style="border-bottom:1px solid var(--line)">
               <td style="padding:6px 8px"><b>Gemini</b> · Antigravity (Lead)</td>
-              <td style="padding:6px 8px"><code>Gemini 4 Hydrogen</code> / <code>argon</code> / <code>opus-high</code></td>
-              <td style="padding:6px 8px">11-16 23:44 → 11-18 03:18+ (11.5h recorded span)</td>
-              <td style="padding:6px 8px"><b>1 quota switch (02:24)</b>: Orchestrator <code>Argon</code> hit usage limit &amp; developer switched cleanly to <code>Gemini 4 Hydrogen</code>; automatic <code>&lt;CONTEXT_SUMMARY&gt;</code> compaction + 2 QA sub-agents</td>
-              <td style="padding:6px 8px">34+ ledger rows across models (<code>B55</code> MK18 iron sights, <code>B58</code> music, <code>B59</code> death ADS/clip, <code>B51/B63</code> Unified CTF Half &amp; Half + Smart Flag AI, <code>B14/B62</code> killcam recoil, overheat FX, faction uniforms &amp; colored lasers/tracers; Endurance Score <b>22.4</b>)</td>
+              <td style="padding:6px 8px"><code>gemini-4-hydrogen</code> / <code>hydrogen-high</code> / <code>argon</code></td>
+              <td style="padding:6px 8px">11-16 23:44 → 11-18 10:24 (11.5h + 0.9h span)</td>
+              <td style="padding:6px 8px"><b>1 quota switch (02:24)</b> + session transition to <code>gemini-4-hydrogen-high</code> (09:23, <code>0.0</code> escaped defects across 6 tasks)</td>
+              <td style="padding:6px 8px">37 ledger rows across Hydrogen models (<code>B55</code> MK18, <code>B76/B77</code> Half &amp; Half CTF &amp; Uniforms, <code>B74b</code> Bot Resupply, <code>B72/B75</code> Graphics &amp; Props Overhaul, <code>B20</code> 22 PNGs + combat GIF; Endurance <b>23.5 + 7.8</b>)</td>
               <td style="padding:6px 8px"><code>BUDGET: OK</code> on board; <code>02:24</code> Argon limit logged; raw IDE token count not recorded in repo</td>
             </tr>
             <tr style="border-bottom:1px solid var(--line)">
@@ -569,15 +569,15 @@ a { color: var(--bot) }
               <td style="padding:6px 8px"><code>gpt-5.6-luna</code></td>
               <td style="padding:6px 8px">11-17 23:12 → 11-18 02:40 (3.5h recorded span)</td>
               <td style="padding:6px 8px"><b>1 monthly limit stop (02:40)</b>; ran continuous cross-review, P1–P5 research specs, <code>R8</code> pushes, pose checks (#7–#10) &amp; HyperMotion <code>B60b</code> until monthly quota exhausted</td>
-              <td style="padding:6px 8px">35 ledger rows (<code>P01–P35</code>), 6 pre-merge review catches, <code>B60.md</code> (Endurance Score <b>34.8</b>)</td>
+              <td style="padding:6px 8px">35 ledger rows (<code>P01–P35</code>), 6 pre-merge review catches, <code>B60.md</code> (Endurance Score <b>33.8</b>)</td>
               <td style="padding:6px 8px"><code>OFFLINE (monthly limit reached at 02:40)</code>; VS Code Copilot Chat raw token count not recorded in repo</td>
             </tr>
             <tr>
               <td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex CLI</td>
               <td style="padding:6px 8px"><code>gpt-6</code></td>
-              <td style="padding:6px 8px">11-18 01:54 → 02:53+ (~1.0h recorded span)</td>
-              <td style="padding:6px 8px"><b>Not recorded</b> (quota/context-reset count not logged into repo); onboarded in Section <code>7b</code> + temporary <code>B16/B23</code> animation handoff at 02:53</td>
-              <td style="padding:6px 8px">2 ledger rows (<code>X01</code> <code>B56/B57</code>, <code>X02</code> <code>B61</code> 390-leaf realism backlog), 1 review catch (<code>D39/B65</code> audio tail rollback; Endurance Score <b>5.5</b>)</td>
+              <td style="padding:6px 8px">11-18 01:54 → 04:19 (~1.0h+ recorded span)</td>
+              <td style="padding:6px 8px"><b>Not recorded</b> (quota/context-reset count not logged into repo); onboarded in Section <code>7b</code></td>
+              <td style="padding:6px 8px">8 ledger rows (<code>X01–X08</code>: <code>B56/B57</code>, <code>B61</code> 390-leaf backlog, <code>B66a</code> rubric, <code>B67a–B70</code> VFX/laser/ADS/TDM), 1 review catch (<code>D39</code>; Endurance Score <b>7.8</b>)</td>
               <td style="padding:6px 8px"><code>BUDGET: OK</code> on board; raw Codex CLI token counter not recorded in git</td>
             </tr>
           </tbody>
@@ -1485,13 +1485,14 @@ a { color: var(--bot) }
 
   // ---------------- TAB 3: QUALITY METRICS CHART (real analyze.py values incl. Endurance Score) ----------------
   const QUALITY_ROWS = [
-    { lbl: 'Claude · opus-5-5', score: 54.1, endurance: 43.3, scoreHr: 11.3, tasks: 21, escaped: 2.7, caught: 3, c: '#b388ff' },
-    { lbl: 'Copilot · gpt-5.6-luna', score: 32.5, endurance: 34.8, scoreHr: 9.3, tasks: 35, escaped: 0.6, caught: 6, c: '#5cc46a' },
-    { lbl: 'Gemini · hydrogen', score: 5.2, endurance: 22.4, scoreHr: 0.5, tasks: 30, escaped: 1.3, caught: 4, c: '#6eaee6' },
-    { lbl: 'Codex · gpt-6', score: 4.0, endurance: 5.5, scoreHr: 4.0, tasks: 2, escaped: 0.0, caught: 0, c: '#2dd4bf' },
+    { lbl: 'Claude · opus-5-5', score: 76.6, endurance: 65.8, scoreHr: 16.0, tasks: 32, escaped: 1.8, caught: 5, c: '#b388ff' },
+    { lbl: 'Copilot · gpt-5.6-luna', score: 31.5, endurance: 33.8, scoreHr: 9.0, tasks: 35, escaped: 0.6, caught: 6, c: '#5cc46a' },
+    { lbl: 'Gemini · hydrogen-high', score: 6.5, endurance: 7.8, scoreHr: 7.2, tasks: 6, escaped: 0.0, caught: 1, c: '#47d9ff' },
+    { lbl: 'Codex · gpt-6', score: 6.2, endurance: 7.8, scoreHr: 6.2, tasks: 8, escaped: 0.0, caught: 2, c: '#2dd4bf' },
+    { lbl: 'Gemini · hydrogen', score: 6.2, endurance: 23.5, scoreHr: 0.5, tasks: 31, escaped: 1.4, caught: 6, c: '#6eaee6' },
     { lbl: 'Gemini · opus-high', score: 3.0, endurance: 3.9, scoreHr: 5.0, tasks: 0, escaped: 0.0, caught: 0, c: '#e2b54a' },
     { lbl: 'Gemini · argon/hyd', score: -1.2, endurance: -0.4, scoreHr: -2.4, tasks: 1, escaped: 6.0, caught: 0, c: '#6eaee6' },
-    { lbl: 'Gemini · argon', score: -3.2, endurance: -4.0, scoreHr: -2.1, tasks: 3, escaped: 12.0, caught: 2, c: '#ff7d3b' }
+    { lbl: 'Gemini · argon', score: -3.0, endurance: -3.7, scoreHr: -2.0, tasks: 3, escaped: 12.0, caught: 2, c: '#ff7d3b' }
   ];
   function drawQuality() {
     const f = fit($('cv-quality'), 0.56); if (!f) return;
@@ -1519,6 +1520,17 @@ a { color: var(--bot) }
 
   // ---------------- TAB 3: TASK LOG WITH SOURCE ----------------
   const TASKS_LOG = [
+    { id: 'G42', when: '10:22', agent: 'Gemini', board: 'B1/B5/B20/D37', task: '0-failure 5-scene QA verification (MK18 tactical bolt hold + LR2QABotRunner active-part/equip fixes), grounded MainMenu lantern, MapPreviews & gameplay_combat.gif (11.18.26.3)', src: 'LR2Firearm.cs + LR2QABotRunner.cs + LR2MapBuilder.cs + LR2MapPreviewCapture.cs + qa_LR2_*.txt' },
+    { id: 'C32', when: '10:19', agent: 'Claude', board: 'B20', task: 'README gallery from new captures, contribution chart, Bot Lab section, complete prompts page & agent timers section', src: 'README.md + PROMPTS.md + Docs/AI_Collaboration/README.md' },
+    { id: 'C31', when: '10:19', agent: 'Claude', board: 'B52/B73', task: 'LR2 Bot Lab artifact: 8 live scenarios on compact bot brain + 7 interactive drills + 8 Edge-captured GIFs', src: 'Docs/Bot/bot-lab.html + Tools/make_bot_lab_gifs.py (0 headless errors)' },
+    { id: 'G41', when: '10:15', agent: 'Gemini', board: 'B20', task: 'Expanded LR2ReadmeMediaRunner and captured 22 refreshed 16:9 README screenshots into Docs/Media/', src: 'LR2MapPreviewCapture.cs + 22 Docs/Media/*.png captures visually inspected' },
+    { id: 'G40', when: '10:15', agent: 'Gemini', board: 'B1/B72/B75', task: 'BuildAllBatch + visible 4-map QA verifying B1/B72/B75/B74b/B65 across Saltworks, Deadsector, Foundry & TestRange', src: 'Logs/LR2_QABot/qa_LR2_*.txt + visually inspected *_vis.png' },
+    { id: 'G39', when: '09:38', agent: 'Gemini', board: 'B72', task: 'HDRP detail map + per-map SMH grading + ContactShadows/SSAO + wear/scorch decals', src: 'specs/B42.md + LR2MapBuilder.cs + LR2MapBuilder.ExtraMaps.cs' },
+    { id: 'G38', when: '09:38', agent: 'Gemini', board: 'B75', task: 'Props/assets overhaul with Leartes/ScansFactory pack meshes preserving cover heights & surface wear', src: 'specs/B75.md + LR2MapBuilder*.cs + LR2ContentBuilder.cs' },
+    { id: 'C28-30', when: '09:33', agent: 'Claude', board: 'B14.1/B16/B23', task: 'Eye-socket killcam replay matching player view, 0.35s reload ease-out & COD sprint interrupt, 3-blend walk stride table', src: 'KillcamDirector.cs + ReloadMotionBridge.cs + SoldierMovement.cs (pose checks C9/C10)' },
+    { id: 'G37', when: '09:28', agent: 'Gemini', board: 'B74b', task: 'Disengaged-only bot AmmoCrate resupply on broken armour or low ammo + QA gate check', src: 'specs/B74b.md + BotController.cs + BotTypes.cs + LR2QABotRunner.cs' },
+    { id: 'C26', when: '04:28', agent: 'Claude', board: 'B74', task: '100 HP + 50 armour layer, procedural armour-break sound, HUD armour bar & ammo-station refill', src: 'Health.cs + HitFeedbackHUD.cs + HUDController.cs + AmmoCrate.cs' },
+    { id: 'X05-08', when: '04:14', agent: 'Codex', board: 'B67a–B70', task: 'Soft barrel smoke/heat haze, stronger faction weapon lasers, clean TDM menu label & ADS FOV pacing', src: 'LR2Firearm.cs + HeatHazeEmitter.cs + WeaponLaser.cs + MainMenuController.cs' },
     { id: 'G36', when: '03:18', agent: 'Gemini', board: 'B51/B65/B1/D37', task: 'LeadRushHDRP MK18 iron sights & clean Humanoid reload, Green vs Red team lasers & tracers, Desert-Crimson vs Cobalt-SWAT uniforms, Half & Half 50/50 CTF option, B1 lighting, B65 tail rollback & R18 QA hooks', src: 'user prompts 03:09–03:12 + MatchManager.cs + LR2ContentBuilder.cs + Tracer.cs' },
     { id: 'G35', when: '02:32', agent: 'Gemini', board: 'B56', task: '4-agent token telemetry & Endurance Score metric across all GitHub task logs & charts', src: 'user prompts 01:50, 02:16, 02:24, 02:58 + analyze.py + README + RESEARCH_LOG' },
     { id: 'X02', when: '02:35', agent: 'Codex', board: 'B61/B65', task: '390-leaf realism backlog (specs/B61_Realism_Backlog.md), B57 assertions & D39 audio tail-slot catch', src: 'board R16/R17/R18 + LR2QAExtraChecks.cs + B61_task_register.csv' },
