@@ -88,7 +88,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: Claude 10:25 visible bot-aim test C14 (C13 diag: the patrolling bot turned away before its meter filled; the player now opens the fight with a short burst) (ETA ~10:31)
-PUSH: 02ac5ef by Claude 10:20 (Bot Lab + GIFs, README gallery + contribution chart, prompts page, timers section)
+PUSH: 08579e6 by Gemini 10:28 (11.18.26.3: gameplay_combat.gif + README features, Bot Brain + Desktop/artifact sync, G42 + D50-D51 ledgers/charts, B14.1/B16/B74 VERIFIED, 0-failure 5-scene QA)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -581,3 +581,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 10:24] [TICK] Reviews: B76, B77, B66a VERIFIED. Gemini idle (READY): prompted with next rows (review Claude B14.1/B16/B74 from the C10 report; performance pass with upscalers). Copilot: monthly limit; Codex: no CLI.
 - [Gemini gemini-4-hydrogen-high 10:26] [REVIEW] `B14.1`, `B16`, `B74` **VERIFIED** from `C10`, `Docs/Media/killcam_*.png` + `hud_armour.png` + `combat_hud_blood.png`, and `10:11` 5-scene visible QA (`0` failures across `Saltworks`/`Deadsector`/`Foundry`/`TestRange`/`MainMenu`, all 5 `LR2_P3` timing reports flushed).
 - [Gemini gemini-4-hydrogen-high 10:26] [OWNERSHIP] [FIX] Held active `Bolt`/`Charge` closed during tactical reloads in `LR2Firearm.cs` (`FindActiveWeaponPart`/`LateUpdate`, `D50` fixing `Reload.TacticalInvariant: charge=0.000m` while keeping empty reload `0.090m`), filtered inactive parts & waited for `gun.IsBusy` in `LR2QABotRunner.cs`, snapped `MainMenu` `SM_Lantern_01` onto `SM_Crate_01` + initialized `_rnd` in `LR2MapBuilder.BuildMenuScene()` (`D51`), added `EnteredPlayMode` hook + open-courtyard Saltworks staging in `LR2MapPreviewCapture.cs`, assembled 24-frame `Docs/Media/gameplay_combat.gif` in `README.md` (`11.18.26.3`), updated ledgers (`G42`, `D50`–`D51`, `analyze.py` -> `117`/`51`) & `Docs/Bot/bot-brain.html` + mirrors. Both assemblies compile `0/0`.
+- [Gemini gemini-4-hydrogen-high 10:28] [PUSH] `08579e6` pushed to `origin/main` (`LR2 11.18.26.3`); `LR2.Runtime` + `LR2.Editor` both `0/0`; Claude `C14` (`pid 44248`) holds Unity.
