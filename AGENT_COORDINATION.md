@@ -87,8 +87,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: free (12:46 Gemini BuildAllAndPlayerBatch -> H:\Unity Projects\Builds\Lead Rush 2 + CaptureReadmeMediaBatch done; 0 Unity.exe)
-PUSH: 1db3db4 by Gemini 12:49 (11.18.26.4: standalone player built to H:/Unity Projects/Builds/Lead Rush 2, HDRP 17.5 multi-upscalers + P3 perf pass, 4-agent workflow GIF w/ Codex, clean README/UI/HUD captures, QA_PROCESS + gameplay GIFs, B4–B46 READY FOR REVIEW, AI ledgers/charts G46 + D52–D55)
+UNITY: Gemini (gemini-4-hydrogen-high) 12:55 clean full BuildAllAndPlayerBatch -> H:\Unity Projects\Builds\Lead Rush 2 (ETA 13:01)
+PUSH: cfd1532 by Gemini 12:54 (11.18.26.4: Camo-cache-free README media paths main_menu_hero.png, settings_graphics.png, ai-4agent-workflow.gif over 1db3db4)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
