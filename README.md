@@ -4,7 +4,7 @@ Tactical first-person shooter built in **Unity 6 (`6000.5.0f1`) HDRP** ([github.
 
 LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation with multi-layered HDRP lighting, utility-driven AI bots and seeker drones, custom per-mode match rules, persistent camera/audio settings, and first-person killcam replays across four combat maps.
 
-![LeadRush 2 — Main Menu & Tactical Recon](Docs/Media/menu_main.png)
+![LeadRush 2 — Main Menu & Tactical Recon](Docs/Media/main_menu_hero.png)
 
 > **Built by 4 AI agents.** One developer directs; **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`gemini-4-hydrogen` / `argon`), **GitHub Copilot** (`gpt-5.6-luna`), and **OpenAI Codex** (`gpt-6`) write the code, verify metrics, and cross-review through a shared board. The full story — with prompts, agent messages, 4-agent token/usage telemetry (`B56`), and model quality charts:
 > **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
@@ -63,7 +63,7 @@ In-game captures, 1920 x 1080, build 11.18.26.4 (2026-11-18).
 
 | Deploy screen | Settings |
 |---|---|
-| ![Deploy screen with loadout, map and bot team mode](Docs/Media/menu_deploy.png) | ![Graphics settings page](Docs/Media/settings_steppers.png) |
+| ![Deploy screen with loadout, map and bot team mode](Docs/Media/menu_deploy.png) | ![Graphics & HDRP upscaler settings page](Docs/Media/settings_graphics.png) |
 
 ### How the bots behave
 

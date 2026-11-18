@@ -1029,7 +1029,7 @@ namespace LR2.EditorTools
                         while ((LR2LoadingIntro.IsCoveringScreen || LR2LoadingIntro.IsShowingTitleScreen) && Time.realtimeSinceStartup - tIntro < 20f)
                             yield return null;
                         yield return new WaitForSecondsRealtime(1.6f);
-                        yield return SaveScreenPng(Path.Combine(MediaDir, "menu_main.png"));
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "main_menu_hero.png"));
 
                         // 1b. Mode Rules panel
                         if (mm.modeRulesButton != null)
@@ -1046,7 +1046,7 @@ namespace LR2.EditorTools
                         {
                             mm.settingsButton.onClick.Invoke();
                             yield return new WaitForSecondsRealtime(0.4f);
-                            yield return SaveScreenPng(Path.Combine(MediaDir, "settings_steppers.png"));
+                            yield return SaveScreenPng(Path.Combine(MediaDir, "settings_graphics.png"));
                             if (mm.settingsBackButton != null) mm.settingsBackButton.onClick.Invoke();
                             yield return new WaitForSecondsRealtime(0.25f);
                         }

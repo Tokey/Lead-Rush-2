@@ -927,7 +927,7 @@ def make_ai_workflow_gif():
             d.text((bx - rw / 2 + 14, by + 6), sub, fill=hex_rgba(INK2), font=FONT_SM)
         d.text((34, h2 - 50), "Protocol v3 (4 Agents): Research First -> Implement -> Cross-Review -> Visible QA -> dotnet 0/0 -> Push", fill=hex_rgba(INK2), font=FONT_SM)
         frames.append(finish_frame(img, W_PX, H_PX))
-    save_gif("ai-multiagent-workflow.gif", frames, fps=14)
+    save_gif("ai-4agent-workflow.gif", frames, fps=14)
 
 
 def main():
