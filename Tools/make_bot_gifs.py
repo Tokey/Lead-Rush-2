@@ -176,7 +176,84 @@ def draw_adaptive(ax, frame):
     ax.tick_params(colors="#a3ada2")
 
 
+def watch_bot():
+    frames = []
+    for i in range(116):
+        if i < 5:
+            goal = "Patrol"
+        elif i < 23:
+            goal = "Spot"
+        elif i < 47:
+            goal = "Flick"
+        elif i < 77:
+            goal = "Burst"
+        elif i < 101:
+            goal = "Flank"
+        else:
+            goal = "Hunt"
+
+        if i < 23:
+            bot_x = -18 + i * 1.55
+            bot_y = -8 + math.sin(i * 0.22) * 2
+            player_x = 20
+            player_y = 10
+        elif i < 47:
+            u = (i - 23) / 24.0
+            bot_x = 17 - u * 10
+            bot_y = -6 + u * 6
+            player_x = 20 - u * 3
+            player_y = 10 - u * 12
+        elif i < 77:
+            u = (i - 47) / 30.0
+            bot_x = 7 + u * 7
+            bot_y = 0 - u * 2
+            player_x = 17 - u * 5
+            player_y = -2 - u * 3
+        elif i < 101:
+            u = (i - 77) / 24.0
+            bot_x = 14 - u * 18
+            bot_y = -2 - u * 8
+            player_x = 12 - u * 8
+            player_y = -5 - u * 2
+        else:
+            u = (i - 101) / 15.0
+            bot_x = -4 - u * 8
+            bot_y = -10 + u * 5
+            player_x = 4
+            player_y = -7
+
+        meter = 0.0 if i < 5 else min(1.25, max(0.0, (i - 5) / 18.0))
+        aim_error = 18 * math.exp(-max(0, i - 23) / 6.0) if i >= 23 else 18
+        frames.append((bot_x, bot_y, player_x, player_y, goal, meter, aim_error))
+    return frames
+
+
+def draw_watch_bot(ax, frame):
+    bot_x, bot_y, player_x, player_y, goal, meter, aim_error = frame
+    ax.clear()
+    ax.set_facecolor("#181e1a")
+    ax.set_xlim(-26, 26)
+    ax.set_ylim(-18, 18)
+    ax.add_patch(plt.Rectangle((-22, -14), 44, 28, fill=False, edgecolor="#2d3630", linewidth=1))
+    ax.plot([-12, -12, 7, 7, 16, 16],
+            [-10, 6, 6, 12, 12, -12],
+            color="#c8cdc5", linewidth=2, alpha=0.35)
+    ax.scatter([bot_x], [bot_y], c="#6eaee6", s=110, label="bot")
+    ax.scatter([player_x], [player_y], c="#ff7d3b", s=90, label="player")
+    ax.plot([bot_x, player_x], [bot_y, player_y], color="#a3ada2", linewidth=1, alpha=0.45)
+
+    ax.set_title(f"Watch a bot play - {goal}", color="#e6ebe4")
+    ax.text(-24, 16.1, f"detection {meter:.2f}", color="#ff7d3b", fontsize=9)
+    ax.text(-24, 14.3, f"aim error {aim_error:.1f} deg", color="#6eaee6", fontsize=9)
+    ax.axhspan(-16.5, -14.8,
+               xmin=0.0, xmax=min(1.0, meter / 1.25),
+               color="#ff7d3b", alpha=0.85)
+    ax.tick_params(colors="#a3ada2")
+    ax.legend(facecolor="#181e1a", labelcolor="#e6ebe4", loc="lower right", fontsize=8)
+
+
 def main():
+    save_animation("watch-a-bot-play.gif", watch_bot(), draw_watch_bot)
     save_animation("perception-meter.gif", perception(), draw_perception)
     save_animation("fitts-minimum-jerk.gif", fitts(), draw_fitts)
     save_animation("recoil-pulldown.gif", recoil(), draw_recoil)
