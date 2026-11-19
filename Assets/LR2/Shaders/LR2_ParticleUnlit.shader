@@ -91,7 +91,9 @@ Shader "LR2/ParticleUnlit"
                     // Particle Pack flipbooks are RGB on black. Their alpha can import as fully opaque, so shape the
                     // smoke from RGB luminance directly and preserve particle/material tint alpha.
                     float luma = dot(tex.rgb, float3(0.2126, 0.7152, 0.0722));
-                    c.a = smoothstep(0.015, 0.38, luma) * i.color.a * _Color.a * _LuminanceAlphaScale;
+                    // Claude B87 (user 11-19 05:2x "fix the fire"): smoothstep(0.015, 0.38) saturated at 0.38, so each puff's core drew
+                    // at full tint opacity (the flat dark blob in C29). Density now rises gradually with luminance.
+                    c.a = saturate(pow(luma, 1.25) * 1.5) * i.color.a * _Color.a * _LuminanceAlphaScale;
                 }
                 c.rgb *= _Intensity;
                 if (_PremultiplyAlpha > 0.5) c.rgb *= c.a;

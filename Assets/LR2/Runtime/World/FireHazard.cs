@@ -233,13 +233,13 @@ namespace LR2.World
             var m = fl.main;
             m.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.95f);
             m.startSpeed = new ParticleSystem.MinMaxCurve(0.25f + 0.35f * s, 0.45f + 0.8f * s);
-            m.startSize = new ParticleSystem.MinMaxCurve(0.55f * s, 1.05f * s);
+            m.startSize = new ParticleSystem.MinMaxCurve(0.7f * s, 1.25f * s);
             m.startRotation = new ParticleSystem.MinMaxCurve(-0.35f, 0.35f);
             m.startColor = Color.white;
             m.gravityModifier = -0.22f;
             m.maxParticles = 140;
             var em = fl.emission;
-            em.rateOverTime = 28f;
+            em.rateOverTime = 34f;
             UpCone(fl, 6f, 0.32f * s);
             var col = fl.colorOverLifetime;
             col.enabled = true;
@@ -271,7 +271,7 @@ namespace LR2.World
                 gm.startLifetime = new ParticleSystem.MinMaxCurve(0.22f, 0.4f);
                 gm.startSpeed = 0f;
                 gm.startSize = new ParticleSystem.MinMaxCurve(1.5f * s, 2.2f * s);
-                gm.startColor = new Color(1f, 0.46f, 0.12f, 0.32f);
+                gm.startColor = new Color(1f, 0.48f, 0.14f, 0.42f);
                 gm.maxParticles = 16;
                 var ge = gl.emission;
                 ge.rateOverTime = 16f;
@@ -316,13 +316,13 @@ namespace LR2.World
             }
 
             // 4. smoke column: the pack's steam flipbook, dark grey, growing and drifting
-            var sm = NewSystem("Fire Smoke", new Vector3(0f, 0.75f * s + 0.15f, 0f), lib.smoke, 2f);
+            var sm = NewSystem("Fire Smoke", new Vector3(0f, 1.0f * s + 0.3f, 0f), lib.smoke, 2f); // above the flames, not over them
             var ms = sm.main;
             ms.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 3.8f);
             ms.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 0.85f);
             ms.startSize = new ParticleSystem.MinMaxCurve(0.65f * s, 1.05f * s);
             ms.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            ms.startColor = new ParticleSystem.MinMaxGradient(new Color(0.14f, 0.13f, 0.12f, 0.42f), new Color(0.07f, 0.07f, 0.07f, 0.34f));
+            ms.startColor = new ParticleSystem.MinMaxGradient(new Color(0.2f, 0.19f, 0.18f, 0.3f), new Color(0.11f, 0.1f, 0.1f, 0.22f));
             ms.gravityModifier = -0.05f;
             ms.maxParticles = 72;
             var se = sm.emission;
