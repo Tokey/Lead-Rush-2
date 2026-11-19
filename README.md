@@ -41,6 +41,16 @@ and the protocol experiments: [How AI agents are building LeadRush 2](Docs/AI_Co
 
 ## Screenshots
 
+### Match setup and AI vs AI (`11.19.26.7`)
+
+![The skirmish lobby: PLAY opens a roster of up to 20 bots, each with its own difficulty and team, presets, and match settings](Docs/Media/match_setup.jpg)
+
+| AI vs AI: chase cam on a bot | The headshot killcam |
+|---|---|
+| ![AI vs AI spectating with the AI test bench panel](Docs/Media/updates/2026-11-19/aivsai_chase.gif) | ![Headshot killcam: the replay, then the bullet cam](Docs/Media/updates/2026-11-19/killcam_headshot.gif) |
+
+More from this build, with what changed: [What's new on 2026-11-19](Docs/Updates/2026-11-19.md).
+
 In-game captures, 1920 x 1080, build 11.18.26.4 (2026-11-18).
 
 ### Gameplay Clips (`11.18.26.4`)
