@@ -200,3 +200,5 @@ C94,2026-11-19 13:27,Claude,claude-opus-5-5,"Bot names: friends in friendly name
 X17,2026-11-19 14:15,Codex,gpt-6,"Main menu cleanup; ultrawide Skirmish text; delayed headshot fall pan",bug,B124,ready-for-review,"user request 13:51; user confirmed UI fix 14:14; Runtime+Editor builds 0 errors; Windows player build succeeded (report errors=2); Logs/Codex_B124_Final_Build.log",unrated,,
 C95,2026-11-19 15:33,Claude,claude-opus-5-5,"Review of B124 (Codex): lobby text refresh, killcam fall pan, menu hide",review,B124,verified,8bba23a diff,unrated,,
 C96,2026-11-19 16:17,Claude,claude-opus-5-5,"Weapon flip: per-frame flip detector, layer ablation, post-Kinemation flip guard, held-gun collider strip",bug,B125,delivered,"user prompts 13:4x; Logs/LR2_Guard3_On vs LR2_Guard_Off",unrated,,
+C97,2026-11-19 18:35,Claude,claude-opus-5-5,"Review of B60a (Gemini): inertialization offsets",review,B60a,verified,RetargetProxy.cs inertial block,unrated,,
+C98,2026-11-19 18:35,Claude,claude-opus-5-5,"Review of B60d (Gemini): eye-plane weapon guard",review,B60d,verified,"qa_LR2_Saltworks.txt known-bad/good",unrated,,
