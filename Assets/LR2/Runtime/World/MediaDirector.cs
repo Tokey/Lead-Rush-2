@@ -139,7 +139,39 @@ namespace LR2.World
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-lr2BenchSeconds") float.TryParse(args[i + 1], out secs);
             float t0 = Time.time;
-            while (Time.time - t0 < secs && (MatchManager.Instance == null || MatchManager.Instance.State != MatchState.Ended)) yield return null;
+            // weapon-flip detector (user 11-19: "the weapon keeps on going up then rotating fully"): muzzle vs aim per living bot
+            int samples = 0, flips = 0, flipsNearWall = 0, flipsSprint = 0, flipsReload = 0;
+            var flipLog = new System.Text.StringBuilder();
+            float nextSample = Time.time;
+            while (Time.time - t0 < secs && (MatchManager.Instance == null || MatchManager.Instance.State != MatchState.Ended))
+            {
+                if (Time.time >= nextSample)
+                {
+                    nextSample = Time.time + 0.1f;
+                    foreach (var c in Combatant.All)
+                    {
+                        if (c == null || !c.IsAlive) continue;
+                        var sc = c.GetComponent<LR2.Characters.SoldierController>();
+                        var gun = sc != null ? sc.ActiveFirearm : null;
+                        if (gun == null || gun.Muzzle == null) continue;
+                        samples++;
+                        Vector3 aim = Quaternion.Euler(sc.Pitch, sc.Yaw, 0f) * Vector3.forward;
+                        float ang = Vector3.Angle(gun.Muzzle.forward, aim);
+                        if (ang < 50f) continue;
+                        flips++;
+                        bool wall = Physics.Raycast(sc.EyeTransform.position, aim, 1.2f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore);
+                        bool sprint = sc.Movement != null && sc.Movement.Speed > 4.5f;
+                        if (wall) flipsNearWall++;
+                        if (sprint) flipsSprint++;
+                        if (gun.IsReloading) flipsReload++;
+                        if (flipLog.Length < 6000)
+                            flipLog.AppendLine(FormattableString.Invariant($"{Time.time - t0:0.0}s {c.DisplayName} angle={ang:0} wall={wall} sprint={sprint} reload={gun.IsReloading} pitch={sc.Pitch:0} goal={c.GetComponent<LR2.AI.BotController>()?.CurrentGoalName}"));
+                    }
+                }
+                yield return null;
+            }
+            File.WriteAllText(Path.Combine(_out, "flips.txt"), FormattableString.Invariant($"samples={samples} flips(>50deg)={flips} nearWall={flipsNearWall} sprint={flipsSprint} reload={flipsReload}") + "\n" + flipLog);
+            Note($"weapon flips: {flips} of {samples} samples (near wall {flipsNearWall}, sprint {flipsSprint}, reload {flipsReload})");
             var rows = new System.Collections.Generic.SortedDictionary<string, int[]>();
             foreach (var c in Combatant.All)
             {
