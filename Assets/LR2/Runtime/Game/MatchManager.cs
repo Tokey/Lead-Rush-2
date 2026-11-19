@@ -290,11 +290,10 @@ namespace LR2.Game
             return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
 
-        // User 11-18 14:10: featured gamer tags (the developer's friends, EnchantedP0tato and two favourites), weighted 4x.
+        // User 11-18 14:10: featured gamer tags, weighted 4x. User 11-19: Ashlesha, Xiaokun, Claypool and Jack removed.
         private static readonly string[] FeaturedCallsigns =
         {
-            "EnchantedP0tato", "JackOfAllFrags", "Ashl3sha_OneTap", "ClaypoolCampz", "xX_Tokey_Xx", "XiaokunNoScope",
-            "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
+            "EnchantedP0tato", "xX_Tokey_Xx", "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
         };
         private const float FeaturedWeight = 4f;
 

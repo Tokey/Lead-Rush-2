@@ -48,6 +48,14 @@ namespace LR2.World
                 SkirmishSetup.Bots.Clear();
                 foreach (var t in new[] { TeamId.Alpha, TeamId.Bravo })
                     for (int d = 0; d < 4; d++) SkirmishSetup.Bots.Add(new SkirmishBot { team = t, difficulty = d });
+                // a bench-only match (no asset touched): no score or time limit cuts the sample short
+                var bench = ScriptableObject.CreateInstance<MatchSettings>();
+                bench.mode = GameModeType.TeamDeathmatch;
+                bench.scoreLimit = 999;
+                bench.timeLimitSeconds = 900f;
+                bench.countdownSeconds = 2f;
+                bench.spawnOrbs = false;
+                LR2Session.PendingSettings = bench;
             }
         }
 
