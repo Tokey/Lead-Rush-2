@@ -17,6 +17,9 @@ MonoBehaviour:
   smoke: {fileID: 2100000, guid: 44610787724f6ec46b8ac27a9aed1a24, type: 2}
   smokeTiles: {x: 8, y: 8}
   embers: {fileID: 2100000, guid: ae8f9e46e1232ec4c82c25ba57fdc96d, type: 2}
+  fireGlow: {fileID: 2100000, guid: ab301c200dd72c74ea75c39e999f5bb1, type: 2}
+  zoneRingOuter: {fileID: 2100000, guid: ee37cb5bcf36c4f4393df020ffd926f3, type: 2}
+  zoneRingCore: {fileID: 2100000, guid: 1a26a1aa7bc454541b084b24956a6932, type: 2}
   mist: {fileID: 2100000, guid: ec58b1a552022a5438312225bff0a451, type: 2}
   mistTiles: {x: 8, y: 8}
   barrelSmoke: {fileID: 2100000, guid: 2b5c0d01f00aeb048837cf1c68dc617d, type: 2}

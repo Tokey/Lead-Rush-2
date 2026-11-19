@@ -55,40 +55,113 @@ namespace LR2.UI
 
         private const int MaxVisibleLines = 5;
 
-        private static readonly string[] KillPlayerRoasts =
+        // ------------------------------------------------------------------ B105 banter library
+        // User 11-19: "improve the diss dialogue library. make it realistic with censored slangs if used", then "not always slangs,
+        // sometimes normal. gg at the end of the match. and not as frequent as now". Lobby talk the way players actually type it:
+        // mostly plain lines, a censored-slang line about a quarter of the time, never slurs or jabs at who someone is. {0} = the
+        // other player, {1} = the victim in bot-vs-bot lines.
+        private const float SpicyChance = 0.25f;
+
+        private static readonly string[] KillPlayerClean =
         {
-            "sit down {0}, wide peek paid the tax",
-            "thanks for standing still {0} lol",
-            "check your corners next time {0}",
-            "clean scoreboard diff rn {0}",
-            "caught you reloading in the open {0}",
-            "you dropped your aim on that peek {0}"
+            "sit down {0}", "ez", "too slow {0}", "check your corners next time {0}", "caught you reloading {0}",
+            "nice try {0}", "wide peek, wide punish", "thanks for standing still {0}", "you peeked the wrong guy {0}",
+            "back to spawn {0}", "crosshair placement diff", "that angle is mine {0}", "you jiggle peeked into my crosshair lol",
+            "should have waited for your team {0}", "good fight {0}, not good enough", "pre-aimed you {0}", "lol {0} ran straight at me",
+            "nt {0}", "next time try cover {0}", "free kill, ty {0}"
         };
 
-        private static readonly string[] HeadshotRoasts =
+        private static readonly string[] KillPlayerSpicy =
         {
-            "helmet check {0} — spotless",
-            "straight through the optic {0} ouch",
-            "one tap special for {0}"
+            "get f***ing clapped {0}", "sh*t peek {0} lmao", "bro you are NOT him", "skill issue {0}", "{0} whiffed every shot lmaooo",
+            "your crosshair was on my feet {0}", "stay mad {0}", "{0} put the controller down lol", "rent free {0}",
+            "who taught you to peek like that, d*mn", "{0} is cooked", "sit the h*ll down {0}"
         };
 
-        private static readonly string[] BotVsBotTrashTalk =
+        private static readonly string[] HeadshotClean =
         {
-            "{1} were you shooting at birds or me??",
-            "back to spawn {1}, my lane now",
-            "somebody tell {1} ADS helps lol",
-            "easy pick on {1}, onto the next",
-            "{1} really swung that wide with 20hp"
+            "headshot. sit down {0}", "right in the lid {0}", "one tap {0}", "tap tap, lights out {0}", "dome'd", "{0} never saw it",
+            "head was right there {0}", "clean one tap"
         };
 
-        private static readonly string[] BotKilledByPlayerReactions =
+        private static readonly string[] HeadshotSpicy =
         {
-            "alright {0}, sharp flick ngl",
-            "ok {0} is locked in today",
-            "wait how did {0} win that trade?!",
-            "nice shot {0}, running it back now",
-            "fair play {0}, checking that off-angle next"
+            "one tap, no f***ing chance {0}", "head popped lmao", "{0} got deleted", "beamed. d*mn that felt good"
         };
+
+        private static readonly string[] BotVsBotClean =
+        {
+            "{1} were you shooting at birds?", "back to spawn {1}", "somebody tell {1} ADS helps", "easy pick on {1}",
+            "{1} really swung that wide with 20 hp", "my lane, {1}", "{1} you reloaded in the open lol", "nt {1}",
+            "{1} you were one shot, I saw it", "that flank was mine {1}"
+        };
+
+        private static readonly string[] BotVsBotSpicy =
+        {
+            "{1} you are dog water today lol", "sh*t peek {1}", "{1} got clapped", "wtf was that spray {1}"
+        };
+
+        private static readonly string[] KilledByPlayerClean =
+        {
+            "nice shot {0}", "ok {0} is locked in today", "how did {0} win that", "fair play {0}", "good flick {0}",
+            "I had you {0}...", "you got lucky {0}", "running it back {0}", "{0} is actually good", "respect {0}, clean trade",
+            "lag", "my bad, aim went on vacation", "bro I hit you like 4 times {0}", "who is this {0} guy",
+            "that off-angle again {0}?", "ok that prefire was dirty {0}"
+        };
+
+        private static readonly string[] KilledByPlayerSpicy =
+        {
+            "wtf was that {0}", "lucky a** shot {0}", "nah that flick was f***ing disgusting", "h*ll no", "{0} is cheating 100% (jk)",
+            "sh*t, I fumbled that", "f*** it, running it back"
+        };
+
+        private static readonly string[] RevengeLines =
+        {
+            "got you back {0}", "payback {0}", "that's for earlier {0}", "remember me {0}?", "one each {0}", "we're even {0}"
+        };
+
+        private static readonly string[] StreakLines =
+        {
+            "three down", "who's next", "on a streak, come get me", "they keep running at me lol", "five. somebody stop me"
+        };
+
+        private static readonly string[] IdleClean =
+        {
+            "who's hiding behind those containers", "peek mid already, I'm bored", "anyone holding the long lane?", "quiet round lol",
+            "where is everyone", "this map is huge for 8 people", "ok who has the sniper angle", "flag's up, anyone going?"
+        };
+
+        private static readonly string[] IdleSpicy = { "bro where the h*ll is everybody", "stop camping lmao, come fight" };
+
+        private static readonly string[] MatchEndLines =
+        {
+            "gg", "gg", "gg", "ggs", "gg wp", "gg all", "good games", "gg, close one", "gg go next", "ggwp everyone", "gg {0}, you were cracked",
+            "gg, rematch?", "gg. that last fight was wild"
+        };
+
+        // B105 pacing: a global gap between banter lines plus a per-bot gap (was a line on most kills)
+        private float _nextBanterAllowedAt;
+        private readonly Dictionary<Combatant, float> _botQuietUntil = new Dictionary<Combatant, float>();
+        private readonly Dictionary<Combatant, Combatant> _lastKillerOf = new Dictionary<Combatant, Combatant>();
+        private readonly Dictionary<Combatant, int> _killsSinceDeath = new Dictionary<Combatant, int>();
+
+        private static string PickLine(string[] clean, string[] spicy) =>
+            spicy != null && spicy.Length > 0 && Random.value < SpicyChance ? spicy[Random.Range(0, spicy.Length)] : clean[Random.Range(0, clean.Length)];
+
+        private bool BanterAllowed(Combatant speaker)
+        {
+            float now = Time.unscaledTime;
+            if (now < _nextBanterAllowedAt) return false;
+            if (speaker != null && _botQuietUntil.TryGetValue(speaker, out float q) && now < q) return false;
+            return true;
+        }
+
+        private void MarkBanter(Combatant speaker)
+        {
+            float now = Time.unscaledTime;
+            _nextBanterAllowedAt = now + Random.Range(9f, 15f);
+            if (speaker != null) _botQuietUntil[speaker] = now + Random.Range(25f, 40f);
+        }
 
         private static readonly string[] TdmSquadPlans =
         {
@@ -211,6 +284,7 @@ namespace LR2.UI
 
         private void OnMatchStateChanged(MatchStateEvent e)
         {
+            if (e.current == MatchState.Ended) PostMatchGG();
             if (e.current == MatchState.Playing)
             {
                 _nextSquadPlanAt = Time.unscaledTime + 5.5f;
@@ -225,25 +299,62 @@ namespace LR2.UI
             string kName = e.killer.DisplayName;
             string vName = e.victim.DisplayName;
 
+            // bookkeeping for revenge and streak lines
+            bool revenge = _lastKillerOf.TryGetValue(e.killer, out var killedMeLast) && killedMeLast == e.victim;
+            _lastKillerOf[e.victim] = e.killer;
+            _lastKillerOf.Remove(e.killer);
+            _killsSinceDeath[e.victim] = 0;
+            _killsSinceDeath.TryGetValue(e.killer, out int streak);
+            _killsSinceDeath[e.killer] = ++streak;
+
             if (!e.killer.IsLocalPlayer && e.victim.IsLocalPlayer)
             {
-                if (Random.value > 0.78f) return;
-                string pool = e.headshot && Random.value < 0.65f
-                    ? HeadshotRoasts[Random.Range(0, HeadshotRoasts.Length)]
-                    : KillPlayerRoasts[Random.Range(0, KillPlayerRoasts.Length)];
-                Enqueue(Random.Range(1.0f, 2.1f), kName, TeamUtil.EnemyColor, string.Format(pool, vName));
+                if (!BanterAllowed(e.killer)) return;
+                string line;
+                if (revenge && Random.value < 0.6f) line = RevengeLines[Random.Range(0, RevengeLines.Length)];
+                else
+                {
+                    if (Random.value > 0.33f) return;
+                    line = e.headshot && Random.value < 0.6f ? PickLine(HeadshotClean, HeadshotSpicy) : PickLine(KillPlayerClean, KillPlayerSpicy);
+                }
+                MarkBanter(e.killer);
+                Enqueue(Random.Range(1.0f, 2.4f), kName, TeamUtil.EnemyColor, string.Format(line, vName));
             }
             else if (!e.killer.IsLocalPlayer && !e.victim.IsLocalPlayer)
             {
-                if (Random.value > 0.55f) return;
-                string line = BotVsBotTrashTalk[Random.Range(0, BotVsBotTrashTalk.Length)];
-                Enqueue(Random.Range(1.1f, 2.2f), kName, ColorOf(e.killer), string.Format(line, kName, vName));
+                if (!BanterAllowed(e.killer)) return;
+                string line;
+                if ((streak == 3 || streak == 5) && Random.value < 0.5f) line = StreakLines[Random.Range(0, StreakLines.Length)];
+                else
+                {
+                    if (Random.value > 0.12f) return;
+                    line = PickLine(BotVsBotClean, BotVsBotSpicy);
+                }
+                MarkBanter(e.killer);
+                Enqueue(Random.Range(1.1f, 2.6f), kName, ColorOf(e.killer), string.Format(line, kName, vName));
             }
             else if (e.killer.IsLocalPlayer && !e.victim.IsLocalPlayer)
             {
-                if (Random.value > 0.45f) return;
-                string line = BotKilledByPlayerReactions[Random.Range(0, BotKilledByPlayerReactions.Length)];
-                Enqueue(Random.Range(1.2f, 2.4f), vName, ColorOf(e.victim), string.Format(line, kName));
+                if (!BanterAllowed(e.victim) || Random.value > 0.22f) return;
+                string line = PickLine(KilledByPlayerClean, KilledByPlayerSpicy);
+                MarkBanter(e.victim);
+                Enqueue(Random.Range(1.2f, 2.8f), vName, ColorOf(e.victim), string.Format(line, kName));
+            }
+        }
+
+        /// <summary>B105: when the match ends, a few players type "gg" (staggered like real typing).</summary>
+        private void PostMatchGG()
+        {
+            var speakers = new List<Combatant>();
+            foreach (var c in Combatant.All) if (c != null && !c.IsLocalPlayer) speakers.Add(c);
+            int n = Mathf.Min(speakers.Count, Random.Range(2, 5));
+            string playerName = _playerCombatant != null ? _playerCombatant.DisplayName : "Operator";
+            for (int i = 0; i < n; i++)
+            {
+                int k = Random.Range(i, speakers.Count);
+                (speakers[i], speakers[k]) = (speakers[k], speakers[i]);
+                string line = MatchEndLines[Random.Range(0, MatchEndLines.Length)];
+                Enqueue(0.8f + i * Random.Range(0.6f, 1.4f), speakers[i].DisplayName, ColorOf(speakers[i]), string.Format(line, playerName));
             }
         }
 
@@ -301,7 +412,7 @@ namespace LR2.UI
 
             if (mm.IsTeamMode && now >= _nextSquadPlanAt)
             {
-                _nextSquadPlanAt = now + Random.Range(22f, 34f);
+                _nextSquadPlanAt = now + Random.Range(45f, 75f); // B105: less chatter (22-34 s before)
                 Combatant ally = FindFriendlyBot();
                 if (ally != null)
                 {
@@ -311,14 +422,12 @@ namespace LR2.UI
             }
             else if (!mm.IsTeamMode && now >= _nextAutoBanterAt)
             {
-                _nextAutoBanterAt = now + Random.Range(26f, 40f);
+                _nextAutoBanterAt = now + Random.Range(60f, 110f); // B105: less chatter (26-40 s before)
                 Combatant enemy = FindAnyBot();
-                if (enemy != null)
+                if (enemy != null && BanterAllowed(enemy))
                 {
-                    string taunt = Random.value < 0.5f
-                        ? "who's hiding behind those containers lol"
-                        : "peek mid already someone, I'm bored";
-                    Enqueue(0.2f, enemy.DisplayName, TeamUtil.EnemyColor, taunt);
+                    MarkBanter(enemy);
+                    Enqueue(0.2f, enemy.DisplayName, TeamUtil.EnemyColor, PickLine(IdleClean, IdleSpicy));
                 }
             }
         }

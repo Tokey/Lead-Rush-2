@@ -25,6 +25,11 @@ namespace LR2.Characters
         [SerializeField] private float maxOffset = 0.0035f;
         [Tooltip("ADS blend where the lock starts to apply (it reaches full strength at 1).")]
         [SerializeField, Range(0f, 1f)] private float startBlend = 0.6f;
+        [Tooltip("Share of the walk's vertical head bob taken out of the camera at full ADS.")]
+        [SerializeField, Range(0f, 1f)] private float adsBobDamping = 0.85f;
+
+        private float _eyeFiltered;
+        private bool _haveEye;
 
         private SoldierController _soldier;
         private LR2Firearm _cachedGun;
@@ -38,11 +43,19 @@ namespace LR2.Characters
         private void LateUpdate()
         {
             LastCorrection = Vector2.zero;
-            if (_soldier == null || !_soldier.IsLocalPlayer || _soldier.IsDead) return;
+            if (_soldier == null || !_soldier.IsLocalPlayer || _soldier.IsDead) { _haveEye = false; return; }
+            var cam = _soldier.ViewCamera;
             float blend = _soldier.AimBlend;
+            // the eye-height filter runs all the time, so entering ADS never jumps
+            float rawEye = 0f;
+            if (cam != null)
+            {
+                rawEye = cam.transform.position.y - _soldier.transform.position.y;
+                if (!_haveEye || Mathf.Abs(rawEye - _eyeFiltered) > 0.45f) { _eyeFiltered = rawEye; _haveEye = true; }
+                _eyeFiltered = Mathf.Lerp(_eyeFiltered, rawEye, 1f - Mathf.Exp(-Time.deltaTime / 0.18f));
+            }
             if (blend <= startBlend) return;
             var gun = _soldier.ActiveFirearm;
-            var cam = _soldier.ViewCamera;
             if (gun == null || cam == null || !gun.gameObject.activeInHierarchy || gun.IsReloading) return;
             if (gun != _cachedGun)
             {
@@ -55,6 +68,17 @@ namespace LR2.Characters
             float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(startBlend, 1f, blend));
             Transform g = gun.transform;
             Transform view = cam.transform;
+
+            // 0) B91 (user 11-19: "ads is specially bad while moving, not while steady"): walking moved the camera ~7 cm up and down
+            // in ADS (C28: 6.9 cm walking vs 1.4 cm still), and the gun swung up to 9.5 deg off the sight line while strafing (fixed
+            // by 1 and 2). Near full ADS the eye height is low-passed (~0.18 s; the ~2 Hz step bob averages out) before the gun is
+            // aligned to it, so the sight picture stays level as in COD / BF. The animated camera pose is rewritten every frame.
+            if (_haveEye)
+            {
+                float eye = Mathf.Lerp(rawEye, _eyeFiltered, w * adsBobDamping);
+                Vector3 vp = view.position;
+                view.position = new Vector3(vp.x, _soldier.transform.position.y + eye, vp.z);
+            }
 
             // 1) direction: rotate the gun about the aim point by the part of the error beyond the allowed cone
             Quaternion toView = Quaternion.FromToRotation(ap.forward, view.forward);

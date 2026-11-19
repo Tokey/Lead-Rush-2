@@ -925,6 +925,73 @@ tool notifications are left out here and documented once below.
 
 > merge bot brain and bot lab. bot brain might be outdataed update it and i like the updates stuff bot brain has
 
+### 2026-11-19
+
+**00:27 · to Claude Code**
+
+> please fix the fire, use unitys fire particle effects instead. the heat effect should also be particles or something. the unity one has the heat effect already use that.
+> Also fix the ui for showing score system, in conquest, tdm, free for all, its shows now 1st and 2nd which is very confusing.
+>
+> also human players can sometimes overshoot, and some pros start pre shooting even, add those.
+>
+> make the anim to start sprinting faster, proning should be 5x faster and smoother, maybe have a differnt anim for that. crouching also can be more faster and seamless. use x to hold crouch, and is adding sliding possible? on xx.
+> i want the movement to be snappy, now it kinda feels sluggish.
+>
+> also when ADSing, the reticle should never move fully away, it can sway a little bit, but throghu the hole most of the time the iron sight in front needs to be seen. try to make it like COD or BF^ iron sights.. not its much harder to shoot through that.
+>
+> Also can you add more articial lights and more ambiance?
+>
+> And the rain is not visible at all. make it cinematic, visible, realism focused.
+>
+> Fix the weapon hold finger position stuff for all the weapons. Some tactical reload show  animation too long, it tilts the gun to clock and then stops, fix that, specially AKs. also no grunt is heard, add some war grunt like BF1, and add some intensity to sound. the indoor and outdoor sound sounds very different but not realistic at all. work on that.
+> show map on the bottom like bf6, here maybe above the healht bar, make it look good. maybe in the menu give me both options, but default is this.
+> add more particles, like footstep dust, or splash while raining, more audio improvements some reload clip sounds are severly delayed, maybe those clips need to be cropped. check and fix those, and add more SFX. if possible use some external audio engine to play these sounds or do some research on how game audio can be more realistic, currently it can be improved a lot.
+>
+> in some maps objects are floating and stuff, fix their position. and capture the flas area effect is HORRILE. use something sharp, htat adhears to the groud, not just floats above holes.
+> all other models are down so its on you.
+
+**00:28 · to Claude Code**
+
+> push and build when done. push and build when reaching limit too.
+
+**00:34 · to Claude Code**
+
+> ADD CAMERA post processing effects to make the scenes more realistic.
+
+**00:43 · to Claude Code**
+
+> unity closed now.
+
+**00:52 · to Claude Code**
+
+> also blood spashes on the gun looks weird when the gun is moving too fast, maybe its not on the surface and floating, not sure, check at the end.
+
+**00:56 · to Claude Code**
+
+> add a page for all the new feature list, with maybe screenshots and visuals, when pushing.
+
+**00:57 · to Claude Code**
+
+> ui flicking, first to 15 thing.
+>
+> also ads is specially bad while moving.
+
+**00:57 · to Claude Code**
+
+> not while steady
+
+**00:58 · to Claude Code**
+
+> update my prompt list too.
+
+**00:58 · to Claude Code**
+
+> update whole github readmes (all) properly
+
+**00:58 · to Claude Code**
+
+> when done
+
 ### The automatic tick prompt (Claude Code to itself, every 20 minutes)
 
 Claude Code has no command line the other agents can call, so it schedules its own wake-up: a session job (`CronCreate`,

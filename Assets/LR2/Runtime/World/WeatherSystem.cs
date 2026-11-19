@@ -111,6 +111,7 @@ namespace LR2.World
         private Material _runtimeRippleMat;
         private AudioClip _procThunderClip;
         private ParticleSystem.EmitParams _splashEmit;
+        private ParticleSystem _rainNear; // B93
         private ParticleSystem.EmitParams _rippleEmit;
         private float _splashAcc;
         private readonly VisorDrop[] _visorDrops = new VisorDrop[18];
@@ -149,7 +150,8 @@ namespace LR2.World
             if (lightning != null) lightning.intensity = 0f;
             _from = _to = Mathf.Clamp(randomStart ? Random.Range(0, presets.Length) : startPreset, 0, Mathf.Max(0, presets.Length - 1));
             _nextChange = Time.time + Random.Range(holdTime.x, holdTime.y);
-            maxRainRate = Mathf.Clamp(maxRainRate, 1400f, 2200f);
+            // B93 (user 11-19 00:27: "the rain is not visible at all. make it cinematic, visible, realism focused")
+            maxRainRate = Mathf.Clamp(Mathf.Max(maxRainRate, 3400f), 2400f, 4200f);
             if (lightningLux < 2500f) lightningLux = 18000f;
             CreateRainAudio();
             EnsureRealisticRainRig();
@@ -262,7 +264,7 @@ namespace LR2.World
             if (rain != null)
             {
                 var cam = Camera.main;
-                if (cam != null) rain.transform.position = cam.transform.position + Vector3.up * 22f + cam.transform.forward * 6f;
+                if (cam != null) rain.transform.position = cam.transform.position + Vector3.up * 14f + cam.transform.forward * 5f;
                 var em = rain.emission;
                 em.rateOverTime = amount * maxRainRate;
                 var vel = rain.velocityOverLifetime;
@@ -272,6 +274,16 @@ namespace LR2.World
                 vel.z = new ParticleSystem.MinMaxCurve(-0.35f, 0.35f);
                 if (amount > 0.01f && !rain.isPlaying) rain.Play();
                 else if (amount <= 0.01f && rain.isPlaying) rain.Stop();
+                if (_rainNear != null)
+                {
+                    if (cam != null) _rainNear.transform.position = cam.transform.position + Vector3.up * 5f + cam.transform.forward * 2.5f;
+                    var nem = _rainNear.emission;
+                    nem.rateOverTime = amount * 950f;
+                    var nv = _rainNear.velocityOverLifetime;
+                    nv.x = new ParticleSystem.MinMaxCurve(wx * 0.85f, wx * 1.15f);
+                    if (amount > 0.01f && !_rainNear.isPlaying) _rainNear.Play();
+                    else if (amount <= 0.01f && _rainNear.isPlaying) _rainNear.Stop();
+                }
             }
             if (_rainSource != null)
             {
@@ -348,8 +360,9 @@ namespace LR2.World
             var pShader = Shader.Find("LR2/ParticleUnlit") ?? Shader.Find("Sprites/Default");
             _runtimeRainMat = new Material(pShader);
             _runtimeRainMat.SetTexture("_MainTex", _rainStreakTex);
-            _runtimeRainMat.SetColor("_Color", new Color(0.80f, 0.88f, 0.96f, 0.36f));
-            _runtimeRainMat.SetFloat("_Intensity", 0.95f);
+            // B93: the streaks were 8-15 mm wide at ~15 % opacity, spawned 22 m up in a 34 m box: sub-pixel almost everywhere
+            _runtimeRainMat.SetColor("_Color", new Color(0.80f, 0.87f, 0.95f, 0.62f));
+            _runtimeRainMat.SetFloat("_Intensity", 1.15f);
             _runtimeRainMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             _runtimeRainMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             _runtimeRainMat.renderQueue = 3000;
@@ -357,18 +370,18 @@ namespace LR2.World
             // Fine high-altitude optical rain streaks + strict 3D roof collision (keeps interiors dry)
             var main = rain.main;
             main.loop = true;
-            main.maxParticles = Mathf.Min(main.maxParticles > 0 ? main.maxParticles : 2400, 2400);
+            main.maxParticles = 5200;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startLifetime = new ParticleSystem.MinMaxCurve(1.35f, 1.85f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(19f, 24f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.008f, 0.015f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.76f, 0.86f, 0.96f, 0.26f), new Color(0.90f, 0.95f, 1f, 0.48f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.016f, 0.026f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.76f, 0.84f, 0.94f, 0.45f), new Color(0.90f, 0.95f, 1f, 0.75f));
             main.gravityModifier = 0.0f;
 
             var shape = rain.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(34f, 3.5f, 34f);
+            shape.scale = new Vector3(30f, 3f, 30f);
 
             var vel = rain.velocityOverLifetime;
             vel.enabled = true;
@@ -389,10 +402,48 @@ namespace LR2.World
 
             var psr = rain.GetComponent<ParticleSystemRenderer>();
             psr.renderMode = ParticleSystemRenderMode.Stretch;
-            psr.velocityScale = 0.022f;
-            psr.lengthScale = 0.14f;
+            psr.velocityScale = 0.03f;
+            psr.lengthScale = 0.3f;
             psr.cameraVelocityScale = 0.02f;
             psr.sharedMaterial = _runtimeRainMat;
+
+            // B93: a dense near layer around the camera: longer, brighter streaks with parallax, so the rain reads up close
+            var nGo = new GameObject("RainNear_Runtime");
+            nGo.transform.SetParent(transform, false);
+            _rainNear = nGo.AddComponent<ParticleSystem>();
+            _rainNear.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var nm = _rainNear.main;
+            nm.loop = true;
+            nm.playOnAwake = false;
+            nm.maxParticles = 1600;
+            nm.simulationSpace = ParticleSystemSimulationSpace.World;
+            nm.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.7f);
+            nm.startSpeed = 0f;
+            nm.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.02f);
+            nm.startColor = new ParticleSystem.MinMaxGradient(new Color(0.78f, 0.86f, 0.95f, 0.32f), new Color(0.92f, 0.96f, 1f, 0.55f));
+            var nsh = _rainNear.shape;
+            nsh.enabled = true;
+            nsh.shapeType = ParticleSystemShapeType.Box;
+            nsh.scale = new Vector3(10f, 1f, 10f);
+            var nvel = _rainNear.velocityOverLifetime;
+            nvel.enabled = true;
+            nvel.space = ParticleSystemSimulationSpace.World;
+            nvel.x = new ParticleSystem.MinMaxCurve(1.2f, 2.6f);
+            nvel.y = new ParticleSystem.MinMaxCurve(-21f, -17f);
+            nvel.z = new ParticleSystem.MinMaxCurve(-0.3f, 0.3f);
+            var ncol = _rainNear.collision;
+            ncol.enabled = true;
+            ncol.type = ParticleSystemCollisionType.World;
+            ncol.mode = ParticleSystemCollisionMode.Collision3D;
+            ncol.collidesWith = LR2.Core.LR2Layers.EnvironmentMask;
+            ncol.lifetimeLoss = 1f;
+            ncol.radiusScale = 0.04f;
+            var npsr = nGo.GetComponent<ParticleSystemRenderer>();
+            npsr.renderMode = ParticleSystemRenderMode.Stretch;
+            npsr.velocityScale = 0.034f;
+            npsr.lengthScale = 0.25f;
+            npsr.cameraVelocityScale = 0.02f;
+            npsr.sharedMaterial = _runtimeRainMat;
 
             // Ground impact crown droplet bursts
             var sGo = new GameObject("RainSplashBursts_Runtime");
@@ -405,7 +456,7 @@ namespace LR2.World
             sm.simulationSpace = ParticleSystemSimulationSpace.World;
             sm.startLifetime = new ParticleSystem.MinMaxCurve(0.14f, 0.24f);
             sm.startSpeed = new ParticleSystem.MinMaxCurve(1.1f, 2.4f);
-            sm.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.055f);
+            sm.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.065f);
             sm.gravityModifier = 2.4f;
             var sem = _splashBurstPS.emission; sem.enabled = false;
             var scol = _splashBurstPS.colorOverLifetime;
@@ -473,9 +524,9 @@ namespace LR2.World
             if (cam == null) return;
 
             // Emit real ground crown splashes & concentric water ripples strictly on outdoor surfaces
-            float targetPerSec = Mathf.Lerp(10f, 90f, rainAmount);
+            float targetPerSec = Mathf.Lerp(60f, 340f, rainAmount); // B97: splashes you can see (10-90/s before)
             _splashAcc += targetPerSec * Time.deltaTime;
-            int burstCount = Mathf.Min(4, Mathf.FloorToInt(_splashAcc));
+            int burstCount = Mathf.Min(14, Mathf.FloorToInt(_splashAcc));
             _splashAcc -= burstCount;
 
             Vector3 originCenter = cam.transform.position + cam.transform.forward * 7f;
@@ -483,7 +534,7 @@ namespace LR2.World
             for (int i = 0; i < burstCount; i++)
             {
                 float angle = (float)(_noise.NextDouble() * Mathf.PI * 2.0);
-                float dist = Mathf.Sqrt((float)_noise.NextDouble()) * 16f;
+                float dist = Mathf.Sqrt((float)_noise.NextDouble()) * 12f;
                 Vector3 sampleTop = new Vector3(
                     originCenter.x + Mathf.Cos(angle) * dist,
                     cam.transform.position.y + 18f,
@@ -510,6 +561,26 @@ namespace LR2.World
                     _rippleEmit.velocity = Vector3.zero;
                     _puddleRipplePS.Emit(_rippleEmit, 1);
                 }
+            }
+        }
+
+        /// <summary>B97: a footstep on a wet outdoor surface throws a small crown of droplets (and a ripple once puddles form).</summary>
+        public void EmitFootSplash(Vector3 position, float intensity)
+        {
+            if (_splashBurstPS == null) return;
+            int drops = 3 + Mathf.RoundToInt(Mathf.Clamp01(intensity) * 4f);
+            for (int d = 0; d < drops; d++)
+            {
+                _splashEmit.position = position + Vector3.up * 0.03f;
+                _splashEmit.velocity = new Vector3(((float)_noise.NextDouble() - 0.5f) * 1.6f, 0.9f + (float)_noise.NextDouble() * 1.4f * (0.6f + intensity),
+                    ((float)_noise.NextDouble() - 0.5f) * 1.6f);
+                _splashBurstPS.Emit(_splashEmit, 1);
+            }
+            if (_puddleRipplePS != null && Wetness > 0.2f)
+            {
+                _rippleEmit.position = position + Vector3.up * 0.02f;
+                _rippleEmit.velocity = Vector3.zero;
+                _puddleRipplePS.Emit(_rippleEmit, 1);
             }
         }
 

@@ -61,6 +61,77 @@ namespace LR2.FX
             var set = fx.footstepSound.IsValid ? fx.footstepSound : lib.fallback.footstepSound;
             float vol = Mathf.Clamp01(intensity) * (localPlayer ? lib.localFootstepVolume : 1f);
             LR2Audio.PlayAt(set, position, vol);
+            FootstepParticles(position, surface, intensity);
+        }
+
+        // ------------------------------------------------------------------ B97 footstep dust and splashes
+        // User 11-19 00:27: "add more particles, like footstep dust, or splash while raining".
+        private static ParticleSystem _footDust;
+        private static ParticleSystem.EmitParams _dustEmit;
+
+        private static void FootstepParticles(Vector3 position, SurfaceType surface, float intensity)
+        {
+            var cam = Camera.main;
+            if (cam == null || (position - cam.transform.position).sqrMagnitude > 35f * 35f) return;
+            var weather = LR2.World.WeatherSystem.Instance;
+            if (weather != null && weather.Wetness > 0.25f && !LR2Audio.IsIndoors(position + Vector3.up * 0.4f))
+            {
+                weather.EmitFootSplash(position, intensity);
+                return;
+            }
+            if (surface != SurfaceType.Dirt && surface != SurfaceType.Concrete && surface != SurfaceType.Default) return;
+            if (_footDust == null) _footDust = CreateFootDust();
+            if (_footDust == null) return;
+            Color c = surface == SurfaceType.Dirt ? new Color(0.47f, 0.40f, 0.31f, 0.42f) : new Color(0.56f, 0.54f, 0.5f, 0.3f);
+            int n = intensity > 0.85f ? 3 : 2;
+            for (int i = 0; i < n; i++)
+            {
+                _dustEmit.position = position + new Vector3(Random.Range(-0.12f, 0.12f), 0.05f, Random.Range(-0.12f, 0.12f));
+                _dustEmit.velocity = new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(0.1f, 0.32f), Random.Range(-0.35f, 0.35f)) * (0.6f + intensity);
+                _dustEmit.startSize = Random.Range(0.16f, 0.32f) * (0.7f + 0.5f * intensity);
+                _dustEmit.startLifetime = Random.Range(0.7f, 1.2f);
+                _dustEmit.startColor = c;
+                _dustEmit.rotation = Random.Range(0f, 360f);
+                _footDust.Emit(_dustEmit, 1);
+            }
+        }
+
+        private static ParticleSystem CreateFootDust()
+        {
+            var lib = LR2FxLibrary.Instance;
+            if (lib == null || lib.smoke == null) return null;
+            var go = new GameObject("[LR2 Foot Dust]");
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 320;
+            main.gravityModifier = -0.01f;
+            var em = ps.emission;
+            em.enabled = false;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sz = ps.sizeOverLifetime;
+            sz.enabled = true;
+            sz.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(1f, 1.8f)));
+            var lv = ps.limitVelocityOverLifetime;
+            lv.enabled = true;
+            lv.drag = 2.5f;
+            var rot = ps.rotationOverLifetime;
+            rot.enabled = true;
+            rot.z = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
+            LR2FxLibrary.ApplyFlipbook(ps, lib.smokeTiles);
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = lib.smoke;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            return ps;
         }
 
         private static void PlaceDecal(Material material, Vector3 point, Vector3 normal, float size, float depth, SurfaceLibrary lib)

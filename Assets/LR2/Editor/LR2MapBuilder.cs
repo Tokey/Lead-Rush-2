@@ -1525,6 +1525,72 @@ namespace LR2.EditorTools
             return placed;
         }
 
+        // ------------------------------------------------------------------ B101 cinematic camera post-processing
+        // User 11-19 00:34: "ADD CAMERA post processing effects to make the scenes more realistic". A real camera look on top of the
+        // existing ACES / SSAO / SSR / contact shadows: bloom that actually blooms with lens dirt around bright lights, screen-space
+        // lens flares with soft anamorphic streaks, a touch of chromatic aberration at the edges, and a subtle cool-shadow / warm-
+        // highlight split tone. Kept subtle so it never hides a target.
+        private static Texture2D _lensDirt;
+
+        private static Texture2D LensDirtTexture()
+        {
+            if (_lensDirt != null) return _lensDirt;
+            const string path = "Assets/LR2/Data/Lighting/T_LensDirt.png";
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return _lensDirt = existing;
+            const int w = 1024, h = 576;
+            var px = new Color[w * h];
+            var rng = new System.Random(1911);
+            void Blob(float cx, float cy, float r, float v)
+            {
+                int x0 = Mathf.Max(0, (int)(cx - r)), x1 = Mathf.Min(w - 1, (int)(cx + r));
+                int y0 = Mathf.Max(0, (int)(cy - r)), y1 = Mathf.Min(h - 1, (int)(cy + r));
+                for (int y = y0; y <= y1; y++)
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        float d = Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / r;
+                        if (d >= 1f) continue;
+                        float a = (1f - d * d) * v;
+                        px[y * w + x].r += a; px[y * w + x].g += a; px[y * w + x].b += a;
+                    }
+            }
+            for (int i = 0; i < 70; i++) Blob((float)rng.NextDouble() * w, (float)rng.NextDouble() * h, 18f + (float)rng.NextDouble() * 95f, 0.05f + (float)rng.NextDouble() * 0.16f);
+            for (int i = 0; i < 380; i++) Blob((float)rng.NextDouble() * w, (float)rng.NextDouble() * h, 1.2f + (float)rng.NextDouble() * 3.2f, 0.25f + (float)rng.NextDouble() * 0.45f);
+            for (int i = 0; i < px.Length; i++) { float v = Mathf.Clamp01(px[i].r); px[i] = new Color(v, v, v, 1f); }
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.SetPixels(px);
+            tex.Apply(false, false);
+            return _lensDirt = SaveTexture(tex, path, false, false, true);
+        }
+
+        private static void ApplyCinematicPost(VolumeProfile profile, float strength)
+        {
+            if (profile == null) return;
+            if (!profile.TryGet<Bloom>(out var bloom)) bloom = profile.Add<Bloom>(true);
+            bloom.intensity.Override(0.12f * strength);
+            bloom.threshold.Override(1.25f);
+            bloom.scatter.Override(0.6f);
+            bloom.dirtTexture.Override(LensDirtTexture());
+            bloom.dirtIntensity.Override(1.6f * strength);
+            if (!profile.TryGet<ScreenSpaceLensFlare>(out var flare)) flare = profile.Add<ScreenSpaceLensFlare>(true);
+            flare.intensity.Override(0.32f * strength);
+            flare.firstFlareIntensity.Override(0.6f);
+            flare.secondaryFlareIntensity.Override(0.35f);
+            flare.warpedFlareIntensity.Override(0.25f);
+            flare.streaksIntensity.Override(0.45f);
+            flare.streaksLength.Override(0.45f);
+            flare.streaksThreshold.Override(0.4f);
+            flare.vignetteEffect.Override(1f);
+            flare.chromaticAbberationIntensity.Override(0.35f);
+            if (!profile.TryGet<ChromaticAberration>(out var ca)) ca = profile.Add<ChromaticAberration>(true);
+            ca.intensity.Override(0.07f);
+            if (!profile.TryGet<SplitToning>(out var split)) split = profile.Add<SplitToning>(true);
+            split.shadows.Override(new Color(0.42f, 0.47f, 0.52f));
+            split.highlights.Override(new Color(0.55f, 0.5f, 0.44f));
+            split.balance.Override(-12f);
+            EditorUtility.SetDirty(profile);
+        }
+
         private static DecalProjector CreateDecal(Material mat, Vector3 point, Vector3 normal, float sizeXY, bool floorDecal)
         {
             var go = new GameObject("Decal_" + mat.name);
@@ -1637,6 +1703,7 @@ namespace LR2.EditorTools
             shadows.maxShadowDistance.Override(95f);
             shadows.cascadeShadowSplitCount.Override(4);
             DisableMotionBlur(profile);
+            ApplyCinematicPost(profile, 1f);
             SaveProfile(profile);
 
             var vol = new GameObject("GlobalVolume");

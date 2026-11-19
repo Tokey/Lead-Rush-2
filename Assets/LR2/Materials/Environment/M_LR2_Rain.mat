@@ -33,6 +33,7 @@ Material:
     - _DstBlend: 10
     - _Intensity: 0.35
     - _PremultiplyAlpha: 0
+    - _SoftFade: 0
     - _SrcBlend: 5
     m_Colors:
     - _Color: {r: 0.7, g: 0.76, b: 0.82, a: 0.5}

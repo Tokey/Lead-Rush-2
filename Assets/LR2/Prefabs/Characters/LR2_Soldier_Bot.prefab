@@ -3036,7 +3036,7 @@ MonoBehaviour:
   cameraBone: {fileID: 0}
   mouseInputProperty: MouseInput
   fovEaseMode:
-    easeFunc: 2
+    easeFunc: 1
     curve:
       serializedVersion: 2
       m_Curve: []

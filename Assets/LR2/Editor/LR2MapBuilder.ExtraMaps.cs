@@ -842,6 +842,7 @@ namespace LR2.EditorTools
             shadows.maxShadowDistance.Override(95f);
             shadows.cascadeShadowSplitCount.Override(4);
             DisableMotionBlur(profile);
+            ApplyCinematicPost(profile, rainDefaultPreset >= 0 ? 1.15f : 1f); // B101
             SaveProfile(profile);
 
             var vol = new GameObject("GlobalVolume");
