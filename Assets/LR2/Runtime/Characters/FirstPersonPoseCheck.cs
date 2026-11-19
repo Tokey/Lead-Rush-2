@@ -144,6 +144,8 @@ namespace LR2.Characters
             if (Array.IndexOf(args, "-lr2DeathTest") >= 0) { yield return DeathTest(); Finish(); yield break; }
             // -lr2GripCheck: where each hand sits on the gun (weapon space) + the gun's underside profile (B26/B49), then quit.
             if (Array.IndexOf(args, "-lr2GripCheck") >= 0) { yield return GripCheck(); Finish(); yield break; }
+            // -lr2AdsWalkCheck: sight picture and view stability while moving in ADS (B91), then quit.
+            if (Array.IndexOf(args, "-lr2AdsWalkCheck") >= 0) { yield return AdsWalkCheck(); Finish(); yield break; }
             if (aimRun) yield return BotAimTest();
             // -lr2GifRun: record real gameplay clips (HUD included) for the README GIFs, then quit.
             if (gifRun) yield return GifRun();
@@ -897,6 +899,69 @@ namespace LR2.Characters
             string offs = def != null ? $" defOffsets R=({def.rightGripOffset.x * 100f:0.0},{def.rightGripOffset.y * 100f:0.0},{def.rightGripOffset.z * 100f:0.0}) L=({def.leftGripOffset.x * 100f:0.0},{def.leftGripOffset.y * 100f:0.0},{def.leftGripOffset.z * 100f:0.0})" : "";
             string hands = _proxy != null ? $" handErr L={_proxy.HandErrorLeft * 100f:0.0} R={_proxy.HandErrorRight * 100f:0.0} cm" : "";
             return $"GRIP [{label}] gun={fa?.DisplayName} item-space cm: rPalm=({r.x:0.0},{r.y:0.0},{r.z:0.0}) lPalm=({l.x:0.0},{l.y:0.0},{l.z:0.0}){idx}{offs}{hands}";
+        }
+
+        /// <summary>
+        /// B91 (user 11-19: "ads is specially bad while moving, not while steady"). In ADS: stand, walk forward, strafe right and
+        /// left, walk back; every frame (after all LateUpdates, so BodycamRig's camera motion is included) it records where the
+        /// sight line points relative to the view, how far the view itself is off the bullet line (AimDirection), the camera's
+        /// vertical bob, and the correction AdsSightLock had to apply. One first-person capture per phase.
+        /// </summary>
+        private IEnumerator AdsWalkCheck()
+        {
+            float yaw = OpenYaw();
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw; _cmd.aimPitch = 0f;
+            if (_pistolRun) { _cmd.weaponSlot = 1; yield return Wait(0.9f); }
+            yield return Wait(1.0f);
+            _cmd.aim = true;
+            yield return Wait(0.9f);
+            yield return AdsSample("still", 1.2f, Vector2.zero);
+            yield return AdsSample("walk-forward", 2.0f, new Vector2(0f, 1f));
+            yield return AdsSample("strafe-right", 1.6f, new Vector2(1f, 0f));
+            yield return AdsSample("strafe-left", 1.6f, new Vector2(-1f, 0f));
+            yield return AdsSample("walk-back", 1.6f, new Vector2(0f, -1f));
+            _cmd.move = Vector2.zero;
+            _cmd.aim = false;
+            yield return Wait(0.5f);
+        }
+
+        private IEnumerator AdsSample(string label, float seconds, Vector2 move)
+        {
+            _cmd.move = move;
+            yield return Wait(0.4f); // into the gait
+            var fa = _soldier.ActiveFirearm;
+            var cam = _soldier.ViewCamera;
+            var entity = fa != null ? fa.GetComponent<KINEMATION.FPSAnimationFramework.Runtime.Core.FPSAnimatorEntity>() : null;
+            Transform ap = entity != null ? entity.defaultAimPoint : null;
+            var sightLock = _soldier.GetComponent<AdsSightLock>();
+            float maxAng = 0f, sumAng = 0f, maxOff = 0f, sumOff = 0f, maxView = 0f, sumView = 0f, maxCorr = 0f;
+            float yMin = float.MaxValue, yMax = float.MinValue, speed = 0f;
+            int n = 0;
+            float end = Time.time + seconds;
+            var eof = new WaitForEndOfFrame();
+            while (Time.time < end && fa != null && cam != null && ap != null && !_soldier.IsDead)
+            {
+                yield return eof;
+                Vector3 local = cam.transform.InverseTransformPoint(ap.position);
+                float off = new Vector2(local.x, local.y).magnitude * 100f;
+                float ang = Vector3.Angle(ap.forward, cam.transform.forward);
+                float view = Vector3.Angle(cam.transform.forward, _soldier.AimDirection);
+                maxAng = Mathf.Max(maxAng, ang); sumAng += ang;
+                maxOff = Mathf.Max(maxOff, off); sumOff += off;
+                maxView = Mathf.Max(maxView, view); sumView += view;
+                if (sightLock != null) maxCorr = Mathf.Max(maxCorr, sightLock.LastCorrection.x);
+                float camY = cam.transform.position.y - _soldier.transform.position.y;
+                yMin = Mathf.Min(yMin, camY); yMax = Mathf.Max(yMax, camY);
+                speed += _soldier.Movement != null ? _soldier.Movement.Speed : 0f;
+                n++;
+            }
+            if (n == 0) { Note($"ADS-MOVE [{label}] no samples (gun/camera/aim point missing)"); yield break; }
+            Note($"ADS-MOVE [{label}] gun={fa.DisplayName} frames={n} speed={speed / n:0.00} m/s aimBlend={_soldier.AimBlend:0.00} | " +
+                 $"sight vs view: angle max {maxAng:0.00} mean {sumAng / n:0.00} deg, offset max {maxOff:0.00} mean {sumOff / n:0.00} cm | " +
+                 $"view vs bullet line: max {maxView:0.00} mean {sumView / n:0.00} deg | camera bob {(yMax - yMin) * 100f:0.0} cm | " +
+                 $"sight-lock correction max {maxCorr:0.00} deg");
+            yield return Capture($"adsmove_{label}", $"ADS {label}");
         }
 
         private IEnumerator GripCheck()

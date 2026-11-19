@@ -177,7 +177,6 @@ namespace LR2.UI
         {
             if (_myScoreLabel == null || mm == null || mm.Settings == null || Time.unscaledTime < _nextScoreLabelAt) return;
             _nextScoreLabelAt = Time.unscaledTime + 0.25f;
-            if (limitText != null) limitText.text = $"FIRST TO {Mathf.Max(1, mm.ScoreLimit)}";
             if (mm.IsTeamMode && _player != null && _player.Team != TeamId.None)
             {
                 var other = _player.Team == TeamId.Alpha ? TeamId.Bravo : TeamId.Alpha;
@@ -783,7 +782,8 @@ namespace LR2.UI
             if (enemyScoreText != null) enemyScoreText.text = theirs.ToString();
             if (myScoreBar != null) myScoreBar.fillAmount = Mathf.MoveTowards(myScoreBar.fillAmount, (float)mine / limit, dt * 3.5f);
             if (enemyScoreBar != null) enemyScoreBar.fillAmount = Mathf.MoveTowards(enemyScoreBar.fillAmount, (float)theirs / limit, dt * 3.5f);
-            if (limitText != null) limitText.text = limit.ToString();
+            // B88: set once per frame here only (a second, throttled writer made "15" and "FIRST TO 15" flicker, user 11-19)
+            if (limitText != null) limitText.text = $"FIRST TO {limit}";
             UpdateScoreLabels(mm);
         }
 
