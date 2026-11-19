@@ -400,6 +400,26 @@ namespace LR2.Weapons
 
         private RecoilPatternSettings _patternRuntime;
         private Vector2 _patternBaseV, _patternBaseH;
+        // B47 (specs/B47.md fairness rules): a learnable spray. Kinemation drew every shot at random inside the pattern ranges
+        // and the view kick picked a random side, so no two sprays matched. Shot i of a spray now climbs the range midpoint
+        // (easing to 78 % from shot 5 on) and weaves sideways along one fixed S curve, with at most 10 % seeded drift from shot
+        // 4 on; the climb holds 0.10 s after the last shot before recovering. Average climb per gun is unchanged.
+        private static readonly float[] SprayWeave =
+            { 0f, 0.15f, 0.25f, 0.1f, -0.2f, -0.45f, -0.5f, -0.3f, 0.1f, 0.45f, 0.6f, 0.4f, 0f, -0.4f, -0.55f, -0.35f, 0.05f, 0.4f, 0.55f, 0.3f };
+        private const float SprayResetSeconds = 0.3f, RecoveryHoldSeconds = 0.10f;
+        private int _sprayIndex;
+        private float _lastShotAt = -10f, _patternBaseDamping, _sprayWeaveNow;
+
+        private float SpraySeed
+        {
+            get
+            {
+                string id = definition != null ? definition.displayName : name;
+                int h = 17;
+                foreach (char ch in id ?? "") h = h * 31 + ch;
+                return (h & 0x3FF) * 0.137f;
+            }
+        }
 
         /// <summary>Per-gun copy of the Kinemation recoil pattern, so per-weapon and ADS scaling never touch the shared demo asset.</summary>
         private RecoilPatternSettings RuntimePattern()
@@ -411,21 +431,41 @@ namespace LR2.Weapons
                 _patternRuntime.name = recoilPatternSettings.name + " (LR2 runtime)";
                 _patternBaseV = recoilPatternSettings.verticalRecoil;
                 _patternBaseH = recoilPatternSettings.horizontalRecoil;
+                _patternBaseDamping = recoilPatternSettings.damping;
             }
             ScalePatternForShot(false);
             return _patternRuntime;
         }
 
         /// <summary>Per-shot climb = demo pattern x weapon scale x (ADS multiplier while aiming). Read by RecoilPattern.OnFireStart.</summary>
-        private void ScalePatternForShot(bool aiming)
+        private void ScalePatternForShot(bool aiming, bool shot = false)
         {
             if (_patternRuntime == null) return;
             float v = definition != null ? definition.recoilPatternScale : 1f;
             float h = definition != null ? definition.recoilPatternHorizontalScale : 1f;
             float ads = aiming && definition != null ? definition.adsRecoilMultiplier : 1f;
-            _patternRuntime.verticalRecoil = _patternBaseV * (v * ads);
-            _patternRuntime.horizontalRecoil = _patternBaseH * (h * ads);
+            if (!shot)
+            {
+                _patternRuntime.verticalRecoil = _patternBaseV * (v * ads);
+                _patternRuntime.horizontalRecoil = _patternBaseH * (h * ads);
+                return;
+            }
+            if (Time.time - _lastShotAt > SprayResetSeconds) _sprayIndex = 0;
+            int i = _sprayIndex++;
+            _lastShotAt = Time.time;
+            float ramp = i < 4 ? 1f : Mathf.Lerp(1f, 0.78f, Mathf.Clamp01((i - 4) / 11f));
+            float vv = (_patternBaseV.x + _patternBaseV.y) * 0.5f * ramp * v * ads;
+            float hMid = (_patternBaseH.x + _patternBaseH.y) * 0.5f;
+            float hHalf = Mathf.Abs(_patternBaseH.y - _patternBaseH.x) * 0.5f;
+            float jitter = i >= 3 ? (Mathf.PerlinNoise(SpraySeed, i * 0.37f) - 0.5f) * 0.2f : 0f; // at most +-10 % of the range
+            _sprayWeaveNow = SprayWeave[i % SprayWeave.Length] + jitter;
+            float hv = (hMid + hHalf * _sprayWeaveNow) * h * ads;
+            _patternRuntime.verticalRecoil = new Vector2(vv, vv);   // equal ends: Kinemation's Random.Range returns that value
+            _patternRuntime.horizontalRecoil = new Vector2(hv, hv);
         }
+
+        /// <summary>Index of the next shot in the current spray (QA).</summary>
+        public int SprayIndex => _sprayIndex;
 
         /// <summary>Current per-shot vertical climb range in degrees (QA).</summary>
         public Vector2 PatternVerticalPerShot => _patternRuntime != null ? _patternRuntime.verticalRecoil : Vector2.zero;
@@ -441,6 +481,8 @@ namespace LR2.Weapons
         public override void Tick(float deltaTime)
         {
             if (definition != null) _bloom = Mathf.Max(0f, _bloom - definition.bloomRecovery * deltaTime);
+            // B47: hold the climb for 0.10 s after the last shot, then recover at the pattern's own rate (damping 5: 80 % in ~0.32 s)
+            if (_patternRuntime != null) _patternRuntime.damping = Time.time - _lastShotAt < RecoveryHoldSeconds ? 0f : _patternBaseDamping;
             if (IsReloading) UpdateReload();
 
             bool wantsShot = _triggerHeld && (_fireMode == FireMode.Auto || (_fireMode == FireMode.Semi && !_shotThisPress) ||
@@ -533,15 +575,22 @@ namespace LR2.Weapons
             if (_recoilAnimation != null && recoilData != null) _recoilAnimation.Play();
             if (_recoilPattern != null)
             {
-                ScalePatternForShot(owner.IsAiming);
+                ScalePatternForShot(owner.IsAiming, true);
                 _recoilPattern.OnFireStart();
+            }
+            else
+            {
+                // guns without a Kinemation pattern (MK23) still follow the spray weave for the view kick below
+                if (Time.time - _lastShotAt > SprayResetSeconds) _sprayIndex = 0;
+                _sprayWeaveNow = SprayWeave[_sprayIndex++ % SprayWeave.Length];
+                _lastShotAt = Time.time;
             }
             _recoilActive = true;
 
             if (definition != null)
             {
                 Vector2 kick = definition.cameraKick * (owner.IsAiming ? definition.adsKickMultiplier : 1f);
-                owner.AddViewKick(new Vector2(UnityEngine.Random.Range(-kick.y, kick.y), -kick.x));
+                owner.AddViewKick(new Vector2(kick.y * Mathf.Clamp(_sprayWeaveNow * 2f, -1f, 1f), -kick.x)); // B47: side follows the weave
             }
 
             PlayShotAudio();
