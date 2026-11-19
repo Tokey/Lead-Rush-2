@@ -105,6 +105,7 @@ namespace LR2.Game
             Time.timeScale = 1f;
             if (LR2.World.KillcamDirector.Instance == null)
                 new GameObject("[LR2 Killcam]").AddComponent<LR2.World.KillcamDirector>();
+            LR2.World.MapAmbientFx.Ensure();
 
             _teamScore[TeamId.Alpha] = 0;
             _teamScore[TeamId.Bravo] = 0;

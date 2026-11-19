@@ -160,7 +160,14 @@ namespace LR2.Game
         {
             if (_dead) return;
             _dead = true;
-            if (explosionPrefab != null) LR2Pool.Spawn(explosionPrefab, transform.position, Quaternion.identity, 4f);
+            // B112: seeker drones burst in the Particle Pack's energy explosion
+            var fxLib = LR2.FX.LR2FxLibrary.Instance;
+            if (fxLib != null && fxLib.packEnergyExplosion != null)
+            {
+                LR2.FX.PackFx.Spawn(fxLib.packEnergyExplosion, transform.position, Quaternion.identity, 0.75f, 4f);
+                LR2.FX.ExplosionFlash.Spawn(transform.position, new Color(0.55f, 0.75f, 1f), 30000f, 12f, 0.35f);
+            }
+            else if (explosionPrefab != null) LR2Pool.Spawn(explosionPrefab, transform.position, Quaternion.identity, 4f);
             var s = LR2CommonSounds.Instance;
             if (s != null) LR2Audio.PlayAt(s.orbExplode, transform.position);
             foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;

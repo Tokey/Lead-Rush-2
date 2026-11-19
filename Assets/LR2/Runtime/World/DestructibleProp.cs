@@ -160,7 +160,14 @@ namespace LR2.World
 
         private void TriggerExplosion(Vector3 center, DamageInfo triggerInfo)
         {
-            if (explosionPrefab != null) LR2Pool.Spawn(explosionPrefab, center, Quaternion.identity, 4f);
+            // B112: the Particle Pack fireball (sized to the blast) and a light pulse; the old effect only without the pack
+            var fxLib = LR2FxLibrary.Instance;
+            if (fxLib != null && fxLib.packExplosion != null)
+            {
+                PackFx.Spawn(fxLib.packExplosion, center, Quaternion.identity, Mathf.Clamp(blastRadius / 2.2f, 1.4f, 3.2f), 5f);
+                ExplosionFlash.Spawn(center + Vector3.up * 0.6f, new Color(1f, 0.62f, 0.32f), 60000f, blastRadius * 3f, 0.45f);
+            }
+            else if (explosionPrefab != null) LR2Pool.Spawn(explosionPrefab, center, Quaternion.identity, 4f);
             var s = LR2CommonSounds.Instance;
             if (s != null) LR2Audio.PlayAt(s.orbExplode, center);
             GameEvents.RaiseNoise(triggerInfo.attacker, center, 48f, NoiseType.Explosion);

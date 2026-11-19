@@ -39,6 +39,13 @@ namespace LR2.FX
         public Material muzzleHeat;
         public Material heatHaze;
 
+        [Header("Unity Particle Pack (B112, re-materialised by PackFx)")]
+        public GameObject packExplosion;        // TinyExplosion: gas cylinders and other explosive props
+        public GameObject packEnergyExplosion;  // EnergyExplosion: seeker drones
+        public GameObject packSparks;           // ElectricalSparks: shorting light fittings
+        public GameObject packSteam;            // PressurisedSteam: a punctured pipe vents
+        public GameObject packSteamStatic;      // PressurizedSteamStatic: standing leaks on pipe runs
+
         private static LR2FxLibrary _instance;
         private static bool _loaded;
 

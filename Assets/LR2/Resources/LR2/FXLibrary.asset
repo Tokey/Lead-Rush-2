@@ -26,3 +26,8 @@ MonoBehaviour:
   barrelSmokeTiles: {x: 8, y: 8}
   muzzleHeat: {fileID: 2100000, guid: 874cc2a1f7d727242b7117c0899f0cec, type: 2}
   heatHaze: {fileID: 2100000, guid: 274e3f3996fe4f54aa61ae391e173ebd, type: 2}
+  packExplosion: {fileID: 1337198075554910, guid: 25c7aa9ad705fe143a4d71c1c8deb7d4, type: 3}
+  packEnergyExplosion: {fileID: 1329845292236604, guid: 9bba9cf244c53c5439505dfc96fdd11c, type: 3}
+  packSparks: {fileID: 1000011396044746, guid: 96b2ec0239d11fa4b9792311efceb8ed, type: 3}
+  packSteam: {fileID: 1533138625715334, guid: 61bb62591466c3649bdf4905822d72f6, type: 3}
+  packSteamStatic: {fileID: 1533138625715334, guid: 3ce3e11ee76080c4da4c6aa8d5251b23, type: 3}

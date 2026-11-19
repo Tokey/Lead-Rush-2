@@ -18,6 +18,7 @@ namespace LR2.FX
 
         public static void SpawnBulletImpact(Vector3 point, Vector3 normal, Vector3 direction, SurfaceType surface, bool exitHole)
         {
+            if (surface == SurfaceType.Metal && !exitHole) LR2.World.MapAmbientFx.Instance?.OnMetalHit(point, normal); // B112 pipe steam
             var lib = SurfaceLibrary.Instance;
             if (lib == null) return;
             var fx = lib.Get(surface);
