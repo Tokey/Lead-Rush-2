@@ -219,6 +219,7 @@ body.gifmode .wrap { display: none; }
 .viz-svg { width: 100%; min-width: 640px; height: auto; display: block; }
 .viz-svg text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 .viz-svg .dim { fill: var(--muted); }
+.viz-svg .lbl { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 .viz-sum { font: 14px/1.55 var(--body); color: var(--ink); margin-top: 10px; max-width: 78ch; }
 .viz-sum b { font-family: var(--mono); font-weight: 500; }
 </style>
@@ -3111,7 +3112,7 @@ requestAnimationFrame(frame);
         if (prev) mk('line', { x1: prev.x, y1: prev.y, x2: x, y2: y, stroke: 'var(--ink)', 'stroke-width': 1.3, 'stroke-dasharray': '4 3' }, evG);
         mk('circle', { cx: x, cy: y, r: 6.5, fill: 'var(--panel)', stroke: 'var(--ink)', 'stroke-width': 2 }, evG);
         const right = x < X1 - 190;
-        mk('text', { x: right ? x + 10 : x - 10, y: y - 9, 'text-anchor': right ? 'start' : 'end', 'font-size': 11, 'font-weight': 600 }, evG, m.label);
+        mk('text', { x: right ? x + 10 : x - 10, y: y - 9, 'text-anchor': right ? 'start' : 'end', 'font-size': 11, 'font-weight': 600, class: 'lbl' }, evG, m.label);
         prev = { x, y };
       }
     };
@@ -3182,7 +3183,7 @@ requestAnimationFrame(frame);
       for (const sg of SEG) {
         mk('rect', { x: lx, y: ly - 9, width: 12, height: 12, rx: 2, fill: sg.col }, rsvg);
         const tx = mk('text', { x: lx + 18, y: ly + 1, 'font-size': 11 }, rsvg, sg.label);
-        lx += 30 + sg.label.length * 6.7;
+        lx += 36 + (tx.getComputedTextLength ? tx.getComputedTextLength() : sg.label.length * 7.4);
       }
       mk('line', { x1: lx, y1: ly - 10, x2: lx, y2: ly + 3, stroke: 'var(--ink)', 'stroke-width': 2 }, rsvg);
       mk('text', { x: lx + 8, y: ly + 1, 'font-size': 11 }, rsvg, 'flick lands');

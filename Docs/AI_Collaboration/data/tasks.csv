@@ -175,3 +175,8 @@ C69,2026-11-19 05:24,Claude,claude-opus-5-5,"Tactical reload 15 % faster, ends a
 C70,2026-11-19 06:28,Claude,claude-opus-5-5,"Skirmish lobby (PLAY-only menu, 20-bot roster with per-slot team and difficulty, 3/4-way teams) and AI vs AI spectator with a per-difficulty test bench",feature,B109,delivered,"user prompt 06:0x; code only, editor check pending",unrated,,
 C71,2026-11-19 06:28,Claude,claude-opus-5-5,Headshot killcam bullet cam (short slow-motion pan of the round into the head),feature,B111,delivered,user prompt 06:1x; code only,unrated,,
 C72,2026-11-19 06:28,Claude,claude-opus-5-5,Laser spill light on the surface it hits,feature,B113,delivered,user prompt 06:1x; code only,unrated,,
+C73,2026-11-19 06:53,Claude,claude-opus-5-5,"Menu cinematic: per-screen shots, slow motion, moving and firing soldiers, eye view",feature,B110,delivered,user prompt 06:09; 73d8bb3; code only,unrated,,
+C74,2026-11-19 06:53,Claude,claude-opus-5-5,"Particle Pack in HDRP (material conversion), pack explosions with light pulses, seeded ambient steam leaks, sparking fittings, pipe steam jets",feature,B112,delivered,user prompt 06:16; d2688da; code only,unrated,,
+C75,2026-11-19 06:53,Claude,claude-opus-5-5,Bot Lab: animated tick clock and seen-to-first-shot chain from the game constants,docs,B114,delivered,user prompt 06:19; dee1a6f; artifact v4,unrated,,
+C76,2026-11-19 06:53,Claude,claude-opus-5-5,README by-the-numbers stats (total prompts) and prompt list to 06:22,docs,B115,delivered,user prompt 06:22; 196a1ef,unrated,,
+C77,2026-11-19 06:53,Claude,claude-opus-5-5,"Features page rewritten with B109-B114 and real captures (ADS, storm, Bot Lab GIF and chart)",docs,B103,delivered,user prompt 06:16,unrated,,
