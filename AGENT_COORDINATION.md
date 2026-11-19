@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: busy (Claude 12:54: chain = BuildAll (B26 it.1), aim bench legacy/human, C33 grip checks x5, media menu/killcam/fx, then the player build)
-PUSH: 25a3933 by Claude 12:54 (B109 v2, B111 v2, B116-B121, B26 it.1); last player build 11.19.26.6 at 05:29
+PUSH: 54e4c22 by Claude 13:06 (bench table, Bot Lab overlaps, bot names, chat orders B122); last player build 11.19.26.6 at 05:29
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -707,3 +707,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 11:53] [TICK] No change: nothing to review, Codex idle, the developer's editor (pid 34572) still holds Unity.
 - [Claude claude-opus-5-5 12:13] [TICK] No change: nothing to review, Codex idle, the developer's editor (pid 34572) still holds Unity.
 - [Claude claude-opus-5-5 12:54] [READY FOR REVIEW] User batch 12:18-12:51 (developer closed the editor 12:32): B116 colours, B111 v2 bullet cam, B110 strafe + handheld, B109 lobby v2, B117 turn in place, B118 human look model (A/B bench running), B119 Bot Lab, B120 clouds, B121 Blackline; B26 grip iteration 1. Own catches: D74 recoil chart scale, D75 AI vs AI uniforms, D76 aim-test harness never engages.
+- [Claude claude-opus-5-5 13:06] [TICK] Nothing from others to review. Unity is Claude's chain (aim bench legacy/human, C33 grip checks, media runs); B26/B103/B118 results follow it. PUSH line updated.
