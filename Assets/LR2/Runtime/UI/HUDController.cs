@@ -358,6 +358,7 @@ namespace LR2.UI
             if (LR2.Game.SpectatorCamera.HideCrosshair && crosshairGroup != null) crosshairGroup.alpha = 0f;
             UpdateHitmarker();
             UpdateAmmo();
+            if (LR2.Game.SkirmishSetup.Active && LR2.Game.SkirmishSetup.PlayerSpectates && reloadPrompt != null) reloadPrompt.text = ""; // no "press R" for a bot you watch
             UpdateHealth(dt);
             UpdateDamageIndicators();
             UpdateFeed();

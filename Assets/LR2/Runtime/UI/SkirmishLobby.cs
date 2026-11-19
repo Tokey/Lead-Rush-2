@@ -78,6 +78,7 @@ namespace LR2.UI
             Anchor(edge.rectTransform, 0.715f, 0f, 0.75f, 1f);
 
             var title = Label(root, "SKIRMISH", 66, Text, true);
+            title.overflowMode = TextOverflowModes.Overflow; // ellipsis hid the whole line when the box ran shorter than the font
             Anchor(title.rectTransform, 0.03f, 0.885f, 0.5f, 0.965f);
             var sub = Label(root, "ANY MATCH YOU WANT  ·  UP TO 20 BOTS  ·  2, 3 OR 4 TEAMS  ·  AI VS AI TEST BENCH", 19, Dim);
             Anchor(sub.rectTransform, 0.031f, 0.852f, 0.7f, 0.89f);

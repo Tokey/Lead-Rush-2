@@ -183,18 +183,18 @@ namespace LR2.World
             bot.Teleport(bp, yaw + 180f);
             var agent = bot.GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (agent != null && agent.isOnNavMesh) agent.Warp(bp);
-            player.Health.SetInvulnerable(40f);
+            // no invulnerability: bots do not target a protected player (that is why the first staging never fired)
+            player.Health.CancelSpawnProtection();
             bool armed = true, killed = false;
             void OnShot(ShotEvent e)
             {
-                if (!armed || e.shooter != bot.Combatant) return;
+                if (!armed || e.shooter == null || e.shooter == player || !TeamUtil.AreHostile(e.shooter, player)) return;
                 armed = false;
-                player.Health.CancelSpawnProtection();
                 Vector3 head = player.HeadPosition;
                 var info = new DamageInfo
                 {
-                    amount = 500f, type = DamageType.Bullet, zone = HitZone.Head, attacker = bot.Combatant,
-                    weaponName = bot.ActiveFirearm != null ? bot.ActiveFirearm.DisplayName : "rifle",
+                    amount = 500f, type = DamageType.Bullet, zone = HitZone.Head, attacker = e.shooter,
+                    weaponName = "rifle",
                     point = head, normal = -(head - e.origin).normalized, direction = (head - e.origin).normalized,
                     distance = Vector3.Distance(head, e.origin), force = 140f
                 };
