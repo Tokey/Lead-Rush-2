@@ -48,6 +48,12 @@ namespace LR2.AI
                  "Before D61 every bot stacked about 5 deg of extra error in a real fight, so even Veterans rarely won.")]
         [Range(0f, 1f)] public float composure = 0.25f;
 
+        [Header("Human flick errors and pre-fire (B89)")]
+        [Tooltip("Chance that a large flick (over 14 deg) overshoots: it lands 5-14 % past the target and corrects back. Fast, skilled players overshoot more often than slow ones (speed-accuracy trade-off).")]
+        [Range(0f, 1f)] public float overshootChance = 0.16f;
+        [Tooltip("Chance that a skilled bot pulls the trigger in the last part of a flick onto a visible target, or pre-fires the spot where it expects the target as that spot comes into view.")]
+        [Range(0f, 1f)] public float preFireChance = 0.05f;
+
         public float RandomReaction() => Random.Range(reactionTime.x, reactionTime.y);
     }
 }

@@ -74,6 +74,14 @@ namespace LR2.AI
         private float _flickStartYaw, _flickStartPitch;
         private float _flickGoalYaw, _flickGoalPitch;
         private float _nextFlickAllowedAt;
+        // B89 (user 11-19 00:13: "human players can sometimes overshoot, and some pros start pre shooting even, add those")
+        private bool _flickOvershoot, _flickPreFire;
+        private float _flickProgress;
+        private bool _expectedSpotWasHidden;
+        private float _preFireUntil;
+        /// <summary>QA/docs: flicks started, overshoots, flick pre-fires and corner pre-fires since spawn.</summary>
+        public Vector4 FlickStats => new Vector4(_statFlicks, _statOvershoots, _statFlickPreFires, _statCornerPreFires);
+        private int _statFlicks, _statOvershoots, _statFlickPreFires, _statCornerPreFires;
         private float _sdnPhase;
 
         // trigger discipline
@@ -584,6 +592,17 @@ namespace LR2.AI
                 float composure = d != null ? d.composure : 0.25f;
                 float sdnSigma = Mathf.Clamp(angularDist * (0.045f + 0.045f * _combatStress * (1f - composure)) * skillScale, 0.35f, 6.5f);
                 float muAlong = Mathf.Lerp(-0.075f, 0.035f, _combatStress) * angularDist;
+                // B89: now and then a fast flick sails past the target and corrects back (more often under stress)
+                float overChance = (d != null ? d.overshootChance : 0.16f) * Mathf.Lerp(1f, 1.4f, _combatStress);
+                _flickOvershoot = angularDist > 14f && Random.value < overChance;
+                if (_flickOvershoot)
+                {
+                    muAlong = Random.Range(0.05f, 0.14f) * Mathf.Lerp(1f, 1.25f, _combatStress) * angularDist;
+                    _statOvershoots++;
+                }
+                // B89: a pro may already pull the trigger as the flick arrives (only onto a visible target)
+                _flickPreFire = engaging && bb.targetVisible && target != null && d != null && Random.value < d.preFireChance;
+                _statFlicks++;
                 float epsAlong = muAlong + ((Random.value + Random.value) - 1f) * sdnSigma;
                 float epsPerp = ((Random.value + Random.value) - 1f) * (0.44f * sdnSigma);
                 float endErrYaw = (ux * epsAlong + nx * epsPerp) * 1.08f;
@@ -609,7 +628,9 @@ namespace LR2.AI
                 _yawVel = yawStepDeg / Mathf.Max(0.001f, dt);
                 _pitchVel = pitchStepDeg / Mathf.Max(0.001f, dt);
 
-                if (u >= 1f || angularDist < 2.2f)
+                _flickProgress = u;
+                // an overshooting flick runs to its end point (passing through the target on the way)
+                if (u >= 1f || (!_flickOvershoot && angularDist < 2.2f))
                     _flickActive = false;
             }
             else
@@ -677,7 +698,11 @@ namespace LR2.AI
                 Vector3 toTarget = (target.ChestPosition - Soldier.AimOrigin);
                 float angle = Vector3.Angle(Soldier.AimDirection, toTarget);
                 float tolerance = Mathf.Max(d != null ? d.fireTolerance : 3.5f, Mathf.Atan2(0.45f, Mathf.Max(dist, 0.5f)) * Mathf.Rad2Deg);
-                if (angle <= tolerance)
+                // B89 flick pre-fire: the shot is timed to the arrival of the flick, before the aim has settled on target
+                bool flickShot = _flickActive && _flickPreFire && _flickProgress >= 0.72f
+                    && Vector3.Angle(Quaternion.Euler(_flickGoalPitch, _flickGoalYaw, 0f) * Vector3.forward, toTarget) <= tolerance * 1.5f;
+                if (flickShot && _burstShotsLeft <= 0) _statFlickPreFires++;
+                if (angle <= tolerance || flickShot)
                 {
                     if (dist < 13f) fire = true; // full auto up close
                     else if (now >= _burstPauseUntil)
@@ -694,6 +719,13 @@ namespace LR2.AI
             {
                 // Brief suppressive burst on the corner where the target just ducked into cover
                 if (_burstShotsLeft <= 0) _burstShotsLeft = 2;
+                fire = true;
+            }
+            else if (!visible && _intent.allowFire && gun != null && !gun.IsReloading && d != null && d.preFireChance > 0f
+                     && bb.ammo01 > 0.3f && now >= _burstPauseUntil && PreFireExpectedSpot(bb, d, now))
+            {
+                // B89 corner pre-fire: a short burst at the spot where the target is expected, as that spot comes into view
+                if (_burstShotsLeft <= 0) _burstShotsLeft = Random.Range(2, 4);
                 fire = true;
             }
             input.fire = fire;
@@ -794,6 +826,30 @@ namespace LR2.AI
         }
 
         /// <summary>True only when the bot is completely out of combat and not handling an urgent objective.</summary>
+        /// <summary>
+        /// B89 corner pre-fire. A skilled player rounding a corner onto the spot where the enemy was last seen fires a short
+        /// burst the moment that spot comes into view, before seeing anyone there. Rolled once per corner (when the line to the
+        /// expected spot goes from blocked to clear), only when the bot is already pre-aimed there and the contact is fresh.
+        /// </summary>
+        private bool PreFireExpectedSpot(BotBlackboard bb, BotDifficulty d, float now)
+        {
+            if (now < _preFireUntil) return true;
+            if (bb.target == null || bb.TimeSinceSeen > 5f || bb.TimeSinceSeen < 0.85f) { _expectedSpotWasHidden = false; return false; }
+            Vector3 eye = Soldier.AimOrigin;
+            Vector3 spot = bb.targetLastKnown + Vector3.up * 1.3f;
+            float dist = Vector3.Distance(eye, spot);
+            if (dist < 3f || dist > 30f) { _expectedSpotWasHidden = false; return false; }
+            bool clear = !Physics.Linecast(eye, spot, LR2Layers.VisionMask, QueryTriggerInteraction.Ignore);
+            bool justOpened = clear && _expectedSpotWasHidden;
+            _expectedSpotWasHidden = !clear;
+            if (!justOpened) return false;
+            if (Vector3.Angle(Soldier.AimDirection, spot - eye) > 7f) return false;
+            if (Random.value >= d.preFireChance) return false;
+            _preFireUntil = now + Random.Range(0.18f, 0.32f);
+            _statCornerPreFires++;
+            return true;
+        }
+
         public static bool IsDisengagedForResupply(BotBlackboard bb, BotIntent brainIntent, Combatant self = null)
         {
             if (bb == null) return false;

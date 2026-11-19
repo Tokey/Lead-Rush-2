@@ -157,6 +157,8 @@ namespace LR2.AI
             dst.errorDecay = Mathf.Lerp(1.35f, 3.5f, effectiveS);
             dst.headshotChance = Mathf.Clamp(Mathf.Lerp(0.06f, 0.30f, effectiveS * 0.7f + hsBonus * 0.3f), 0.05f, 0.34f);
             dst.fireTolerance = Mathf.Lerp(4.8f, 2.2f, effectiveS);
+            dst.overshootChance = Mathf.Lerp(0.10f, 0.28f, effectiveS);   // B89
+            dst.preFireChance = Mathf.Lerp(0f, 0.42f, effectiveS * effectiveS);
 
             // Counter player playstyle: high rush players face slightly lower blind aggression (more crossfires/cover);
             // slow passive players face stronger flank push!

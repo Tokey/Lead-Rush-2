@@ -2405,7 +2405,8 @@ namespace LR2.EditorTools
         public static void BuildData()
         {
             void Diff(string name, Vector2 reaction, float aimSpeed, float err, float settle, float decay, float head, float tol,
-                float aggr, float strafe, float slide, float flank, float crouch, Vector2Int burst, float detect = 1f, float composure = 0.25f)
+                float aggr, float strafe, float slide, float flank, float crouch, Vector2Int burst, float detect = 1f, float composure = 0.25f,
+                float overshoot = 0.16f, float preFire = 0.05f)
             {
                 var d = LoadOrCreate<BotDifficulty>($"{DataDir}/AI/BotDifficulty_{name}.asset");
                 d.displayName = name;
@@ -2425,15 +2426,19 @@ namespace LR2.EditorTools
                 d.visionRange = 75f;
                 d.detectionSpeed = detect;
                 d.composure = composure;
+                d.overshootChance = overshoot;
+                d.preFireChance = preFire;
                 EditorUtility.SetDirty(d);
             }
             // D61 (user 11-18 "even the veteran bot seems too easy ... it rarely wins"): the detection meter needed ~0.75 s at
             // 20 m before a Veteran even reacted, and stress/strafe/movement stacked ~5 deg of error in a real fight. Per-preset
             // detection speed and composure; Veteran also reacts a little faster and settles tighter.
-            Diff("Recruit", new Vector2(0.55f, 0.8f), 4.2f, 7f, 1.6f, 1.3f, 0.05f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4), 0.85f, 0f);
-            Diff("Regular", new Vector2(0.32f, 0.5f), 6.2f, 4.6f, 0.85f, 2f, 0.14f, 3.4f, 0.58f, 0.42f, 0.06f, 0.24f, 0.12f, new Vector2Int(3, 6), 1.15f, 0.25f);
-            Diff("Hardened", new Vector2(0.22f, 0.34f), 8.2f, 3.2f, 0.48f, 2.8f, 0.24f, 2.8f, 0.74f, 0.66f, 0.16f, 0.38f, 0.2f, new Vector2Int(4, 7), 1.55f, 0.5f);
-            Diff("Veteran", new Vector2(0.15f, 0.23f), 10.5f, 2.1f, 0.26f, 3.8f, 0.34f, 2.2f, 0.88f, 0.88f, 0.3f, 0.55f, 0.28f, new Vector2Int(5, 9), 2.2f, 0.72f);
+            Diff("Recruit", new Vector2(0.55f, 0.8f), 4.2f, 7f, 1.6f, 1.3f, 0.05f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4), 0.85f, 0f, 0.10f, 0f);
+            Diff("Regular", new Vector2(0.32f, 0.5f), 6.2f, 4.6f, 0.85f, 2f, 0.14f, 3.4f, 0.58f, 0.42f, 0.06f, 0.24f, 0.12f, new Vector2Int(3, 6), 1.15f, 0.25f, 0.16f, 0.05f);
+            Diff("Hardened", new Vector2(0.22f, 0.34f), 8.2f, 3.2f, 0.48f, 2.8f, 0.24f, 2.8f, 0.74f, 0.66f, 0.16f, 0.38f, 0.2f, new Vector2Int(4, 7), 1.55f, 0.5f, 0.22f, 0.25f);
+            Diff("Veteran", new Vector2(0.15f, 0.23f), 10.5f, 2.1f, 0.26f, 3.8f, 0.34f, 2.2f, 0.88f, 0.88f, 0.3f, 0.55f, 0.28f, new Vector2Int(5, 9), 2.2f, 0.72f, 0.28f, 0.45f);
+            // B89 (user 11-19 00:13): overshoot chance and pre-fire chance (last two values): pros flick faster, so they
+            // overshoot more often, and they pre-fire corners and time shots to the arrival of a flick.
 
             void Match(string file, string display, string desc, GameModeType mode, int limit, float time, int friendly, int enemy)
             {

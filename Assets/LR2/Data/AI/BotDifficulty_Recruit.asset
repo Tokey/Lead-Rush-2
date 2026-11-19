@@ -35,3 +35,5 @@ MonoBehaviour:
   retreatHealth: 0.38
   useCoverChance: 0.6
   composure: 0
+  overshootChance: 0.1
+  preFireChance: 0
