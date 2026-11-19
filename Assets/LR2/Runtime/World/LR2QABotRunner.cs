@@ -113,10 +113,12 @@ namespace LR2.World
             Application.logMessageReceived += OnLog;
             string outDir = OutDir();
             string reqScene = GetArgValue("-lr2Scene");
-            if (!string.IsNullOrEmpty(reqScene) && !string.Equals(SceneManager.GetActiveScene().name, reqScene, StringComparison.OrdinalIgnoreCase)
-                && Application.CanStreamedLevelBeLoaded(reqScene))
+            string reqSceneName = !string.IsNullOrEmpty(reqScene) ? Path.GetFileNameWithoutExtension(reqScene) : null;
+            if (!string.IsNullOrEmpty(reqSceneName)
+                && !string.Equals(SceneManager.GetActiveScene().name, reqSceneName, StringComparison.OrdinalIgnoreCase)
+                && Application.CanStreamedLevelBeLoaded(reqSceneName))
             {
-                var loadOp = SceneManager.LoadSceneAsync(reqScene);
+                var loadOp = SceneManager.LoadSceneAsync(reqSceneName);
                 while (loadOp != null && !loadOp.isDone) yield return null;
                 yield return null;
             }
