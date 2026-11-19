@@ -77,6 +77,7 @@ namespace LR2.Game
         private float _nextOrbSpawn;
         private float _lastTick = -1f;
         private int _nameIndex;
+        private int _botsThisMatch = 1; // how many bots get names this match (friends only all-in when they all fit)
         private string[] _shuffledCallsigns;
 
         // ------------------------------------------------------------------ lifecycle
@@ -168,7 +169,8 @@ namespace LR2.Game
                 return;
             }
 
-            if (SkirmishSetup.Active) { SpawnSkirmish(); return; }
+            if (SkirmishSetup.Active) { _botsThisMatch = SkirmishSetup.Bots.Count; SpawnSkirmish(); return; }
+            _botsThisMatch = Settings.mode == GameModeType.Duel ? 1 : Mathf.Max(1, Settings.enemyBots) + Mathf.Max(0, Settings.friendlyBots);
 
             BotTeamAlignment align = Settings.EffectiveBotTeamAlignment;
             bool team = align != BotTeamAlignment.FreeForAll && Settings.mode != GameModeType.Duel;
@@ -280,9 +282,11 @@ namespace LR2.Game
                 var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length + FriendCallsigns.Length);
                 var seen = new HashSet<string>();
                 if (!string.IsNullOrWhiteSpace(LR2Settings.PlayerName)) seen.Add(LR2Settings.PlayerName); // never a bot with your name
-                // friends first, in random order (keys above 1 beat every weighted key, which stay in 0..1)
+                // user 11-19: friends all play when every one of them fits (any team), dealt first; in a 1v1 or a small match
+                // they only turn up now and then (weight 0.35 against 1 for an ordinary tag)
+                bool allFriends = _botsThisMatch >= FriendCallsigns.Length;
                 foreach (string n in FriendCallsigns)
-                    if (seen.Add(n)) pool.Add((n, 1f + Random.value));
+                    if (seen.Add(n)) pool.Add((n, allFriends ? 1f + Random.value : Mathf.Pow(Mathf.Max(1e-6f, Random.value), 1f / 0.35f)));
                 foreach (string n in FeaturedCallsigns)
                     if (seen.Add(n)) pool.Add((n, Mathf.Pow(Mathf.Max(1e-6f, Random.value), 1f / FeaturedWeight)));
                 foreach (string n in src)
