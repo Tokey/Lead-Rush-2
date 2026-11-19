@@ -864,6 +864,19 @@ body.gifmode .wrap { display: none; }
 </div>
 
 <script>
+// B119: a canvas label on a solid rounded pill, so lines, walls and cones never run through text
+function __pill(ctx, text, x, y) {
+  const fg = ctx.fillStyle, w = ctx.measureText(text).width, a = ctx.textAlign || 'left';
+  const m = /(\d+(?:\.\d+)?)px/.exec(ctx.font), fs = m ? +m[1] : 12;
+  const x0 = a === 'center' ? x - w / 2 : (a === 'right' || a === 'end') ? x - w : x;
+  ctx.save();
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || '#16201b';
+  ctx.globalAlpha = 0.88; ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x0 - 5, y - fs, w + 10, fs + 6, 4); else ctx.rect(x0 - 5, y - fs, w + 10, fs + 6);
+  ctx.fill(); ctx.restore();
+  ctx.fillStyle = fg; ctx.fillText(text, x, y);
+}
+
 (() => {
 'use strict';
 // ---------------------------------------------------------------- shared
@@ -2258,8 +2271,8 @@ requestAnimationFrame(frame);
     const bx = 10, by = h - 22, bw = Math.min(220, w - 20), bh = 10;
     ctx.fillStyle = grid; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = spotted ? bad : acc; ctx.fillRect(bx, by, bw * meter / 1.25, bh);
     ctx.strokeStyle = ink; ctx.beginPath(); ctx.moveTo(bx + bw / 1.25, by - 3); ctx.lineTo(bx + bw / 1.25, by + bh + 3); ctx.stroke();
-    ctx.fillStyle = ink; ctx.font = '13.5px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
-    ctx.fillStyle = ink2; ctx.fillText('6 m (±100°)', bot.x * k + 6 * k * 0.7, bot.y * k - 6 * k * 0.7);
+    ctx.fillStyle = ink; ctx.font = '13.5px ' + css('--mono'); __pill(ctx, 'detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
+    ctx.fillStyle = ink2; __pill(ctx, '6 m (±100°)', bot.x * k + 6 * k * 0.7, bot.y * k - 6 * k * 0.7);
     const heardNow = heard && simTime - heard.t < 4;
     if (heardNow) {
       const fade = 1 - (simTime - heard.t) / 4, wc = css('--warn');
@@ -2393,14 +2406,14 @@ requestAnimationFrame(frame);
       ctx.beginPath(); corners.forEach((p, i) => i ? ctx.lineTo(p.x * k, p.y * k) : ctx.moveTo(p.x * k, p.y * k)); ctx.stroke(); ctx.setLineDash([]);
       corners.forEach((c, i) => {
         ctx.fillStyle = i === 1 ? acc : botC; ctx.beginPath(); ctx.arc(c.x * k, c.y * k, i === 1 ? 6 : 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText(i === 1 ? 'next corner: steer + slice' : 'corner ' + i, c.x * k + 9, c.y * k - 8);
+        ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); __pill(ctx, i === 1 ? 'next corner: steer + slice' : 'corner ' + i, c.x * k + 9, c.y * k - 8);
       });
       // Corner slicing gaze sweep (±28°)
       const gAng = Math.atan2(corners[1].y - bPos.y, corners[1].x - bPos.x) + Math.sin(navAnim * 1.4) * 28 * Math.PI / 180;
       ctx.strokeStyle = warn; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo(bPos.x * k + Math.cos(gAng) * 3.8 * k, bPos.y * k + Math.sin(gAng) * 3.8 * k); ctx.stroke();
       if (strafe) {
         ctx.strokeStyle = good; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo((bPos.x + 1.8) * k, (bPos.y + Math.sin(navAnim * 3) * 2.2) * k); ctx.stroke();
-        ctx.fillStyle = good; ctx.fillText('strafe: 65 % path + 85 % sideways', (bPos.x + 0.4) * k, (bPos.y + 3.2) * k);
+        ctx.fillStyle = good; __pill(ctx, 'strafe: 65 % path + 85 % sideways', (bPos.x + 0.4) * k, (bPos.y + 3.2) * k);
       }
       if (stuck) {
         ctx.strokeStyle = css('--bad'); ctx.lineWidth = 2; ctx.strokeRect(7.4 * k, 8.6 * k, 1.4 * k, 1.4 * k);
@@ -2481,7 +2494,7 @@ requestAnimationFrame(frame);
     }
     ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bPos.x * k, bPos.y * k, 7, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(threat.x * k, threat.y * k, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText('BOT', bPos.x * k - 10, bPos.y * k - 10); ctx.fillText('THREAT', threat.x * k - 18, threat.y * k - 10);
+    ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); __pill(ctx, 'BOT', bPos.x * k - 10, bPos.y * k - 12); __pill(ctx, 'THREAT', threat.x * k - 18, threat.y * k - 12);
     $('nav-out').innerHTML = outStats.map(([k2, v]) => `<div class="stat"><div class="k">${k2}</div><div class="v">${v}</div></div>`).join('');
     $('nav-formula').textContent = formulaNote;
   }
@@ -3100,7 +3113,7 @@ requestAnimationFrame(frame);
       { name: 'Brain', rate: '~4 Hz ±15 %', per: 0.25, jit: 0.15, col: 'var(--accent)', what: 'goal, target, destination' },
       { name: 'Legs', rate: 'every 0.6 s', per: 0.6, col: 'var(--good)', what: 'NavMesh path refresh' },
       { name: 'Adaptive', rate: 'every 0.75 s', per: 0.75, col: 'var(--zone)', what: 'skill re-blend (Adaptive bots)' },
-      { name: 'Orders', rate: '1.5 s, with a commander', per: 1.5, col: 'var(--warn)', what: 'no LLM: none; you order by chat (T)', optional: true },
+      { name: 'Orders', rate: '1.5 s (commander)', per: 1.5, col: 'var(--warn)', what: 'none without LLM; chat: T', optional: true },
     ];
     const X0 = 248, X1 = 990, W = X1 - X0, TOP = 28, ROW = 40, WIN = 4;
     mk('text', { x: X0, y: 16, class: 'dim', 'font-size': 11 }, csvg, '4 s ago');
@@ -3177,14 +3190,29 @@ requestAnimationFrame(frame);
       meter.setAttribute('width', Math.min(1, s.det) * W);
       meterTxt.textContent = s.spotted != null ? 'spotted' : `${Math.round(s.det * 100)} %  (+${Math.round(s.rate * 10)} % per eye tick, ${s.need} ticks to fill)`;
       let prev = null;
+      const pts = [];
       for (const m of s.marks) {
         const x = xOf(m.t), y = TOP + m.lane * ROW + ROW / 2;
         if (x < X0) { prev = { x: X0, y }; continue; }
         if (prev) mk('line', { x1: prev.x, y1: prev.y, x2: x, y2: y, stroke: 'var(--ink)', 'stroke-width': 1.3, 'stroke-dasharray': '4 3' }, evG);
-        mk('circle', { cx: x, cy: y, r: 6.5, fill: 'var(--panel)', stroke: 'var(--ink)', 'stroke-width': 2 }, evG);
-        const right = x < X1 - 190;
-        mk('text', { x: right ? x + 10 : x - 10, y: y - 9, 'text-anchor': right ? 'start' : 'end', 'font-size': 11, 'font-weight': 600, class: 'lbl' }, evG, m.label);
+        pts.push({ x, y, label: m.label });
         prev = { x, y };
+      }
+      // B119 (user 11-19 "fix text overlaps"): every label sits on a solid pill above every connector and tick, and labels
+      // that would touch an earlier one move down half a row
+      const placed = [];
+      for (const p of pts) {
+        mk('circle', { cx: p.x, cy: p.y, r: 6.5, fill: 'var(--panel)', stroke: 'var(--ink)', 'stroke-width': 2 }, evG);
+        const right = p.x < X1 - 210;
+        let ly = p.y - 12;
+        const t = mk('text', { x: right ? p.x + 11 : p.x - 11, y: ly, 'text-anchor': right ? 'start' : 'end', 'font-size': 11, 'font-weight': 600 }, evG, p.label);
+        let bb = t.getBBox();
+        for (let guard = 0; guard < 4 && placed.some(q => bb.x < q.x + q.width + 6 && bb.x + bb.width + 6 > q.x && bb.y < q.y + q.height + 2 && bb.y + bb.height + 2 > q.y); guard++) {
+          ly += ROW * 0.5; t.setAttribute('y', ly); bb = t.getBBox();
+        }
+        const pill = mk('rect', { x: bb.x - 5, y: bb.y - 2, width: bb.width + 10, height: bb.height + 4, rx: 4, fill: 'var(--panel)', stroke: 'var(--line)', 'stroke-width': 1, opacity: 0.95 });
+        evG.insertBefore(pill, t);
+        placed.push({ x: bb.x - 5, y: bb.y - 2, width: bb.width + 10, height: bb.height + 4 });
       }
     };
     for (let i = 0; i < 260; i++) step(1 / 60); // start with a full window of history
