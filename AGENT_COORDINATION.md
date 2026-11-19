@@ -88,7 +88,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: free (Claude 19:26: pose checks C25 + C26 done, 0 Unity.exe)
-PUSH: cc55b9e by Claude 19:16 (11.18.26.5: death/respawn/walk/wall animation fixes D56-D59, see-through VFX D60, harder bots D61, tracers/laser; player build 15:13 Success 1.597 GB)
+PUSH: 50ba4e8 by Claude 19:26 (D64 sprint-weight easing; B16/B35/B43 ready for review; B19 verified, B26 reopened; over cc55b9e 11.18.26.5)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
