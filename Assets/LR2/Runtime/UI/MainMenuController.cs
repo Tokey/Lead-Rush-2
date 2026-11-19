@@ -166,6 +166,7 @@ namespace LR2.UI
             if (versionText != null) versionText.text = $"LR2.{Application.version}";
 
             CacheBaseModeLabels();
+            LR2.World.MenuCinematic.Ensure();
             BuildSkirmishLobby();
 
             if (duelButton != null && _lobby == null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
@@ -173,7 +174,7 @@ namespace LR2.UI
             if (ffaButton != null) ffaButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAll, ffaSettings));
             if (tdmButton != null) tdmButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.TeamDeathmatch, tdmSettings));
             if (modeRulesButton != null) modeRulesButton.onClick.AddListener(() => OpenModeRules(_editingMode));
-            if (settingsButton != null) settingsButton.onClick.AddListener(() => SwitchLayer(settingsPanel, 1f));
+            if (settingsButton != null) settingsButton.onClick.AddListener(() => { SwitchLayer(settingsPanel, 1f); OnMenuShot?.Invoke(LR2.World.MenuCinematic.OptionsShot); });
             if (settingsBackButton != null) settingsBackButton.onClick.AddListener(ReturnFromSettings);
             if (quitButton != null) quitButton.onClick.AddListener(Quit);
 
@@ -202,7 +203,7 @@ namespace LR2.UI
             _lobby = SkirmishLobby.Create(mainPanel.transform.parent, mode => SettingsFor(mode) ?? duelSettings);
             Show(_lobby.Group, false);
             _lobby.OnBack = () => { SwitchLayer(mainPanel, -1f); OnMenuShot?.Invoke(-1); };
-            _lobby.OnOptions = () => { _settingsReturn = _lobby.Group; SwitchLayer(settingsPanel, 1f); };
+            _lobby.OnOptions = () => { _settingsReturn = _lobby.Group; SwitchLayer(settingsPanel, 1f); OnMenuShot?.Invoke(LR2.World.MenuCinematic.OptionsShot); };
             _lobby.OnRules = () => { _rulesFromLobby = true; OpenModeRules(SkirmishSetup.Mode); };
             _lobby.OnStart = mode => Play(SettingsFor(mode) ?? duelSettings);
             _lobby.OnModeChanged = mode => OnMenuShot?.Invoke((int)mode);
@@ -273,6 +274,7 @@ namespace LR2.UI
         {
             LR2Settings.Save();
             SwitchLayer(_settingsReturn != null ? _settingsReturn : mainPanel, -1f);
+            OnMenuShot?.Invoke(_settingsReturn != null ? (int)SkirmishSetup.Mode : -1);
             _settingsReturn = null;
             RefreshDifficultyLabel();
             RefreshDeployLabels();
@@ -801,6 +803,7 @@ namespace LR2.UI
         public void Play(MatchSettings settings)
         {
             if (_isLoading) return;
+            LR2.World.MenuCinematic.Release();
             string targetScene = LR2Session.CurrentMapScene;
             if (!Application.CanStreamedLevelBeLoaded(targetScene)) targetScene = mapScene;
             if (!Application.CanStreamedLevelBeLoaded(targetScene)) targetScene = "LR2_Saltworks";

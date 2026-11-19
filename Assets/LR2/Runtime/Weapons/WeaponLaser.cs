@@ -123,8 +123,8 @@ namespace LR2.Weapons
             _spill.shadows = LightShadows.None;
             _spill.lightUnit = UnityEngine.Rendering.LightUnit.Lumen;
             _spill.intensity = SpillLumens;
-            _ = go.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>()
-                ?? go.AddComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            if (!go.TryGetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>(out _))
+                go.AddComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
             _spill.enabled = false;
         }
 
