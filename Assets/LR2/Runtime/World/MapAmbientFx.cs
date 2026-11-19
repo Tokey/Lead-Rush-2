@@ -23,6 +23,12 @@ namespace LR2.World
         }
 
         private readonly List<Fixture> _fixtures = new List<Fixture>();
+        /// <summary>Where the standing leaks are (point, surface normal) and the sparking fittings (media capture).</summary>
+        public readonly List<(Vector3 point, Vector3 normal)> SteamSpots = new List<(Vector3, Vector3)>();
+        public readonly List<Vector3> SparkSpots = new List<Vector3>();
+
+        /// <summary>Every sparking fitting shorts out now.</summary>
+        public void SparkNow() { foreach (var f in _fixtures) f.nextSpark = Time.time; }
         private readonly List<GameObject> _jets = new List<GameObject>();
         private float _nextJetAt;
         private System.Random _rng;
@@ -86,6 +92,7 @@ namespace LR2.World
                 foreach (var q in placed) if ((q - hit.point).sqrMagnitude < 15f * 15f) crowded = true;
                 if (crowded) continue;
                 placed.Add(hit.point);
+                SteamSpots.Add((hit.point, hit.normal));
                 var go = Instantiate(prefab, hit.point + hit.normal * 0.03f, Quaternion.LookRotation((hit.normal + Vector3.up * 0.4f).normalized), transform);
                 go.name = "SteamLeak";
                 PackFx.Prepare(go, 0.55f);
@@ -111,6 +118,7 @@ namespace LR2.World
                 foreach (var f in _fixtures) if ((f.light.transform.position - l.transform.position).sqrMagnitude < 20f * 20f) crowded = true;
                 if (crowded) continue;
                 _fixtures.Add(new Fixture { light = l, baseIntensity = l.intensity, nextSpark = Time.time + 3f + (float)_rng.NextDouble() * 8f });
+                SparkSpots.Add(l.transform.position);
             }
         }
 

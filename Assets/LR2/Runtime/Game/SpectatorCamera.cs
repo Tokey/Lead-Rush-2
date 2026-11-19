@@ -35,6 +35,9 @@ namespace LR2.Game
         private GUIStyle _box, _head, _row, _hint;
         private Texture2D _bg;
 
+        /// <summary>0 chase, 1 eye, 2 free (media capture and UI).</summary>
+        public void SetView(int mode) => _mode = (ViewMode)Mathf.Clamp(mode, 0, 2);
+
         public static void Ensure()
         {
             if (Instance != null) return;

@@ -312,6 +312,11 @@ body.gifmode .wrap { display: none; }
   <div class="clock-wrap">
     <div class="viz-ctl"><div class="seg" role="group" aria-label="Clock controls"><button type="button" id="clock-spot">Show a sighting</button><button type="button" id="clock-slow" aria-pressed="false">Slow motion 0.25&times;</button><button type="button" id="clock-pause" aria-pressed="false">Pause</button></div><span class="note">Regular bot; the enemy walks into view 20 m away, 25&deg; off its aim.</span></div>
     <svg class="viz-svg" id="clock-svg" viewBox="0 0 1000 300" role="img" aria-label="Animated timeline with one row per bot loop and one mark per tick"></svg>
+    <p class="viz-sum"><b>Who gives orders?</b> The 1.5 s Orders poll runs only when a commander is plugged in: an LLM or any script that
+    implements <code>IBotDirectiveProvider</code> (hollow marks show where it would ask). Out of the box none is attached, so nothing is
+    polled. Every bot decides for itself with its own priority waterfall (05), and the only orders come from you, the player. Squad chat
+    (Flank, Hold, Push) reaches your team's bots instantly, not on a tick, and each order lasts 12 s. In team modes your bots also follow
+    you on their own (the waterfall's Follow leader rule), which is a decision, not an order.</p>
   </div>
 </section>
 
@@ -3054,9 +3059,9 @@ requestAnimationFrame(frame);
       { name: 'Brain', rate: '~4 Hz ±15 %', per: 0.25, jit: 0.15, col: 'var(--accent)', what: 'goal, target, destination' },
       { name: 'Legs', rate: 'every 0.6 s', per: 0.6, col: 'var(--good)', what: 'NavMesh path refresh' },
       { name: 'Adaptive', rate: 'every 0.75 s', per: 0.75, col: 'var(--zone)', what: 'skill re-blend (Adaptive bots)' },
-      { name: 'Orders', rate: 'every 1.5 s', per: 1.5, col: 'var(--warn)', what: 'squad or LLM directive' },
+      { name: 'Orders', rate: '1.5 s, with a commander', per: 1.5, col: 'var(--warn)', what: 'no LLM: none (you order by chat)', optional: true },
     ];
-    const X0 = 230, X1 = 990, W = X1 - X0, TOP = 28, ROW = 40, WIN = 4;
+    const X0 = 248, X1 = 990, W = X1 - X0, TOP = 28, ROW = 40, WIN = 4;
     mk('text', { x: X0, y: 16, class: 'dim', 'font-size': 11 }, csvg, '4 s ago');
     mk('text', { x: X1, y: 16, class: 'dim', 'font-size': 11, 'text-anchor': 'end' }, csvg, 'now');
     const pat = mk('pattern', { id: 'clock-frames', width: 3.2, height: 10, patternUnits: 'userSpaceOnUse' }, mk('defs', {}, csvg));
@@ -3064,13 +3069,15 @@ requestAnimationFrame(frame);
     LANES.forEach((L, i) => {
       L.y = TOP + i * ROW;
       mk('rect', { x: X0, y: L.y + 5, width: W, height: ROW - 10, rx: 3, fill: 'var(--grid)' }, csvg);
-      mk('text', { x: 4, y: L.y + 18, 'font-weight': 600 }, csvg, `${L.name} · ${L.rate}`);
-      mk('text', { x: 4, y: L.y + 32, class: 'dim', 'font-size': 11 }, csvg, L.what);
+      // ticker dot: pulses on every tick of this loop (user 11-19 "a ticker dot beside the text, like the first artifact")
+      L.dot = mk('circle', { cx: 10, cy: L.y + 14, r: 5.5, fill: L.col, opacity: 0.25 }, csvg);
+      mk('text', { x: 22, y: L.y + 18, 'font-weight': 600 }, csvg, `${L.name} · ${L.rate}`);
+      mk('text', { x: 22, y: L.y + 32, class: 'dim', 'font-size': 11 }, csvg, L.what);
       if (!L.per) mk('rect', { x: X0, y: L.y + 9, width: W, height: ROW - 18, fill: 'url(#clock-frames)' }, csvg);
       L.g = mk('g', {}, csvg);
     });
     const meterY = TOP + LANES.length * ROW + 6;
-    mk('text', { x: 4, y: meterY + 12, 'font-weight': 600 }, csvg, 'Detection meter');
+    mk('text', { x: 22, y: meterY + 12, 'font-weight': 600 }, csvg, 'Detection meter');
     mk('rect', { x: X0, y: meterY, width: W, height: 16, rx: 3, fill: 'var(--grid)' }, csvg);
     const meter = mk('rect', { x: X0, y: meterY, width: 0, height: 16, rx: 3, fill: 'var(--bot)' }, csvg);
     const meterTxt = mk('text', { x: X0 + 6, y: meterY + 12, 'font-size': 11 }, csvg, '');
@@ -3107,11 +3114,20 @@ requestAnimationFrame(frame);
     };
     const draw = () => {
       for (const L of LANES) {
+        // the ticker dot flashes and swells on each tick, then fades; the every-frame hands stay lit with a flicker
+        if (L.dot) {
+          const last = L.per ? (L.ticks.length ? L.ticks[L.ticks.length - 1] : -9) : t;
+          const k = L.per ? Math.max(0, 1 - (t - last) / 0.16) : 0.75 + 0.25 * Math.sin(t * 47);
+          L.dot.setAttribute('opacity', (0.22 + 0.78 * k).toFixed(2));
+          L.dot.setAttribute('r', (5 + 2.5 * (L.per ? k : 0)).toFixed(2));
+        }
         if (!L.per) continue;
         L.g.replaceChildren();
         for (const tt of L.ticks) {
           const x = xOf(tt);
-          if (x >= X0 && x <= X1) mk('rect', { x: x - 2, y: L.y + 9, width: 4, height: ROW - 18, rx: 1.5, fill: L.col }, L.g);
+          if (x >= X0 && x <= X1) mk('rect', L.optional
+            ? { x: x - 2, y: L.y + 9, width: 4, height: ROW - 18, rx: 1.5, fill: 'none', stroke: L.col, 'stroke-width': 1.4, 'stroke-dasharray': '3 2' }
+            : { x: x - 2, y: L.y + 9, width: 4, height: ROW - 18, rx: 1.5, fill: L.col }, L.g);
         }
       }
       evG.replaceChildren();
