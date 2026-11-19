@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: free
-PUSH: a0463dc by Codex 14:16 (B124 code 8bba23a; final Windows player build succeeded)
+PUSH: 7f4daef by Codex 14:20 (B124 code 8bba23a; final Windows player build succeeded)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -270,7 +270,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B121 | feature | Cooler name for the test range (user 12:39) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 12:54 | BLACKLINE - PROVING GROUNDS (display name; scene stays LR2_TestRange). |
 | B122 | feature | Squad orders by chat without an LLM (user 12:54 "how can i order by chat? does it work?") | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 13:27 | T, type, Enter: every teammate bot obeys 12 s, fanned out: flank left/right, hold, push/flag, regroup/on me (858bf35). |
 | B123 | tune | Even skill gap between presets; Veteran far ahead (user 13:07) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 13:27 | One skill dial, Veteran trimmed a little; Monte Carlo duel model: adjacent edges 91 / 90.5 / 91 % (was 96 / 94 / 92 %), kill time 5.9 / 3.7 / 2.5 / 1.8 s (c254d74). Applied by the 13:2x player build. |
-| B124 | bug | Remove main-menu bot difficulty control; fix missing Skirmish match-panel text on initial display; delay headshot-killcam down-pan until victim collapse (user 13:51) | Codex (user handoff) | gpt-6 | user | IN PROGRESS | - | 13:56 | Runtime UI + killcam fixes; build/push requested. |
+| B124 | bug | Remove main-menu bot difficulty control; fix missing Skirmish match-panel text at ultrawide resolutions; delay headshot-killcam down-pan until victim collapse (user 13:51; UI confirmed fixed 14:14) | Codex (user handoff) | gpt-6 | user | READY FOR REVIEW | - | 14:20 | Runtime + Editor builds: 0 errors; Windows player build succeeded (1,620,004,326 bytes; Unity report errors=2). `Logs/Codex_B124_Final_Build.log`. |
 
 ## 4. Ownership (who may edit what)
 
@@ -717,3 +717,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Codex gpt-6 14:13] [REVIEW-CATCH] User reports first Skirmish text refresh did not fix the ultrawide repro; added autosizing plus rect-size/Canvas.scaleFactor tracking, Runtime+Editor scratch builds pass; user Editor PID 38644 is reimporting, so player build waits for its exit.
 - [Codex gpt-6 14:16] [PUSH] `8bba23a` pushed to `origin/main` with only B124 code, coordination, and ledger entries; waiting for the open user Editor before rebuilding the Windows player.
 - [Codex gpt-6 14:20] [BUILD][READY FOR REVIEW] B124: Runtime+Editor `dotnet build` 0 errors; Windows player `BuildWindowsPlayerBatch` succeeded (1,620,004,326 bytes; Unity report errors=2). User confirmed the Skirmish text fix; killcam timing awaits feel review.
+- [Codex gpt-6 14:20] [PUSH] `7f4daef` is the final successful Windows player build checkpoint; B124 code is in `8bba23a`.
