@@ -294,11 +294,11 @@ namespace LR2.Game
             return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
 
-        // User 11-19: the developer's friends play under friendly, funny tags with no real names in them, and are dealt first
+        // User 11-19: the developer's friends play under friendly, funny tags built on their names, and are dealt first
         // (in random order), so with six or more bots every one of them is in the match.
         private static readonly string[] FriendCallsigns =
         {
-            "EnchantedP0tato", "PixelPhoenix", "SirSnipesALot", "WaffleWarrior", "CtrlAltDefeat", "TacticalTaco"
+            "EnchantedP0tato", "AshleshaNeverMisses", "Xiaokun_ClutchKing", "ClaypoolPartyTime", "JackAttack", "HolyTokeyMoley"
         };
         // User 11-18 14:10: favourite tags, weighted 4x in the shuffle after the friends.
         private static readonly string[] FeaturedCallsigns =

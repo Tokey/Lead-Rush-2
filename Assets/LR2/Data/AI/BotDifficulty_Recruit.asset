@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: BotDifficulty_Recruit
   m_EditorClassIdentifier: LR2.Runtime::LR2.AI.BotDifficulty
   displayName: Recruit
-  reactionTime: {x: 0.55, y: 0.8}
+  reactionTime: {x: 0.5, y: 0.72}
   fieldOfView: 110
   visionRange: 75
-  detectionSpeed: 0.85
+  detectionSpeed: 0.9
   hearingMultiplier: 1
-  aimSpeed: 4.2
-  initialAimError: 7
-  settledAimError: 1.6
-  errorDecay: 1.3
-  headshotChance: 0.05
+  aimSpeed: 4.6
+  initialAimError: 6
+  settledAimError: 1.35
+  errorDecay: 1.5
+  headshotChance: 0.07
   fireTolerance: 4.5
   aggression: 0.35
   strafeChance: 0.12
@@ -34,6 +34,6 @@ MonoBehaviour:
   burstPause: {x: 0.18, y: 0.4}
   retreatHealth: 0.38
   useCoverChance: 0.6
-  composure: 0
+  composure: 0.08
   overshootChance: 0.1
   preFireChance: 0

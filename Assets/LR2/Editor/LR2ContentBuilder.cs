@@ -2611,10 +2611,13 @@ namespace LR2.EditorTools
             // D61 (user 11-18 "even the veteran bot seems too easy ... it rarely wins"): the detection meter needed ~0.75 s at
             // 20 m before a Veteran even reacted, and stress/strafe/movement stacked ~5 deg of error in a real fight. Per-preset
             // detection speed and composure; Veteran also reacts a little faster and settles tighter.
-            Diff("Recruit", new Vector2(0.55f, 0.8f), 4.2f, 7f, 1.6f, 1.3f, 0.05f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4), 0.85f, 0f, 0.10f, 0f);
-            Diff("Regular", new Vector2(0.32f, 0.5f), 6.2f, 4.6f, 0.85f, 2f, 0.14f, 3.4f, 0.58f, 0.42f, 0.06f, 0.24f, 0.12f, new Vector2Int(3, 6), 1.15f, 0.25f, 0.16f, 0.05f);
-            Diff("Hardened", new Vector2(0.22f, 0.34f), 8.2f, 3.2f, 0.48f, 2.8f, 0.24f, 2.8f, 0.74f, 0.66f, 0.16f, 0.38f, 0.2f, new Vector2Int(4, 7), 1.55f, 0.5f, 0.22f, 0.25f);
-            Diff("Veteran", new Vector2(0.15f, 0.23f), 10.5f, 2.1f, 0.26f, 3.8f, 0.34f, 2.2f, 0.88f, 0.88f, 0.3f, 0.55f, 0.28f, new Vector2Int(5, 9), 2.2f, 0.72f, 0.28f, 0.45f);
+            Diff("Recruit", new Vector2(0.5f, 0.72f), 4.6f, 6f, 1.35f, 1.5f, 0.07f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4), 0.9f, 0.08f, 0.1f, 0f);
+            Diff("Regular", new Vector2(0.4f, 0.58f), 6.1f, 4.6f, 0.88f, 2.1f, 0.13f, 3.8f, 0.51f, 0.35f, 0.09f, 0.22f, 0.12f, new Vector2Int(3, 5), 1.13f, 0.25f, 0.15f, 0.13f);
+            Diff("Hardened", new Vector2(0.29f, 0.43f), 7.8f, 3.4f, 0.54f, 2.8f, 0.2f, 3f, 0.69f, 0.61f, 0.19f, 0.38f, 0.2f, new Vector2Int(3, 7), 1.45f, 0.45f, 0.22f, 0.27f);
+            Diff("Veteran", new Vector2(0.17f, 0.26f), 9.6f, 2.5f, 0.32f, 3.5f, 0.28f, 2.2f, 0.88f, 0.88f, 0.3f, 0.55f, 0.28f, new Vector2Int(4, 8), 1.9f, 0.66f, 0.28f, 0.42f);
+            // B123 (user 11-19 "vet is vastly more superior ... let the skill gap between each setting be somewhat similar"):
+            // one skill dial from Recruit (a little less helpless) to Veteran (trimmed a little); Regular and Hardened sit where
+            // a duel model of these formulas gives every adjacent pair the same edge (~91 %), not 96/94/92 %.
             // B89 (user 11-19 00:13): overshoot chance and pre-fire chance (last two values): pros flick faster, so they
             // overshoot more often, and they pre-fire corners and time shots to the arrival of a flick.
 

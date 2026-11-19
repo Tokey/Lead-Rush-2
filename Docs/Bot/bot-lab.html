@@ -222,6 +222,13 @@ body.gifmode .wrap { display: none; }
 .viz-svg .lbl { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 .viz-sum { font: 14px/1.55 var(--body); color: var(--ink); margin-top: 10px; max-width: 78ch; }
 .viz-sum b { font-family: var(--mono); font-weight: 500; }
+.agents-readout .stat .v { font-size: 15.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 2px 100px; font: 12.5px/1.4 var(--mono); color: var(--ink); }
+.viz-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.viz-legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.viz-legend i.bar { width: 3px; height: 14px; border-radius: 0; background: var(--ink); }
+.viz-legend i.whisk { width: 18px; height: 2px; border-radius: 0; background: var(--ink); }
+@media (max-width: 700px) { .viz-legend { margin-left: 0; } }
 </style>
 </head>
 <body>
@@ -248,6 +255,7 @@ body.gifmode .wrap { display: none; }
 <aside class="panel news" id="news" aria-labelledby="h-news">
   <div class="head"><span class="num">WHAT CHANGED · 2026-11-19</span><h2 id="h-news">Latest bot and combat updates</h2></div>
   <ul class="news-list">
+    <li><code>B123</code><div><b>Evenly spaced presets.</b> Veteran was far ahead of Hardened in a fight. One skill dial now runs from Recruit (a little less helpless) to Veteran (trimmed a little: detection 1.9&times;, 28 % headshots), and Regular and Hardened sit where every step wins about the same share of duels (~91 % in a model of these formulas, was 96 / 94 / 92 %). <a href="#skill">Presets in 12</a>.</div></li>
     <li><code>B118</code><div><b>Looks around like a person.</b> Casual looks now follow 4,636 real mouse movements: speed peaks a third of the way, the path bows, the first move stops about 8 % short and corrects after a short pause, and glances come at uneven, human gaps. An enemy in sight ends a glance at once, so reactions are unchanged.</div></li>
     <li><code>B109</code><div><b>AI vs AI test bench.</b> The new skirmish lobby gives every bot its own difficulty and team: up to 20 bots, two to four teams, or free for all. In AI vs AI you watch from a spectator camera while a panel counts kills, deaths and K/D per difficulty. Adaptive can be set per bot.</div></li>
     <li><code>B114</code><div><b>See the clock.</b> <a href="#clock">02.1</a> shows every bot loop ticking at its real rate; <a href="#react">02.2</a> times the path from in view to the first shot for each preset.</div></li>
@@ -343,7 +351,8 @@ body.gifmode .wrap { display: none; }
       <label><input type="checkbox" id="re-fired"> you just fired</label>
       <label><input type="checkbox" id="re-crouch"> you are crouched</label>
     </div>
-    <svg class="viz-svg" id="react-svg" viewBox="0 0 1000 250" role="img" aria-label="Stacked time bars per preset: noticing, brain tick, reaction and flick"></svg>
+    <svg class="viz-svg" id="react-svg" viewBox="0 0 1000 214" role="img" aria-label="Stacked time bars per preset: noticing, brain tick, reaction and flick"></svg>
+    <div class="viz-legend"><span><i style="background:var(--bot)"></i>noticing (meter fills on eye ticks)</span><span><i style="background:var(--accent)"></i>waiting for the brain tick</span><span><i style="background:var(--warn)"></i>reaction time, flick under way</span><span><i class="bar"></i>flick lands</span><span><i class="whisk"></i>earliest to latest</span></div>
     <div class="viz-sum" id="react-sum" aria-live="polite"></div>
   </div>
 </section>
@@ -740,11 +749,11 @@ body.gifmode .wrap { display: none; }
             </div>
           </div>
           <div id="proto-desc" class="card" style="margin-top:4px"></div>
-          <div class="readout">
-            <div class="stat"><div class="k">Board rows</div><div class="v">B1–B85 + P1–P5</div></div>
-            <div class="stat"><div class="k">Ledger rows</div><div class="v">168 non-open task rows · 1 open · 71 bugs</div></div>
-            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">38 of 71</div></div>
-            <div class="stat"><div class="k">Running now</div><div class="v">See AGENT_COORDINATION.md</div></div>
+          <div class="readout agents-readout">
+            <div class="stat"><div class="k">Board rows</div><div class="v">B1–B123 + P1–P5</div></div>
+            <div class="stat"><div class="k">Ledger rows</div><div class="v">192 tasks · 76 defects (14 open)</div></div>
+            <div class="stat"><div class="k">Caught by the agents</div><div class="v">46 of 76</div></div>
+            <div class="stat"><div class="k">Running now</div><div class="v">Claude; Codex idle</div></div>
           </div>
         </div>
       </div>
@@ -923,11 +932,13 @@ function fit(cv) {
 const $ = id => document.getElementById(id);
 
 // Skill presets: Assets/LR2/Data/AI/BotDifficulty_*.asset (D61, 2026-11-18: per-preset detection speed and composure)
+// Skill presets: Assets/LR2/Data/AI/BotDifficulty_*.asset (D61 per-preset detection and composure; B123 11-19: evenly spaced,
+// every adjacent preset wins ~91 % of duels in a model of these formulas, instead of 96 / 94 / 92 %)
 const PRESETS = {
-  Recruit:  { react: [0.55, 0.80], aimSpeed: 4.2,  initErr: 7.0, settleErr: 1.6,  head: 0.05, aggression: 0.35, flank: 0.08, detect: 0.85, composure: 0.00 },
-  Regular:  { react: [0.32, 0.50], aimSpeed: 6.2,  initErr: 4.6, settleErr: 0.85, head: 0.14, aggression: 0.58, flank: 0.24, detect: 1.15, composure: 0.25 },
-  Hardened: { react: [0.22, 0.34], aimSpeed: 8.2,  initErr: 3.2, settleErr: 0.48, head: 0.24, aggression: 0.74, flank: 0.38, detect: 1.55, composure: 0.50 },
-  Veteran:  { react: [0.15, 0.23], aimSpeed: 10.5, initErr: 2.1, settleErr: 0.26, head: 0.34, aggression: 0.88, flank: 0.55, detect: 2.20, composure: 0.72 }
+  Recruit:  { react: [0.50, 0.72], aimSpeed: 4.6, initErr: 6.0, settleErr: 1.35, head: 0.07, aggression: 0.35, flank: 0.08, detect: 0.90, composure: 0.08 },
+  Regular:  { react: [0.40, 0.58], aimSpeed: 6.1, initErr: 4.6, settleErr: 0.88, head: 0.13, aggression: 0.51, flank: 0.22, detect: 1.13, composure: 0.25 },
+  Hardened: { react: [0.29, 0.43], aimSpeed: 7.8, initErr: 3.4, settleErr: 0.54, head: 0.20, aggression: 0.69, flank: 0.38, detect: 1.45, composure: 0.45 },
+  Veteran:  { react: [0.17, 0.26], aimSpeed: 9.6, initErr: 2.5, settleErr: 0.32, head: 0.28, aggression: 0.88, flank: 0.55, detect: 1.90, composure: 0.66 },
 };
 const PRESET_NAMES = Object.keys(PRESETS);
 
@@ -2815,12 +2826,12 @@ requestAnimationFrame(frame);
     const nodes = [
       { id: 'DEV', x: 0.5, y: 0.13, c: acc, lbl: 'Developer (1)', sub: 'Prompts · Playtest · Calls' },
       { id: 'CLAUDE', x: 0.14, y: 0.46, c: '#b388ff', lbl: 'Claude Code', sub: 'opus-5-5 · hard rows, reviews' },
-      { id: 'BOARD', x: 0.5, y: 0.46, c: ink, lbl: 'AGENT_COORDINATION.md', sub: 'v3 Lock · Ownership · Ledgers' },
-      { id: 'GEMINI', x: 0.86, y: 0.46, c: botC, lbl: 'Gemini', sub: 'neon-high · easy rows' },
-      { id: 'COPILOT', x: 0.36, y: 0.84, c: good, lbl: 'GitHub Copilot', sub: 'gpt-5.6-luna · offline', off: true },
-      { id: 'CODEX', x: 0.65, y: 0.84, c: '#47d9ff', lbl: 'OpenAI Codex', sub: 'gpt-6 · offline', off: true },
-      { id: 'UNITY', x: 0.12, y: 0.84, c: warn, lbl: 'Unity 6000.5', sub: '1 Lock + ParallelWorker' },
-      { id: 'GIT', x: 0.89, y: 0.84, c: ink2, lbl: 'GitHub Main', sub: 'dotnet green -> R8 Push' }
+      { id: 'BOARD', x: 0.5, y: 0.46, c: ink, lbl: 'AGENT_COORDINATION.md', sub: 'locks · owners · ledgers' },
+      { id: 'GEMINI', x: 0.86, y: 0.46, c: botC, lbl: 'Gemini', sub: 'easy rows · down 11-19' },
+      { id: 'COPILOT', x: 0.375, y: 0.84, c: good, lbl: 'GitHub Copilot', sub: 'gpt-5.6-luna · offline', off: true },
+      { id: 'CODEX', x: 0.625, y: 0.84, c: '#47d9ff', lbl: 'OpenAI Codex', sub: 'gpt-6 · idle', off: true },
+      { id: 'UNITY', x: 0.125, y: 0.84, c: warn, lbl: 'Unity 6000.5', sub: 'one lock, visible runs' },
+      { id: 'GIT', x: 0.875, y: 0.84, c: ink2, lbl: 'GitHub Main', sub: 'push when both builds pass' }
     ];
     const edges = [['DEV', 'CLAUDE'], ['DEV', 'GEMINI'], ['DEV', 'COPILOT'], ['DEV', 'CODEX'], ['CLAUDE', 'BOARD'], ['GEMINI', 'BOARD'], ['COPILOT', 'BOARD'], ['CODEX', 'BOARD'], ['CLAUDE', 'UNITY'], ['GEMINI', 'UNITY'], ['COPILOT', 'GIT'], ['BOARD', 'GIT']];
     const map = Object.fromEntries(nodes.map(n => [n.id, n]));
@@ -2834,13 +2845,19 @@ requestAnimationFrame(frame);
       ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(lerp(n1.x * w, n2.x * w, t), lerp(n1.y * h, n2.y * h, t), 3.2, 0, Math.PI * 2); ctx.fill();
     });
     nodes.forEach(n => {
-      const bx = n.x * w, by = n.y * h, rw = Math.min(165, w * 0.28), rh = 44;
+      const maxW = w * 0.235, rh = 46;
+      ctx.font = '600 13.5px ' + css('--label'); const lw = ctx.measureText(n.lbl).width;
+      let fs = 12; ctx.font = fs + 'px ' + css('--mono');
+      while (fs > 9.5 && ctx.measureText(n.sub).width > maxW - 16) { fs -= 0.5; ctx.font = fs + 'px ' + css('--mono'); }
+      const sw = ctx.measureText(n.sub).width;
+      const bx = n.x * w, by = n.y * h, rw = Math.min(maxW, Math.max(lw, sw) + 22);
+      n.fs = fs;
       ctx.fillStyle = css('--panel-2'); ctx.strokeStyle = n.off ? css('--line') : n.c; ctx.lineWidth = 2; ctx.setLineDash(n.off ? [4, 4] : []);
       ctx.beginPath(); ctx.roundRect(bx - rw / 2, by - rh / 2, rw, rh, 6); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = n.off ? ink2 : ink; ctx.font = '600 13.5px ' + css('--label'); ctx.textAlign = 'center';
       ctx.fillText(n.lbl, bx, by - 3);
-      ctx.fillStyle = ink2; ctx.font = '12px ' + css('--mono');
-      ctx.fillText(n.sub, bx, by + 13);
+      ctx.fillStyle = ink2; ctx.font = n.fs + 'px ' + css('--mono');
+      ctx.fillText(n.sub, bx, by + 14);
     });
     ctx.textAlign = 'left';
   }
@@ -3074,10 +3091,10 @@ requestAnimationFrame(frame);
   };
   const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const PRESETS = [
-    { name: 'Recruit', react: [0.55, 0.80], det: 0.85, aim: 4.2 },
-    { name: 'Regular', react: [0.32, 0.50], det: 1.15, aim: 6.2 },
-    { name: 'Hardened', react: [0.22, 0.34], det: 1.55, aim: 8.2 },
-    { name: 'Veteran', react: [0.15, 0.23], det: 2.20, aim: 10.5 },
+    { name: 'Recruit', react: [0.50, 0.72], det: 0.90, aim: 4.6 },
+    { name: 'Regular', react: [0.40, 0.58], det: 1.13, aim: 6.1 },
+    { name: 'Hardened', react: [0.29, 0.43], det: 1.45, aim: 7.8 },
+    { name: 'Veteran', react: [0.17, 0.26], det: 1.90, aim: 9.6 },
   ];
   const detRate = (p, s) => {
     let r = p.det * (0.9 + 9 / Math.max(s.dist, 1.5));
@@ -3277,15 +3294,6 @@ requestAnimationFrame(frame);
         for (const v of [r.c.total[0], r.c.total[2]]) mk('line', { x1: sx(v), y1: wy - 3, x2: sx(v), y2: wy + 3, stroke: 'var(--ink)', 'stroke-width': 1.2 }, rsvg);
         mk('text', { x: X1 + 10, y: y + h / 2 + 4, 'font-weight': 600 }, rsvg, `${r.c.total[1].toFixed(2)} s`);
       });
-      const ly = TOP + rows.length * H + 14;
-      let lx = X0;
-      for (const sg of SEG) {
-        mk('rect', { x: lx, y: ly - 9, width: 12, height: 12, rx: 2, fill: sg.col }, rsvg);
-        const tx = mk('text', { x: lx + 18, y: ly + 1, 'font-size': 11 }, rsvg, sg.label);
-        lx += 36 + (tx.getComputedTextLength ? tx.getComputedTextLength() : sg.label.length * 7.4);
-      }
-      mk('line', { x1: lx, y1: ly - 10, x2: lx, y2: ly + 3, stroke: 'var(--ink)', 'stroke-width': 2 }, rsvg);
-      mk('text', { x: lx + 8, y: ly + 1, 'font-size': 11 }, rsvg, 'flick lands');
       const rec = rows[0].c, reg = rows[1].c, vet = rows[3].c;
       const where = `${s.dist} m away and ${s.ang}° off its aim${s.moving ? ', moving' : ''}${s.fired ? ', just after you fired' : ''}${s.crouched ? ', crouched' : ''}`;
       $('react-sum').innerHTML =

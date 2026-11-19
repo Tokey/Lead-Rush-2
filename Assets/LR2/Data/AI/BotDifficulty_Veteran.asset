@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: BotDifficulty_Veteran
   m_EditorClassIdentifier: LR2.Runtime::LR2.AI.BotDifficulty
   displayName: Veteran
-  reactionTime: {x: 0.15, y: 0.23}
+  reactionTime: {x: 0.17, y: 0.26}
   fieldOfView: 110
   visionRange: 75
-  detectionSpeed: 2.2
+  detectionSpeed: 1.9
   hearingMultiplier: 1
-  aimSpeed: 10.5
-  initialAimError: 2.1
-  settledAimError: 0.26
-  errorDecay: 3.8
-  headshotChance: 0.34
+  aimSpeed: 9.6
+  initialAimError: 2.5
+  settledAimError: 0.32
+  errorDecay: 3.5
+  headshotChance: 0.28
   fireTolerance: 2.2
   aggression: 0.88
   strafeChance: 0.88
@@ -30,10 +30,10 @@ MonoBehaviour:
   crouchPeekChance: 0.28
   slideChance: 0.3
   flankChance: 0.55
-  burstSize: {x: 5, y: 9}
+  burstSize: {x: 4, y: 8}
   burstPause: {x: 0.18, y: 0.4}
   retreatHealth: 0.38
   useCoverChance: 0.6
-  composure: 0.72
+  composure: 0.66
   overshootChance: 0.28
-  preFireChance: 0.45
+  preFireChance: 0.42
