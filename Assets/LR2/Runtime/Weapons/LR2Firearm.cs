@@ -7,9 +7,11 @@ using System.Reflection;
 using Demo.Scripts.Runtime.AttachmentSystem;
 using KINEMATION.FPSAnimationFramework.Runtime.Camera;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.AdsLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Playables;
 using KINEMATION.FPSAnimationFramework.Runtime.Recoil;
 using KINEMATION.ProceduralRecoilAnimationSystem.Runtime;
+using KINEMATION.Shared.KAnimationCore.Runtime.Core;
 using KINEMATION.Shared.KAnimationCore.Runtime.Input;
 using LR2.Audio;
 using LR2.Characters;
@@ -71,6 +73,8 @@ namespace LR2.Weapons
         public event Action DryFired;
 
         public WeaponDefinition Definition => definition;
+        /// <summary>Authoritative ADS in/out duration (s) shared by 3D weapon ADS layer, camera FOV zoom, and spread blend.</summary>
+        public float EffectiveAdsTime => definition != null ? Mathf.Max(0.05f, definition.adsTime) : 0.21f;
         public int AmmoInMagazine { get; private set; }
         public int ReserveAmmo { get; private set; }
         public int MagazineSize => definition != null ? definition.magazineSize : 30;
@@ -153,6 +157,11 @@ namespace LR2.Weapons
         public float BarrelHeat => _barrelHeat;
         private static readonly FieldInfo CameraFovSpeedField = typeof(FPSCameraController).GetField(
             "fovSpeed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        private static readonly FieldInfo CameraFovEaseModeField = typeof(FPSCameraController).GetField(
+            "fovEaseMode", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        private static readonly EaseMode AdsFovEaseMode = new EaseMode(EEaseFunc.Sine);
+        private FPSAnimatorProfile _runtimeProfile;
+        private AdsLayerSettings _runtimeAdsSettings;
 
         // Reload
         private float _reloadStart;
@@ -244,6 +253,7 @@ namespace LR2.Weapons
                 _playables.UpdateAnimatorController(overrideController);
 
             InitializeAttachments();
+            EnsureRuntimeAdsProfile();
             if (_fpsAnimator != null)
             {
                 _fpsAnimator.LinkAnimatorProfile(gameObject);
@@ -315,33 +325,68 @@ namespace LR2.Weapons
         /// <summary>Kinemation per-shot camera shake asset (the killcam replays it on the recorded shots).</summary>
         public FPSCameraShake CameraShakeAsset => cameraShake;
 
+        /// <summary>
+        /// Clones the weapon's animatorProfile and AdsLayerSettings at runtime (HideAndDontSave) so each weapon
+        /// drives Kinemation's 3D ADS-in and ADS-out blend at 1 / EffectiveAdsTime without mutating shared disk assets.
+        /// </summary>
+        private void EnsureRuntimeAdsProfile()
+        {
+            if (_entity == null || _entity.animatorProfile == null) return;
+            float targetSpeed = 1f / EffectiveAdsTime;
+            if (_runtimeProfile == null)
+            {
+                _runtimeProfile = Instantiate(_entity.animatorProfile);
+                _runtimeProfile.name = $"{_entity.animatorProfile.name}_{name}_Runtime";
+                _runtimeProfile.hideFlags = HideFlags.HideAndDontSave;
+                if (_runtimeProfile.settings != null)
+                {
+                    for (int i = 0; i < _runtimeProfile.settings.Count; i++)
+                    {
+                        if (_runtimeProfile.settings[i] is AdsLayerSettings origAds)
+                        {
+                            _runtimeAdsSettings = Instantiate(origAds);
+                            _runtimeAdsSettings.name = $"{origAds.name}_{name}_Runtime";
+                            _runtimeAdsSettings.hideFlags = HideFlags.HideAndDontSave;
+                            _runtimeProfile.settings[i] = _runtimeAdsSettings;
+                            break;
+                        }
+                    }
+                }
+                _entity.animatorProfile = _runtimeProfile;
+            }
+            if (_runtimeAdsSettings != null) _runtimeAdsSettings.aimingSpeed = targetSpeed;
+        }
+
         public override void UpdateFieldOfView(bool aiming)
         {
             // Settings and fieldOfView are HORIZONTAL degrees (CoD/BF convention); Unity cameras take the vertical angle.
             float hipFovH = Owner != null && Owner.IsLocalPlayer ? LR2Settings.FieldOfView : fieldOfView;
             var viewCam = Owner != null ? Owner.ViewCamera : null;
-            float fov = LR2Settings.VerticalFov(hipFovH, viewCam != null ? viewCam.aspect : 16f / 9f);
+            float hipFovV = LR2Settings.VerticalFov(hipFovH, viewCam != null ? viewCam.aspect : 16f / 9f);
+            float adsFovV = hipFovV * (definition != null ? definition.adsFovMultiplier : 0.8f);
             float sens = 1f;
-            if (aiming)
+            if (scopeGroups.Count != 0)
             {
-                fov *= definition != null ? definition.adsFovMultiplier : 0.8f;
-                if (scopeGroups.Count != 0)
+                var scope = scopeGroups[_scopeIndex].GetActiveAttachment();
+                if (scope != null)
                 {
-                    var scope = scopeGroups[_scopeIndex].GetActiveAttachment();
-                    if (scope != null)
-                    {
-                        fov *= scope.aimFovZoom > 0.01f ? Mathf.Min(1f, scope.aimFovZoom) : 1f;
-                        sens = scope.sensitivityMultiplier;
-                    }
+                    adsFovV *= scope.aimFovZoom > 0.01f ? Mathf.Min(1f, scope.aimFovZoom) : 1f;
+                    if (aiming) sens = scope.sensitivityMultiplier;
                 }
             }
+            float fov = aiming ? adsFovV : hipFovV;
             if (_userInput != null) _userInput.SetValue("SensitivityMultiplier", sens);
             if (_cameraController != null)
             {
-                // FPSCameraController advances its cubic FOV curve by deltaTime * fovSpeed.
-                // Match that duration to the weapon's authored ADS transition so the zoom does not finish first.
-                float adsDuration = definition != null ? Mathf.Max(0.05f, definition.adsTime) : 0.25f;
-                if (CameraFovSpeedField != null) CameraFovSpeedField.SetValue(_cameraController, 1f / adsDuration);
+                // FPSCameraController advances its Sine FOV curve by deltaTime * fovSpeed.
+                // Match both zoom-in and zoom-out (including mid-ADS reversals) to the weapon's 3D ADS rate and ease mode.
+                float adsDuration = EffectiveAdsTime;
+                float fullDelta = Mathf.Abs(hipFovV - adsFovV);
+                float remFrac = 1f;
+                if (viewCam != null && fullDelta > 0.5f)
+                    remFrac = Mathf.Clamp(Mathf.Abs(fov - viewCam.fieldOfView) / fullDelta, 0.1f, 1f);
+                if (CameraFovSpeedField != null) CameraFovSpeedField.SetValue(_cameraController, 1f / (adsDuration * remFrac));
+                if (CameraFovEaseModeField != null) CameraFovEaseModeField.SetValue(_cameraController, AdsFovEaseMode);
                 _cameraController.UpdateTargetFOV(fov);
             }
         }
@@ -856,6 +901,8 @@ namespace LR2.Weapons
         {
             if (_barrelSmokeMaterial != null) Destroy(_barrelSmokeMaterial);
             if (_barrelGlowMat != null) Destroy(_barrelGlowMat);
+            if (_runtimeAdsSettings != null) Destroy(_runtimeAdsSettings);
+            if (_runtimeProfile != null) Destroy(_runtimeProfile);
         }
 
         private static readonly RaycastHit[] EchoHits = new RaycastHit[1];

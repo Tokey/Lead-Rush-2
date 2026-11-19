@@ -445,15 +445,16 @@ namespace LR2.Characters
             {
                 for (int i = 0; i < list.Count; i++) { int idx = list[i]; if (idx < mus.Length) mus[idx] = Mathf.Clamp(mus[idx], range.x, range.y); }
             }
-            // Right (trigger) hand: wrap middle/ring/little tightly around grip, rest index finger straight along the right
-            // side of the frame (clearing the trigger guard), and bring the right thumb closer to the grip.
+            // Right (trigger) hand (B26/D63): wrap middle/ring/little snugly around the pistol grip, rest the index finger
+            // naturally along the right frame/trigger guard (no upward hyperextension), and seat the right thumb around the backstrap.
             Add(_rFingerIdx, rightGripCurl);
-            Soft(_rIndexProxIdx, new Vector2(0.15f, 0.45f));
-            Soft(_rIndexDistIdx, new Vector2(-0.22f, 0.06f));
-            Soft(_rIndexSpreadIdx, new Vector2(-0.35f, -0.08f));
-            Soft(_rThumbProxIdx, new Vector2(-1.20f, -0.55f));
-            Soft(_rThumbDistIdx, new Vector2(-0.70f, -0.20f));
-            Soft(_rThumbSpreadIdx, new Vector2(-0.78f, -0.35f));
+            Soft(_rFingerIdx, new Vector2(-0.98f, -0.62f));
+            Soft(_rIndexProxIdx, new Vector2(-0.22f, -0.02f));
+            Soft(_rIndexDistIdx, new Vector2(-0.34f, -0.08f));
+            Soft(_rIndexSpreadIdx, new Vector2(-0.32f, -0.08f));
+            Soft(_rThumbProxIdx, new Vector2(-1.15f, -0.45f));
+            Soft(_rThumbDistIdx, new Vector2(-0.68f, -0.22f));
+            Soft(_rThumbSpreadIdx, new Vector2(-0.78f, -0.32f));
             // Left (support) hand: wrap fingers snugly under the rail and tuck the left thumb close against the handguard.
             bool pistol = IsHoldingPistol;
             float lProxMax = pistol ? -0.48f : Mathf.Lerp(-0.56f, -0.14f, reloadHand);

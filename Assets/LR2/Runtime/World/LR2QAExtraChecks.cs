@@ -227,10 +227,25 @@ namespace LR2.World
             return $"{(pass ? "PASS" : "FAIL")} Motion.FootSlide: plantedSpeed={plantedFootSpeed:0.000}m/s max={MaxMotionFootSlideSpeed:0.000}m/s";
         }
 
+        public static string CheckAdsSpeedAndSyncState(string weaponName, float adsTime, float aimingSpeed,
+            float inGunMs, float inFovMs, float outGunMs, float outFovMs)
+        {
+            float maxMs = adsTime * 1000f + 90f;
+            float expectedSpeed = adsTime > 0.01f ? 1f / adsTime : 0f;
+            bool speedOk = aimingSpeed >= 3.5f && Mathf.Abs(aimingSpeed - expectedSpeed) <= 0.1f;
+            bool inOk = inGunMs > 0f && inGunMs <= maxMs && inFovMs > 0f && inFovMs <= maxMs;
+            bool outOk = outGunMs > 0f && outGunMs <= maxMs && outFovMs > 0f && outFovMs <= maxMs;
+            bool syncOk = Mathf.Abs(inGunMs - inFovMs) <= 75f && Mathf.Abs(outGunMs - outFovMs) <= 75f;
+            bool pass = speedOk && inOk && outOk && syncOk;
+            return $"{(pass ? "PASS" : "FAIL")} ADS.SpeedAndFovSync: gun={weaponName} adsTime={adsTime:0.00}s aimingSpeed={aimingSpeed:0.00}/s inGun={inGunMs:0}ms inFov={inFovMs:0}ms outGun={outGunMs:0}ms outFov={outFovMs:0}ms max={maxMs:0}ms";
+        }
+
         public static string[] CheckB57KnownBadFixtures()
         {
             string deathBad = CheckDeathAimResetState(true, true, 1f, true, true, true, true);
             string deathGood = CheckDeathAimResetState(true, false, 0f, true, false, true, false);
+            string adsBad = CheckAdsSpeedAndSyncState("MK18_OldDesync", 0.22f, 1.8f, 556f, 220f, 556f, 220f);
+            string adsGood = CheckAdsSpeedAndSyncState("MK18_Synced2x", 0.18f, 5.56f, 185f, 185f, 185f, 185f);
             string weaponBad = CheckCloseWeaponSafety(Vector3.back * 0.20f, Vector3.zero,
                 Vector3.forward, LR2Layers.EnvironmentMask | (1 << LR2Layers.Character));
             string weaponGood = CheckCloseWeaponSafety(Vector3.forward * 0.05f, Vector3.zero,
@@ -245,6 +260,7 @@ namespace LR2.World
             return new[]
             {
                 $"{(deathBad.StartsWith("FAIL", StringComparison.Ordinal) && deathGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.DeathAimReset: badCase=({deathBad}) goodCase=({deathGood})",
+                $"{(adsBad.StartsWith("FAIL", StringComparison.Ordinal) && adsGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.AdsSpeedAndFovSync: badCase=({adsBad}) goodCase=({adsGood})",
                 $"{(weaponBad.StartsWith("FAIL", StringComparison.Ordinal) && weaponGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.CloseWeaponSafety: badCase=({weaponBad}) goodCase=({weaponGood})",
                 $"{(gainBad.StartsWith("FAIL", StringComparison.Ordinal) && gainGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicGain: badCase=({gainBad}) goodCase=({gainGood})",
                 $"{(musicSourceBad.StartsWith("FAIL", StringComparison.Ordinal) && musicSourceGood.StartsWith("PASS", StringComparison.Ordinal) ? "PASS" : "FAIL")} QA.KnownBad.MusicSourcePriority: badCase=({musicSourceBad}) goodCase=({musicSourceGood})",

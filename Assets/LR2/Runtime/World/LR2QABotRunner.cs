@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.AdsLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.CollisionLayer;
 using LR2.Audio;
 using LR2.Characters;
@@ -1112,6 +1113,68 @@ namespace LR2.World
             if (player == null || player.Health == null || player.ViewCamera == null) yield break;
             Vector3 savedPos = player.transform.position;
             float savedYaw = player.Yaw;
+
+            // Measure live 2x ADS-in, ADS-out ("coming back"), FOV zoom sync, and per-weapon speed hierarchy.
+            _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = false };
+            float settleLimit = Time.time + 1.5f;
+            while (Time.time < settleLimit &&
+                   (player.IsAiming || player.AimBlend > 0.01f ||
+                    (player.UserInput != null && player.UserInput.GetValue<float>(FPSANames.AimingWeight) > 0.01f)))
+                yield return null;
+
+            var activeGun = player.ActiveFirearm;
+            var activeEntity = activeGun != null ? activeGun.GetComponent<FPSAnimatorEntity>() : null;
+            float runtimeAimingSpeed = 0f;
+            if (activeEntity != null && activeEntity.animatorProfile != null && activeEntity.animatorProfile.settings != null)
+            {
+                foreach (var s in activeEntity.animatorProfile.settings)
+                    if (s is AdsLayerSettings als) { runtimeAimingSpeed = als.aimingSpeed; break; }
+            }
+            if (activeGun != null && activeGun.Definition != null && player.UserInput != null)
+            {
+                float hipFovV = LR2Settings.VerticalFov(LR2Settings.FieldOfView, player.ViewCamera.aspect);
+                float adsFovV = hipFovV * activeGun.Definition.adsFovMultiplier;
+                float inGunMs = -1f, inFovMs = -1f;
+                float inElapsed = 0f;
+                _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = true };
+                while (inElapsed < 1.0f && (inGunMs < 0f || inFovMs < 0f))
+                {
+                    yield return null;
+                    if (!player.IsAiming) continue;
+                    inElapsed += Time.deltaTime;
+                    float w = player.UserInput.GetValue<float>(FPSANames.AimingWeight);
+                    if (inGunMs < 0f && w >= 0.98f) inGunMs = inElapsed * 1000f;
+                    if (inFovMs < 0f && Mathf.Abs(player.ViewCamera.fieldOfView - adsFovV) <= 0.5f) inFovMs = inElapsed * 1000f;
+                }
+                yield return null;
+                if (inFovMs < 0f && Mathf.Abs(player.ViewCamera.fieldOfView - adsFovV) <= 0.5f)
+                    inFovMs = (inElapsed + Time.deltaTime) * 1000f;
+
+                float outGunMs = -1f, outFovMs = -1f;
+                float outElapsed = 0f;
+                _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = false };
+                while (outElapsed < 1.0f && (outGunMs < 0f || outFovMs < 0f))
+                {
+                    yield return null;
+                    if (player.IsAiming) continue;
+                    outElapsed += Time.deltaTime;
+                    float w = player.UserInput.GetValue<float>(FPSANames.AimingWeight);
+                    if (outGunMs < 0f && w <= 0.02f) outGunMs = outElapsed * 1000f;
+                    if (outFovMs < 0f && Mathf.Abs(player.ViewCamera.fieldOfView - hipFovV) <= 0.5f) outFovMs = outElapsed * 1000f;
+                }
+                yield return null;
+                if (outFovMs < 0f && Mathf.Abs(player.ViewCamera.fieldOfView - hipFovV) <= 0.5f)
+                    outFovMs = (outElapsed + Time.deltaTime) * 1000f;
+
+                CheckExtra(LR2QAExtraChecks.CheckAdsSpeedAndSyncState(
+                    activeGun.DisplayName, activeGun.EffectiveAdsTime, runtimeAimingSpeed,
+                    inGunMs, inFovMs, outGunMs, outFovMs));
+            }
+            if (player.Items.Count >= 2 && player.Items[0] is LR2Firearm slot0 && player.Items[1] is LR2Firearm slot1)
+            {
+                Check(slot1.EffectiveAdsTime < slot0.EffectiveAdsTime, "ADS.PerWeaponHierarchy",
+                    $"{slot1.DisplayName}={slot1.EffectiveAdsTime:0.00}s < {slot0.DisplayName}={slot0.EffectiveAdsTime:0.00}s");
+            }
 
             // Enter ADS, place enemy close in front, inflict lethal damage and verify immediate ADS reset + safe weapon eye-plane.
             _cmd = new SoldierInput { absoluteLook = true, aimYaw = savedYaw, aimPitch = 0f, aim = true };

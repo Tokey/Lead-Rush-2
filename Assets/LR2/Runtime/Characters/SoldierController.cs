@@ -7,6 +7,7 @@ using System.Reflection;
 using Demo.Scripts.Runtime.Character;
 using KINEMATION.FPSAnimationFramework.Runtime.Camera;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.IkMotionLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Playables;
 using KINEMATION.FPSAnimationFramework.Runtime.Recoil;
 using KINEMATION.ProceduralRecoilAnimationSystem.Runtime;
@@ -135,6 +136,7 @@ namespace LR2.Characters
         private int _sensIndex = -1;
         private bool _initialized;
         private float _nextHurtVoiceAt;
+        private IkMotionLayerSettings _runtimeAimingMotion;
 
         // death cam / weapon drop
         private Transform _camParent;
@@ -194,6 +196,7 @@ namespace LR2.Characters
             }
             LR2Settings.Changed -= OnSettingsChanged;
             if (_droppedWeapon != null) Destroy(_droppedWeapon);
+            if (_runtimeAimingMotion != null) Destroy(_runtimeAimingMotion);
         }
 
         private void OnSettingsChanged()
@@ -399,8 +402,8 @@ namespace LR2.Characters
                 UserInput.SetValue(FPSANames.StabilizationWeight, _stabWeight);
             }
 
-            float adsTime = ActiveFirearm != null && ActiveFirearm.Definition != null ? ActiveFirearm.Definition.adsTime : 0.25f;
-            AimBlend = Mathf.MoveTowards(AimBlend, _isAiming ? 1f : 0f, Time.deltaTime / Mathf.Max(0.05f, adsTime));
+            float adsTime = ActiveFirearm != null ? ActiveFirearm.EffectiveAdsTime : 0.21f;
+            AimBlend = Mathf.MoveTowards(AimBlend, _isAiming ? 1f : 0f, Time.deltaTime / adsTime);
             Movement.IsAimingSlowdown = _isAiming;
 
             Quaternion view = Quaternion.Euler(_pitch, transform.eulerAngles.y, 0f);
@@ -531,7 +534,20 @@ namespace LR2.Characters
                 item.OnAimReleased();
                 _isAiming = false;
             }
-            PlayTransitionMotion(settings != null ? settings.aimingMotion : null);
+            if (settings != null && settings.aimingMotion != null)
+            {
+                var ikSrc = settings.aimingMotion;
+                if (_runtimeAimingMotion == null)
+                {
+                    _runtimeAimingMotion = Instantiate(ikSrc);
+                    _runtimeAimingMotion.hideFlags = HideFlags.HideAndDontSave;
+                }
+                float adsTime = ActiveFirearm != null ? ActiveFirearm.EffectiveAdsTime : 0.21f;
+                float targetRate = Mathf.Clamp(0.45f / adsTime, 1.8f, 3.6f);
+                _runtimeAimingMotion.playRate = targetRate;
+                _runtimeAimingMotion.blendTime = Mathf.Clamp(ikSrc.blendTime * (ikSrc.playRate / Mathf.Max(0.1f, targetRate)), 0.05f, 0.3f);
+                PlayTransitionMotion(_runtimeAimingMotion);
+            }
             var s = LR2CommonSounds.Instance;
             if (s != null) LR2Audio.PlayAt(aim ? s.adsIn : s.adsOut, transform.position, IsLocalPlayer ? 1f : 0.6f);
         }

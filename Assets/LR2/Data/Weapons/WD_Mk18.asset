@@ -41,7 +41,7 @@ MonoBehaviour:
   penetrationDepth: 0.25
   penetrationDamageScale: 0.65
   sprintToFireTime: 0.2
-  adsTime: 0.22
+  adsTime: 0.18
   adsFovMultiplier: 0.72
   equipTime: 0.55
   reloadTime: 2.2
@@ -65,5 +65,5 @@ MonoBehaviour:
   tracerEvery: 1
   shellPrefab: {fileID: 7496392848592200594, guid: c114d37c6341b414aa4cb01b076e2836, type: 3}
   muzzleFlashPrefab: {fileID: 8025995091943808216, guid: 1b26fa37b150091409de8b6e8aea82d1, type: 3}
-  rightGripOffset: {x: 0.006, y: -0.004, z: -0.075}
+  rightGripOffset: {x: -0.004, y: -0.022, z: 0.012}
   leftGripOffset: {x: 0, y: -0.036, z: 0}

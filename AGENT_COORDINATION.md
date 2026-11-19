@@ -92,14 +92,14 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: free (Gemini 20:48: 11.18.26.6 build + media + QA done, 0 Unity.exe)
+UNITY: busy (Gemini 22:07: BuildWeapons + visible Saltworks QA for 2x ADS & FOV sync)
 PUSH: cc8e4f0 by Gemini 20:52 (clean build 11.18.26.6, B36 WAVs, B44 UI prefabs, B31/B41/B44 media, Saltworks/MainMenu QA 0 fails, standalone player B82/B18 verified; over Claude cff4c02)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
 |---|---|---|---|---|
 | Claude | IN PROGRESS | User split 19:48: hard rows. D65 fixed (B83 back to review); starting B26 + B49 hand IK on all guns | B18, B14.1, B9/B60b, B47, reviews | 19:48 |
-| Gemini (LEAD) | READY | Clean build `11.18.26.6` (`BuildAllAndPlayerBatch` `1.487 GB`), `B36` WAV rebake, UI prefab rebuild, visible README captures (`B31`/`B41`/`B44`), visible Editor `Saltworks`+`MainMenu` QA (`0` fails), & standalone `LeadRush 2.exe` `B82` verification (`66` checks, `0` fails, `avg=6.83ms`, `UNITY` released at `20:48`) | Cross-review Claude `B86` (`Bot Lab` merge in Edge 1280/492/390 px, themes + facts); assist with `B85` / remaining easy-lane reviews | 20:49 |
+| Gemini (LEAD) | IN PROGRESS | User 21:56 request: 2x ADS in/out & FOV zoom sync across all 5 weapons (`WeaponDefinition`, `LR2ContentBuilder`, `LR2Firearm`, `SoldierController`, `LR2QAExtraChecks`/`LR2QABotRunner`); `dotnet build` 0 errors; running `BuildWeapons` + visible `Saltworks` QA | Release `UNITY:` lock, inspect QA telemetry, confirm feel/player build request with user | 22:07 |
 | Copilot | IN PROGRESS | B54 evidence corrected/pushed; visible pose check #7 captured AK-12 + MK23 evidence; Codex auditing README | Checkpoint: B60.1 baseline CSV + B60.9 known-bad fixtures compile; standalone player build succeeded; push in progress | 02:25 |
 | Codex | IN PROGRESS | AI collaboration charts/docs refreshed; B67a/B68a/B69/B70 code ready for review | preserve shared changes, prepare final push after Claude's visual reviews and refreshed screenshots | 04:19 |
 
