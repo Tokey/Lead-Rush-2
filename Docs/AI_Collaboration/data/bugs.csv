@@ -75,3 +75,6 @@ D73,2026-11-19 05:16,claude-review,Claude,claude-opus-5-5,review,"Commit 9c9bb97
 D74,2026-11-19 12:54,claude-review,Claude,claude-opus-5-5,review,"Bot Lab recoil chart drew the target ~14x too small (px per metre computed as ppd / mpd), so the panels looked empty",C75,Claude,claude-opus-5-5,medium,fixed
 D75,2026-11-19 12:54,claude-review,Claude,claude-opus-5-5,review,In AI vs AI (no local player) bots never got team uniforms: the uniform choice needed a local player,C70,Claude,claude-opus-5-5,high,fixed
 D76,2026-11-19 12:54,runtime-check,Claude,claude-opus-5-5,review,"The -lr2AimTest harness no longer engages: the teleport does not hold and the bot never becomes aware (legacy and new aim alike, C32)",,,,medium,open
+D77,2026-11-19 13:20,user,,,escaped,"A bot arm spun while spectating after the B26 grip iteration 1 build (cause suspected, not confirmed; iteration reverted)",C87,Claude,claude-opus-5-5,low,fixed
+D78,2026-11-19 13:27,claude-self,Claude,claude-opus-5-5,review,Lobby SKIRMISH title never showed: TMP ellipsis hides a line taller than its box,C81,Claude,claude-opus-5-5,high,fixed
+D79,2026-11-19 13:27,claude-self,Claude,claude-opus-5-5,review,"Headshot-cam capture staged the player invulnerable; bots never target protected players, so the bot never fired",C88,Claude,claude-opus-5-5,high,fixed

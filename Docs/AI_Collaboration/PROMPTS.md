@@ -1115,6 +1115,77 @@ tool notifications are left out here and documented once below.
 >
 > when  no llm who gives orders? specify and clarify
 
+**12:54 · to Claude Code**
+
+> Orders · 1.5 s, with a commander
+> no LLM: none (you order by chat)
+>
+> how can i order by chat? does it work? now? without LLM?
+
+**12:56 · to Claude Code**
+
+> fire a shot isnt dfoing a thing
+
+**12:57 · to Claude Code**
+
+> remove ashlesha xiokun claypool and jack from the bot names
+
+**12:59 · to Claude Code**
+
+> remove ashlesha xiokun claypool and jack from the bot names
+>
+> Or maybe have them all be present when multiple bots are playing. generate new gamer tags for them.
+
+**13:00 · to Claude Code**
+
+> less offensive. cool and funny
+
+**13:00 · to Claude Code**
+
+> no more names.
+
+**13:00 · to Claude Code**
+
+> tokey too. regen that too
+
+**13:02 · to Claude Code**
+
+> fix text overlaps like these in the Bot lab artifact. update github accordingly too.
+
+**13:05 · to Claude Code**
+
+> this table needs work fix alighment
+
+**13:07 · to Claude Code**
+
+> vet is vastly more superior from the rest. can that be tweaked a bit? like let the skill gap between each setting be somewhat similar?
+
+**13:13 · to Claude Code**
+
+> was the gamer tag thing done? i dont see anyones name anymore
+
+**13:16 · to Claude Code**
+
+> play under tags that hide their names, like Pix
+>
+> noooo dont hide their names. keep their names too
+
+**13:16 · to Claude Code**
+
+> text overlap here
+
+**13:18 · to Claude Code**
+
+> mess fix.
+
+**13:20 · to Claude Code**
+
+> while spectating, i see someones whole arm rotating. pls fix that? were those added after finder pos change? if so, try to remove anything forced that is breaking critical animations
+
+**13:21 · to Claude Code**
+
+> fix text overlap
+
 ### The automatic tick prompt (Claude Code to itself, every 20 minutes)
 
 Claude Code has no command line the other agents can call, so it schedules its own wake-up: a session job (`CronCreate`,
