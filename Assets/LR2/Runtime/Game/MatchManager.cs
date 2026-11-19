@@ -277,12 +277,9 @@ namespace LR2.Game
                 string[] src = useSerialized ? botCallsigns : fallback;
                 // Weighted shuffle without repeats (Efraimidis-Spirakis keys u^(1/w)): featured tags come up far more often,
                 // every old tag stays in the pool, and no two bots share a name in one match.
-                var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length + FriendCallsigns.Length);
+                var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length);
                 var seen = new HashSet<string>();
                 if (!string.IsNullOrWhiteSpace(LR2Settings.PlayerName)) seen.Add(LR2Settings.PlayerName); // never a bot with your name
-                // friends first, in random order (keys above 1 beat every weighted key, which stay in 0..1)
-                foreach (string n in FriendCallsigns)
-                    if (seen.Add(n)) pool.Add((n, 1f + Random.value));
                 foreach (string n in FeaturedCallsigns)
                     if (seen.Add(n)) pool.Add((n, Mathf.Pow(Mathf.Max(1e-6f, Random.value), 1f / FeaturedWeight)));
                 foreach (string n in src)
@@ -294,16 +291,10 @@ namespace LR2.Game
             return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
 
-        // User 11-19: the developer's friends get fresh gamer tags and are always in a match with enough bots: they are dealt
-        // first (in random order), so six or more bots means every one of them plays.
-        private static readonly string[] FriendCallsigns =
-        {
-            "EnchantedP0tato", "xX_Tokey_Xx", "Ash3sToAsh3s", "XiaoKunFu", "ClaymorePool", "JackHamm3r"
-        };
-        // User 11-18 14:10: favourite tags, weighted 4x in the shuffle after the friends.
+        // User 11-18 14:10: featured gamer tags, weighted 4x. User 11-19: four friends' tags removed for good (no replacements).
         private static readonly string[] FeaturedCallsigns =
         {
-            "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
+            "EnchantedP0tato", "xX_Tokey_Xx", "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
         };
         private const float FeaturedWeight = 4f;
 
