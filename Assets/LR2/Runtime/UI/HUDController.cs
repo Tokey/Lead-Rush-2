@@ -179,8 +179,9 @@ namespace LR2.UI
             _nextScoreLabelAt = Time.unscaledTime + 0.25f;
             if (mm.IsTeamMode && _player != null && _player.Team != TeamId.None)
             {
-                var other = _player.Team == TeamId.Alpha ? TeamId.Bravo : TeamId.Alpha;
-                _myScoreLabel.text = $"YOUR TEAM \u00b7 {_player.Team.ToString().ToUpperInvariant()}";
+                var other = mm.BestOpponentTeam(_player.Team);
+                bool watching = LR2.Game.SkirmishSetup.Active && LR2.Game.SkirmishSetup.PlayerSpectates;
+                _myScoreLabel.text = $"{(watching ? "WATCHING" : "YOUR TEAM")} \u00b7 {_player.Team.ToString().ToUpperInvariant()}";
                 _enemyScoreLabel.text = $"ENEMY \u00b7 {other.ToString().ToUpperInvariant()}";
                 return;
             }
@@ -326,6 +327,13 @@ namespace LR2.UI
 
         private void Bind()
         {
+            if (LR2.Game.SkirmishSetup.Active && LR2.Game.SkirmishSetup.PlayerSpectates)
+            {
+                // AI vs AI: the HUD shows the soldier the spectator camera follows (health, ammo, hits), like a CS spectator
+                var t = LR2.Game.SpectatorCamera.Target;
+                if (t != _player) { _player = t; _soldier = t != null ? t.GetComponent<SoldierController>() : null; }
+                return;
+            }
             if (_player != null && _soldier != null) return;
             _player = Combatant.FindLocalPlayer();
             _soldier = _player != null ? _player.GetComponent<SoldierController>() : null;
@@ -336,6 +344,7 @@ namespace LR2.UI
             Bind();
             float dt = Time.unscaledDeltaTime;
             UpdateCrosshair();
+            if (LR2.Game.SpectatorCamera.HideCrosshair && crosshairGroup != null) crosshairGroup.alpha = 0f;
             UpdateHitmarker();
             UpdateAmmo();
             UpdateHealth(dt);

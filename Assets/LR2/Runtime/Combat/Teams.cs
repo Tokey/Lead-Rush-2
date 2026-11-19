@@ -11,7 +11,10 @@ namespace LR2.Combat
         None = 0,
         Alpha = 1,
         Bravo = 2,
-        Hostile = 3
+        Hostile = 3,
+        // Skirmish lobby (user 11-19: "3 way, 4 way ... which team they can be in")
+        Charlie = 4,
+        Delta = 5
     }
 
     public static class TeamUtil
@@ -40,9 +43,27 @@ namespace LR2.Combat
                 case TeamId.Alpha: return "TASK FORCE";
                 case TeamId.Bravo: return "SYNDICATE";
                 case TeamId.Hostile: return "DRONES";
+                case TeamId.Charlie: return "VANGUARD";
+                case TeamId.Delta: return "REAPERS";
                 default: return "FREE FOR ALL";
             }
         }
+
+        /// <summary>Fixed colour per team for lobby rows, the spectator overlay and scoreboards.</summary>
+        public static Color TeamColor(TeamId team)
+        {
+            switch (team)
+            {
+                case TeamId.Alpha: return new Color(0.30f, 0.66f, 1.00f);
+                case TeamId.Bravo: return new Color(1.00f, 0.33f, 0.28f);
+                case TeamId.Charlie: return new Color(0.42f, 0.86f, 0.38f);
+                case TeamId.Delta: return new Color(1.00f, 0.80f, 0.25f);
+                default: return new Color(0.85f, 0.85f, 0.85f);
+            }
+        }
+
+        /// <summary>Short team label for lobby rows ("ALPHA", "FFA").</summary>
+        public static string ShortName(TeamId team) => team == TeamId.None ? "FFA" : team.ToString().ToUpperInvariant();
 
         /// <summary>Colour of <paramref name="other"/> as seen by <paramref name="viewer"/>.</summary>
         public static Color RelationColor(Combatant viewer, Combatant other)

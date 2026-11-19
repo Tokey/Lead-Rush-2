@@ -155,6 +155,23 @@ namespace LR2.World
         private float _killerBodyBack;
         private Transform[] _kArm; // puppet L upper/lower/hand, R upper/lower/hand
 
+        // B111 headshot bullet cam (user 11-19: "on killcams for headshots show a quick pan of the bullet hitting the head in
+        // slomo, but dont make it too long"). When the replay reaches the killing headshot it cuts beside the bullet's path:
+        // the round streaks the last 1.9 m in near-frozen time, the camera swings round to a side-on view as it hits, and the
+        // impact plays out at ~0.5x. It replaces 0.34 s of the normal replay, so a headshot killcam is only ~0.75 s longer.
+        private const float HsCamReal = 1.1f;     // real seconds of bullet cam
+        private const float HsLead = 0.035f;      // recorded seconds before the impact
+        private const float HsTail = 0.30f;       // recorded seconds after it
+        private const float HsApproach = 0.42f;   // share of the bullet cam the round is in flight
+        private bool _hsPending, _hsActive, _hsBloodDone;
+        private float _hsStartReal, _hsHitTime, _hsSideSign = 1f;
+        private Vector3 _hsPoint, _hsDir = Vector3.forward;
+        private Transform _hsHead;
+        private LineRenderer _hsBullet;
+
+        /// <summary>Extra replay time a headshot kill adds (the bullet cam minus the replay time it stands in for).</summary>
+        private float HeadshotExtra => HsCamReal - (HsLead + HsTail) * duration / Mathf.Max(0.1f, preKillWindow + postKillWindow);
+
         /// <summary>Extra respawn time so the killcam can play out before the player is put back in.</summary>
         public static float ExtraRespawnDelay(in KillEvent e, float baseDelay)
         {
@@ -162,7 +179,8 @@ namespace LR2.World
             if (e.victim == null || !e.victim.IsLocalPlayer) return 0f;
             if (e.killer == null || e.killer == e.victim) return 0f;
             if (e.killer.GetComponent<SoldierController>() == null) return 0f;
-            return Mathf.Max(0f, (Instance.EffectiveStartDelay + Instance.duration) - baseDelay);
+            float hs = e.headshot ? Instance.HeadshotExtra : 0f;
+            return Mathf.Max(0f, (Instance.EffectiveStartDelay + Instance.duration + hs) - baseDelay);
         }
 
         /// <summary>The replay starts only after the post-kill window has been recorded (the victim's real death).</summary>
@@ -387,6 +405,24 @@ namespace LR2.World
             deathPush.y = 0f;
             _victimDeathDir = deathPush.sqrMagnitude > 0.01f ? deathPush.normalized : killer.transform.forward;
 
+            // B111: the killing headshot is where the bullet cam looks
+            _hsPending = _hsActive = false;
+            if (e.headshot)
+            {
+                for (int i = _replayHits.Count - 1; i >= 0; i--)
+                {
+                    if (!_replayHits[i].killed) continue;
+                    _hsHitTime = _replayHits[i].time;
+                    _hsPoint = _replayHits[i].point;
+                    _hsDir = _replayHits[i].direction;
+                    _hsPending = _hsHitTime - HsLead >= _replayStartTime && _hsHitTime + HsTail <= _replayEndTime + 0.05f;
+                    break;
+                }
+                Vector3 shotLine = victim.transform.position - killer.transform.position;
+                if (_hsDir.sqrMagnitude < 0.01f) _hsDir = shotLine;
+                _hsDir = _hsDir.sqrMagnitude > 0.0001f ? _hsDir.normalized : Vector3.forward;
+            }
+
             _pending = true;
             _startAt = Time.time + EffectiveStartDelay;
         }
@@ -444,6 +480,7 @@ namespace LR2.World
 
             float norm = 1f - Mathf.Clamp01((_endAt - Time.time) / duration);
             float sampleTime = Mathf.Lerp(_replayStartTime, _replayEndTime, norm);
+            bool hsCam = UpdateHeadshotClock(ref sampleTime);
             DebugSampleTime = sampleTime;
             Snapshot kSnap = Evaluate(_killerReplay, sampleTime);
 
@@ -469,6 +506,7 @@ namespace LR2.World
                 fpCam.fieldOfView = kSnap.localPlayer && kSnap.fov > 10f ? kSnap.fov : ReplayFov(fpCam.aspect, kSnap.aimBlend);
                 ReplayShots(sampleTime, camRot, kSnap.aimBlend);
                 ReplayHits(sampleTime);
+                if (hsCam) ApplyBulletCam(fpCam);
                 if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
                 return;
             }
@@ -499,7 +537,136 @@ namespace LR2.World
 
             ReplayShots(sampleTime, aimRot);
             ReplayHits(sampleTime);
+            if (hsCam) ApplyBulletCam(cam);
             if (_info != null) _info.alpha = Mathf.Clamp01(norm * 6f);
+        }
+
+        // ------------------------------------------------------------------ B111 headshot bullet cam
+        /// <summary>Takes over the replay clock for the bullet cam; true while it runs.</summary>
+        private bool UpdateHeadshotClock(ref float sampleTime)
+        {
+            if (_hsPending && sampleTime >= _hsHitTime - HsLead)
+            {
+                _hsPending = false;
+                _hsActive = true;
+                _hsBloodDone = false;
+                _hsStartReal = Time.time;
+                _endAt += HsCamReal; // re-timed on exit
+                _hsHead = FindHead(_puppets && _victimPuppet != null ? _victimPuppet.transform : _victim != null ? _victim.transform : null);
+                _hsSideSign = PickBulletCamSide();
+                var sounds = LR2CommonSounds.Instance; // the round cracks past the lens
+                if (sounds != null) LR2Audio.PlayAt(sounds.bulletWhizz, _hsPoint - _hsDir * 0.8f, 1f);
+            }
+            if (!_hsActive) return false;
+            float u = Mathf.Clamp01((Time.time - _hsStartReal) / HsCamReal);
+            sampleTime = u < HsApproach
+                ? Mathf.Lerp(_hsHitTime - HsLead, _hsHitTime, u / HsApproach)                       // near-frozen: the round flies
+                : Mathf.Lerp(_hsHitTime, _hsHitTime + HsTail, (u - HsApproach) / (1f - HsApproach)); // ~0.5x: the impact
+            if (u < 1f) return true;
+            _hsActive = false;
+            if (_hsBullet != null) _hsBullet.enabled = false;
+            // carry on with the normal replay from where the slow motion stopped
+            float exitNorm = Mathf.InverseLerp(_replayStartTime, _replayEndTime, sampleTime);
+            _endAt = Time.time + (1f - exitNorm) * duration;
+            return false;
+        }
+
+        private Vector3 BulletCamOffset(float e, float sign)
+        {
+            float ang = Mathf.Lerp(35f, 100f, e) * sign;
+            float r = Mathf.Lerp(1.4f, 0.95f, e);
+            return Quaternion.AngleAxis(ang, Vector3.up) * (-_hsDir) * r + Vector3.up * Mathf.Lerp(0.14f, 0.05f, e);
+        }
+
+        /// <summary>The orbit side with no wall between the camera and the head (right first).</summary>
+        private float PickBulletCamSide()
+        {
+            foreach (float sign in new[] { 1f, -1f })
+            {
+                bool clear = true;
+                foreach (float e in new[] { 0f, 0.5f, 1f })
+                    if (Physics.Linecast(_hsPoint, _hsPoint + BulletCamOffset(e, sign), LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) clear = false;
+                if (clear) return sign;
+            }
+            return 1f;
+        }
+
+        private static Transform FindHead(Transform root)
+        {
+            if (root == null) return null;
+            var anim = root.GetComponentInChildren<Animator>();
+            if (anim != null && anim.isHuman)
+            {
+                var h = anim.GetBoneTransform(HumanBodyBones.Head);
+                if (h != null) return h;
+            }
+            foreach (var t in root.GetComponentsInChildren<Transform>())
+                if (t.name.EndsWith("Head", System.StringComparison.OrdinalIgnoreCase)) return t;
+            return null;
+        }
+
+        private void ApplyBulletCam(Camera cam)
+        {
+            if (cam == null) return;
+            float u = Mathf.Clamp01((Time.time - _hsStartReal) / HsCamReal);
+            float e = Mathf.SmoothStep(0f, 1f, u);
+            float fly = Mathf.Clamp01(u / HsApproach);
+            Vector3 bullet = _hsPoint - _hsDir * Mathf.Lerp(1.9f, 0f, fly * fly * (3f - 2f * fly) * 0.25f + fly * 0.75f);
+            Vector3 head = _hsHead != null ? _hsHead.position : _hsPoint;
+            Vector3 camPos = _hsPoint + BulletCamOffset(e, _hsSideSign);
+            Vector3 look = u < HsApproach ? Vector3.Lerp(bullet, _hsPoint, 0.5f + 0.5f * fly)
+                                          : Vector3.Lerp(_hsPoint, head, Mathf.Clamp01((u - HsApproach) * 2.5f));
+            cam.transform.SetPositionAndRotation(camPos, Quaternion.LookRotation(look - camPos, Vector3.up));
+            cam.fieldOfView = Mathf.Lerp(46f, 34f, e);
+
+            EnsureBullet();
+            if (_hsBullet != null)
+            {
+                bool inFlight = u < HsApproach;
+                _hsBullet.enabled = inFlight;
+                if (inFlight)
+                {
+                    _hsBullet.SetPosition(0, bullet - _hsDir * 0.6f);
+                    _hsBullet.SetPosition(1, bullet);
+                }
+            }
+            if (!_hsBloodDone && u >= HsApproach)
+            {
+                _hsBloodDone = true;
+                ImpactSystem.SpawnBlood(_hsPoint, -_hsDir, _hsDir, true);
+            }
+        }
+
+        /// <summary>The round: a hot additive streak (core plus soft halo) on the keyword-free LR2/ParticleUnlit shader.</summary>
+        private void EnsureBullet()
+        {
+            if (_hsBullet != null) return;
+            var go = new GameObject("[Killcam Bullet]");
+            go.transform.SetParent(transform, false);
+            _hsBullet = go.AddComponent<LineRenderer>();
+            _hsBullet.useWorldSpace = true;
+            _hsBullet.positionCount = 2;
+            _hsBullet.numCapVertices = 4;
+            _hsBullet.startWidth = 0.002f;
+            _hsBullet.endWidth = 0.016f;
+            _hsBullet.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _hsBullet.receiveShadows = false;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.55f, 0.25f), 0f), new GradientColorKey(new Color(1f, 0.92f, 0.78f), 1f) },
+                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.55f, 0.6f), new GradientAlphaKey(1f, 1f) });
+            _hsBullet.colorGradient = g;
+            var shader = Shader.Find("LR2/ParticleUnlit");
+            if (shader != null)
+            {
+                var m = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                m.SetColor("_Color", new Color(1f, 0.82f, 0.6f, 1f));
+                m.SetFloat("_Intensity", 3f);
+                m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                m.renderQueue = 3100;
+                _hsBullet.sharedMaterial = m;
+            }
+            _hsBullet.enabled = false;
         }
 
         private void ReplayShots(float sampleTime, Quaternion aimRot, float aimBlend = 0f)
@@ -869,6 +1036,8 @@ namespace LR2.World
         {
             if (!_playing) return;
             _playing = false;
+            _hsActive = _hsPending = false;
+            if (_hsBullet != null) _hsBullet.enabled = false;
             DestroyPuppets();
             if (_killer != null)
             {

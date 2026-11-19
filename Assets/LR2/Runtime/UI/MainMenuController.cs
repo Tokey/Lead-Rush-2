@@ -138,6 +138,10 @@ namespace LR2.UI
         private readonly List<Sprite> _generatedSprites = new List<Sprite>();
         private Sprite[] _cachedMapSprites;
 
+        private SkirmishLobby _lobby;
+        private CanvasGroup _settingsReturn;
+        private bool _rulesFromLobby;
+
         private string _duelBaseLabel;
         private string _ctfBaseLabel;
         private string _ffaBaseLabel;
@@ -162,8 +166,9 @@ namespace LR2.UI
             if (versionText != null) versionText.text = $"LR2.{Application.version}";
 
             CacheBaseModeLabels();
+            BuildSkirmishLobby();
 
-            if (duelButton != null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
+            if (duelButton != null && _lobby == null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
             if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
             if (ffaButton != null) ffaButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.FreeForAll, ffaSettings));
             if (tdmButton != null) tdmButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.TeamDeathmatch, tdmSettings));
@@ -184,6 +189,57 @@ namespace LR2.UI
             RefreshDifficultyLabel();
             RefreshModeButtons();
         }
+
+        /// <summary>
+        /// User 11-19: "change the menu, just have play, then in that have all the settings". The first mode button becomes
+        /// PLAY and opens the skirmish lobby; the other mode buttons and MODE RULES go (the rules live in the lobby's ALL
+        /// RULES sub-menu); OPTIONS and QUIT move up under PLAY.
+        /// </summary>
+        private void BuildSkirmishLobby()
+        {
+            SkirmishSetup.Active = false;
+            if (mainPanel == null || duelButton == null || mainPanel.transform.parent == null) return;
+            _lobby = SkirmishLobby.Create(mainPanel.transform.parent, mode => SettingsFor(mode) ?? duelSettings);
+            Show(_lobby.Group, false);
+            _lobby.OnBack = () => { SwitchLayer(mainPanel, -1f); OnMenuShot?.Invoke(-1); };
+            _lobby.OnOptions = () => { _settingsReturn = _lobby.Group; SwitchLayer(settingsPanel, 1f); };
+            _lobby.OnRules = () => { _rulesFromLobby = true; OpenModeRules(SkirmishSetup.Mode); };
+            _lobby.OnStart = mode => Play(SettingsFor(mode) ?? duelSettings);
+            _lobby.OnModeChanged = mode => OnMenuShot?.Invoke((int)mode);
+            duelButton.onClick.AddListener(() => { SwitchLayer(_lobby.Group, 1f); _lobby.PlayIntro(); OnMenuShot?.Invoke((int)SkirmishSetup.Mode); });
+            _duelBaseLabel = "PLAY";
+
+            var hide = new[] { ctfButton, ffaCtfButton, ffaButton, tdmButton, modeRulesButton };
+            var keep = new[] { duelButton, settingsButton, quitButton };
+            var parent = duelButton.transform.parent;
+            var slots = new List<float>();
+            bool sameAnchors = true;
+            var a0 = (RectTransform)duelButton.transform;
+            foreach (var b in hide)
+                if (b != null && b.transform.parent == parent) slots.Add(((RectTransform)b.transform).anchoredPosition.y);
+            foreach (var b in keep)
+            {
+                if (b == null || b.transform.parent != parent) continue;
+                var rt = (RectTransform)b.transform;
+                slots.Add(rt.anchoredPosition.y);
+                if (rt.anchorMin != a0.anchorMin || rt.anchorMax != a0.anchorMax) sameAnchors = false;
+            }
+            foreach (var b in hide) if (b != null) b.gameObject.SetActive(false);
+            // compact the column when the buttons are placed by hand (a layout group compacts it by itself)
+            if (!sameAnchors || parent.GetComponent<LayoutGroup>() != null || slots.Count < 3) return;
+            slots.Sort((x, y) => y.CompareTo(x));
+            float step = (slots[0] - slots[slots.Count - 1]) / (slots.Count - 1);
+            int k = 0;
+            foreach (var b in keep)
+            {
+                if (b == null || b.transform.parent != parent) continue;
+                var rt = (RectTransform)b.transform;
+                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, slots[0] - step * k++);
+            }
+        }
+
+        /// <summary>Menu background hook (B110): -1 = main menu, otherwise the GameModeType shown in the lobby.</summary>
+        public static System.Action<int> OnMenuShot;
 
         private void OnDestroy()
         {
@@ -208,6 +264,7 @@ namespace LR2.UI
             {
                 if (settingsPanel != null && settingsPanel.alpha > 0.5f) ReturnFromSettings();
                 else if (modeRulesPanel != null && modeRulesPanel.alpha > 0.5f) ReturnFromModeRules();
+                else if (_lobby != null && _lobby.Group.alpha > 0.5f) _lobby.OnBack?.Invoke();
                 else if (deployPanel != null && deployPanel.alpha > 0.5f) ReturnFromDeploy();
             }
         }
@@ -215,7 +272,8 @@ namespace LR2.UI
         private void ReturnFromSettings()
         {
             LR2Settings.Save();
-            SwitchLayer(mainPanel, -1f);
+            SwitchLayer(_settingsReturn != null ? _settingsReturn : mainPanel, -1f);
+            _settingsReturn = null;
             RefreshDifficultyLabel();
             RefreshDeployLabels();
             RefreshPreviewStatus();
@@ -369,7 +427,7 @@ namespace LR2.UI
 
         private void RefreshModeButtons()
         {
-            SetButtonLabel(duelButton, _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
+            SetButtonLabel(duelButton, _lobby != null ? "PLAY" : _duelBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.Duel) ? "  [CUSTOM]" : ""));
             SetButtonLabel(ctfButton, _ctfBaseLabel);
             SetButtonLabel(ffaButton, _ffaBaseLabel + (LR2Session.HasCustomModeRules(GameModeType.FreeForAll) ? "  [CUSTOM]" : ""));
             SetButtonLabel(tdmButton, _tdmBaseLabel);
@@ -562,6 +620,13 @@ namespace LR2.UI
 
         private void ReturnFromModeRules()
         {
+            if (_rulesFromLobby && _lobby != null)
+            {
+                _rulesFromLobby = false;
+                SwitchLayer(_lobby.Group, -1f);
+                _lobby.Reload();
+                return;
+            }
             SwitchLayer(deployPanel != null && _deployMode == _editingMode ? deployPanel : mainPanel, -1f);
             RefreshModeButtons();
             if (deployPanel != null) LoadDeployLobby(_deployMode);

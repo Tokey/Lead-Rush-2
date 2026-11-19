@@ -56,7 +56,7 @@ namespace LR2.Game
         public Combatant LocalPlayer { get; private set; }
         public IReadOnlyList<Combatant> Participants => _participants;
         public int ScoreLimit => Settings != null ? Settings.scoreLimit : 15;
-        public bool IsTeamMode => Settings != null && Settings.IsTeamMode;
+        public bool IsTeamMode => SkirmishSetup.Active ? SkirmishSetup.IsTeamGame : Settings != null && Settings.IsTeamMode;
         public bool IsSuddenDeath { get; private set; }
         public Combatant WinnerCombatant { get; private set; }
         public TeamId WinnerTeam { get; private set; }
@@ -71,6 +71,7 @@ namespace LR2.Game
         private readonly Dictionary<Combatant, int> _deathStreak = new Dictionary<Combatant, int>();
         private readonly Dictionary<Combatant, Combatant> _lastKiller = new Dictionary<Combatant, Combatant>();
         private readonly Dictionary<TeamId, int> _teamScore = new Dictionary<TeamId, int>();
+        private readonly HashSet<TeamId> _teamsInPlay = new HashSet<TeamId>();
         private readonly List<OrbDrone> _orbs = new List<OrbDrone>();
         private bool _firstBlood;
         private float _nextOrbSpawn;
@@ -107,6 +108,8 @@ namespace LR2.Game
 
             _teamScore[TeamId.Alpha] = 0;
             _teamScore[TeamId.Bravo] = 0;
+            _teamScore[TeamId.Charlie] = 0;
+            _teamScore[TeamId.Delta] = 0;
             SpawnParticipants();
             if (Settings.IsFlagMode && FlagZoneController.Instance == null)
                 new GameObject("[LR2 FlagZone]").AddComponent<FlagZoneController>();
@@ -163,6 +166,8 @@ namespace LR2.Game
                 return;
             }
 
+            if (SkirmishSetup.Active) { SpawnSkirmish(); return; }
+
             BotTeamAlignment align = Settings.EffectiveBotTeamAlignment;
             bool team = align != BotTeamAlignment.FreeForAll && Settings.mode != GameModeType.Duel;
             TeamId playerTeam = team ? TeamId.Alpha : TeamId.None;
@@ -209,6 +214,35 @@ namespace LR2.Game
                 }
                 for (int i = 0; i < enemies; i++) Spawn(botPrefab, team ? TeamId.Bravo : TeamId.None, NextName(), false);
             }
+        }
+
+        private static readonly string[] DifficultyTags = { "REC", "REG", "HRD", "VET", "ADP" };
+
+        /// <summary>
+        /// Skirmish lobby (user 11-19): every slot has its own team and difficulty (3-way and 4-way games); AI vs AI spawns no
+        /// player and hands the screen to <see cref="SpectatorCamera"/>. With mixed difficulties the names carry a tag so the
+        /// scoreboard shows which difficulty is winning.
+        /// </summary>
+        private void SpawnSkirmish()
+        {
+            bool teams = SkirmishSetup.IsTeamGame;
+            bool mixed = false;
+            for (int i = 1; i < SkirmishSetup.Bots.Count; i++)
+                if (SkirmishSetup.Bots[i].difficulty != SkirmishSetup.Bots[0].difficulty) mixed = true;
+            bool tag = mixed || SkirmishSetup.PlayerSpectates;
+
+            if (!SkirmishSetup.PlayerSpectates)
+                LocalPlayer = Spawn(playerPrefab, teams ? SkirmishSetup.PlayerTeam : TeamId.None, LR2Settings.PlayerName, true);
+            foreach (var slot in SkirmishSetup.Bots)
+            {
+                TeamId t = teams ? slot.team : TeamId.None;
+                int d = Mathf.Clamp(slot.difficulty, 0, DifficultyTags.Length - 1);
+                string name = tag ? $"{NextName()} [{DifficultyTags[d]}]" : NextName();
+                var bot = Spawn(botPrefab, t, name, false, d);
+                var bc = bot != null ? bot.GetComponent<BotController>() : null;
+                if (bc != null && LocalPlayer != null && t != TeamId.None && t == LocalPlayer.Team) bc.SetSquadLeader(LocalPlayer);
+            }
+            if (SkirmishSetup.PlayerSpectates) SpectatorCamera.Ensure();
         }
 
         /// <summary>Overview camera so the screen is never black if the soldier prefabs are missing.</summary>
@@ -262,8 +296,9 @@ namespace LR2.Game
         };
         private const float FeaturedWeight = 4f;
 
-        private Combatant Spawn(GameObject prefab, TeamId team, string displayName, bool local)
+        private Combatant Spawn(GameObject prefab, TeamId team, string displayName, bool local, int difficultyIndex = -1)
         {
+            if (team != TeamId.None) _teamsInPlay.Add(team);
             var sp = PickSpawn(team, null);
             Vector3 pos = sp != null ? SpawnPoint.ClearPosition(sp.transform.position, null, sp.name) : Vector3.zero;
             float yaw = sp != null ? sp.transform.eulerAngles.y : 0f;
@@ -284,7 +319,11 @@ namespace LR2.Game
             {
                 if (local) bot.enabled = false;
                 else if (difficulties != null && difficulties.Length > 0)
-                    bot.Difficulty = difficulties[Mathf.Clamp(LR2Settings.BotDifficulty, 0, difficulties.Length - 1)];
+                {
+                    int di = difficultyIndex >= 0 ? difficultyIndex : LR2Settings.BotDifficulty;
+                    bot.Difficulty = difficulties[Mathf.Clamp(di, 0, difficulties.Length - 1)];
+                    if (difficultyIndex >= 0) bot.AdaptiveOverride = difficultyIndex == 4; // per-slot difficulty beats the global one
+                }
             }
             _participants.Add(c);
             _deathStreak[c] = 0;
@@ -298,7 +337,12 @@ namespace LR2.Game
             foreach (var sp in SpawnPoint.All)
             {
                 if (sp == null) continue;
-                bool teamOk = team == TeamId.None ? sp.allowFreeForAll : (sp.team == team || sp.team == TeamId.None);
+                // Charlie/Delta (3-way, 4-way skirmish) have no bases: they use the neutral and free-for-all spawns; the scoring
+                // below still keeps them near their own team and away from every other one
+                bool extraTeam = team == TeamId.Charlie || team == TeamId.Delta;
+                bool teamOk = team == TeamId.None ? sp.allowFreeForAll
+                    : extraTeam ? (sp.allowFreeForAll || sp.team == TeamId.None)
+                    : (sp.team == team || sp.team == TeamId.None);
                 if (!teamOk) continue;
                 candidates.Add((sp, ScoreSpawn(sp, forCombatant, team)));
             }
@@ -544,10 +588,35 @@ namespace LR2.Game
         /// <summary>Highest score among opponents of the given combatant.</summary>
         public int GetBestOpponentScore(Combatant c)
         {
-            if (IsTeamMode && c != null) return TeamScore(c.Team == TeamId.Alpha ? TeamId.Bravo : TeamId.Alpha);
+            if (IsTeamMode && c != null && c.Team != TeamId.None) return TeamScore(BestOpponentTeam(c.Team));
             int best = 0;
             foreach (var p in _participants)
                 if (p != null && p != c) best = Mathf.Max(best, p.stats.kills);
+            return best;
+        }
+
+        /// <summary>The leading team other than <paramref name="team"/> (any number of teams).</summary>
+        public TeamId BestOpponentTeam(TeamId team)
+        {
+            TeamId best = team == TeamId.Alpha ? TeamId.Bravo : TeamId.Alpha;
+            int top = int.MinValue;
+            foreach (var kv in _teamScore)
+            {
+                if (kv.Key == team || !_teamsInPlay.Contains(kv.Key)) continue;
+                if (kv.Value > top) { top = kv.Value; best = kv.Key; }
+            }
+            return best;
+        }
+
+        /// <summary>Teams with at least one soldier this match.</summary>
+        public IEnumerable<TeamId> TeamsInPlay => _teamsInPlay;
+
+        private TeamId TopTeam()
+        {
+            TeamId best = TeamId.Alpha;
+            int top = int.MinValue;
+            foreach (var kv in _teamScore)
+                if (_teamsInPlay.Contains(kv.Key) && kv.Value > top) { top = kv.Value; best = kv.Key; }
             return best;
         }
 
@@ -576,7 +645,17 @@ namespace LR2.Game
 
         private bool IsTied()
         {
-            if (IsTeamMode) return TeamScore(TeamId.Alpha) == TeamScore(TeamId.Bravo);
+            if (IsTeamMode)
+            {
+                int topScore = int.MinValue, leaders = 0;
+                foreach (var kv in _teamScore)
+                {
+                    if (!_teamsInPlay.Contains(kv.Key)) continue;
+                    if (kv.Value > topScore) { topScore = kv.Value; leaders = 1; }
+                    else if (kv.Value == topScore) leaders++;
+                }
+                return leaders > 1;
+            }
             int top = -1, count = 0;
             foreach (var p in _participants)
             {
@@ -597,7 +676,7 @@ namespace LR2.Game
             IsDraw = IsTied();
             if (IsTeamMode)
             {
-                WinnerTeam = TeamScore(TeamId.Alpha) >= TeamScore(TeamId.Bravo) ? TeamId.Alpha : TeamId.Bravo;
+                WinnerTeam = TopTeam();
                 LocalPlayerWon = !IsDraw && LocalPlayer != null && LocalPlayer.Team == WinnerTeam;
             }
             else

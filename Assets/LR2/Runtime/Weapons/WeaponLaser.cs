@@ -25,6 +25,14 @@ namespace LR2.Weapons
         private bool _appliedColorValid;
         private bool _appliedIsPlayer;
 
+        // B113 (user 11-19 "add GI to the laser, laser should light up area too when hitting a surface like real laser"): a small
+        // shadowless point light just off the hit point tints the surface around the dot, so the dot lights its surroundings
+        // in dark rooms and at night and fades out in daylight like a real laser. HDRP's SSGI, where a profile enables it,
+        // bounces it further.
+        private Light _spill;
+        private const float SpillLumens = 60f;
+        private const float SpillRange = 1.35f;
+
         private static readonly Color PlayerBeamColor = new Color(0.05f, 1f, 0.22f, 0.96f);
         private static readonly Color PlayerDotColor = new Color(0.08f, 1f, 0.28f, 0.95f);
         private static readonly Color EnemyBeamColor = new Color(1f, 0.08f, 0.025f, 0.94f);
@@ -99,6 +107,25 @@ namespace LR2.Weapons
             _appliedIsPlayer = isPlayer;
             ApplyColor(_beamMaterial, isPlayer ? PlayerBeamColor : EnemyBeamColor);
             ApplyColor(_dotMaterial, isPlayer ? PlayerDotColor : EnemyDotColor);
+            EnsureSpill();
+            var c = isPlayer ? PlayerBeamColor : EnemyBeamColor;
+            if (_spill != null) _spill.color = new Color(c.r, c.g, c.b, 1f);
+        }
+
+        private void EnsureSpill()
+        {
+            if (_spill != null) return;
+            var go = new GameObject("LaserSpill");
+            go.transform.SetParent(transform, false);
+            _spill = go.AddComponent<Light>();
+            _spill.type = LightType.Point;
+            _spill.range = SpillRange;
+            _spill.shadows = LightShadows.None;
+            _spill.lightUnit = UnityEngine.Rendering.LightUnit.Lumen;
+            _spill.intensity = SpillLumens;
+            _ = go.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>()
+                ?? go.AddComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            _spill.enabled = false;
         }
 
         private static void ApplyColor(Material material, Color color)
@@ -151,6 +178,7 @@ namespace LR2.Weapons
             if (hitFound)
             {
                 _dot.position = end - muzzle.forward * 0.006f;
+                if (_spill != null) _spill.transform.position = end - muzzle.forward * 0.07f;
                 var viewer = Camera.main;
                 _dot.rotation = viewer != null ? Quaternion.LookRotation(viewer.transform.forward, viewer.transform.up)
                                                : Quaternion.LookRotation(-muzzle.forward, Vector3.up);
@@ -169,6 +197,7 @@ namespace LR2.Weapons
         {
             if (_beam != null) _beam.enabled = visible;
             if (_dotRenderer != null) _dotRenderer.enabled = visible && showDot;
+            if (_spill != null) _spill.enabled = visible && showDot;
         }
 
         private static Texture2D _beamTex, _dotTex;

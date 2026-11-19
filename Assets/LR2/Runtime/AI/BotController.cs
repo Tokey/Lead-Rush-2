@@ -46,6 +46,8 @@ namespace LR2.AI
 
         private BotDifficulty _runtimeAdaptiveDiff;
         private bool _isAdaptiveMode;
+        /// <summary>Skirmish lobby per-slot difficulty: true/false beats the global Adaptive setting; null follows it.</summary>
+        public bool? AdaptiveOverride { get; set; }
         private float _nextAdaptiveRefresh;
 
         public bool IsAdaptiveMode => _isAdaptiveMode;
@@ -129,7 +131,7 @@ namespace LR2.AI
 
         private void RefreshAdaptiveProfile(float now)
         {
-            _isAdaptiveMode = LR2Settings.BotDifficulty == 4;
+            _isAdaptiveMode = AdaptiveOverride ?? (LR2Settings.BotDifficulty == 4);
             if (!_isAdaptiveMode) return;
             if (_runtimeAdaptiveDiff == null)
             {
