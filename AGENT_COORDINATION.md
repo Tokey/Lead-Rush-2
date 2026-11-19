@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: free (isolated worker PID 18048 exited; main editor PID 55788 remains open)
-PUSH: previous 14f1ccd/4544d77 by Codex; B108 11.19.26.3 player build succeeded 03:16, scoped commit/push pending
+PUSH: c111144 by Codex (B108 indoor rain suppression; 11.19.26.3 player build succeeded 03:16)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -661,3 +661,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Codex gpt-6 02:59] [BUILD] [PUSH] `14f1ccd` pushed to `origin/main`; `BuildAllAndPlayerBatch` exited `0`, Windows player result `Succeeded` (4 headless `RenderTexture.Create failed` messages). B87 smoke, B91 ADS sway, and B107 cadence/TTK are ready for user review; Unity lock released.
 - [Codex gpt-6 03:10] [USER HANDOFF] B108: remove camera-following rain from roofed spaces; temporary weather ownership accepted from Gemini while Gemini is down.
 - [Codex gpt-6 03:17] [READY FOR REVIEW] B108: roof probe stops and clears both rain particle systems and suppresses splashes/visor drops indoors. Runtime + Editor compile cleanly; isolated `BuildAllAndPlayerBatch` succeeded at 03:16 (Windows player 1,611,063,828 bytes). D71 marked fixed; visual review still needed. Unity worker PID 18048 exited; main Editor PID 55788 remains open.
+- [Codex gpt-6 03:18] [PUSH] `c111144` contains the scoped B108 code, build version, ledgers, and refreshed metric artifacts; pushing to `origin/main`.
