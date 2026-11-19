@@ -40,9 +40,11 @@ namespace LR2.UI
         private Color Accent => _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f);
         private Color Text => _theme != null ? _theme.text : new Color(1f, 1f, 1f, 0.92f);
         private Color Dim => _theme != null ? _theme.textDim : new Color(1f, 1f, 1f, 0.55f);
-        private static readonly Color Panel = new Color(0.035f, 0.045f, 0.055f, 0.82f);
+        // user 11-19: "make the buttons lil seethrough but still perfectly visible, and let the slomo stuff play on bg"
+        private static readonly Color Panel = new Color(0.035f, 0.045f, 0.055f, 0.58f);
+        private static readonly Color ButtonBg = new Color(0.14f, 0.16f, 0.18f, 0.62f); // translucent slate: readable on any background, lifts on hover
         private static readonly Color RowColor = new Color(1f, 1f, 1f, 0.05f);
-        private static readonly Color Chip = new Color(0f, 0f, 0f, 0.3f);
+        private static readonly Color Chip = new Color(0f, 0f, 0f, 0.42f);
         private static readonly Color[] DiffColors =
         {
             new Color(0.62f, 0.85f, 0.55f), new Color(0.80f, 0.86f, 0.92f), new Color(1f, 0.70f, 0.32f),
@@ -74,9 +76,9 @@ namespace LR2.UI
 
             // centred (user 11-19 "why is the skirmish menu on the side?"); a lighter full-screen shade keeps the
             // slow-motion background readable around the panels
-            var shade = Img(root, "Shade", new Color(0.015f, 0.02f, 0.025f, 0.62f));
+            var shade = Img(root, "Shade", new Color(0.015f, 0.02f, 0.025f, 0.22f));
             Anchor(shade.rectTransform, 0f, 0f, 1f, 1f);
-            var band = Img(root, "ShadeBand", new Color(0.015f, 0.02f, 0.025f, 0.35f));
+            var band = Img(root, "ShadeBand", new Color(0.015f, 0.02f, 0.025f, 0.16f));
             Anchor(band.rectTransform, 0.12f, 0f, 0.88f, 1f);
 
             var title = Label(root, "SKIRMISH", 66, Text, true);
@@ -95,13 +97,13 @@ namespace LR2.UI
                 string preset = SkirmishSetup.Presets[i];
                 bool aiVsAi = preset == "AI VS AI";
                 IconBtn(presets.transform, PresetIcons[i], preset, 19, () => { SkirmishSetup.ApplyPreset(preset); LoadRules(); Rebuild(); OnModeChanged?.Invoke(SkirmishSetup.Mode); },
-                        aiVsAi ? new Color(0.45f, 0.30f, 0.85f, 0.6f) : new Color(1f, 1f, 1f, 0.08f), aiVsAi ? new Color(0.85f, 0.75f, 1f) : Accent);
+                        aiVsAi ? new Color(0.45f, 0.30f, 0.85f, 0.6f) : ButtonBg, aiVsAi ? new Color(0.85f, 0.75f, 1f) : Accent);
             }
 
             BuildRoster(root);
             BuildMatchColumn(root);
 
-            var back = IconBtn(root, "back", "BACK", 22, () => OnBack?.Invoke(), new Color(1f, 1f, 1f, 0.08f), Text);
+            var back = IconBtn(root, "back", "BACK", 22, () => OnBack?.Invoke(), ButtonBg, Text);
             Anchor((RectTransform)back.transform, 0.135f, 0.035f, 0.245f, 0.1f);
             _startButton = IconBtn(root, "play", "START", 30, Start_, new Color(Accent.r, Accent.g, Accent.b, 0.9f), new Color(0.05f, 0.05f, 0.05f));
             Anchor((RectTransform)_startButton.transform, 0.665f, 0.03f, 0.865f, 0.11f);
@@ -168,11 +170,11 @@ namespace LR2.UI
             _scroll.verticalScrollbar = sb;
             _scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
-            var add = IconBtn(pr, "plus", "ADD BOT", 20, AddBot, new Color(1f, 1f, 1f, 0.09f), Accent);
+            var add = IconBtn(pr, "plus", "ADD BOT", 20, AddBot, ButtonBg, Accent);
             Anchor((RectTransform)add.transform, 0.025f, 0.02f, 0.37f, 0.098f);
-            var balance = IconBtn(pr, "balance", "BALANCE TEAMS", 18, BalanceTeams, new Color(1f, 1f, 1f, 0.07f), Text);
+            var balance = IconBtn(pr, "balance", "BALANCE TEAMS", 18, BalanceTeams, ButtonBg, Text);
             Anchor((RectTransform)balance.transform, 0.385f, 0.02f, 0.72f, 0.098f);
-            var clear = IconBtn(pr, "trash", "CLEAR", 18, () => { SkirmishSetup.Bots.Clear(); Rebuild(); }, new Color(1f, 1f, 1f, 0.07f), new Color(1f, 0.45f, 0.4f));
+            var clear = IconBtn(pr, "trash", "CLEAR", 18, () => { SkirmishSetup.Bots.Clear(); Rebuild(); }, ButtonBg, new Color(1f, 0.45f, 0.4f));
             Anchor((RectTransform)clear.transform, 0.735f, 0.02f, 0.975f, 0.098f);
         }
 
@@ -222,9 +224,9 @@ namespace LR2.UI
                 Rebuild();
             });
 
-            var opt = IconBtn(pr, "gear", "OPTIONS", 18, () => OnOptions?.Invoke(), new Color(1f, 1f, 1f, 0.08f), Text);
+            var opt = IconBtn(pr, "gear", "OPTIONS", 18, () => OnOptions?.Invoke(), ButtonBg, Text);
             Anchor((RectTransform)opt.transform, 0.045f, 0.02f, 0.49f, 0.098f);
-            var rules = IconBtn(pr, "rules", "ALL RULES", 18, () => OnRules?.Invoke(), new Color(1f, 1f, 1f, 0.08f), Text);
+            var rules = IconBtn(pr, "rules", "ALL RULES", 18, () => OnRules?.Invoke(), ButtonBg, Text);
             Anchor((RectTransform)rules.transform, 0.51f, 0.02f, 0.955f, 0.098f);
         }
 
