@@ -142,6 +142,8 @@ namespace LR2.Characters
             bool aimRun = Array.IndexOf(args, "-lr2AimTest") >= 0, gifRun = Array.IndexOf(args, "-lr2GifRun") >= 0;
             // -lr2DeathTest: ADS sight alignment + death/respawn pose integrity in six states (user 11-18 14:10), then quit.
             if (Array.IndexOf(args, "-lr2DeathTest") >= 0) { yield return DeathTest(); Finish(); yield break; }
+            // -lr2GripCheck: where each hand sits on the gun (weapon space) + the gun's underside profile (B26/B49), then quit.
+            if (Array.IndexOf(args, "-lr2GripCheck") >= 0) { yield return GripCheck(); Finish(); yield break; }
             if (aimRun) yield return BotAimTest();
             // -lr2GifRun: record real gameplay clips (HUD included) for the README GIFs, then quit.
             if (gifRun) yield return GifRun();
@@ -826,6 +828,104 @@ namespace LR2.Characters
                    $"stance={_soldier.Movement?.Stance} state={_soldier.Movement?.State} aimBlend={_soldier.AimBlend:0.00} reloading={_soldier.IsReloading} " +
                    $"look={UserFloat("LookLayerWeight"):0.00} stab={UserFloat(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.StabilizationWeight):0.00} " +
                    $"playables={UserFloat(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.PlayablesWeight):0.00} dead={_soldier.IsDead} {DriverAnim()}";
+        }
+
+        // ------------------------------------------------------------------ grip check (B26 / B49)
+        /// <summary>Palm centre (wrist to middle-finger knuckle midpoint) of a visual hand, in the active gun's local space (cm).</summary>
+        private Vector3 PalmInItem(HumanBodyBones hand, HumanBodyBones knuckle, Transform item)
+        {
+            var vis = _proxy != null ? _proxy.Visual : null;
+            if (vis == null || !vis.isHuman || item == null) return new Vector3(float.NaN, 0f, 0f);
+            var h = vis.GetBoneTransform(hand);
+            var k = vis.GetBoneTransform(knuckle);
+            if (h == null) return new Vector3(float.NaN, 0f, 0f);
+            Vector3 palm = k != null ? Vector3.Lerp(h.position, k.position, 0.5f) : h.position;
+            return item.InverseTransformPoint(palm) * 100f;
+        }
+
+        /// <summary>Lowest mesh point per 1 cm slice along the barrel (item z), from every visible renderer of the gun.</summary>
+        private string UndersideProfile(Transform item)
+        {
+            var minY = new SortedDictionary<int, float>();
+            var maxY = new SortedDictionary<int, float>();
+            int verts = 0;
+            foreach (var r in item.GetComponentsInChildren<Renderer>(false))
+            {
+                if (!r.enabled || r is LineRenderer || r is ParticleSystemRenderer || r is TrailRenderer) continue;
+                if (r.name.Contains("Laser") || r.name.Contains("Haze") || r.name.Contains("Glow")) continue;
+                Mesh m = null;
+                bool baked = false;
+                if (r is SkinnedMeshRenderer smr && smr.sharedMesh != null) { m = new Mesh(); smr.BakeMesh(m); baked = true; }
+                else { var mf = r.GetComponent<MeshFilter>(); if (mf != null) m = mf.sharedMesh; }
+                if (m == null) continue;
+#if !UNITY_EDITOR
+                if (!m.isReadable) { if (baked) Destroy(m); continue; } // the editor can read any mesh; a player only Read/Write ones
+#endif
+                var v = m.vertices;
+                for (int i = 0; i < v.Length; i++)
+                {
+                    Vector3 lv = item.InverseTransformPoint(r.transform.TransformPoint(v[i]));
+                    if (Mathf.Abs(lv.x) > 0.035f) continue; // centre line only (grip, magazine, trigger guard)
+                    int z = Mathf.RoundToInt(lv.z * 100f);
+                    if (!minY.TryGetValue(z, out float mn) || lv.y < mn) minY[z] = lv.y;
+                    if (!maxY.TryGetValue(z, out float mx) || lv.y > mx) maxY[z] = lv.y;
+                    verts++;
+                }
+                if (baked) Destroy(m);
+            }
+            var sb = new StringBuilder($"{verts} centre-line verts; z cm: bottom..top cm |");
+            foreach (var kv in minY)
+                if (kv.Key % 2 == 0) sb.Append($" {kv.Key}:{kv.Value * 100f:0}..{maxY[kv.Key] * 100f:0}");
+            return sb.ToString();
+        }
+
+        private string GripLine(string label)
+        {
+            var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+            if (item == null) return $"GRIP [{label}] no item";
+            Vector3 r = PalmInItem(HumanBodyBones.RightHand, HumanBodyBones.RightMiddleProximal, item);
+            Vector3 l = PalmInItem(HumanBodyBones.LeftHand, HumanBodyBones.LeftMiddleProximal, item);
+            var vis = _proxy != null ? _proxy.Visual : null;
+            string idx = "";
+            if (vis != null && vis.isHuman)
+            {
+                var ri = vis.GetBoneTransform(HumanBodyBones.RightIndexDistal);
+                if (ri != null) { Vector3 t = item.InverseTransformPoint(ri.position) * 100f; idx = $" rIndexTip=({t.x:0.0},{t.y:0.0},{t.z:0.0})"; }
+            }
+            var fa = _soldier.ActiveFirearm;
+            var def = fa != null ? fa.Definition : null;
+            string offs = def != null ? $" defOffsets R=({def.rightGripOffset.x * 100f:0.0},{def.rightGripOffset.y * 100f:0.0},{def.rightGripOffset.z * 100f:0.0}) L=({def.leftGripOffset.x * 100f:0.0},{def.leftGripOffset.y * 100f:0.0},{def.leftGripOffset.z * 100f:0.0})" : "";
+            string hands = _proxy != null ? $" handErr L={_proxy.HandErrorLeft * 100f:0.0} R={_proxy.HandErrorRight * 100f:0.0} cm" : "";
+            return $"GRIP [{label}] gun={fa?.DisplayName} item-space cm: rPalm=({r.x:0.0},{r.y:0.0},{r.z:0.0}) lPalm=({l.x:0.0},{l.y:0.0},{l.z:0.0}){idx}{offs}{hands}";
+        }
+
+        private IEnumerator GripCheck()
+        {
+            float yaw = OpenYaw();
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+            yield return Wait(1.6f);
+            var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+            Note(GripLine("rifle hip"));
+            if (item != null) Note($"PROFILE [{_soldier.ActiveFirearm?.DisplayName}] {UndersideProfile(item)}");
+            yield return Capture("grip_rifle_left", null, View.HandsLeft, true);
+            yield return Capture("grip_rifle_right", null, View.HandsRight, true);
+            _cmd.aim = true; yield return Wait(1.3f);
+            Note(GripLine("rifle ADS"));
+            yield return Capture("grip_rifle_ads_right", null, View.HandsRight, true);
+            _cmd.aim = false; yield return Wait(0.6f);
+
+            _cmd.weaponSlot = 1; yield return Wait(1.6f);
+            item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+            Note(GripLine("pistol hip"));
+            if (item != null) Note($"PROFILE [{_soldier.ActiveFirearm?.DisplayName}] {UndersideProfile(item)}");
+            yield return Capture("grip_pistol_left", null, View.HandsLeft, true);
+            yield return Capture("grip_pistol_right", null, View.HandsRight, true);
+            yield return Capture("grip_pistol_fp", "pistol first person", View.FirstPerson);
+            _cmd.aim = true; yield return Wait(1.3f);
+            Note(GripLine("pistol ADS"));
+            yield return Capture("grip_pistol_ads_fp", "pistol ADS first person", View.FirstPerson);
+            _cmd.aim = false; yield return Wait(0.5f);
         }
 
         private IEnumerator DeathTest()
