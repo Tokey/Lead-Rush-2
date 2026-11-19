@@ -839,6 +839,92 @@ tool notifications are left out here and documented once below.
 
 > aslo talk about the 20m timer hitter that prompts u to wake up and other automatically... and share all my prompts to the promt page too.
 
+**10:27 · to Claude Code**
+
+> change the main menu screenshot and the main screen shot, thats too old, and also talk about the QA process, in details, like how you guys run and pl,ay game camputure screenshot and logs and analyze. document everything do comparative analysis on them and push.
+
+**10:33 · to Claude Code**
+
+> the loading text is in the main menu SS, remove that, wait for it to fully load and take a much nicer SS.
+>
+> also show, more gifs of gunfights, and other animations and visuals.
+
+**12:57 · to Claude Code**
+
+> add a gamer tag there "EnchantedP0tato"
+>
+> Also have these names tweked to turn to gamer tags: "Jack, Ashlesha, Claypool, Tokey, Xiaokun"
+>
+> - 2 more best ones from current.
+
+**13:12 · to Claude Code**
+
+> a lot of animation bugs happening, weapon going sideways after dying, losing its ik losing its place. do a thorough review of all animation code and implement fix. this is top priority. the gunplay needs to be top notch.
+>
+> H:\Unity Projects\GitHub Repos\LeadRushHDRP
+>
+> gunplay in this project did not face many issues. maybe the sprinting and other animations are makign it break. investigate and fix.
+
+**13:12 · to Claude Code**
+
+> as for the new gamer tag stuff, keep all the old ones too, add the new naems just make them more frequent.
+
+**14:10 · to Claude Code**
+
+> a lot of animation bugs happening, weapon going sideways after dying, losing its ik losing its place. do a thorough review of all animation code and implement fix. this is top priority. the gunplay needs to be top notch.  AK74n ADS is totally off, its not looking through the iron sights.
+>
+> H:\Unity Projects\GitHub Repos\LeadRushHDRP
+>
+> gunplay in this project did not face many issues. maybe the sprinting and other animations are makign it break. investigate and fix.
+>
+>
+> the sideways bug did not happen with other weapons, maybe because mk18 went sideways while ads and that is still there... also dead while crouching also puts the gun up. i thing the animations need to be refreshed more frequently and need to be corrected. go through that code to figure that out.
+>
+>
+> Also, the bot, sometimes looks up instead of searching me . even the veteran bot seems too easy. Work on the bot behavior to make it play more smartly. and engage more aggressively maybe. it rarely wins against me. after you change the bot behavior, add those changes to the docs.
+>
+> then push and build.
+>
+> The animation bugs are the main issues that must be fixed. start with that first. gunplay needs to be seemless. thats what differs between AAA vs ours.
+
+**14:11 · to Claude Code**
+
+> also the flames and the smokes and the visual effects are boxy, literal not see through boxes. MUST FIX THOSE.
+
+**14:13 · to Claude Code**
+
+> no first fix are the animations, then boxy flames, then the bot.
+
+**14:13 · to Claude Code**
+
+> use the unity built in particle effects, those look nice and realistic. maybe swap with those once you fix the animations
+
+**14:16 · to Claude Code**
+
+> also turn off enemies laser once they die.
+>
+> and make my tracers orange/yellow and keep their red. green looks unnatural. do this fix later.
+
+**14:17 · to Claude Code**
+
+> sprinting, hitting walls also mess up the animation. mainly hitting walls when the gun gets back, thats when everything starts to break, so look into that too.
+
+**14:18 · to Claude Code**
+
+> also the pistol is totally messed up ik wise.
+
+**19:46 · to Claude Code**
+
+> every other ai is down except gemini. take the harder tasks yourself, and let it finish the ez ones.
+
+**19:56 · to Claude Code**
+
+> fix some of the spawning. sometimes player get inside objects. and some objects like pipes are suuuuper thin. fix those. try to fix the clipping issues.
+
+**20:05 · to Claude Code**
+
+> merge bot brain and bot lab. bot brain might be outdataed update it and i like the updates stuff bot brain has
+
 ### The automatic tick prompt (Claude Code to itself, every 20 minutes)
 
 Claude Code has no command line the other agents can call, so it schedules its own wake-up: a session job (`CronCreate`,

@@ -21,7 +21,7 @@ This page tells that story with the real prompts, the real messages the agents l
 
 ![How AI agents collaborate through AGENT_COORDINATION.md](../Media/bot/ai-4agent-workflow.gif)
 
-> **Interactive Lab:** Open [`Docs/Bot/bot-brain.html`](../Bot/bot-brain.html) (Tab 3: *How AI Built LR2 & Research Lab*) for the animated coordination graph, live Protocol v1 -> v2 -> v3 timeline, interactive ledger chart, and filterable research spec explorer.
+> **Interactive Lab:** Open [`Docs/Bot/bot-lab.html`](../Bot/bot-lab.html#part-built) (part 3: *How it was built*) for the animated coordination graph, live Protocol v1 -> v2 -> v3 timeline, interactive ledger chart, and filterable research spec explorer.
 
 ```mermaid
 flowchart LR

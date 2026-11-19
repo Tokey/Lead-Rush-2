@@ -1,6 +1,6 @@
 # LR2 Bot Brain — Complete Technical & Empirical Field Manual
 
-This repository page mirrors and expands the interactive [LR2 Bot Brain artifact](https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo). The interactive multi-tab HTML version lives in [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html), and all companion 1:1 canvas GIFs below are deterministically rendered by `python Tools/make_bot_gifs.py`.
+This repository page mirrors and expands the interactive [LR2 Bot Lab artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo), which since 2026-11-18 also holds everything from the former Bot Brain page. The HTML version lives in [`Docs/Bot/bot-lab.html`](Bot/bot-lab.html), and all companion 1:1 canvas GIFs below are deterministically rendered by `python Tools/make_bot_gifs.py`.
 
 ---
 
@@ -194,7 +194,7 @@ The [Bot Lab](Bot/bot-lab.html) simulation uses the same presets, detection spee
 
 ![How Claude, Gemini, Copilot, and Codex collaborate through AGENT_COORDINATION.md](Media/bot/ai-4agent-workflow.gif)
 
-See the full documented multi-agent engineering story, model quality ledger charts, and research spec index in [`Docs/AI_Collaboration/README.md`](AI_Collaboration/README.md) and interactively inside Tab 3 of [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html).
+See the full documented multi-agent engineering story, model quality ledger charts, and research spec index in [`Docs/AI_Collaboration/README.md`](AI_Collaboration/README.md) and interactively in part 3 of [`Docs/Bot/bot-lab.html`](Bot/bot-lab.html#part-built).
 
 ---
 

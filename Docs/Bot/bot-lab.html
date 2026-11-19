@@ -16,6 +16,7 @@
   --bg: #eef0e9; --panel: #fbfcf8; --raised: #d6dbd1; --line: #b9c2b5; --grid: #e2e6dd;
   --ink: #141b17; --muted: #56625a; --accent: #c4501b; --bot: #2a6cab; --good: #2c8540;
   --bad: #c2352b; --warn: #946805; --zone: #74499f;
+  --purple: #74499f; --ink-2: #56625a; --panel-2: #eff1ea; --label: var(--display);
   --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -25,13 +26,15 @@
   :root:not([data-theme="light"]) {
     --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
     --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
-    --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff; color-scheme: dark;
+    --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff;
+    --purple: #b388ff; --ink-2: #95a39a; --panel-2: #1d2521; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
   --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
-  --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff; color-scheme: dark;
+  --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff;
+    --purple: #b388ff; --ink-2: #95a39a; --panel-2: #1d2521; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
@@ -53,7 +56,7 @@ header .lede { font-size: 17px; color: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { font: 500 12px/1 var(--mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
 .chip b { color: var(--ink); font-weight: 500; }
-nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 13px/1.4 var(--mono); }
+nav.toc { display: grid; gap: 8px; font: 500 13px/1.4 var(--mono); }
 nav.toc a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line); }
 nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); }
 section { display: grid; gap: 16px; scroll-margin-top: 16px; }
@@ -130,6 +133,81 @@ body.gifmode { padding: 0; }
 body.gifmode .wrap { display: none; }
 .gifgrid { display: grid; grid-template-columns: repeat(8, 640px); gap: 0; }
 .gifgrid canvas { width: 640px; height: 400px; border: 0; border-radius: 0; }
+
+/* Merged page (2026-11-18): table of contents in three parts, part dividers, what changed */
+.toc-part { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.toc-part b { font: 600 12px/1.4 var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: .08em; min-width: 12em; }
+.part { display: grid; gap: 6px; padding-top: 16px; border-top: 2px solid var(--ink); scroll-margin-top: 16px; }
+.part h2 { font-size: clamp(32px, 4.6vw, 46px); }
+.part p { color: var(--muted); }
+.news { display: grid; gap: 14px; border-left: 3px solid var(--accent); }
+.news .head { gap: 6px; }
+.news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px 28px; }
+@media (min-width: 900px) { .news-list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.news-list li { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; }
+.news-list li code { color: var(--accent); }
+.news-list li b { font-weight: 600; }
+.head .src { font: 500 12.5px/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.wrap > * { min-width: 0; }
+
+/* Bot Brain instruments (Gemini, merged 2026-11-18), scoped to section.bb; type and buttons follow the Lab */
+.bb .tag { font: 600 13px/1 var(--label); text-transform: uppercase; letter-spacing: 1.4px; color: var(--accent) }
+.bb .instrument { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px }
+@media (max-width: 780px) { .bb .instrument { grid-template-columns: minmax(0, 1fr) } }
+.bb .controls { display: grid; gap: 10px; align-content: start; min-width: 0 }
+.bb .ctl { display: grid; gap: 2px }
+.bb .ctl label, .bb .ctl .lbl { font: 600 13px/1.2 var(--label); text-transform: uppercase; letter-spacing: 1px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px }
+.bb .ctl output { font: 500 13px var(--mono); color: var(--ink); text-transform: none; letter-spacing: 0 }
+.bb .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px }
+.bb .checks label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
+.bb select, .bb input[type=text] { font: 14px var(--body); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px }
+.bb .readout { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px }
+.bb .stat { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; background: var(--panel-2) }
+.bb .stat .k { font: 600 11.5px/1.2 var(--label); text-transform: uppercase; letter-spacing: 1px; color: var(--ink-2) }
+.bb .stat .v { font: 500 17px/1.3 var(--mono); font-variant-numeric: tabular-nums }
+.bb .note { font-size: 13px; color: var(--ink-2) }
+.bb .pill { display: inline-block; font: 600 12px/1 var(--label); text-transform: uppercase; letter-spacing: 1px; padding: 4px 8px; border-radius: 3px; border: 1px solid currentColor }
+.bb .on { color: var(--good) }
+.bb .off { color: var(--bad) }
+.bb .warn { color: var(--warn) }
+.bb .comp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+@media (max-width: 760px) { .bb .comp-grid { grid-template-columns: minmax(0, 1fr) } }
+.bb .comp-card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 11px; text-align: left; display: grid; gap: 4px; cursor: pointer; color: var(--ink) }
+.bb .comp-card.sel { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--panel-2) }
+.bb .comp-detail { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 8px }
+.bb .goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.bb .goal { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: start; border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; color: var(--ink-2) }
+.bb .goal .n { font: 600 13.5px/1.4 var(--mono); }
+.bb .goal b { font: 600 14.5px/1.3 var(--label); text-transform: uppercase; letter-spacing: .8px; color: var(--ink-2) }
+.bb .goal .why { font-size: 13px }
+.bb .goal.win { border-color: var(--accent); color: var(--ink); box-shadow: inset 4px 0 0 var(--accent); background: var(--panel-2) }
+.bb .goal.win b { color: var(--accent) }
+.bb .goal.skip { opacity: .52 }
+.bb pre.code { margin: 0; overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; font: 12.8px/1.5 var(--mono) }
+.bb .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px }
+.bb .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.bb .four { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+@media (max-width: 780px) { .bb .two, .bb .three, .bb .four { grid-template-columns: minmax(0, 1fr) } }
+.bb .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 6px; align-content: start }
+.bb .chat-box { background: #0c1015; color: #e8edf2; border: 1px solid #2b3540; border-radius: 6px; padding: 12px; display: grid; gap: 8px; font-family: var(--mono); font-size: 12.8px }
+.bb .chat-lines { min-height: 126px; display: grid; gap: 5px; align-content: end }
+.bb .chat-line { line-height: 1.35 }
+.bb .chat-input-row { display: flex; gap: 6px }
+.bb .chat-input-row input { flex: 1; background: #141a22; color: #fff; border: 1px solid #354252; font-family: var(--mono); font-size: 13px }
+.bb .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+@media (max-width: 760px) { .bb .spec-grid { grid-template-columns: minmax(0, 1fr) } }
+.bb .spec-item { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 11px; display: grid; gap: 5px }
+.bb .spec-item.hidden { display: none }
+.bb canvas { touch-action: none; }
+.bb .instrument canvas { border: 0; border-radius: 4px; }
+.bb button.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.bb .comp-card { font: 14px/1.45 var(--body); align-content: start; }
+.bb .comp-card .tag, .bb .pill { text-transform: none; letter-spacing: .04em; }
+.bb .comp-card h3 { font-size: 18px; }
+.bb .comp-detail h3, .bb p code, .bb .note code, .bb li code { overflow-wrap: anywhere; }
+.bb table td, .bb table th { white-space: normal; vertical-align: top; }
+.bb .card table { min-width: 760px; }
+
 </style>
 </head>
 <body>
@@ -137,20 +215,37 @@ body.gifmode .wrap { display: none; }
 
 <div class="wrap">
 <header>
-  <span class="eyebrow">LeadRush 2 · bot behaviour field manual</span>
+  <span class="eyebrow">LeadRush 2 · bot field manual · game modes · how it was built</span>
   <h1>LR2 Bot Lab</h1>
-  <p class="lede">How a LeadRush 2 bot notices you, decides what to do, turns to you and pulls its shots. Every drill below runs the same rules and numbers as the game's bot code, so you can watch the mistakes a human makes appear for the same reasons.</p>
+  <p class="lede">How a LeadRush 2 bot notices you, decides what to do, moves, turns to you and pulls its shots; the game modes it plays; and how the AI agents that built it are scored. Every drill runs the same rules and numbers as the game's code, so you can watch human mistakes appear for the same reasons.</p>
   <div class="chips">
-    <span class="chip">code <b>7e2b37d</b> · build <b>11.18.26.2</b></span>
-    <span class="chip">BotController · TacticalBotBrain · BotPerception · BotDifficulty</span>
+    <span class="chip">code <b>5791ce8</b> · build <b>11.18.26.5</b></span>
+    <span class="chip">BotController · TacticalBotBrain · BotPerception · BotDifficulty · FlagZoneController</span>
     <span class="chip">soldiers <b>100 HP + 50 armour</b></span>
   </div>
   <nav class="toc" aria-label="Sections">
-    <a href="#theater">1 Scenarios</a><a href="#ladder">2 Decision ladder</a><a href="#senses">3 Detection</a>
-    <a href="#flick">4 Reaction and flick</a><a href="#strafe">5 Tracking a strafer</a><a href="#recoil">6 Recoil pull-down</a>
-    <a href="#armour">7 Armour and resupply</a><a href="#skill">8 Skill and adaptation</a><a href="#sources">9 Sources</a>
+    <div class="toc-part"><b>New</b><a href="#news">What changed on 11-18</a></div>
+    <div class="toc-part"><b>1 · The bot</b><a href="#theater">01 Scenarios</a><a href="#components">02 Six parts</a><a href="#senses">03 Detection</a><a href="#see">04 Sightlines</a><a href="#decide">05 Priorities</a><a href="#nav">06 Pathfinding</a><a href="#flick">07 Reaction and flick</a><a href="#strafe">08 Tracking a strafer</a><a href="#miss">09 Miss patterns</a><a href="#recoil">10 Recoil</a><a href="#armour">11 Armour and resupply</a><a href="#skill">12 Presets</a><a href="#adapt">13 Adaptive</a><a href="#llm">14 LLM hook</a></div>
+    <div class="toc-part"><b>2 · Game modes</b><a href="#modes">15 Modes</a><a href="#ctf">16 Capture the flag</a><a href="#chat">17 Chat</a></div>
+    <div class="toc-part"><b>3 · How it was built</b><a href="#ai-story">18 Agents</a><a href="#ai-quality">19 Quality</a><a href="#ai-research">20 Research</a><a href="#sources">21 Sources</a></div>
   </nav>
 </header>
+
+<aside class="panel news" id="news" aria-labelledby="h-news">
+  <div class="head"><span class="num">WHAT CHANGED · 2026-11-18</span><h2 id="h-news">Latest bot and combat updates</h2></div>
+  <ul class="news-list">
+    <li><code>D61</code><div><b>Hardened and Veteran bots press a weak target.</b> With aggression 0.68 or more they push a target that is reloading, under 45 % health or 35 points weaker, and sprint when it is out of sight beyond 9 m. <a href="#decide">Try it in 05</a>.</div></li>
+    <li><code>D65</code><div><b>The press is checked first.</b> Gemini's review found the sprint could never fire behind the range test. Hunting a weak target now skips the slow corner slice.</div></li>
+    <li><code>D61</code><div><b>Searching at eye level.</b> Noise and last-known positions snap to the floor, and a search glances ±75° along the horizon every 1.1 to 2.1 s instead of looking up.</div></li>
+    <li><code>D61</code><div><b>Faster eyes, steadier hands at the top.</b> Detection 0.85× (Recruit) to 2.2× (Veteran: 0.34 s to notice you at 20 m, was 0.74 s); composure 0 to 0.72 damps stress and movement error; Veteran reacts in 0.15 to 0.23 s. <a href="#skill">Presets in 12</a>.</div></li>
+    <li><code>B47</code><div><b>A spray you can learn.</b> Each rifle climbs the middle of its range and weaves along one fixed S curve, with at most 10 % drift from shot 4; the climb holds 0.10 s after the last shot, then recovers.</div></li>
+    <li><code>D66</code><div><b>No spawning inside props.</b> Every spawn and respawn tests the soldier capsule (0.38 × 1.8 m) and moves to the nearest clear NavMesh point on the same floor.</div></li>
+    <li><code>B84</code><div><b>Tracer colours.</b> Yours and your team's are yellow-orange, enemies' stay red, and a dead soldier's laser goes out with the dropped gun.</div></li>
+    <li><code>B85</code><div><b>Next: thin pipes and clipping.</b> A prop audit of the four maps (thin geometry, squashed props, overlaps, blocked spawns) is written and waits for a free Unity editor.</div></li>
+  </ul>
+</aside>
+
+<div class="part" id="part-bot"><span class="eyebrow">Part 1 of 3</span><h2>The bot</h2><p>How one bot sees, decides, moves, aims and learns. Sections 01 to 14; the drills run the game's rules and numbers.</p></div>
 
 <section id="theater" aria-labelledby="h-theater">
   <div class="head"><span class="num">01 · WATCH A BOT PLAY</span><h2 id="h-theater">Eight scenarios, one brain</h2>
@@ -197,30 +292,12 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
-
-<section id="ladder" aria-labelledby="h-ladder">
-  <div class="head"><span class="num">02 · DECIDE</span><h2 id="h-ladder">The goal ladder</h2>
-    <p>Four times a second the brain walks down this list and takes the first rule that holds. Tick what the bot currently knows and see which goal wins and why the rules above it did not fire.</p></div>
-  <div class="drill">
-    <div class="panel facts" id="factBox">
-      <label class="tick"><input type="checkbox" id="fLow"><span>Health under 38 % and taking hits</span></label>
-      <label class="tick"><input type="checkbox" id="fDir"><span>Squad (or LLM) order received</span></label>
-      <label class="tick"><input type="checkbox" id="fFlagC"><span>CTF: an enemy is capturing a flag</span></label>
-      <label class="tick"><input type="checkbox" id="fVis" checked><span>Target in sight, detection meter full</span></label>
-      <label class="tick"><input type="checkbox" id="fCamp"><span>Target camped for 6 s and the flank roll passed</span></label>
-      <label class="tick"><input type="checkbox" id="fLost"><span>Target lost less than 12 s ago</span></label>
-      <label class="tick"><input type="checkbox" id="fNoise"><span>Heard a shot or footsteps</span></label>
-      <label class="tick"><input type="checkbox" id="fSupply"><span>Armour broken or low on ammo</span></label>
-      <label class="tick"><input type="checkbox" id="fZone"><span>CTF flag zone active</span></label>
-      <label class="tick"><input type="checkbox" id="fSquad"><span>Squad leader to follow (TDM)</span></label>
-    </div>
-    <div class="readout">
-      <div class="verdict"><div class="eyebrow">Chosen goal</div><div class="big" id="lvGoal">Engage</div><p class="note" id="lvWhy"></p></div>
-      <div class="panel"><ol class="ladder" id="lvLadder"></ol></div>
-    </div>
-  </div>
-</section>
-
+<section id="components" class="bb" aria-labelledby="h-components">
+      <div class="head"><span class="num">02 · ANATOMY</span><h2 id="h-components">Six parts, one bot</h2><span class="src">BotPerception · BotBlackboard · TacticalBotBrain · BotController · AdaptiveDifficultyTracker · TacticalChatSystem</span>
+        <p>Click any of the six decoupled components below to inspect its exact tick rate, C# source file, internal state struct, and how it hands data to the next stage without letting bots cheat.</p></div>
+      <div class="comp-grid" id="comp-grid"></div>
+      <div class="comp-detail" id="comp-detail"></div>
+    </section>
 <section id="senses" aria-labelledby="h-senses">
   <div class="head"><span class="num">03 · NOTICE</span><h2 id="h-senses">The detection meter</h2>
     <p>A bot never knows where you are just because you exist. While you are in its view cone and in line of sight, a meter fills at <code>0.9 + 9 / distance</code> per second, faster if you move, much faster if you just fired. It must reach 100 % before the bot reacts. Out of sight it drains at 0.5 per second.</p></div>
@@ -244,9 +321,87 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
-
+<section id="see" class="bb" aria-labelledby="h-see">
+      <div class="head"><span class="num">04 · SEE</span><h2 id="h-see">Sightlines and the close arc</h2><span class="src">BotPerception.cs · 10 Hz</span>
+        <p>The bot looks every 0.1 s with two raycasts (<code>HeadPosition</code> OR <code>ChestPosition</code>). You are visible when inside its main vision cone, within 70 m, and unoccluded. Within 6 m, anything within <b>±100° half-angle (200° total arc)</b> around its gaze counts as peripheral threat awareness. <b>Drag the orange dot</b> to test sightlines and shot alerts.</p></div>
+      <div class="instrument">
+        <canvas id="cv-see" aria-label="Top-down view of the bot's vision cone and the player"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="see-gaze">Bot gaze <output id="o-gaze"></output></label><input id="see-gaze" type="range" min="-180" max="180" value="0"></div>
+          <div class="ctl"><label for="see-fov">Field of view <output id="o-fov"></output></label><input id="see-fov" type="range" min="95" max="132" value="110"></div>
+          <div class="ctl"><label for="see-spd">Detection speed <output id="o-spd"></output></label><input id="see-spd" type="range" min="80" max="138" value="100"></div>
+          <div class="ctl"><label for="see-react">Base reaction <output id="o-react"></output></label><input id="see-react" type="range" min="16" max="76" value="40"></div>
+          <div class="checks"><label><input id="see-crouch" type="checkbox"> Crouched (×0.7)</label><label><input id="see-sprint" type="checkbox"> Moving &gt;2 m/s (×1.35)</label></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="see-fire" type="button">Fire a shot (×2.2)</button><button id="see-reset" type="button" class="ghost">Reset meter</button></div>
+          <div class="readout">
+            <div class="stat"><div class="k">State</div><div class="v" id="r-state">-</div></div>
+            <div class="stat"><div class="k">Distance</div><div class="v" id="r-dist">-</div></div>
+            <div class="stat"><div class="k">Off gaze</div><div class="v" id="r-ang">-</div></div>
+            <div class="stat"><div class="k">Fill rate</div><div class="v" id="r-rate">-</div></div>
+            <div class="stat"><div class="k">Meter</div><div class="v" id="r-meter">-</div></div>
+            <div class="stat"><div class="k">Reacts after</div><div class="v" id="r-react">-</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Fill rate/s = speed × (0.9 + 9 / max(dist, 1.5)), ×1.35 speed &gt; 2 m/s, ×2.2 within 1 s of gunshot, ×1.4 within ±12° fovea, ×0.7 crouched. Drains at 0.5/s when occluded; forgets after 12 s. Reaction latency scales from 0.76× foveal to 1.58× at 115° eccentricity. Presets set the speed: Recruit 0.85×, Regular 1.15×, Hardened 1.55×, Veteran 2.2× (D61), so a Veteran notices you at 20 m in 0.34 s (it took 0.74 s). <span class="mono">BotPerception.cs</span></p>
+    </section>
+<section id="decide" class="bb" aria-labelledby="h-decide">
+      <div class="head"><span class="num">05 · DECIDE</span><h2 id="h-decide">The priority waterfall</h2><span class="src">TacticalBotBrain.cs · about 4 Hz · BotController resupply override</span>
+        <p>Four times a second the brain walks down this list in source order and takes the first rule that holds. Reload cover, the anti-camp flank and, since D61, pressing a weak target all happen inside <b>Engage</b>; <b>Investigate</b> still beats the flag zone. Set what the bot knows and see which rule wins and why the ones above it did not.</p></div>
+      <div class="instrument">
+        <ol class="goals" id="goals"></ol>
+        <div class="controls">
+          <div class="ctl"><label for="b-hp">Bot health <output id="o-hp"></output></label><input id="b-hp" type="range" min="1" max="100" value="80"></div>
+          <div class="ctl"><label for="b-dist">Target distance <output id="o-bdist"></output></label><input id="b-dist" type="range" min="2" max="60" value="22"></div>
+          <div class="ctl"><label for="b-seen">Seconds since seen <output id="o-seen"></output></label><input id="b-seen" type="range" min="0" max="15" step="0.5" value="0"></div>
+          <div class="ctl"><label for="b-anchor">Target camping duration <output id="o-anchor"></output></label><input id="b-anchor" type="range" min="0" max="12" step="0.5" value="2"></div>
+          <div class="ctl"><label for="b-flankwin">Anti-camp window (Adaptive 4.0–7.2 s) <output id="o-flankwin"></output></label><input id="b-flankwin" type="range" min="4.0" max="7.2" step="0.2" value="6.0"></div>
+          <div class="ctl"><label for="b-preset">Bot preset (aggression)</label>
+            <select id="b-preset"><option value="0.35">Recruit (0.35)</option><option value="0.58">Regular (0.58)</option><option value="0.74">Hardened (0.74)</option><option value="0.88" selected>Veteran (0.88)</option></select></div>
+          <div class="checks">
+            <label><input id="b-target" type="checkbox" checked> Has a target</label>
+            <label><input id="b-visible" type="checkbox" checked> Target visible</label>
+            <label><input id="b-hurt" type="checkbox"> Under fire / damaged</label>
+            <label><input id="b-reload" type="checkbox"> Bot reloading</label>
+            <label><input id="b-weak" type="checkbox" checked> Target reloading or hurt</label>
+            <label><input id="b-supply" type="checkbox"> Armour broken or low ammo</label>
+            <label><input id="b-noise" type="checkbox"> Heard gunshot (&lt;8 s)</label>
+            <label><input id="b-capture" type="checkbox"> Enemy capturing the flag</label>
+            <label><input id="b-flag" type="checkbox"> CTF flag zone active</label>
+            <label><input id="b-squad" type="checkbox"> Has squad leader (TDM)</label>
+          </div>
+          <div class="ctl"><label for="b-order">Commander directive</label>
+            <select id="b-order"><option value="">None (free roam)</option><option>HoldPosition</option><option>MoveTo</option><option>Attack</option><option>Flank</option><option>Retreat</option><option>FollowLeader</option></select></div>
+        </div>
+      </div>
+    </section>
+<section id="nav" class="bb" aria-labelledby="h-nav">
+      <div class="head"><span class="num">06 · MOVE</span><h2 id="h-nav">Two-layer pathfinding</h2><span class="src">TacticalBotBrain.cs chooses where · BotController.cs drives the NavMeshAgent</span>
+        <p>LeadRush 2 splits movement into <b>two cooperating layers</b>: <b>Layer 1 (<code>TacticalBotBrain</code>, ~4 Hz)</b> scores candidate <code>CoverPoint</code>, <code>TacticalPoint</code>, <code>FlagAnchor</code>, or leader-offset world coordinates; <b>Layer 2 (<code>BotController</code>, every frame)</b> drives a decoupled <code>NavMeshAgent</code> (<code>updatePosition = false</code>) with 0.6 s / 1 m repath hysteresis, slices corners ahead on <code>path.corners[1]</code>, blends combat ADAD strafing (<code>0.65·route + 0.85·right·dir</code>), completes OffMeshLinks, and triggers 1.1 s obstacle hops / 2.4 s <code>ResetPath()</code> stuck recovery.</p></div>
+      <div class="instrument">
+        <canvas id="cv-nav" aria-label="Interactive dual-layer pathfinding visualizer"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="nav-mode">Pathfinding Layer / Mode</label>
+            <select id="nav-mode">
+              <option value="corridor">Layer 2 · Decoupled NavMesh Corridor &amp; Corner Slicing</option>
+              <option value="cover">Layer 1 · CoverPoint LOS Scorer (PickCover)</option>
+              <option value="flank">Layer 1 · 90° Anti-Camp Flank Scorer (TryPickFlank)</option>
+              <option value="patrol">Layer 1 · 18 m Patrol Node Scorer (PickPatrol)</option>
+              <option value="ctf">Layer 1 · CTF 8-Slot Core / Perimeter Ring</option>
+            </select>
+          </div>
+          <div class="checks">
+            <label><input id="nav-strafe" type="checkbox" checked> Blend ADAD combat strafe</label>
+            <label><input id="nav-stuck" type="checkbox"> Simulate stuck block (&gt;1.1 s jump / 2.4 s repath)</label>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="nav-step" type="button">Regenerate Threat / Visit Ages</button></div>
+          <div class="readout" id="nav-out"></div>
+          <p class="note" id="nav-formula"></p>
+        </div>
+      </div>
+    </section>
 <section id="flick" aria-labelledby="h-flick">
-  <div class="head"><span class="num">04 · TURN</span><h2 id="h-flick">Reaction, flick and where it lands</h2>
+  <div class="head"><span class="num">07 · TURN</span><h2 id="h-flick">Reaction, flick and where it lands</h2>
     <p>After the meter fills the bot waits a human reaction time, longer when you are far off to the side. Then it flicks with one fast, bell-shaped movement whose duration follows Fitts's law, and lands near you, not on you: errors along the flick are about 2.3 times larger than across it, and calm bots tend to land a little short.</p></div>
   <div class="drill">
     <div class="stage">
@@ -270,9 +425,8 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
-
 <section id="strafe" aria-labelledby="h-strafe">
-  <div class="head"><span class="num">05 · TRACK</span><h2 id="h-strafe">Tracking a counter-strafer</h2>
+  <div class="head"><span class="num">08 · TRACK</span><h2 id="h-strafe">Tracking a counter-strafer</h2>
     <p>The bot sees your sideways speed through a 125 ms lag, the same lag people show, and leads by 55 ms of that lagged speed. When you change direction it keeps swinging the old way for a moment, so its misses land behind you, right after each direction change.</p></div>
   <div class="drill">
     <div class="stage">
@@ -290,18 +444,38 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
-
+<section id="miss" class="bb" aria-labelledby="h-miss">
+      <div class="head"><span class="num">09 · MISS</span><h2 id="h-miss">How real people miss</h2><span class="src">BotController.UpdateAim · ESTA · CSKnow · Aim Lab (B53)</span>
+        <p>Unlike aimbots that distribute misses uniformly inside a circle, empirical human FPS telemetry (<b>ESTA</b> pro CS:GO demos, <b>CSKnow</b> human-vs-bot trajectories, <b>Aim Lab</b> 10,000-player kinematics, and <b>Meyer / van Beers</b> motor studies) proves four systematic asymmetries — all now wired into <code>BotController.UpdateAim</code>:</p></div>
+      <div class="instrument">
+        <canvas id="cv-miss" aria-label="2D target silhouette showing anisotropic human miss ellipse and shot cloud"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="m-flick">Flick approach angle <output id="o-mflick"></output></label><input id="m-flick" type="range" min="-180" max="180" value="-22"></div>
+          <div class="ctl"><label for="m-amp">Flick size D <output id="o-mamp"></output></label><input id="m-amp" type="range" min="8" max="90" value="38"></div>
+          <div class="ctl"><label for="m-strafe">Target ADAD speed <output id="o-mstrafe"></output></label><input id="m-strafe" type="range" min="0" max="5.5" step="0.5" value="2.5"></div>
+          <div class="ctl"><label for="m-heat">Sustained spray heat <output id="o-mheat"></output></label><input id="m-heat" type="range" min="0" max="100" value="35"></div>
+          <div class="ctl"><label for="m-stress">Combat stress <output id="o-mstress"></output></label><input id="m-stress" type="range" min="0" max="100" value="25"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="m-sample" type="button">Resample 220 Shots</button></div>
+          <div class="readout">
+            <div class="stat"><div class="k">Head / Torso Hit</div><div class="v" id="r-mhit">-</div></div>
+            <div class="stat"><div class="k">Trailing Strafe Lag</div><div class="v" id="r-mlag">-</div></div>
+            <div class="stat"><div class="k">σ∥ / σ⊥ Ratio</div><div class="v" id="r-mratio">2.27 : 1</div></div>
+            <div class="stat"><div class="k">Wrist X : Arm Y</div><div class="v" id="r-mxy">1.55 : 1</div></div>
+          </div>
+          <p class="note">• <b>Primary undershoot:</b> Calm flicks stop ~7.5% short along the flick vector before tipping to +3.5% overshoot under panic.<br>• <b>125 ms velocity lag:</b> <code>_perceivedTargetVel</code> low-pass filter leaves trailing-edge misses behind sudden ADAD reversals.<br>• <b>Late-spray weave:</b> Above 0.25 spray heat, bimanual horizontal oscillation sweeps across shoulders instead of a rigid vertical laser.</p>
+        </div>
+      </div>
+    </section>
 <section id="recoil" aria-labelledby="h-recoil">
-  <div class="head"><span class="num">06 · CONTROL</span><h2 id="h-recoil">Recoil and the pull-down</h2>
+  <div class="head"><span class="num">10 · CONTROL</span><h2 id="h-recoil">Recoil and the pull-down</h2>
     <p>Bots do not get recoil-free guns. Every shot kicks the view up, the bot starts pulling down 65 to 135 ms later, and how well it compensates depends on its skill and tires as the spray goes on. Late in a long spray a sideways weave appears. Four bots, same rifle, 24 rounds at a target 15 m away:</p></div>
   <div class="stage">
     <canvas id="cvRecoil" class="cv-wide" aria-label="Spray patterns of four bot skill levels"></canvas>
     <div class="controls"><button type="button" id="btnSpray">Spray again</button><span class="note" id="rcNote"></span></div>
   </div>
 </section>
-
 <section id="armour" aria-labelledby="h-armour">
-  <div class="head"><span class="num">07 · SURVIVE</span><h2 id="h-armour">Armour and the ammo stations</h2>
+  <div class="head"><span class="num">11 · SURVIVE</span><h2 id="h-armour">Armour and the ammo stations</h2>
     <p>Every soldier, bot or player, has 100 health and 50 armour. Armour takes damage first and does not grow back; health does, after 4 s without damage. Breaking someone's armour makes a ceramic crack for both of you. Each map has two ammo stations that give back 120 rounds and 50 armour, then go dark for 20 s for everyone.</p></div>
   <div class="drill">
     <div class="panel readout">
@@ -332,13 +506,12 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
-
 <section id="skill" aria-labelledby="h-skill">
-  <div class="head"><span class="num">08 · ADAPT</span><h2 id="h-skill">Skill presets and the adaptive mode</h2>
+  <div class="head"><span class="num">12 · ADAPT</span><h2 id="h-skill">Skill presets and the adaptive mode</h2>
     <p>Four presets change the human limits, never the rules. The adaptive mode moves one skill value between them during the match, from how you play: your hit rate, how often you rush to close range, how often you crouch.</p></div>
   <div class="table-wrap panel">
     <table>
-      <thead><tr><th>Preset</th><th>Reaction</th><th>Aim speed</th><th>First error</th><th>Settled error</th><th>Headshot</th><th>Aggression</th><th>Flank chance</th></tr></thead>
+      <thead><tr><th>Preset</th><th>Reaction</th><th>Aim speed</th><th>First error</th><th>Settled error</th><th>Headshot</th><th>Aggression</th><th>Flank chance</th><th>Detection</th><th>Composure</th></tr></thead>
       <tbody id="presetRows"></tbody>
     </table>
   </div>
@@ -350,9 +523,278 @@ body.gifmode .wrap { display: none; }
     <p class="note">Values interpolate linearly between the two ends shown, as in <code>AdaptiveDifficultyTracker</code>. Ends: reaction 0.52 to 0.76 s down to 0.16 to 0.26 s, view 95° to 132°, detection 0.80× to 1.38×, hearing 0.85× to 1.35×, aim speed 4.4 to 10.2.</p>
   </div>
 </section>
+<section id="adapt" class="bb" aria-labelledby="h-adapt">
+      <div class="head"><span class="num">13 · LEARN</span><h2 id="h-adapt">Learning your style</h2><span class="src">AdaptiveDifficultyTracker.cs · 0.75 s refresh</span>
+        <p>In <b>Adaptive</b> difficulty, bots read your live match telemetry: <code>PlayerAccuracy01 = hits / max(8, shots)</code>, headshot ratio, crouch frequency, and rush-vs-camp tendency — which even scales the brain's anti-camp flank timer between <b>4.0 s</b> (campers) and <b>7.2 s</b> (rushers).</p></div>
+      <div class="instrument">
+        <div style="display:grid;gap:10px;min-width:0">
+          <canvas id="cv-skill" aria-label="Bot skill over duels played"></canvas>
+          <div class="readout" id="adapt-out"></div>
+        </div>
+        <div class="controls">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="ad-win" type="button">You win a duel</button>
+            <button id="ad-hs" type="button">Headshot win</button>
+            <button id="ad-lose" type="button" class="ghost">You lose</button>
+            <button id="ad-reset" type="button" class="ghost">Reset</button>
+          </div>
+          <div class="ctl"><label for="ad-acc">Accuracy <code>hits/max(8,shots)</code> <output id="o-acc"></output></label><input id="ad-acc" type="range" min="5" max="60" value="25"></div>
+          <div class="ctl"><label for="ad-hsr">Headshot rate <output id="o-hsr"></output></label><input id="ad-hsr" type="range" min="0" max="50" value="12"></div>
+          <div class="ctl"><label for="ad-rush">Rusher vs Camper <output id="o-rush"></output></label><input id="ad-rush" type="range" min="0" max="100" value="50"></div>
+          <div class="ctl"><label for="ad-crouch">Crouch frequency <output id="o-crouch"></output></label><input id="ad-crouch" type="range" min="0" max="100" value="25"></div>
+        </div>
+      </div>
+    </section>
+<section id="llm" class="bb" aria-labelledby="h-llm">
+      <div class="head"><span class="num">14 · COMMAND</span><h2 id="h-llm">The blackboard and the LLM hook</h2><span class="src">BotTypes.cs · IBotDirectiveProvider</span>
+        <p>Verified against <code>BotBlackboard.ToJson()</code> in <code>BotTypes.cs:94-131</code>: the external LLM / tactical commander reads a compact <b>flat</b> JSON snapshot (no nested target object) and emits a <code>BotDirective</code> every 1.5 s (or instantly from player HUD chat commands).</p></div>
+      <div class="two">
+        <div><h3 style="margin-bottom:6px">Exact BotBlackboard.Snapshot JSON</h3>
+<pre class="code">{
+  "goal": "Engage",
+  "health": 64.0,
+  "ammo": 40.0,
+  "reloading": false,
+  "underFire": true,
+  "target": "Operator",
+  "targetVisible": true,
+  "targetDistance": 18.0,
+  "secondsSinceSeen": 0.0,
+  "position": { "x": 12.1, "y": 0.0, "z": -3.7 },
+  "targetLastKnown": { "x": 28.4, "y": 0.0, "z": 5.2 },
+  "knownEnemies": 2,
+  "directive": "None"
+}</pre><p class="note">Serialized via <code>UnityEngine.JsonUtility.ToJson(Snapshot)</code> (<code>BotTypes.cs:94-131</code>).</p></div>
+        <div><h3 style="margin-bottom:6px">Pluggable Orders &amp; Brains</h3>
+<pre class="code">class LlmCommander : MonoBehaviour, IBotDirectiveProvider {
+  public bool TryGetDirective(BotController bot,
+      BotBlackboard bb, out BotDirective d) {
+    d = new BotDirective {
+      order = BotOrder.Flank,
+      position = flankAnchor,
+      duration = 8f,
+      rationale = "Enemy anchored behind container"
+    };
+    return true;
+  }
+}</pre><p class="note">Orders: <code>FreeRoam, HoldPosition, MoveTo, Attack, FollowLeader, Flank, Retreat</code>.</p></div>
+      </div>
+    </section>
 
+<div class="part" id="part-modes"><span class="eyebrow">Part 2 of 3</span><h2>Game modes</h2><p>The rules the bots play under: duel, free-for-all, team deathmatch, rotating capture the flag, and orders typed in chat.</p></div>
+
+<section id="modes" class="bb" aria-labelledby="h-modes">
+      <div class="head"><span class="num">15 · MODES</span><h2 id="h-modes">Four modes, one brain</h2><span class="src">MatchManager.cs · MatchSettings.cs</span>
+        <p>Every match runs through <code>MatchManager.cs</code> with customizable <code>ModeRuleConfig</code> rules (score limit 1–100, time limit 60–1800 s, respawn delay, optional seeker drones, per-mode difficulty override) and four selectable modes from the Main Menu across all 4 maps (Saltworks, Deadsector, Foundry, TestRange).</p></div>
+      <div class="four">
+        <div class="card">
+          <h3>1v1 Duel</h3>
+          <span class="pill" style="color:var(--accent)">TeamId.None · 1 Rival</span>
+          <p class="note">Head-to-head adaptive duel. First to 15 kills wins; <code>enemyBots</code> forced to 1, <code>friendlyBots = 0</code>. Bots track your individual accuracy, crouch rate, and camp timer every fight.</p>
+        </div>
+        <div class="card">
+          <h3>Free-For-All (FFA)</h3>
+          <span class="pill" style="color:var(--bot)">Everyone Hostile</span>
+          <p class="note">Up to 8 independent bots on <code>TeamId.None</code> fighting player and each other. Smart spawn scoring maximizes min-distance from all live threats; bots investigate third-party gunfire.</p>
+        </div>
+        <div class="card">
+          <h3>Team Deathmatch (TDM)</h3>
+          <span class="pill" style="color:var(--good)">Alpha vs Bravo</span>
+          <p class="note">Player leads <code>TeamId.Alpha</code> with 0–5 friendly bots against Bravo. Friendly bots run <b>Step 7 FollowLeader</b> staggered 2.5–5 m wide, 4–8 m back, watching ±75° flank sectors, and answer <code>[T]</code> chat orders.</p>
+        </div>
+        <div class="card">
+          <h3>Rotating CTF (5 Team Modes · B51/B63)</h3>
+          <span class="pill" style="color:var(--warn)">BF6 Strategic Zone</span>
+          <p class="note"><code>FlagZoneController</code> activates one strategic <code>FlagAnchor</code> plaza at a time (+250 pts/capture). Supports 5 selectable <code>BotTeamMode</code> alignments including <b>Half &amp; Half (50/50 split)</b>, <b>Squads</b>, <b>FFA CTF</b>, <b>Pack</b>, and <b>Co-op</b>, with distinct faction uniforms (Cobalt-Blue SWAT vs. Desert-Tan/Crimson OpFor) &amp; green vs red lasers, yellow-orange vs red tracers (B84).</p>
+        </div>
+      </div>
+      <div class="readout">
+        <div class="stat"><div class="k">Kill Points</div><div class="v">100</div></div>
+        <div class="stat"><div class="k">Headshot Bonus</div><div class="v">+50</div></div>
+        <div class="stat"><div class="k">Assist (6 s)</div><div class="v">+25</div></div>
+        <div class="stat"><div class="k">Seeker Drone</div><div class="v">+50</div></div>
+        <div class="stat"><div class="k">Flag Capture</div><div class="v">+250</div></div>
+        <div class="stat"><div class="k">Sudden Death</div><div class="v">60 s</div></div>
+      </div>
+    </section>
+<section id="ctf" class="bb" aria-labelledby="h-ctf">
+      <div class="head"><span class="num">16 · CAPTURE</span><h2 id="h-ctf">Rotating flag zones</h2><span class="src">FlagZoneController.cs · brain steps 2.5 and 6.5</span>
+        <p>Instead of static camp-friendly bases, LR2 spawns one strategic zone that rotates across the map after every capture or <b>55 s stale timeout</b> (picking the farthest non-repeating plaza). Inside the zone, <b>closer is dramatically faster</b>: standing inside the 2.6 m inner core captures at <b>2.25×</b> speed while perimeter edge-campers at 11.5 m slow to <b>0.28×</b>! Bots fan around 8 deterministic golden slots (<code>DisplayName.GetHashCode() &amp; 7</code> at 45° steps). <b>Drag the orange player dot</b> inside the zone to overpower the blue enemy bots.</p></div>
+      <div class="instrument">
+        <canvas id="cv-ctf" aria-label="Interactive Capture the Flag proximity capture simulator"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="ctf-bots">Active Enemy Bots in Zone <output id="o-ctfbots"></output></label><input id="ctf-bots" type="range" min="0" max="4" value="2"></div>
+          <div class="ctl"><label for="ctf-pos">Bot Ring Aggression (Core vs Edge) <output id="o-ctfpos"></output></label><input id="ctf-pos" type="range" min="15" max="115" value="65"></div>
+          <div class="checks">
+            <label><input id="ctf-ffa" type="checkbox"> Free-For-All CTF Mode (B51: bots fight each other too)</label>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="ctf-rotate" type="button">Rotate to Next Plaza</button>
+            <button id="ctf-reset" type="button" class="ghost">Reset Progress</button>
+          </div>
+          <div class="readout">
+            <div class="stat"><div class="k">Zone State</div><div class="v" id="r-ctfstate">Idle</div></div>
+            <div class="stat"><div class="k">Player Dist</div><div class="v" id="r-ctfdist">-</div></div>
+            <div class="stat"><div class="k">Speed Mult</div><div class="v" id="r-ctfmult">-</div></div>
+            <div class="stat"><div class="k">Capture Progress</div><div class="v" id="r-ctfprog">0%</div></div>
+            <div class="stat"><div class="k">Sector Timer</div><div class="v" id="r-ctftime">55.0 s</div></div>
+          </div>
+          <p class="note">Formula (<code>FlagZoneController.cs:199</code>): inside <code>2.6 m</code> ⇒ <code>2.25×</code>; outer <code>2.6–11.5 m</code> ⇒ <code>Lerp(2.25, 0.28, t^0.65)</code>. Contested when <code>|playerForce - bestEnemyForce| &lt; 0.65</code>.</p>
+        </div>
+      </div>
+    </section>
+<section id="chat" class="bb" aria-labelledby="h-chat">
+      <div class="head"><span class="num">17 · TALK</span><h2 id="h-chat">Tactical chat and squad orders</h2><span class="src">TacticalChatSystem.cs</span>
+        <p>HUD comms stay quiet at 0 alpha until combat events arrive, then fade smoothly after 7.5 s idle. Bots react to kills with <b>1.0–2.4 s simulated typing latency</b>, announce rotating CTF sectors, post TDM crossfire callouts every 22–34 s, and parse player messages on <code>[T]</code> for keywords <code>flank</code>, <code>hold</code>, <code>push</code>, or <code>flag</code> to trigger real <code>BotController.IssueDirective(...)</code> orders!</p></div>
+      <div class="instrument">
+        <div class="chat-box">
+          <div style="display:flex;justify-content:space-between;color:#93a4b8;font-size:11px;border-bottom:1px solid #222b36;padding-bottom:4px">
+            <span>TACTICAL COMMS HUD (5-LINE RING BUFFER)</span>
+            <span>[T] TYPE · FLANK / HOLD / PUSH / FLAG</span>
+          </div>
+          <div class="chat-lines" id="chat-lines"></div>
+          <div class="chat-input-row">
+            <input id="chat-in" type="text" maxlength="64" placeholder="Type squad command (e.g. 'flank', 'hold', 'push flag', 'gg')...">
+            <button id="chat-send" type="button">Send</button>
+          </div>
+          <div style="font-size:11.5px;color:#8fa1b5" id="chat-directive">No directive issued yet. Try sending "flank" or "push flag"!</div>
+        </div>
+        <div class="controls">
+          <div style="font:600 13px/1.2 var(--label);text-transform:uppercase;letter-spacing:1px;color:var(--ink-2)">Trigger Authentic GameEvents (<code>TacticalChatSystem.cs</code>)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button id="ch-roast" type="button" class="ghost">Bot Kills You</button>
+            <button id="ch-hs" type="button" class="ghost">Headshot Roast</button>
+            <button id="ch-bvb" type="button" class="ghost">Bot vs Bot Banter</button>
+            <button id="ch-pkill" type="button" class="ghost">You Kill Bot</button>
+            <button id="ch-tdm" type="button" class="ghost">TDM Squad Callout</button>
+            <button id="ch-flag" type="button" class="ghost">CTF FlagHq Alert</button>
+          </div>
+          <p class="note">Enemy kills queue with <code>1.0–2.4 s</code> human typing delay (78% player-roast prob, 65% headshot pool, 45% bot-killed-by-player reaction). In TDM, typing <code>flank</code> issues <code>BotOrder.Flank</code> for 12 s.</p>
+        </div>
+      </div>
+    </section>
+
+<div class="part" id="part-built"><span class="eyebrow">Part 3 of 3</span><h2>How it was built</h2><p>One developer and four AI agents working through one board, with every task and bug attributed to the model that wrote it.</p></div>
+
+<section id="ai-story" class="bb" aria-labelledby="h-ai-story">
+      <div class="head"><span class="num">18 · BUILD</span><h2 id="h-ai-story">One developer, four AI agents, one board</h2><span class="src">AGENT_COORDINATION.md · protocol v3</span>
+        <p>Four AI coding tools have worked on LeadRush 2: <b>Claude Code</b> (<code>claude-opus-5-5</code>), <b>Antigravity "Gemini"</b> (<code>gemini-4-hydrogen</code>, then <code>hydrogen-high</code> and <code>neon-high</code>), <b>GitHub Copilot</b> (<code>gpt-5.6-luna</code>) and <b>OpenAI Codex</b> (<code>gpt-6</code>). They never talk directly. Everything goes through one Markdown board (<code>AGENT_COORDINATION.md</code>), one <code>UNITY</code> lock line, code-generated builders (<code>LR2BuildPipeline</code>) and a review by another agent before a row counts. Since 11-18 19:48 only Claude Code and Gemini are running: Claude takes the hard rows, Gemini the easy ones.</p></div>
+      <div class="instrument">
+        <canvas id="cv-agents" aria-label="Animated workflow of the developer, Claude Code, Gemini, the board and the Unity lock; Copilot and Codex shown offline"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="proto-ver">Select Coordination Protocol Era</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="proto-btns">
+              <button type="button" data-proto="v1" class="ghost">Protocol v1 (12:45)</button>
+              <button type="button" data-proto="v2" class="ghost">Protocol v2 (23:25)</button>
+              <button type="button" data-proto="v3" class="active">Protocol v3 (00:05+)</button>
+            </div>
+          </div>
+          <div id="proto-desc" class="card" style="margin-top:4px"></div>
+          <div class="readout">
+            <div class="stat"><div class="k">Board rows</div><div class="v">B1–B85 + P1–P5</div></div>
+            <div class="stat"><div class="k">Ledger rows</div><div class="v">148 tasks · 66 bugs</div></div>
+            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">37 of 66</div></div>
+            <div class="stat"><div class="k">Running now</div><div class="v">2 of 4 AI + 1 human</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section id="ai-quality" class="bb" aria-labelledby="h-ai-quality">
+      <div class="head"><span class="num">19 · MEASURE</span><h2 id="h-ai-quality">Who wrote what, and what broke</h2><span class="src">data/tasks.csv · data/bugs.csv · analysis/analyze.py</span>
+        <p>Every delivered task (<code>tasks.csv</code>, 148 rows) and bug (<code>bugs.csv</code>, 66 rows) records which agent &amp; model wrote it, who reviewed it, its explicit <code>source</code> (prompt, board row, or evidence), and whether it escaped to the developer or was caught in review (+3 cross-catch, +2 own catch, +3 adopted suggestion, +1 verified task, -2 escaped defect). Scores are weighted by peer-rated task difficulty (B66), and a <b>time-adjusted score</b> (<code>Score + 1.5 × Hrs − 3.0 × QuotaStops</code>) also surfaces multi-hour reliability alongside raw Score/Hr. Client IDE API billing totals are <b>never guessed</b>: where a client does not export raw token counts into the repository, the table explicitly marks telemetry as <i>not recorded</i> instead of inventing numbers.</p></div>
+      <div class="instrument">
+        <canvas id="cv-quality" aria-label="Bar chart of contribution score and defect rates by agent and model"></canvas>
+        <div class="controls">
+          <div class="ctl"><label for="q-metric">Ledger Metric</label>
+            <select id="q-metric">
+              <option value="score">Difficulty-adjusted score</option>
+              <option value="endurance">Time-adjusted score (hours and quota stops)</option>
+              <option value="scoreHr">Adjusted points per hour</option>
+              <option value="tasks">Tasks delivered</option>
+              <option value="escaped">Escaped defects per 10 tasks (lower is better)</option>
+              <option value="caught">Review catches</option>
+            </select>
+          </div>
+          <p class="note"><b>Reading honestly:</b> Role bias gives the coordinator/reviewer (Claude Code) higher catch scores while solo overnight shifts (Gemini before cross-review existed) accumulated higher escaped rates. Once cross-review &amp; v3 compile gates engaged (23:25–00:05), Copilot caught 6+ pre-merge defects and Codex added independent assertion QA (<code>B57</code>).</p>
+          <p class="note">Regenerate charts anytime: <code>python Docs/AI_Collaboration/analysis/analyze.py</code></p>
+        </div>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <h3>B56 · Usage limits and recorded activity per agent (nothing guessed)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.45">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--line);color:var(--ink-2)">
+              <th style="padding:6px 8px">Agent · Tool</th>
+              <th style="padding:6px 8px">Model(s)</th>
+              <th style="padding:6px 8px">First / Last Recorded Activity (ET)</th>
+              <th style="padding:6px 8px">Observed Limits / Compaction</th>
+              <th style="padding:6px 8px">Verified Work Proxies</th>
+              <th style="padding:6px 8px">Client API Token Visibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Claude</b> · Claude Code</td><td style="padding:6px 8px"><code>claude-opus-5-5</code></td><td style="padding:6px 8px">11-16 11:19 → 11-18 20:05 (4.8 h recorded active)</td><td style="padding:6px 8px"><b>6 quota stops</b> (11-16 pm 97 % cap, 14:55, 15:07, 18:13, 23:14, 00:44–04:13, 04:30–09:13) plus 20-minute coordinator ticks</td><td style="padding:6px 8px">55 tasks (<code>C01–C55</code>: rig and animation fixes <code>D56–D59</code>, FX library <code>D60</code>, bot pressure <code>D61/D65</code>, learnable spray <code>B47</code>, spawn capsule test <code>D66</code>, Bot Lab), 21 bug finds (16 in others' work, 5 own); time-adjusted score <b>79.3</b></td><td style="padding:6px 8px">User-reported <code>97%</code> plus quota timestamps; raw vendor token count not recorded in the repo</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Gemini</b> · Antigravity</td><td style="padding:6px 8px"><code>argon</code> / <code>argon/hydrogen</code> / <code>gemini-4-hydrogen</code> / <code>gemini-4-hydrogen-high</code> / <code>gemini-4-neon-high</code> / <code>orchestrator-neon</code></td><td style="padding:6px 8px">11-16 23:44 → 11-18 20:09</td><td style="padding:6px 8px"><b>1 quota switch (02:24)</b>; <code>hydrogen-high</code> from 09:23, <code>neon-high</code> in the evening</td><td style="padding:6px 8px">50 ledger rows (<code>G01–G50</code>: <code>B55</code> MK18, <code>B76/B77</code> CTF and uniforms, <code>B74b</code> resupply, <code>P3/B48</code> upscalers, <code>B36</code> war-torn audio, <code>B44</code> checkboxes, reviews of <code>D61/D65</code>, <code>B47</code> and <code>B85</code>); time-adjusted <b>22.5 + 16.8 + 4.2</b></td><td style="padding:6px 8px"><code>BUDGET: OK</code> on the board; raw IDE token count not recorded in the repo</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Copilot</b> · VS Code Chat</td><td style="padding:6px 8px"><code>gpt-5.6-luna</code></td><td style="padding:6px 8px">11-17 23:12 → 11-18 02:07</td><td style="padding:6px 8px"><b>1 monthly limit stop (02:40)</b> after cross-review, the P1–P5 research specs, pose checks #7–#10 and HyperMotion <code>B60b</code></td><td style="padding:6px 8px">35 ledger rows (<code>P01–P35</code>), 6 review catches, <code>B60.md</code>; time-adjusted <b>33.8</b></td><td style="padding:6px 8px"><code>OFFLINE</code> since 02:40 (monthly limit); raw token count not recorded in the repo</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex CLI</td><td style="padding:6px 8px"><code>gpt-6</code></td><td style="padding:6px 8px">11-18 01:54 → 11-18 04:14</td><td style="padding:6px 8px">Quota and context resets not logged in the repo; down per the user note of 11-18 19:48</td><td style="padding:6px 8px">8 ledger rows (<code>X01–X08</code>: <code>B56/B57</code>, <code>B61</code> backlog, <code>B66</code> difficulty rubric, <code>B67–B70</code> VFX, laser, ADS, TDM), 1 review catch (<code>D39</code>); time-adjusted <b>7.8</b></td><td style="padding:6px 8px"><code>OFFLINE</code>; raw Codex CLI token counter not recorded in git</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="overflow-x:auto;margin-top:14px">
+        <h3>Did the protocol help? Bugs per 10 tasks by protocol period</h3>
+        <table>
+          <thead><tr><th>Protocol period</th><th>Tasks</th><th>Reached the developer (weighted)</th><th>Per 10 tasks</th><th>Caught before the developer</th><th>Per 10 tasks</th></tr></thead>
+          <tbody>
+            <tr><td>v1: before 11-17 23:25</td><td class="num">23</td><td class="num">13.8</td><td class="num">6.0</td><td class="num">1</td><td class="num">0.4</td></tr>
+            <tr><td>v2: 11-17 23:25 to 11-18 00:05</td><td class="num">15</td><td class="num">2.0</td><td class="num">1.3</td><td class="num">8</td><td class="num">5.3</td></tr>
+            <tr><td>v3: after 11-18 00:05</td><td class="num">109</td><td class="num">6.9</td><td class="num">0.6</td><td class="num">28</td><td class="num">2.6</td></tr>
+          </tbody>
+        </table>
+        <p class="note">From <code>analyze.py</code> at 20:15 on 11-18. Cross-review (v2) and the compile gate plus check-the-check (v3) cut the bugs that reached the developer from 6.0 to 0.6 per 10 tasks.</p>
+      </div>
+      <div class="card" style="overflow-x:auto;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <h3 style="margin:0">Task Log with Explicit Source (<code>data/tasks.csv</code> · Full table in <code>figures/tasks_log.md</code>)</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="task-agent-filter" style="padding:4px 8px;border-radius:6px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);font-size:12px">
+              <option value="all">All Agents</option>
+              <option value="Gemini">Gemini</option>
+              <option value="Copilot">Copilot</option>
+              <option value="Codex">Codex</option>
+              <option value="Claude">Claude</option>
+            </select>
+            <input id="task-search" type="search" placeholder="Filter by board, task, or source..." style="padding:4px 8px;border-radius:6px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);font-size:12px;min-width:210px">
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;line-height:1.4">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--line);color:var(--ink-2)">
+              <th style="padding:5px 6px">ID</th>
+              <th style="padding:5px 6px">When</th>
+              <th style="padding:5px 6px">Agent</th>
+              <th style="padding:5px 6px">Board</th>
+              <th style="padding:5px 6px">Task</th>
+              <th style="padding:5px 6px">Source (Prompt / Board / Evidence)</th>
+            </tr>
+          </thead>
+          <tbody id="task-log-body"></tbody>
+        </table>
+      </div>
+    </section>
+<section id="ai-research" class="bb" aria-labelledby="h-ai-research">
+      <div class="head"><span class="num">20 · RESEARCH</span><h2 id="h-ai-research">Research first</h2><span class="src">Docs/AI_Collaboration/specs/</span>
+        <p>Protocol v3 Rule 13 requires every feature, visual pass, recoil tune, animation principle, or bot tweak to start with a sourced research spec in <code>Docs/AI_Collaboration/specs/</code>. Filter by subsystem below:</p></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="spec-filters">
+        <button type="button" data-cat="all" class="active">All specs (19)</button>
+        <button type="button" data-cat="ai" class="ghost">Bot AI &amp; Human Motor</button>
+        <button type="button" data-cat="wpn" class="ghost">Weapons &amp; Animation</button>
+        <button type="button" data-cat="gfx" class="ghost">Graphics &amp; Maps</button>
+        <button type="button" data-cat="aud" class="ghost">Audio, UI &amp; Perf</button>
+      </div>
+      <div class="spec-grid" id="spec-grid"></div>
+    </section>
 <section id="sources" aria-labelledby="h-sources">
-  <div class="head"><span class="num">09 · WHERE THE NUMBERS COME FROM</span><h2 id="h-sources">Human data behind the model</h2>
+  <div class="head"><span class="num">21 · WHERE THE NUMBERS COME FROM</span><h2 id="h-sources">Human data behind the model</h2>
     <p>LeadRush 2 uses these as calibration targets. The constants are hand-tuned to match the published behaviour; they are not fitted to a dataset inside this project.</p></div>
   <ul class="srcs panel">
     <li><b>Fitts (1954), J. Exp. Psychology 47(6)</b><span>Movement time grows with log2(distance / target width + 1): the flick duration and why heads take longer to hit.</span></li>
@@ -360,12 +802,14 @@ body.gifmode .wrap { display: none; }
     <li><b>Flash and Hogan (1985), J. Neuroscience 5(7)</b><span>Minimum-jerk trajectories, s(u) = 10u³ − 15u⁴ + 6u⁵: the bell-shaped speed of every flick.</span></li>
     <li><b>Harris and Wolpert (1998), Nature 394</b><span>Signal-dependent noise: bigger, faster movements are noisier, so long flicks scatter more.</span></li>
     <li><b>van Beers, Haggard and Wolpert (2004), J. Neurophysiology 91(2)</b><span>Endpoint scatter is larger along the movement than across it: the 2.3 : 1 ellipse.</span></li>
-    <li><b>ESTA esports trajectory dataset and CSKnow (Counter-Strike player data)</b><span>Real players' reaction times, crosshair placement and miss patterns used as targets: around 125 ms of visuomotor lag on a moving target, horizontal errors larger than vertical ones.</span></li>
-    <li><b>Aim-trainer studies (Aim Lab)</b><span>Ranges of flick times and accuracy between new and expert players, used to space the four presets.</span></li>
+    <li><b>Xenopoulos and Silva (2022), ESTA: an esports trajectory and action dataset (arXiv:2209.09861); Durst et al. (2022/2024), CSKnow</b><span>Real players' reaction times, crosshair placement and miss patterns used as targets: around 125 ms of visuomotor lag on a moving target, horizontal errors larger than vertical ones.</span></li>
+    <li><b>Listman, Tsay, Kim, Mackey and Heeger (2021), long-term motor learning in Aim Lab</b><span>Ranges of flick times and accuracy between new and expert players, used to space the four presets.</span></li>
+    <li><b>MacKenzie (1992), Human-Computer Interaction 7(1)</b><span>Fitts' law as a research and design tool: the log2(D / W + 1) form used for every flick time.</span></li>
+    <li><b>Schrum, Karpov and Miikkulainen (2012), in Believable Bots (Springer)</b><span>Humanlike combat behaviour judged by people: why the bots keep human limits on reaction, aim and knowledge instead of playing perfectly.</span></li>
   </ul>
   <footer>
     <span>Mirror on GitHub: <code>Docs/Bot/bot-lab.html</code> with animated GIFs in <code>Docs/Media/bot/</code> and the write-up in <code>Docs/LR2_Bot_Explainer.md</code>.</span>
-    <span>Built for the LeadRush 2 project by Claude Code (claude-opus-5-5), 2026-11-18.</span>
+    <span>Built for the LeadRush 2 project by Claude Code (claude-opus-5-5) on 2026-11-18, merged the same day with the Bot Brain page by Antigravity Gemini (gemini-4-hydrogen); parts 2 and 3 and sections 02, 04, 05, 06, 09, 13 and 14 come from it.</span>
   </footer>
 </section>
 </div>
@@ -465,7 +909,7 @@ const RUNGS = [
   { key: 'flagContest', goal: 'Contest flag', label: 'CTF: an enemy is capturing', note: 'Stop a near-capture before anything far away.' },
   { key: 'engage', goal: 'Engage', label: 'Target in sight, meter full', note: 'Fight; under fire it may take cover.' },
   { key: 'flank', goal: 'Flank', label: 'Target camped 6 s, flank roll passed', note: 'Come in from the side for up to 9 s; 18 s cooldown.' },
-  { key: 'hunt', goal: 'Hunt', label: 'Target lost under 12 s ago', note: 'Last known position, slicing corners.' },
+  { key: 'hunt', goal: 'Hunt', label: 'Target lost under 10 s ago', note: 'Last known position, slicing corners.' },
   { key: 'noise', goal: 'Investigate', label: 'Heard a shot or steps', note: 'Check where the noise came from.' },
   { key: 'resupply', goal: 'Resupply', label: 'Armour broken or low ammo, out of the fight', note: 'Nearest ready ammo station within 85 m.' },
   { key: 'flagZone', goal: 'Play objective', label: 'CTF flag zone active', note: 'Take the zone when nothing else is happening.' },
@@ -876,8 +1320,8 @@ function think(S) {
     return setGoal(S, 'flank');
   }
   if (tv) { b.path = []; return setGoal(S, 'engage'); }
-  // 5 hunt
-  if (hasTarget) {
+  // 5 hunt: TacticalBotBrain hunts for 10 s; perception forgets the target after 12 s
+  if (hasTarget && t - b.lastSeen < 10) {
     if (Math.hypot(b.x - b.lastKnown[0], b.y - b.lastKnown[1]) < 1.3) {
       log(S, 'Last known position is empty: target lost.');
       b.lastSeen = -99; b.lastKnown = null;
@@ -1211,57 +1655,6 @@ function frame(ts) {
   requestAnimationFrame(frame);
 }
 
-// ---------------------------------------------------------------- 2. ladder explorer
-const lv = { els: buildLadder($('lvLadder')) };
-const FACTS = ['fLow', 'fDir', 'fFlagC', 'fVis', 'fCamp', 'fLost', 'fNoise', 'fSupply', 'fZone', 'fSquad'];
-function decide(f) {
-  const target = f.fVis || f.fLost;
-  const checks = {
-    retreat: f.fLow && target,
-    directive: f.fDir,
-    flagContest: f.fFlagC,
-    engage: f.fVis,
-    flank: f.fCamp && target,
-    hunt: f.fLost && !f.fVis,
-    noise: f.fNoise,
-    resupply: f.fSupply && !f.fVis && !f.fLost && !f.fDir && !f.fLow,
-    flagZone: f.fZone,
-    squad: f.fSquad,
-    patrol: true
-  };
-  return { checks, win: RUNGS.find(r => checks[r.key]) };
-}
-const WHY = {
-  retreat: 'Low health under fire beats everything: a dead bot plays no objective.',
-  directive: 'An order from the squad system (or a future LLM) overrides the bot’s own plans.',
-  flagContest: 'An enemy about to capture is the most urgent objective problem.',
-  engage: 'A visible enemy is the next most urgent thing.',
-  flank: 'You camped, so the bot leaves the lane to hit you from the side.',
-  hunt: 'It saw you less than 12 s ago, so it goes where you were.',
-  noise: 'No sight of you, but it heard something worth checking.',
-  resupply: 'Out of the fight with broken armour or low ammo: time for an ammo station.',
-  flagZone: 'Quiet moment in Capture the Flag: go play the objective.',
-  squad: 'Nothing urgent: stay with the squad leader.',
-  patrol: 'Nothing is happening: rotate through the map’s tactical points.'
-};
-function updateLadder() {
-  const f = {};
-  for (const id of FACTS) f[id] = $(id).checked;
-  const { checks, win } = decide(f);
-  let passed = true;
-  for (const r of RUNGS) {
-    const el = lv.els[r.key];
-    el.classList.toggle('on', r === win);
-    el.classList.toggle('miss', passed && r !== win && !checks[r.key]);
-    if (r === win) passed = false;
-  }
-  $('lvGoal').textContent = win.goal;
-  let why = WHY[win.key];
-  if (f.fSupply && win.key !== 'resupply' && RUNGS.indexOf(win) < RUNGS.findIndex(r => r.key === 'resupply')) why += ' Resupply waits until the bot is out of the fight.';
-  $('lvWhy').textContent = why;
-}
-FACTS.forEach(id => $(id).addEventListener('change', updateLadder));
-updateLadder();
 
 // ---------------------------------------------------------------- 3. detection meter
 const senses = { cv: $('cvSenses'), meter: 0, meterT: 0 };
@@ -1605,7 +1998,7 @@ $('aReset').addEventListener('click', () => { ar.hp = 100; ar.armour = 50; arDra
 arDraw(); arLog('Fresh soldier: 100 health, 50 armour. 150 damage to kill: seven rifle hits, or six with a headshot.');
 
 // ---------------------------------------------------------------- 8. skill
-$('presetRows').innerHTML = PRESET_NAMES.map(n => { const p = PRESETS[n]; return `<tr><td>${n}</td><td class="num">${p.react[0].toFixed(2)} to ${p.react[1].toFixed(2)} s</td><td class="num">${p.aimSpeed.toFixed(1)}</td><td class="num">${p.initErr.toFixed(1)}°</td><td class="num">${p.settleErr.toFixed(2)}°</td><td class="num">${Math.round(p.head * 100)} %</td><td class="num">${p.aggression.toFixed(2)}</td><td class="num">${Math.round(p.flank * 100)} %</td></tr>`; }).join('');
+$('presetRows').innerHTML = PRESET_NAMES.map(n => { const p = PRESETS[n]; return `<tr><td>${n}</td><td class="num">${p.react[0].toFixed(2)} to ${p.react[1].toFixed(2)} s</td><td class="num">${p.aimSpeed.toFixed(1)}</td><td class="num">${p.initErr.toFixed(1)}°</td><td class="num">${p.settleErr.toFixed(2)}°</td><td class="num">${Math.round(p.head * 100)} %</td><td class="num">${p.aggression.toFixed(2)}</td><td class="num">${Math.round(p.flank * 100)} %</td><td class="num">${p.detect.toFixed(2)}×</td><td class="num">${p.composure.toFixed(2)}</td></tr>`; }).join('');
 function drawAdapt() {
   const s = +$('sAdapt').value;
   $('oAdapt').textContent = s.toFixed(2);
@@ -1627,6 +2020,845 @@ if (reduceMotion) {
   stepSensesMeter(0.4);
 }
 requestAnimationFrame(frame);
+})();
+</script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function fit(cv, aspect) {
+    if (!cv || !cv.parentElement) return null;
+    const pw = cv.clientWidth || cv.parentElement.clientWidth; // own cell, not the whole instrument
+    if (!pw || pw < 40) return null;
+    const w = Math.max(240, pw), h = Math.round(w * aspect), d = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); cv.style.height = h + 'px'; }
+    const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return { ctx, w, h };
+  }
+  const redrawers = [];
+  const redrawAll = () => redrawers.forEach(f => { try { f(); } catch (_) {} });
+  new ResizeObserver(() => requestAnimationFrame(redrawAll)).observe(document.body);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+  new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+
+  // ---------------- 6 brain component explorer ----------------
+  const codeTicks = s => s.replace(/\x60([^\x60]+)\x60/g, '<code>$1</code>');
+  const COMPONENTS = [
+    {
+      name: 'BotPerception', file: 'Assets/LR2/Runtime/AI/BotPerception.cs', rate: '10 Hz (0.10 s)',
+      summary: 'Filters what the bot is allowed to know without wall-hacks or omniscience.',
+      details: [
+        'Dual-ray LOS check against HeadPosition OR ChestPosition (`LR2Layers.VisionMask`).',
+        'Close-range peripheral exception: within 6 m, any target within ±100° half-angle (200° arc) counts.',
+        'Accumulates visibility detection meter (`0..1.25`, spotted at `1.0`), decays `-0.5/s` out of view, forgets after `12 s`.',
+        'Receives gunfire/footstep noise events (8 s memory) & team callout propagation.',
+        'D61: detection speed per preset (Recruit `0.85×`, Regular `1.15×`, Hardened `1.55×`, Veteran `2.2×`); noise and last-known positions snap to the floor, so a search looks at head height.'
+      ]
+    },
+    {
+      name: 'BotBlackboard', file: 'Assets/LR2/Runtime/AI/BotTypes.cs', rate: 'Updated every frame',
+      summary: 'Single truth snapshot uniting health, mag %, damage direction, active target & directives.',
+      details: [
+        'Feeds `TacticalBotBrain.Think()` (~4 Hz) and `BotController` aim/trigger loops every frame.',
+        'Serializes via `BotBlackboard.ToJson(goal)` into a flat `Snapshot` struct (no nested objects).',
+        'Tracks `underFire = recentlyDamaged || nearMiss < 1.2 s`, `targetLastKnown`, and `TimeSinceSeen`.'
+      ]
+    },
+    {
+      name: 'TacticalBotBrain', file: 'Assets/LR2/Runtime/AI/TacticalBotBrain.cs', rate: 'about 4 Hz (0.25 s)',
+      summary: 'Layer 1 strategic decision tree & spatial destination scorer.',
+      details: [
+        'Walks exact 10-step priority waterfall: Retreat -> Directive -> Reload Cover / Anti-Camp Flank / Engage -> Active Flank -> Hunt -> Investigate Noise -> (Resupply override) -> Flag Zone -> Follow Leader -> Patrol.',
+        'Notice: `Investigate` (noise < 8 s) beats `Flag Zone`; reload cover, the flank roll and (D61/D65) pressing a weak target all live inside `Engage`.',
+        'Scores `CoverPoint` (`-dist - 30*(threat<6m)`), 90° flank arcs, `18 m` Patrol points, and 8-slot CTF core rings.'
+      ]
+    },
+    {
+      name: 'BotController', file: 'Assets/LR2/Runtime/AI/BotController.cs', rate: 'Every frame',
+      summary: 'Layer 2 human-limited motor output: NavMesh steering, Fitts flicks, ESTA miss scatter & bursts.',
+      details: [
+        'Decoupled `NavMeshAgent` (`updatePosition = false`): `0.6 s`/`1 m` repath hysteresis, OffMeshLink completion, `1.1 s` jump & `2.4 s` `ResetPath` stuck recovery.',
+        'Corner slicing: looks toward `path.corners[1]` with `±28°` periodic scan; combat ADAD blend `0.65·route + 0.85·right·strafe`.',
+        'Human aim: `125 ms` lagged `_perceivedTargetVel`, `1.55:1` wrist/arm sway, `σ∥ ≈ 2.27·σ⊥` flick scatter, `65–135 ms` recoil delay, `<13 m` full-auto vs `≥13 m` bursts.',
+        'D61 search gaze: look points within `3 m` become a `±75°` horizon scan every `1.1–2.1 s`; farther ones are clamped to about `10°` up and `22°` down. Composure (`0` to `0.72`) damps stress, strafe and self-movement error.'
+      ]
+    },
+    {
+      name: 'AdaptiveDifficultyTracker', file: 'Assets/LR2/Runtime/AI/AdaptiveDifficultyTracker.cs', rate: 'Event + 0.75 s refresh',
+      summary: 'Continuously calibrates Adaptive bot difficulty to match the player.',
+      details: [
+        'Tracks `Skill01` (`0.12..0.96`), `+0.045` per win (`+0.03` streak, `+0.02` headshot), `-0.040` per loss (`-0.035` streak).',
+        'Computes `PlayerAccuracy01 = hits / max(8, shots)`, `HeadshotRate`, `CrouchRate`, and `PlayerRushTendency01`.',
+        'Scales `BotDifficulty` reaction/FOV/aimSpeed/bursts and dynamically tightens anti-camp flank threshold (`4.0–7.2 s`).'
+      ]
+    },
+    {
+      name: 'IBotDirectiveProvider & Chat', file: 'Assets/LR2/Runtime/UI/TacticalChatSystem.cs', rate: '1.5 s poll / [T] chat',
+      summary: 'Connects squad/LLM directives and live HUD banter to bots without touching aim math.',
+      details: [
+        '`PollDirective()` runs every `1.5 s` on optional `MonoBehaviour : IBotDirectiveProvider` using `Blackboard.ToJson()`.',
+        'In TDM, player typing `flank`, `hold`, `push`, or `flag` in `[T]` chat immediately calls `BotController.IssueDirective(...)` for `12 s`.',
+        'Posts kill roasts, headshot reactions, bot-vs-bot banter, and `FLAG HQ` sector callouts with `1.0–2.4 s` human typing delay.'
+      ]
+    }
+  ];
+  let selComp = 0;
+  function renderComps() {
+    $('comp-grid').innerHTML = COMPONENTS.map((c, i) => `
+      <button type="button" class="comp-card ${i === selComp ? 'sel' : ''}" data-ci="${i}">
+        <span class="tag">${c.rate}</span>
+        <h3>${c.name}</h3>
+        <span class="note" style="margin:0">${c.summary}</span>
+      </button>
+    `).join('');
+    const c = COMPONENTS[selComp];
+    $('comp-detail').innerHTML = `
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">
+        <h3>${c.name} · <span class="mono" style="color:var(--accent)">${c.file}</span></h3>
+        <span class="pill" style="color:var(--bot)">${c.rate}</span>
+      </div>
+      <ul style="margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px">${c.details.map(d => `<li>${codeTicks(d)}</li>`).join('')}</ul>
+    `;
+    document.querySelectorAll('#comp-grid button').forEach(b => b.onclick = () => { selComp = +b.dataset.ci; renderComps(); });
+  }
+  renderComps();
+
+  // ---------------- chapter 1: perception ----------------
+  const W = 32, H = 18, bot = { x: 5, y: 9 };
+  const walls = [{ x: 12, y: 1.5, w: 1.2, h: 6.5 }, { x: 18.5, y: 10.5, w: 7, h: 1.2 }, { x: 12, y: 12.5, w: 1.2, h: 4 }];
+  const pl = { x: 22, y: 5 };
+  let meter = 0, lastShot = -99, spotted = false, reactAt = null, simTime = 0;
+  const segRect = (ax, ay, bx, by, r) => {
+    let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
+    const clip = (p, q) => { if (p === 0) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+    return clip(-dx, ax - r.x) && clip(dx, r.x + r.w - ax) && clip(-dy, ay - r.y) && clip(dy, r.y + r.h - ay) && t0 <= t1;
+  };
+  function seeState() {
+    const gaze = +$('see-gaze').value * Math.PI / 180, halfFov = +$('see-fov').value / 2;
+    const dx = pl.x - bot.x, dy = pl.y - bot.y, dist = Math.hypot(dx, dy);
+    let ang = Math.abs((Math.atan2(dy, dx) - gaze) * 180 / Math.PI) % 360; if (ang > 180) ang = 360 - ang;
+    const inCone = ang <= halfFov || (dist < 6 && ang < 100);
+    const blocked = walls.some(r => segRect(bot.x, bot.y, pl.x, pl.y, r));
+    const visible = inCone && !blocked && dist <= 70;
+    let rate = (+$('see-spd').value / 100) * (0.9 + 9 / Math.max(dist, 1.5));
+    if ($('see-sprint').checked) rate *= 1.35;
+    if (simTime - lastShot < 1) rate *= 2.2;
+    if (ang < 12) rate *= 1.4;
+    if ($('see-crouch').checked) rate *= 0.7;
+    return { dist, ang, inCone, blocked, visible, rate, gaze, halfFov };
+  }
+  function stepSee(dt) {
+    simTime += dt; const s = seeState();
+    if (s.visible) meter = Math.min(1.25, meter + s.rate * dt); else meter = Math.max(0, meter - 0.5 * dt);
+    if (!spotted && meter >= 1) { spotted = true; const ecc = lerp(0.76, 1.58, clamp(s.ang / 115, 0, 1)); reactAt = (+$('see-react').value / 100) * ecc; }
+    if (spotted && meter <= 0.05) { spotted = false; reactAt = null; }
+    return s;
+  }
+  function drawSee(s = seeState()) {
+    const cv = $('cv-see'), f = fit(cv, H / W); if (!f) return;
+    const { ctx, w, h } = f, k = w / W;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent'), good = css('--good'), bad = css('--bad');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) { ctx.moveTo(x * k, 0); ctx.lineTo(x * k, h); } for (let y = 0; y <= H; y += 2) { ctx.moveTo(0, y * k); ctx.lineTo(w, y * k); } ctx.stroke();
+    const R = 26 * k; ctx.fillStyle = botC; ctx.globalAlpha = 0.13; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k);
+    ctx.arc(bot.x * k, bot.y * k, R, s.gaze - s.halfFov * Math.PI / 180, s.gaze + s.halfFov * Math.PI / 180); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.08; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.arc(bot.x * k, bot.y * k, 6 * k, s.gaze - 100 * Math.PI / 180, s.gaze + 100 * Math.PI / 180); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 6 * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = ink2; walls.forEach(r => ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k));
+    ctx.strokeStyle = s.visible ? good : bad; ctx.lineWidth = 2; ctx.setLineDash(s.visible ? [] : [6, 5]);
+    ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(pl.x * k, pl.y * k); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = botC; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(bot.x * k + Math.cos(s.gaze) * 22, bot.y * k + Math.sin(s.gaze) * 22); ctx.stroke();
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, $('see-crouch').checked ? 6 : 8, 0, Math.PI * 2); ctx.fill();
+    if (simTime - lastShot < 1) { ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, 14 + (simTime - lastShot) * 30, 0, Math.PI * 2); ctx.stroke(); }
+    const bx = 10, by = h - 22, bw = Math.min(220, w - 20), bh = 10;
+    ctx.fillStyle = grid; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = spotted ? bad : acc; ctx.fillRect(bx, by, bw * meter / 1.25, bh);
+    ctx.strokeStyle = ink; ctx.beginPath(); ctx.moveTo(bx + bw / 1.25, by - 3); ctx.lineTo(bx + bw / 1.25, by + bh + 3); ctx.stroke();
+    ctx.fillStyle = ink; ctx.font = '12px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
+    ctx.fillStyle = ink2; ctx.fillText('6 m (±100°)', bot.x * k + 6 * k * 0.7, bot.y * k - 6 * k * 0.7);
+    $('r-state').innerHTML = spotted ? '<span class="off">Spotted</span>' : (s.visible ? '<span class="warn">Seeing</span>' : (s.blocked ? 'Behind cover' : 'Out of view'));
+    $('r-dist').textContent = s.dist.toFixed(1) + ' m'; $('r-ang').textContent = s.ang.toFixed(0) + '°';
+    $('r-rate').textContent = s.visible ? s.rate.toFixed(2) + '/s' : '-0.50/s'; $('r-meter').textContent = meter.toFixed(2);
+    $('r-react').textContent = reactAt != null ? reactAt.toFixed(2) + ' s' : '-';
+  }
+  ['see-gaze', 'see-fov', 'see-spd', 'see-react'].forEach(id => $(id).addEventListener('input', () => { $('o-gaze').textContent = $('see-gaze').value + '°'; $('o-fov').textContent = $('see-fov').value + '°'; $('o-spd').textContent = (+$('see-spd').value / 100).toFixed(2) + '×'; $('o-react').textContent = (+$('see-react').value / 100).toFixed(2) + ' s'; drawSee(); }));
+  $('see-gaze').dispatchEvent(new Event('input'));
+  $('see-fire').onclick = () => { lastShot = simTime; };
+  $('see-reset').onclick = () => { meter = 0; spotted = false; reactAt = null; drawSee(); };
+  const cvSee = $('cv-see');
+  const movePl = e => { const r = cvSee.getBoundingClientRect(), k = r.width / W; pl.x = clamp((e.clientX - r.left) / k, 0.3, W - 0.3); pl.y = clamp((e.clientY - r.top) / k, 0.3, H - 0.3); drawSee(); };
+  let dragging = false;
+  cvSee.addEventListener('pointerdown', e => { dragging = true; cvSee.setPointerCapture(e.pointerId); movePl(e); });
+  cvSee.addEventListener('pointermove', e => { if (dragging) movePl(e); });
+  cvSee.addEventListener('pointerup', () => { dragging = false; });
+  redrawers.push(() => drawSee());
+  let lastT = performance.now(), acc = 0;
+  (function seeLoop(t) { const dt = Math.min(0.25, (t - lastT) / 1000); lastT = t; acc += dt; let s = null; while (acc >= 0.1) { s = stepSee(0.1); acc -= 0.1; } if (s) drawSee(s); requestAnimationFrame(seeLoop); })(performance.now());
+
+  // ---------------- TacticalBotBrain.Think priority waterfall (+ BotController resupply override), as of 11-18 (D61/D65) ----------------
+  const GOALS = [
+    ['1', 'Retreat', 'Health under 38 % while under fire with a target: fall back to cover that breaks line of sight within 22 m (7 s at most, out again above 85 %).'],
+    ['2', 'Follow order', 'Active BotDirective: HoldPosition, MoveTo, Attack, Retreat, Flank or FollowLeader.'],
+    ['2.5', 'Urgent flag contest', 'CTF: an enemy team is capturing or contesting and no target is in sight within 14 m: go straight for the zone core.'],
+    ['3a', 'Take cover', 'Inside engage: reloading in the open, break line of sight at a CoverPoint within 10 m.'],
+    ['3b', 'Anti-camp flank', 'Target anchored longer than the 4.0–7.2 s window: pick a 90° off-axis TacticalPoint (6–30 m) and commit for 9 s (18 s cooldown).'],
+    ['3c', 'Engage', 'Target visible or seen under 0.7 s ago. Hardened and Veteran first press a weak target (D61/D65); otherwise close in beyond 1.35 × desired range, back off under 5 m if cautious, strafe and shoot.'],
+    ['4', 'Continue flank', 'A flank is still running after sight drops.'],
+    ['5', 'Hunt', 'Lost sight under 10 s ago: go to the last known position; between 2.5 and 10 m slice the corner and pre-aim at head height (1.42 m).'],
+    ['6', 'Investigate', 'Heard a gunshot or footsteps in the last 8 s: walk to the noise and look at it at eye level (D61).'],
+    ['6.3', 'Resupply', 'BotController override: armour broken or ammo low, nothing seen for 2.5 s, not under fire and no order: nearest ready ammo station.'],
+    ['6.5', 'Flag zone', 'CTF active: contested breach, core anchor (8 slots) or perimeter overwatch, by how many allies are already there.'],
+    ['7', 'Follow leader', 'Team modes: stagger 2.5–5 m wide and 4–8 m behind the leader, scanning ±75° of the rear flank.'],
+    ['8', 'Patrol', 'Fallback: weighted tactical points, preferring stale ones about 18 m away.'],
+  ];
+  function decide() {
+    const hp = +$('b-hp').value / 100, dist = +$('b-dist').value, seen = +$('b-seen').value, anchor = +$('b-anchor').value, flankWin = +$('b-flankwin').value;
+    const aggr = +$('b-preset').value, weak = $('b-weak').checked, supply = $('b-supply').checked, capture = $('b-capture').checked;
+    const hasT = $('b-target').checked, vis = hasT && $('b-visible').checked && seen === 0, hurt = $('b-hurt').checked;
+    const order = $('b-order').value, reload = $('b-reload').checked, noise = $('b-noise').checked, flag = $('b-flag').checked, squad = $('b-squad').checked;
+    const recentEngage = hasT && (vis || seen < 0.7);
+    const pressing = hasT && weak && aggr >= 0.68;
+    const disengaged = !vis && !hurt && !(hasT && seen <= 2.5) && !order;
+    const desired = 28 * lerp(0.8, 0.35, aggr); // MK18 effective range 28 m x Lerp(0.8, 0.35, aggression)
+    const conds = [
+      [hp < 0.38 && hurt && hasT, hp >= 0.38 ? 'health ' + Math.round(hp * 100) + ' % is 38 % or more' : (!hasT ? 'no target' : 'not under fire')],
+      [!!order, 'no commander order'],
+      [capture && (!vis || dist > 14), !capture ? 'no enemy capturing' : 'target in sight within 14 m'],
+      [recentEngage && reload, !recentEngage ? 'not in the engage window (seen under 0.7 s)' : 'not reloading'],
+      [recentEngage && anchor > flankWin, !recentEngage ? 'not in the engage window' : 'anchored ' + anchor + ' s, window ' + flankWin.toFixed(1) + ' s'],
+      [recentEngage, !hasT ? 'no target' : 'target not visible, seen ' + seen + ' s ago'],
+      [false, 'no flank running'],
+      [hasT && !vis && seen < 10, !hasT ? 'no target' : (vis ? 'target in sight' : 'lost sight 10 s or more ago')],
+      [noise, 'no noise in the last 8 s'],
+      [supply && disengaged, !supply ? 'armour and ammo fine' : 'still in or near a fight'],
+      [flag && !vis && (!hasT || seen > 3.2), !flag ? 'no flag zone' : 'fresh contact nearby'],
+      [squad, 'no squad leader'],
+      [true, '']
+    ];
+    const win = conds.findIndex(c => c[0]);
+    const list = $('goals'); list.innerHTML = '';
+    GOALS.forEach(([num, name, desc], i) => {
+      const li = document.createElement('li');
+      li.className = 'goal' + (i === win ? ' win' : (i < win ? ' skip' : ''));
+      let why = i < win ? 'Skipped: ' + conds[i][1] + '.' : desc;
+      if (i === win && num === '2') why = 'Executing commander directive: ' + order + '.';
+      if (i === win && num === '3c') {
+        if (pressing && dist > 4.5) why = 'Pressing (aggression ' + aggr.toFixed(2) + ', target weak): push to its last known position' + (!vis && dist > 9 ? ' at a sprint.' : '.');
+        else if (dist > desired * 1.35) why += ' At ' + dist + ' m, beyond 1.35 × desired range (' + desired.toFixed(1) + ' m): closing in.';
+        else if (dist < 5 && aggr < 0.5) why += ' Under 5 m and cautious: backing off 4 m.';
+        else why += ' In range (desired ' + desired.toFixed(1) + ' m): strafe and fire.';
+      }
+      if (i === win && num === '5') {
+        if (pressing) why += ' Pressing a weak target: no corner slicing' + (dist > 9 ? ', sprinting.' : '.');
+        else if (dist < 10 && dist > 2.5 && seen > 0.9 && seen < 4.5) why += ' Inside 2.5–10 m: slicing the corner with crouch peeks.';
+      }
+      li.innerHTML = `<span class="n">${num}</span><span><b>${name}</b><div class="why">${why}</div></span>`;
+      list.appendChild(li);
+    });
+    $('o-hp').textContent = Math.round(hp * 100) + '%'; $('o-bdist').textContent = dist + ' m'; $('o-seen').textContent = seen + ' s';
+    $('o-anchor').textContent = anchor + ' s'; $('o-flankwin').textContent = flankWin.toFixed(1) + ' s';
+  }
+  document.querySelectorAll('#decide input, #decide select').forEach(el => el.addEventListener('input', decide));
+  decide();
+
+  // ---------------- chapter 2.5: dual-layer pathfinding visualizer ----------------
+  let navVisitTick = 0, navAnim = 0;
+  function drawNav() {
+    const f = fit($('cv-nav'), 0.56); if (!f) return;
+    const { ctx, w, h } = f, k = w / W;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent'), good = css('--good'), warn = css('--warn');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) { ctx.moveTo(x * k, 0); ctx.lineTo(x * k, h); } for (let y = 0; y <= H; y += 2) { ctx.moveTo(0, y * k); ctx.lineTo(w, y * k); } ctx.stroke();
+    ctx.fillStyle = ink2; walls.forEach(r => ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k));
+
+    const mode = $('nav-mode').value, bPos = { x: 4.5, y: 9.2 }, threat = { x: 23.5, y: 5.5 };
+    const covers = [{ x: 10.6, y: 4.5, crouch: true }, { x: 10.6, y: 14.2, crouch: false }, { x: 14.3, y: 3.8, crouch: false }, { x: 17.5, y: 12.6, crouch: true }, { x: 21.8, y: 9.5, crouch: false }, { x: 7.2, y: 15.6, crouch: true }];
+    const pts = [{ x: 7, y: 3.5, w: 1.2 }, { x: 15.5, y: 4.5, w: 1.0 }, { x: 16, y: 14.8, w: 1.4 }, { x: 24.5, y: 14.5, w: 1.1 }, { x: 28, y: 8.5, w: 0.9 }, { x: 9.5, y: 12.2, w: 1.0 }];
+
+    let outStats = [], formulaNote = '';
+    if (mode === 'corridor') {
+      const stuck = $('nav-stuck').checked, strafe = $('nav-strafe').checked;
+      const corners = [{ x: 4.5, y: 9.2 }, { x: 10.8, y: 9.6 }, { x: 15.0, y: 7.5 }, { x: 20.5, y: 5.5 }];
+      // NavMesh corridor ribbon
+      ctx.strokeStyle = botC; ctx.globalAlpha = 0.16; ctx.lineWidth = 22; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); corners.forEach((p, i) => i ? ctx.lineTo(p.x * k, p.y * k) : ctx.moveTo(p.x * k, p.y * k)); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = botC; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+      ctx.beginPath(); corners.forEach((p, i) => i ? ctx.lineTo(p.x * k, p.y * k) : ctx.moveTo(p.x * k, p.y * k)); ctx.stroke(); ctx.setLineDash([]);
+      corners.forEach((c, i) => {
+        ctx.fillStyle = i === 1 ? acc : botC; ctx.beginPath(); ctx.arc(c.x * k, c.y * k, i === 1 ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText(i === 1 ? 'corners[1] steer + slice' : 'c[' + i + ']', c.x * k + 8, c.y * k - 6);
+      });
+      // Corner slicing gaze sweep (±28°)
+      const gAng = Math.atan2(corners[1].y - bPos.y, corners[1].x - bPos.x) + Math.sin(navAnim * 1.4) * 28 * Math.PI / 180;
+      ctx.strokeStyle = warn; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo(bPos.x * k + Math.cos(gAng) * 3.8 * k, bPos.y * k + Math.sin(gAng) * 3.8 * k); ctx.stroke();
+      if (strafe) {
+        ctx.strokeStyle = good; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo((bPos.x + 1.8) * k, (bPos.y + Math.sin(navAnim * 3) * 2.2) * k); ctx.stroke();
+        ctx.fillStyle = good; ctx.fillText('ADAD: 0.65·steer + 0.85·right', (bPos.x + 0.4) * k, (bPos.y + 3.2) * k);
+      }
+      if (stuck) {
+        ctx.strokeStyle = css('--bad'); ctx.lineWidth = 2; ctx.strokeRect(7.4 * k, 8.6 * k, 1.4 * k, 1.4 * k);
+        ctx.fillStyle = css('--bad'); ctx.fillText('speed < 0.4 m/s -> 1.1 s JUMP / 2.4 s ResetPath()', 6.4 * k, 7.9 * k);
+      }
+      outStats = [['updatePosition', 'false (kinematic)'], ['Repath gate', '0.6 s / >1 m'], ['Strafe blend', strafe ? '0.65 / 0.85' : 'Off'], ['Stuck guard', stuck ? 'ACTIVE' : 'Idle (<1.1 s)']];
+      formulaNote = 'NavMeshAgent.nextPosition = transform.position every frame; gaze scans corners[1] ±28° instead of looking at floor.';
+    } else if (mode === 'cover') {
+      let best = null, bs = -1e9;
+      covers.forEach(c => {
+        const d = Math.hypot(c.x - bPos.x, c.y - bPos.y), dT = Math.hypot(c.x - threat.x, c.y - threat.y);
+        const hidden = walls.some(r => segRect(threat.x, threat.y, c.x, c.y, r));
+        const sc = -d - (dT < 6 ? 30 : 0);
+        c.hidden = hidden; c.sc = sc;
+        if (hidden && sc > bs) { bs = sc; best = c; }
+      });
+      covers.forEach(c => {
+        const win = c === best;
+        ctx.strokeStyle = c.hidden ? good : css('--bad'); ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(threat.x * k, threat.y * k); ctx.lineTo(c.x * k, c.y * k); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = win ? acc : (c.hidden ? good : ink2);
+        ctx.beginPath(); ctx.arc(c.x * k, c.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+        ctx.fillText(c.hidden ? (c.sc.toFixed(1) + (c.crouch ? ' crouch' : '')) : 'EXPOSED', c.x * k + 8, c.y * k + 4);
+      });
+      outStats = [['Winner', best ? best.sc.toFixed(1) : 'None'], ['Max Radius', '10 m / 22 m'], ['LOS Check', 'threatEye(+1.5m)'], ['Winner Cover', best && best.crouch ? '0.9 m crouch' : '1.5 m stand']];
+      formulaNote = 'PickCover: Physics.Linecast(threatEye, cover + (0.9m or 1.5m)); score = -dist - 30*(distToThreat < 6m) + rng*3.';
+    } else if (mode === 'flank') {
+      const toT = Math.atan2(threat.y - bPos.y, threat.x - bPos.x);
+      let best = null, bs = -1e9;
+      pts.forEach(p => {
+        const d = Math.hypot(p.x - threat.x, p.y - threat.y);
+        if (d < 6 || d > 30) { p.valid = false; return; }
+        p.valid = true;
+        const fromT = Math.atan2(p.y - threat.y, p.x - threat.x);
+        let diff = Math.abs(((fromT - (toT + Math.PI)) * 180 / Math.PI) % 360); if (diff > 180) diff = 360 - diff;
+        p.ang = diff; p.sc = -Math.abs(diff - 90) + p.w * 10;
+        if (p.sc > bs) { bs = p.sc; best = p; }
+      });
+      ctx.strokeStyle = acc; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo(threat.x * k, threat.y * k); ctx.stroke(); ctx.setLineDash([]);
+      pts.forEach(p => {
+        const win = p === best;
+        ctx.fillStyle = !p.valid ? grid : (win ? acc : botC);
+        ctx.beginPath(); ctx.arc(p.x * k, p.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
+        if (p.valid) { ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText(Math.round(p.ang) + '° (' + p.sc.toFixed(1) + ')', p.x * k + 8, p.y * k + 4); }
+      });
+      outStats = [['Best Angle', best ? Math.round(best.ang) + '°' : '-'], ['Target Band', '6–30 m off threat'], ['Cooldown', '18 s'], ['Duration', '9 s max']];
+      formulaNote = 'TryPickFlank scores each TacticalPoint by -|angle(-toTarget, fromTarget) - 90°| + weight*10 + rng*15.';
+    } else if (mode === 'patrol') {
+      let best = null, bs = -1e9;
+      pts.forEach((p, idx) => {
+        const d = Math.hypot(p.x - bPos.x, p.y - bPos.y);
+        const since = ((idx * 17 + navVisitTick * 23) % 60);
+        const sc = p.w * 20 + since * 0.5 - Math.abs(d - 18) * 0.3;
+        p.since = since; p.sc = sc; if (sc > bs) { bs = sc; best = p; }
+      });
+      ctx.strokeStyle = good; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(bPos.x * k, bPos.y * k, 18 * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = good; ctx.font = '11px ' + css('--mono'); ctx.fillText('18 m sweet spot', (bPos.x + 13) * k, 2.2 * k);
+      pts.forEach(p => {
+        const win = p === best;
+        ctx.fillStyle = win ? acc : botC; ctx.beginPath(); ctx.arc(p.x * k, p.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('t=' + p.since + 's sc=' + p.sc.toFixed(0), p.x * k + 8, p.y * k + 4);
+      });
+      outStats = [['Winning Score', best.sc.toFixed(1)], ['Optimal Dist', '18 m'], ['Repick Timer', '25 s'], ['Sprint If', '> 14 m & agg>0.45']];
+      formulaNote = 'PickPatrol: score = p.weight*20 + min(60, sinceVisit)*0.5 - |dist - 18m|*0.3 + rng*12.';
+    } else {
+      const fx = 16, fy = 9, coreR = 2.6, outerR = 8.5;
+      ctx.fillStyle = botC; ctx.globalAlpha = 0.1; ctx.beginPath(); ctx.arc(fx * k, fy * k, outerR * k, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.22; ctx.beginPath(); ctx.arc(fx * k, fy * k, coreR * k, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = botC; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(fx * k, fy * k, outerR * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      for (let s = 0; s < 8; s++) {
+        const a = s * Math.PI / 4, sx = fx + Math.cos(a) * (coreR * 0.65), sy = fy + Math.sin(a) * (coreR * 0.65);
+        ctx.fillStyle = s % 2 ? botC : acc; ctx.beginPath(); ctx.arc(sx * k, sy * k, 4.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('8 golden slots: coreRadius*0.65 (~1.69 m)', fx * k - 105, (fy - outerR - 0.4) * k);
+      outStats = [['Slot Hash', 'DisplayName & 7'], ['Slot Spacing', '45° steps'], ['Normal Rad', '1.69 m (2.25×)'], ['Contested Rad', 'min(R*0.5, 4.5 m)']];
+      formulaNote = 'TacticalBotBrain Step 6.5: deterministic 8-slot offset prevents bots stacking on identical coordinates inside the flag zone.';
+    }
+    ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bPos.x * k, bPos.y * k, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(threat.x * k, threat.y * k, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('BOT', bPos.x * k - 10, bPos.y * k - 10); ctx.fillText('THREAT', threat.x * k - 18, threat.y * k - 10);
+    $('nav-out').innerHTML = outStats.map(([k2, v]) => `<div class="stat"><div class="k">${k2}</div><div class="v">${v}</div></div>`).join('');
+    $('nav-formula').textContent = formulaNote;
+  }
+  $('nav-mode').addEventListener('change', drawNav);
+  $('nav-strafe').addEventListener('change', drawNav);
+  $('nav-stuck').addEventListener('change', drawNav);
+  $('nav-step').onclick = () => { navVisitTick++; drawNav(); };
+  redrawers.push(drawNav); drawNav();
+  if (!reduce) (function navTick() { navAnim += 0.02; if ($('nav-mode').value === 'corridor') drawNav(); requestAnimationFrame(navTick); })();
+
+  // ---------------- chapter 3.5: empirical ESTA / CSKnow / Aim Lab miss pattern ----------------
+  let missSeed = 19;
+  function drawMiss() {
+    const f = fit($('cv-miss'), 0.72); if (!f) return;
+    const { ctx, w, h } = f;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), acc = css('--accent'), botC = css('--bot'), good = css('--good'), bad = css('--bad');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+
+    const ang = +$('m-flick').value * Math.PI / 180;
+    const amp = +$('m-amp').value;
+    const strafe = +$('m-strafe').value;
+    const heat = +$('m-heat').value / 100;
+    const stress = +$('m-stress').value / 100;
+    $('o-mflick').textContent = $('m-flick').value + '°';
+    $('o-mamp').textContent = amp + '°';
+    $('o-mstrafe').textContent = strafe.toFixed(1) + ' m/s';
+    $('o-mheat').textContent = $('m-heat').value + '%';
+    $('o-mstress').textContent = $('m-stress').value + '%';
+
+    const cx = w * 0.5, cy = h * 0.48, pxPerDeg = Math.min(w, h) / 14;
+    // angular grid
+    ctx.strokeStyle = grid; ctx.lineWidth = 1;
+    for (let g = -6; g <= 6; g += 2) {
+      ctx.beginPath(); ctx.moveTo(cx + g * pxPerDeg, 12); ctx.lineTo(cx + g * pxPerDeg, h - 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(12, cy + g * pxPerDeg); ctx.lineTo(w - 12, cy + g * pxPerDeg); ctx.stroke();
+    }
+    // Operator hitbox silhouette at 18 m (~1.6 deg chest width, ~0.85 deg head)
+    const headR = 0.52 * pxPerDeg, torsoW = 1.65 * pxPerDeg, torsoH = 2.75 * pxPerDeg;
+    ctx.fillStyle = botC; ctx.globalAlpha = 0.18;
+    ctx.beginPath(); ctx.arc(cx, cy - torsoH * 0.42 - headR, headR, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(cx - torsoW / 2, cy - torsoH * 0.42, torsoW, torsoH);
+    ctx.fillRect(cx - torsoW * 0.42, cy + torsoH * 0.58, torsoW * 0.35, torsoH * 0.6);
+    ctx.fillRect(cx + torsoW * 0.07, cy + torsoH * 0.58, torsoW * 0.35, torsoH * 0.6);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = botC; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy - torsoH * 0.42 - headR, headR, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeRect(cx - torsoW / 2, cy - torsoH * 0.42, torsoW, torsoH);
+
+    // Exact BotController constants: muAlong undershoot bias (-7.5% to +3.5%), sigma_along, sigma_perp = 0.44 * sigma_along, 1.08/0.70 wrist/arm scaling
+    const sdnSigma = clamp(amp * (0.045 + 0.045 * stress), 0.35, 6.5);
+    const muAlongDeg = lerp(-0.075, 0.035, stress) * amp;
+    const ux = Math.cos(ang), uy = Math.sin(ang), nx = -uy, ny = ux;
+    // 125 ms visuomotor lag on strafing target (~0.125 * strafe / 18m in rad -> deg trailing behind motion)
+    const lagDeg = -(strafe * 0.125 / 18) * (180 / Math.PI) * 1.4;
+    const meanX = -ux * muAlongDeg * 1.08 + lagDeg;
+    const meanY = -uy * muAlongDeg * 0.70 - heat * 1.15;
+
+    // Incoming flick trajectory arrow
+    ctx.strokeStyle = ink2; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - ux * w * 0.42, cy - uy * w * 0.42); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    ctx.fillText('flick vector (' + $('m-flick').value + '°)', 14, 22);
+
+    // Draw 95% empirical covariance ellipse
+    ctx.save();
+    ctx.translate(cx + meanX * pxPerDeg, cy + meanY * pxPerDeg);
+    ctx.rotate(Math.atan2(uy * 0.70, ux * 1.08));
+    ctx.strokeStyle = acc; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, (sdnSigma * 1.08 + Math.max(0, heat - 0.25) * 1.4) * pxPerDeg, (sdnSigma * 0.44 * 0.70) * pxPerDeg, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Sample 220 empirical shots using BotController formulas
+    const rnd = mulberry(missSeed);
+    let hits = 0;
+    const N = 220;
+    for (let i = 0; i < N; i++) {
+      const epsAlong = muAlongDeg + ((rnd() + rnd()) - 1) * sdnSigma;
+      const epsPerp = ((rnd() + rnd()) - 1) * (0.44 * sdnSigma);
+      const weave = heat > 0.25 ? Math.sin(i * 1.15) * 0.65 * (heat - 0.25) * 2.2 : 0;
+      const ex = (-(ux * epsAlong + nx * epsPerp) * 1.08) + lagDeg + weave;
+      const ey = (-(uy * epsAlong + ny * epsPerp) * 0.70) - (rnd() * heat * 1.6);
+      const sx = cx + ex * pxPerDeg, sy = cy + ey * pxPerDeg;
+      const inHead = Math.hypot(sx - cx, sy - (cy - torsoH * 0.42 - headR)) <= headR;
+      const inTorso = sx >= cx - torsoW / 2 && sx <= cx + torsoW / 2 && sy >= cy - torsoH * 0.42 && sy <= cy + torsoH * 0.58;
+      if (inHead || inTorso) hits++;
+      ctx.fillStyle = inHead ? bad : (inTorso ? good : acc);
+      ctx.globalAlpha = inHead || inTorso ? 0.85 : 0.45;
+      ctx.beginPath(); ctx.arc(sx, sy, inHead ? 3.5 : 2.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+    ctx.fillText('95% anisotropic scatter ellipse (green=torso, red=head, orange=near miss)', 14, h - 10);
+    $('r-mhit').textContent = Math.round(hits * 100 / N) + '%';
+    $('r-mlag').textContent = Math.abs(lagDeg).toFixed(2) + '°';
+  }
+  document.querySelectorAll('#miss input').forEach(el => el.addEventListener('input', drawMiss));
+  $('m-sample').onclick = () => { missSeed = (missSeed * 7919 + 29) % 100003; drawMiss(); };
+  redrawers.push(drawMiss); drawMiss();
+
+  // ---------------- chapter 5: adaptive ----------------
+  let skill = 0.48, pStreak = 0, bStreak = 0; const hist = [0.48];
+  function profile() {
+    const acc = +$('ad-acc').value / 100, hs = +$('ad-hsr').value / 100, rush = +$('ad-rush').value / 100, crouch = +$('ad-crouch').value / 100;
+    const accBonus = clamp((acc - 0.2) * 1.4, 0, 1), hsBonus = clamp(hs * 1.5, 0, 1), e = clamp(skill * 0.78 + accBonus * 0.22, 0, 1);
+    const antiCamp = clamp(0.25 + (1 - rush) * 0.35, 0, 1);
+    const flankWin = lerp(4.0, 7.2, rush);
+    return [
+      ['Effective skill', e.toFixed(2)],
+      ['Reaction', lerp(0.52, 0.16, e).toFixed(2) + '-' + lerp(0.76, 0.26, e).toFixed(2) + ' s'],
+      ['Anti-camp timer', flankWin.toFixed(1) + ' s'],
+      ['Aim speed', lerp(4.4, 10.2, e).toFixed(1)],
+      ['Settled error', lerp(1.35, 0.28, e).toFixed(2) + '°'],
+      ['Headshot %', Math.round(clamp(lerp(0.06, 0.30, e * 0.7 + hsBonus * 0.3), 0.05, 0.34) * 100) + '%'],
+      ['Flank chance', Math.round(lerp(0.18, 0.48, e * 0.6 + antiCamp * 0.4) * 100) + '%'],
+      ['Burst', Math.round(lerp(2, 4, e)) + '-' + Math.round(lerp(5, 8, e)) + ' rds']
+    ];
+  }
+  function drawAdapt() {
+    $('adapt-out').innerHTML = profile().map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    const f = fit($('cv-skill'), 0.32); if (!f) return;
+    const { ctx, w, h } = f, ink2 = css('--ink-2'), grid = css('--grid'), acc = css('--accent');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    const L = 40, B = 18, T = 10, n = Math.max(hist.length, 10), X = i => L + (w - L - 10) * i / (n - 1), Y = s => T + (h - T - B) * (1 - s);
+    ctx.strokeStyle = grid; ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    [0.12, 0.48, 0.96].forEach(s => { ctx.beginPath(); ctx.moveTo(L, Y(s)); ctx.lineTo(w - 10, Y(s)); ctx.stroke(); ctx.fillText(s.toFixed(2), 4, Y(s) + 4); });
+    ctx.strokeStyle = acc; ctx.lineWidth = 2.5; ctx.beginPath(); hist.forEach((s, i) => i ? ctx.lineTo(X(i), Y(s)) : ctx.moveTo(X(i), Y(s))); ctx.stroke();
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(X(hist.length - 1), Y(skill), 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink2; ctx.fillText('bot skill after each duel (now ' + skill.toFixed(2) + ')', L, h - 4);
+    $('o-acc').textContent = $('ad-acc').value + '%'; $('o-hsr').textContent = $('ad-hsr').value + '%'; $('o-crouch').textContent = $('ad-crouch').value + '%';
+    const r = +$('ad-rush').value; $('o-rush').textContent = r > 60 ? 'rusher' : (r < 40 ? 'camper' : 'mixed');
+  }
+  const win = headshot => { pStreak++; bStreak = 0; const acc = +$('ad-acc').value / 100; skill = clamp(skill + 0.045 + (pStreak >= 2 ? 0.03 : 0) + (headshot ? 0.02 : 0) + acc * 0.03, 0.12, 0.96); hist.push(skill); drawAdapt(); };
+  $('ad-win').onclick = () => win(false); $('ad-hs').onclick = () => win(true);
+  $('ad-lose').onclick = () => { bStreak++; pStreak = 0; skill = clamp(skill - 0.040 - (bStreak >= 2 ? 0.035 : 0), 0.12, 0.96); hist.push(skill); drawAdapt(); };
+  $('ad-reset').onclick = () => { skill = 0.48; pStreak = bStreak = 0; hist.length = 0; hist.push(0.48); drawAdapt(); };
+  document.querySelectorAll('#adapt input').forEach(el => el.addEventListener('input', drawAdapt));
+  [() => win(false), () => win(true), () => win(false)].forEach(f => f()); $('ad-lose').onclick(); $('ad-lose').onclick(); win(false);
+  redrawers.push(drawAdapt);
+
+  // ---------------- TAB 2: CAPTURE THE FLAG SIMULATOR ----------------
+  const ctfPlazas = [
+    { name: 'HARBOUR CRANE', x: 16, y: 9 },
+    { name: 'CONTAINER PIER', x: 25, y: 4.5 },
+    { name: 'DRYDOCK PLAZA', x: 7, y: 14 },
+    { name: 'CONTROL BRIDGE', x: 25, y: 14 }
+  ];
+  let ctfIdx = 0, ctfProg = 0, ctfRotTimer = 55, ctfPl = { x: 17.5, y: 9.0 }, ctfDrag = false, ctfT = 0;
+  function proxSpeed(d, core = 2.6, outer = 11.5) {
+    if (d > outer) return 0;
+    if (d <= core) return 2.25;
+    const t = clamp((d - core) / (outer - core), 0, 1);
+    return lerp(2.25, 0.28, Math.pow(t, 0.65));
+  }
+  function stepCtf(dt) {
+    ctfT += dt;
+    ctfRotTimer -= dt;
+    if (ctfRotTimer <= 0) { ctfIdx = (ctfIdx + 1) % ctfPlazas.length; ctfProg = 0; ctfRotTimer = 55; }
+    const z = ctfPlazas[ctfIdx];
+    const pDist = Math.hypot(ctfPl.x - z.x, ctfPl.y - z.y);
+    const pForce = proxSpeed(pDist);
+    const nBots = +$('ctf-bots').value;
+    const radRatio = (+$('ctf-pos').value / 100) * 11.5;
+    let eForce = 0;
+    for (let i = 0; i < nBots; i++) {
+      const a = (i * 2 + ctfT * 0.45);
+      const bx = z.x + Math.cos(a) * radRatio, by = z.y + Math.sin(a) * radRatio;
+      const m = proxSpeed(Math.hypot(bx - z.x, by - z.y));
+      eForce = Math.max(eForce, m);
+    }
+    const diff = pForce - eForce;
+    const contested = pForce > 0.05 && eForce > 0.05 && Math.abs(diff) < 0.65;
+    const baseRate = 1 / 7.5;
+    let state = 'Idle';
+    if (contested) state = 'Contested';
+    else if (diff > 0.05) { state = 'Capturing'; ctfProg = clamp(ctfProg + diff * baseRate * dt, -1, 1); }
+    else if (diff < -0.05) { state = 'Losing'; ctfProg = clamp(ctfProg + diff * baseRate * dt, -1, 1); }
+    else ctfProg = Math.abs(ctfProg) < baseRate * 0.22 * dt ? 0 : ctfProg - Math.sign(ctfProg) * baseRate * 0.22 * dt;
+
+    if (Math.abs(ctfProg) >= 0.999) {
+      ctfIdx = (ctfIdx + 1) % ctfPlazas.length; ctfProg = 0; ctfRotTimer = 55;
+      addChat('FLAG HQ', '#47d9ff', 'Sector captured! New strategic flag active at ' + ctfPlazas[ctfIdx].name + '!');
+    }
+    return { z, pDist, pForce, eForce, state, nBots, radRatio };
+  }
+  function drawCtf(st) {
+    const f = fit($('cv-ctf'), 0.56); if (!f) return;
+    const { ctx, w, h } = f, k = w / W;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid'), botC = css('--bot'), acc = css('--accent'), good = css('--good'), warn = css('--warn');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) { ctx.moveTo(x * k, 0); ctx.lineTo(x * k, h); } for (let y = 0; y <= H; y += 2) { ctx.moveTo(0, y * k); ctx.lineTo(w, y * k); } ctx.stroke();
+    // Draw inactive anchors
+    ctfPlazas.forEach((p, idx) => {
+      if (idx === ctfIdx) return;
+      ctx.strokeStyle = ink2; ctx.globalAlpha = 0.3; ctx.beginPath(); ctx.arc(p.x * k, p.y * k, 1.2 * k, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = ink2; ctx.font = '10px ' + css('--mono'); ctx.fillText(p.name, p.x * k - 34, p.y * k - 14);
+    });
+    const z = st.z;
+    // Outer ring (11.5m) & Core ring (2.6m)
+    const ringC = st.state === 'Contested' ? warn : (ctfProg >= 0 ? good : css('--bad'));
+    ctx.fillStyle = ringC; ctx.globalAlpha = 0.1; ctx.beginPath(); ctx.arc(z.x * k, z.y * k, 8.2 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.arc(z.x * k, z.y * k, 2.2 * k, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = ringC; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(z.x * k, z.y * k, 8.2 * k, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x * k, z.y * k, 2.2 * k, 0, Math.PI * 2); ctx.stroke();
+    // Capture arc
+    if (Math.abs(ctfProg) > 0.01) {
+      ctx.strokeStyle = ctfProg > 0 ? good : css('--bad'); ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(z.x * k, z.y * k, 2.7 * k, -Math.PI / 2, -Math.PI / 2 + ctfProg * Math.PI * 2); ctx.stroke();
+    }
+    // Enemy bots
+    const ffa = $('ctf-ffa').checked;
+    for (let i = 0; i < st.nBots; i++) {
+      const a = (i * 2 + ctfT * 0.45);
+      const bx = z.x + Math.cos(a) * clamp(st.radRatio, 1.5, 8.0), by = z.y + Math.sin(a) * clamp(st.radRatio, 1.5, 8.0);
+      ctx.fillStyle = ffa && i % 2 ? '#e2b54a' : botC;
+      ctx.beginPath(); ctx.arc(bx * k, by * k, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    // Dragged Player
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(ctfPl.x * k, ctfPl.y * k, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+    ctx.fillText(z.name + ' (CORE ≤2.6m = 2.25× | OUTER 11.5m = 0.28×)', 12, 18);
+    ctx.fillText('YOU', ctfPl.x * k + 10, ctfPl.y * k + 4);
+    $('o-ctfbots').textContent = st.nBots;
+    $('o-ctfpos').textContent = (st.radRatio).toFixed(1) + ' m';
+    $('r-ctfstate').textContent = st.state;
+    $('r-ctfdist').textContent = st.pDist.toFixed(1) + ' m';
+    $('r-ctfmult').textContent = st.pForce.toFixed(2) + '×';
+    $('r-ctfprog').textContent = Math.round(ctfProg * 100) + '%';
+    $('r-ctftime').textContent = Math.max(0, ctfRotTimer).toFixed(1) + ' s';
+  }
+  const cvCtf = $('cv-ctf');
+  const moveCtf = e => { const r = cvCtf.getBoundingClientRect(), k = r.width / W; ctfPl.x = clamp((e.clientX - r.left) / k, 0.5, W - 0.5); ctfPl.y = clamp((e.clientY - r.top) / k, 0.5, H - 0.5); };
+  cvCtf.addEventListener('pointerdown', e => { ctfDrag = true; cvCtf.setPointerCapture(e.pointerId); moveCtf(e); });
+  cvCtf.addEventListener('pointermove', e => { if (ctfDrag) moveCtf(e); });
+  cvCtf.addEventListener('pointerup', () => { ctfDrag = false; });
+  $('ctf-rotate').onclick = () => { ctfIdx = (ctfIdx + 1) % ctfPlazas.length; ctfProg = 0; ctfRotTimer = 55; };
+  $('ctf-reset').onclick = () => { ctfProg = 0; ctfRotTimer = 55; };
+  let ctfLast = performance.now();
+  (function ctfLoop(t) {
+    const dt = Math.min(0.1, (t - ctfLast) / 1000); ctfLast = t;
+    const st = stepCtf(dt);
+    drawCtf(st);
+    requestAnimationFrame(ctfLoop);
+  })(performance.now());
+
+  // ---------------- TAB 2: TACTICAL CHAT SIMULATOR ----------------
+  const chatHistory = [
+    { s: 'COMMS', c: '#f2bd47', m: 'Live tactical comms online. Press [T] to chat or issue squad calls.' }
+  ];
+  function addChat(sender, color, body) {
+    chatHistory.push({ s: sender, c: color, m: body });
+    while (chatHistory.length > 5) chatHistory.shift();
+    $('chat-lines').innerHTML = chatHistory.map(x => `<div class="chat-line"><b style="color:${x.c}">${x.s}</b>: ${x.m}</div>`).join('');
+  }
+  addChat('FLAG HQ', '#47d9ff', 'New strategic flag at HARBOUR CRANE! Crash inner ring for 2.25x capture!');
+  const ROASTS = ['sit down Operator, wide peek paid the tax', 'caught you reloading in the open Operator', 'you dropped your aim on that peek Operator'];
+  const HS_ROASTS = ['helmet check Operator — spotless', 'straight through the optic Operator ouch', 'one tap special for Operator'];
+  const BVB = ['BOT-03 were you shooting at birds or me??', 'somebody tell AI-04 ADS helps lol', 'BOT-03 really swung that wide with 20hp'];
+  const PKILL = ['alright Operator, sharp flick ngl', 'ok Operator is locked in today', 'fair play Operator, checking that off-angle next'];
+  const PLANS = ['Holding mid sightline — push opposite flank on my contact!', 'Enemies stacking tight; let\'s pinch from two angles.', 'Rotating to crossfire; flush them out toward my lane.'];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  $('ch-roast').onclick = () => addChat('AI-02', '#ff6b60', pick(ROASTS));
+  $('ch-hs').onclick = () => addChat('BOT-01', '#ff6b60', pick(HS_ROASTS));
+  $('ch-bvb').onclick = () => addChat('BOT-ALPHA', '#e2b54a', pick(BVB));
+  $('ch-pkill').onclick = () => addChat('AI-04', '#ff6b60', pick(PKILL));
+  $('ch-tdm').onclick = () => addChat('BOT-ALLY [TEAM]', '#5cc46a', pick(PLANS));
+  $('ch-flag').onclick = () => addChat('SECTOR', '#ffb847', ctfPlazas[ctfIdx].name + ' contested — push closer to overpower perimeter campers!');
+  function submitChat() {
+    const raw = $('chat-in').value.trim(); if (!raw) return;
+    $('chat-in').value = '';
+    addChat('Operator', '#5cc46a', raw);
+    const low = raw.toLowerCase();
+    if (low.includes('flank')) {
+      $('chat-directive').textContent = 'Issued: BotDirective { order = BotOrder.Flank, duration = 12f }';
+      setTimeout(() => addChat('BOT-ALLY [TEAM]', '#5cc46a', 'Copy! Swinging wide flank right now!'), 650);
+    } else if (low.includes('hold')) {
+      $('chat-directive').textContent = 'Issued: BotDirective { order = BotOrder.HoldPosition, duration = 12f }';
+      setTimeout(() => addChat('BOT-ALLY [TEAM]', '#5cc46a', 'Holding current angle, call when you push!'), 650);
+    } else if (low.includes('push') || low.includes('flag')) {
+      $('chat-directive').textContent = 'Issued: BotDirective { order = BotOrder.MoveTo, position = ActiveFlagPosition, duration = 12f }';
+      setTimeout(() => addChat('BOT-ALLY [TEAM]', '#5cc46a', 'Rogering up — crashing the objective with you!'), 650);
+    } else if (low.includes('gg')) {
+      $('chat-directive').textContent = 'No BotOrder parsed — social banter reply queued.';
+      setTimeout(() => addChat('AI-02', '#ff6b60', 'gg, tight rounds!'), 850);
+    } else {
+      $('chat-directive').textContent = 'No tactical keyword parsed — enemy trash talk queued.';
+      setTimeout(() => addChat('AI-02', '#ff6b60', 'talk all you want, peek mid then!'), 850);
+    }
+  }
+  $('chat-send').onclick = submitChat;
+  $('chat-in').addEventListener('keydown', e => { if (e.key === 'Enter') submitChat(); });
+
+  // ---------------- TAB 3: HOW AI BUILT LR2 & RESEARCH LAB ----------------
+  const PROTOS = {
+    v1: ['Protocol v1 (11-17 12:45 — Two Agents & Unity Lock)', 'Claude Code & Gemini worked via freeform sections and a single UNITY lock line. Catches: simultaneous Unity launch at 12:50; Gemini edited RetargetProxy before reading ownership; two different tools signed "Claude" when running Claude models.'],
+    v2: ['Protocol v2 (11-17 23:25 — 3 Agents, Cross-Review & Ledgers)', 'GitHub Copilot joined as third agent. Established Name-by-Tool (not model), strict Ownership Table, Research-First specs, Handoff Protocol on token limits, and CSV attribution ledgers (`tasks.csv`, `bugs.csv`).'],
+    v3: ['Protocol v3 (11-18 00:05+ — Check-the-Check & Compile Gate)', 'Mandated: (1) QA checks must fail on known-bad baselines before counting, (2) `dotnet build` gate BEFORE saving scripts/launching Unity, (3) WIP limit 2, (4) real system-clock timestamps, (5) `AssetDatabase.DisallowAutoRefresh()` in visible runs, and (6) auto-prompt continuity across limits. On 11-18 at 19:48 only Claude Code and Gemini were still up; the board now gives Claude the hard rows and Gemini the easy ones.']
+  };
+  let selProto = 'v3', agAnim = 0;
+  function renderProto() {
+    document.querySelectorAll('#proto-btns button').forEach(b => {
+      const on = b.dataset.proto === selProto; b.classList.toggle('active', on); b.classList.toggle('ghost', !on);
+    });
+    const [t, d] = PROTOS[selProto];
+    $('proto-desc').innerHTML = `<h3>${t}</h3><p class="note" style="margin:0">${d}</p>`;
+  }
+  document.querySelectorAll('#proto-btns button').forEach(b => b.onclick = () => { selProto = b.dataset.proto; renderProto(); });
+  renderProto();
+
+  function drawAgents() {
+    const f = fit($('cv-agents'), 0.62); if (!f) return;
+    const { ctx, w, h } = f;
+    const ink = css('--ink'), ink2 = css('--ink-2'), acc = css('--accent'), botC = css('--bot'), good = css('--good'), warn = css('--warn');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+
+    const nodes = [
+      { id: 'DEV', x: 0.5, y: 0.13, c: acc, lbl: 'Developer (1)', sub: 'Prompts · Playtest · Calls' },
+      { id: 'CLAUDE', x: 0.14, y: 0.46, c: '#b388ff', lbl: 'Claude Code', sub: 'opus-5-5 · hard rows, reviews' },
+      { id: 'BOARD', x: 0.5, y: 0.46, c: ink, lbl: 'AGENT_COORDINATION.md', sub: 'v3 Lock · Ownership · Ledgers' },
+      { id: 'GEMINI', x: 0.86, y: 0.46, c: botC, lbl: 'Gemini', sub: 'neon-high · easy rows' },
+      { id: 'COPILOT', x: 0.36, y: 0.84, c: good, lbl: 'GitHub Copilot', sub: 'gpt-5.6-luna · offline', off: true },
+      { id: 'CODEX', x: 0.65, y: 0.84, c: '#47d9ff', lbl: 'OpenAI Codex', sub: 'gpt-6 · offline', off: true },
+      { id: 'UNITY', x: 0.12, y: 0.84, c: warn, lbl: 'Unity 6000.5', sub: '1 Lock + ParallelWorker' },
+      { id: 'GIT', x: 0.89, y: 0.84, c: ink2, lbl: 'GitHub Main', sub: 'dotnet green -> R8 Push' }
+    ];
+    const edges = [['DEV', 'CLAUDE'], ['DEV', 'GEMINI'], ['DEV', 'COPILOT'], ['DEV', 'CODEX'], ['CLAUDE', 'BOARD'], ['GEMINI', 'BOARD'], ['COPILOT', 'BOARD'], ['CODEX', 'BOARD'], ['CLAUDE', 'UNITY'], ['GEMINI', 'UNITY'], ['COPILOT', 'GIT'], ['BOARD', 'GIT']];
+    const map = Object.fromEntries(nodes.map(n => [n.id, n]));
+    edges.forEach(([a, b], i) => {
+      const n1 = map[a], n2 = map[b], off = n1.off || n2.off;
+      ctx.strokeStyle = css('--line'); ctx.lineWidth = 1.8; ctx.setLineDash(off ? [4, 5] : []);
+      ctx.beginPath(); ctx.moveTo(n1.x * w, n1.y * h); ctx.lineTo(n2.x * w, n2.y * h); ctx.stroke();
+      ctx.setLineDash([]);
+      if (off) return; // offline since 11-18 (user note 19:48)
+      const t = (agAnim * 0.45 + i * 0.17) % 1;
+      ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(lerp(n1.x * w, n2.x * w, t), lerp(n1.y * h, n2.y * h, t), 3.2, 0, Math.PI * 2); ctx.fill();
+    });
+    nodes.forEach(n => {
+      const bx = n.x * w, by = n.y * h, rw = Math.min(165, w * 0.28), rh = 44;
+      ctx.fillStyle = css('--panel-2'); ctx.strokeStyle = n.off ? css('--line') : n.c; ctx.lineWidth = 2; ctx.setLineDash(n.off ? [4, 4] : []);
+      ctx.beginPath(); ctx.roundRect(bx - rw / 2, by - rh / 2, rw, rh, 6); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = n.off ? ink2 : ink; ctx.font = '600 12px ' + css('--label'); ctx.textAlign = 'center';
+      ctx.fillText(n.lbl, bx, by - 3);
+      ctx.fillStyle = ink2; ctx.font = '10.5px ' + css('--mono');
+      ctx.fillText(n.sub, bx, by + 13);
+    });
+    ctx.textAlign = 'left';
+  }
+  redrawers.push(drawAgents); drawAgents();
+  if (!reduce) (function agLoop() { agAnim += 0.016; drawAgents(); requestAnimationFrame(agLoop); })();
+
+  // ---------------- TAB 3: QUALITY METRICS CHART (real analyze.py values incl. Endurance Score) ----------------
+  const QUALITY_ROWS = [
+    { lbl: 'Claude · opus-5-5', score: 90.1, endurance: 79.3, scoreHr: 18.8, tasks: 55, escaped: 1.2, caught: 7, c: '#b388ff' },
+    { lbl: 'Copilot · gpt-5.6-luna', score: 31.5, endurance: 33.8, scoreHr: 9.0, tasks: 35, escaped: 0.6, caught: 6, c: '#5cc46a' },
+    { lbl: 'Gemini · hydrogen', score: 5.2, endurance: 22.5, scoreHr: 0.5, tasks: 31, escaped: 1.4, caught: 8, c: '#6eaee6' },
+    { lbl: 'Gemini · hydrogen-high', score: 14.5, endurance: 16.8, scoreHr: 9.7, tasks: 10, escaped: 0.0, caught: 4, c: '#47d9ff' },
+    { lbl: 'Codex · gpt-6', score: 6.2, endurance: 7.8, scoreHr: 6.2, tasks: 8, escaped: 0.0, caught: 2, c: '#2dd4bf' },
+    { lbl: 'Gemini · neon-high', score: 3.5, endurance: 4.2, scoreHr: 7.0, tasks: 3, escaped: 0.0, caught: 0, c: '#e8a33d' },
+    { lbl: 'Gemini · opus-5-5-high', score: 3.0, endurance: 3.9, scoreHr: 5.0, tasks: 0, escaped: 0.0, caught: 0, c: '#e2b54a' },
+    { lbl: 'Gemini · orch-neon', score: 0.0, endurance: 0.8, scoreHr: 0.0, tasks: 1, escaped: 0.0, caught: 0, c: '#c9a227' },
+    { lbl: 'Gemini · argon/hyd', score: -1.2, endurance: -0.4, scoreHr: -2.4, tasks: 1, escaped: 6.0, caught: 0, c: '#6eaee6' },
+    { lbl: 'Gemini · argon', score: -3.0, endurance: -3.7, scoreHr: -2.0, tasks: 3, escaped: 12.0, caught: 2, c: '#ff7d3b' }
+  ];
+  function drawQuality() {
+    const f = fit($('cv-quality'), 0.56); if (!f) return;
+    const { ctx, w, h } = f;
+    const ink = css('--ink'), ink2 = css('--ink-2'), grid = css('--grid');
+    ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
+    const key = $('q-metric').value;
+    const vals = QUALITY_ROWS.map(r => r[key]);
+    const minV = Math.min(0, ...vals), maxV = Math.max(1, ...vals) * 1.15;
+    const L = 148, R = 48, T = 20, B = 24, zeroX = L + (w - L - R) * (-minV / (maxV - minV));
+    ctx.strokeStyle = grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(zeroX, T); ctx.lineTo(zeroX, h - B); ctx.stroke();
+    const rowH = (h - T - B) / QUALITY_ROWS.length;
+    QUALITY_ROWS.forEach((r, i) => {
+      const y = T + i * rowH + rowH * 0.18, bh = rowH * 0.64;
+      const vx = L + (w - L - R) * ((r[key] - minV) / (maxV - minV));
+      ctx.fillStyle = ink; ctx.font = '11.5px ' + css('--mono');
+      ctx.fillText(r.lbl, 8, y + bh * 0.68);
+      ctx.fillStyle = r.c; ctx.fillRect(Math.min(zeroX, vx), y, Math.max(2, Math.abs(vx - zeroX)), bh);
+      ctx.fillStyle = ink2; ctx.fillText(r[key].toFixed(key === 'tasks' || key === 'caught' ? 0 : 1), Math.max(zeroX, vx) + 6, y + bh * 0.68);
+    });
+  }
+  $('q-metric').addEventListener('change', drawQuality);
+  redrawers.push(drawQuality); drawQuality();
+
+  // ---------------- TAB 3: TASK LOG WITH SOURCE ----------------
+  const TASKS_LOG = [
+    { id: "G50", when: "20:09", agent: "Gemini", board: "B47/B85", task: "Cross-review of Claude B47 learnable spray + 0.10 s recovery hold (verified KMath.ExpDecayAlpha(0)=0) and D66 SpawnPoint.ClearPosition capsule check", src: "LR2Firearm.cs, RecoilPattern.cs, KMath.cs, SpawnPoint.cs" },
+    { id: "G48", when: "20:05", agent: "Gemini", board: "B83/B14.1/B18/B82/B14/B55/B58/B59/B60a/B60d", task: "Cross-review of Claude B83 (D65), B14.1 (C26 kc_*), B18 (Player.log), B82 build binary scan + easy-lane audits of B14, B55, B58, B59, B60a, B60d against C21-C26 &amp; Saltworks QA", src: "TacticalBotBrain.cs; C26/kc_02/05/08; Player.log; LeadRush 2_Data binary scan; C21/C22/C24 death+wall logs &amp; frames; qa_LR2_Saltworks.txt" },
+    { id: "G49", when: "20:05", agent: "Gemini", board: "B36/B44/B31/B41/B82", task: "Implement B36 war-torn audio (A26 stolen-voice tail release, 5-ray IsIndoors, horizon artillery/wind, brass surge, radio grit/anvil), B44 bright amber checkboxes, and B31/B41/B82 automated capture hooks", src: "specs/B36.md, LR2Audio.cs, AmbientOneShots.cs, LR2AudioEnvironment.cs, LR2MusicDirector.cs, LR2MusicGenerator.cs, LR2UIBuilder.cs, LR2LoadingIntro.cs, LR2MapPreviewCapture.cs, LR2QABotRunner.cs; Runtime+Editor 0 errors" },
+    { id: "C54", when: "20:05", agent: "Claude", board: "B47", task: "B47 fairness rules: learnable spray (fixed weave, &lt;=10% seeded drift), weave-following view kick, 0.10 s recovery hold", src: "LR2Firearm.cs; Runtime 0 errors; measurement owed" },
+    { id: "C55", when: "20:05", agent: "Claude", board: "B85", task: "LR2PropAudit edit-mode map audit: thin geometry, squashed pack props, prop clipping, blocked spawns (B85)", src: "Assets/LR2/Editor/LR2PropAudit.cs; Editor 0 errors" },
+    { id: "C52", when: "19:59", agent: "Claude", board: "B85", task: "Spawn capsule test + nearest clear NavMesh point at every spawn and respawn (D66)", src: "SpawnPoint.cs, MatchManager.cs; Runtime 0 errors" },
+    { id: "C53", when: "19:59", agent: "Claude", board: "B9", task: "Footstep sync probe: footstep events vs visible-foot touchdowns in the gait stages (B9)", src: "FirstPersonPoseCheck.cs FOOTSYNC lines" },
+    { id: "C50", when: "19:55", agent: "Claude", board: "B14.1", task: "B14.1 killcam: post-fix evidence from C26 (no frozen laser, no floating dot, 0 errors)", src: "Logs/LR2_PoseCheck_C26_mk18 kc_01..kc_08" },
+    { id: "C51", when: "19:55", agent: "Claude", board: "B18", task: "B18 D3D12 warmup crash: player-log evidence for 11.18.26.5 (intro + menu + clean exit)", src: "Player.log / Player-prev.log 19:23-19:25" },
+    { id: "C48", when: "19:53", agent: "Claude", board: "B4/B5/B8/B24/B30/B39/B41/B46/B48/B50/B51/B52/B53/B61/P3", task: "Review batch of 15 Gemini/Copilot/Codex rows: 14 VERIFIED (B4, B5, B8, B24, B30, B39, B46, B48, B50-B53, B61, P3), B41 kept for a screenshot", src: "QA logs qa_LR2_*.txt, specs, code, C21-C24 frames" },
+    { id: "C49", when: "19:53", agent: "Claude", board: "B26/B49", task: "Grip check harness (-lr2GripCheck): palm centres in weapon space + gun underside profile + close-ups (B26/B49)", src: "FirstPersonPoseCheck.cs; run waits for the user editor to close" },
+    { id: "C46", when: "19:48", agent: "Claude", board: "B83", task: "Fix D65: press-a-vulnerable-target before the range/sight branch in Engage; Hunt rushes a vulnerable target", src: "TacticalBotBrain.cs; Runtime 0 errors" },
+    { id: "C47", when: "19:48", agent: "Claude", board: "-", task: "Board re-split for two agents (user): Claude hard rows, Gemini easy rows, Copilot/Codex rows parked", src: "AGENT_COORDINATION.md NOTE" },
+    { id: "G47", when: "19:39", agent: "Gemini", board: "B71/B79-B84/B16/B35/B43", task: "File-only cross-review of Claude B71, B79-B84, B16, B35, B43: 8 VERIFIED (code + logs), B82 VERIFIED (code; player-build visual run pending), B83 REOPENED (D65 dead sprint branch)", src: "SoldierController/SoldierMovement/LR2PlayablesController/RetargetProxy/ReloadMotionBridge/LR2FxLibrary/LR2ContentBuilder/BotController/TacticalBotBrain/BotPerception/Tracer/ViewCameraQuality/SettingsPanel; Logs/LR2_DeathTest_C21..C24 &amp; LR2_PoseCheck_C25..C26" },
+    { id: "C44", when: "19:36", agent: "Claude", board: "B44", task: "Review B44 settings menus: VERIFIED (visual + QA), low-contrast checkbox note", src: "Docs/Media/settings_graphics.png; qa_LR2_Saltworks.txt" },
+    { id: "C45", when: "19:36", agent: "Claude", board: "B31", task: "Review B31 starter title screen: VERIFIED (code + QA)", src: "LR2LoadingIntro.cs; qa_LR2_MainMenu.txt" },
+    { id: "C42", when: "19:30", agent: "Claude", board: "B16/B35", task: "Pose checks C25/C26 (MK18) on 11.18.26.5: B16 reload end jumps and B35 reload angles re-measured", src: "Logs/LR2_PoseCheck_C25_mk18, Logs/LR2_PoseCheck_C26_mk18 (0 errors)" },
+    { id: "C43", when: "19:26", agent: "Claude", board: "B16", task: "Ease the sprint look/stabilisation/playables weights instead of stepping them (D64)", src: "SoldierController; C26 sprinting tactical 2.70 deg/frame (C25 5.64)" },
+    { id: "C39", when: "19:14", agent: "Claude", board: "B19", task: "Review B19 main-menu soldier: VERIFIED (visual) from main_menu_hero.png", src: "Docs/Media/main_menu_hero.png 12:44" },
+    { id: "C40", when: "19:14", agent: "Claude", board: "B26", task: "Review B26 weapon-hold fingers: REOPENED (right hand off the MK18 grip, D63)", src: "Logs/LR2_PoseCheck_C10_mk18 tp_04b/tp_04c" },
+    { id: "C38", when: "15:14", agent: "Claude", board: "B84", task: "Player tracers orange/yellow (enemy stays red); a dead soldier&#x27;s dropped gun no longer keeps a frozen laser", src: "Tracer.cs; SoldierController.DropWeapon" },
+    { id: "C41", when: "15:14", agent: "Claude", board: "B71/B79-B84", task: "Release build 11.18.26.5 (BuildAllAndPlayerBatch) to H:/Unity Projects/Builds/Lead Rush 2", src: "Logs/build_player_11_18_26_5.log: Build Finished, Result: Success, 1,596,735,472 bytes, 0 errors" },
+    { id: "C37", when: "15:12", agent: "Claude", board: "B83", task: "Smarter, more aggressive bots: per-preset detection speed and composure, Veteran retune, press a reloading/hurt target, grounded noise and horizon search gaze; explainer 4b and Bot Lab presets", src: "BotController/BotPerception/TacticalBotBrain/BotDifficulty + BuildData; Docs/LR2_Bot_Explainer.md 4b; Docs/Bot/bot-lab.html" },
+    { id: "C35", when: "15:08", agent: "Claude", board: "B80/B81", task: "AK-74N iron-sight aim point; COD-like wall tuck for the humanoid rifle and pistol profiles (secondary pose = primary)", src: "LR2ContentBuilder (AimPoint_Iron, TuneHumanoidCollision); C23 AK ADS through the irons, C24 wall" },
+    { id: "C36", when: "15:02", agent: "Claude", board: "B82", task: "Runtime FX library under Resources (LR2/ParticleUnlit + validated HDRP haze template) with Unity Particle Pack flipbooks for fire and smoke", src: "LR2FxLibrary + BuildFx; FireHazard/AtmosphereFX/LR2Firearm/HeatHazeEmitter" },
+    { id: "C34", when: "14:59", agent: "Claude", board: "B71", task: "Respawn starts from a clean animation state; FullBodyWeight/ProneWeight gated by the soldier (LR2PlayablesController); dropped gun from its real pose", src: "SoldierController/SoldierMovement/RetargetProxy/ReloadMotionBridge/LR2PlayablesController; C21-C23 all six death cases back to &lt;=1.5 deg by +3 s, ADS after respawn &lt;=0.3 deg, open walking 2.5 deg (was 45)" },
+    { id: "C33", when: "14:16", agent: "Claude", board: "B71", task: "Death/respawn/wall/ADS harness (-lr2DeathTest: six death states, ADS alignment after respawn, walk/sprint into a wall, driver Animator and curve readout, case filter, pause guard) and runs C16-C24", src: "FirstPersonPoseCheck.cs; Logs/LR2_DeathTest_C16..C24" },
+    { id: "G46", when: "12:46", agent: "Gemini", board: "B4/B8/B30/B31/B39/B41/B44/B46/B52", task: "Full 11.18.26.4 standalone player build (H:/Unity Projects/Builds/Lead Rush 2), 4-agent workflow GIF with Codex, 22 clean README captures (no loading overlay), QA_PROCESS/gifs README links &amp; B4/B8/B30/B31/B39/B41/B44/B46 fixes", src: "BuildAllAndPlayerBatch Succeeded (1.585 GB) + Tools/make_bot_gifs.py + Docs/Media/bot/ai-multiagent-workflow.gif + 22 Docs/Media/*.png + README.md + Docs/AI_Collaboration/README.md + QA_PROCESS.md + dotnet 0/0" },
+    { id: "G44", when: "11:35", agent: "Gemini", board: "B48", task: "B48 HDRP 17.5 multi-upscaler support (Native, STP, TAAU, FSR 1.0, live RTX DLSS, honest FSR 2 Native fallback) wired into SettingsPanel + UpscalerBackend + LR2QABotRunner", src: "UpscalerBackend.cs + SettingsPanel.cs + LR2Settings.cs + LR2ContentBuilder.cs + LR2QABotRunner.cs; qa_LR2_Saltworks.txt (0 failures across Native/STP/TAAU/FSR1/DLSS)" },
+    { id: "G45", when: "11:35", agent: "Gemini", board: "P3", task: "P3 4-map frame-time optimization &amp; visible verification (sun shadow cap, Sodium 512px, light fadeDistance culling, probe time-slicing, 0 QA failures across 5 scenes)", src: "Docs/AI_Collaboration/specs/P3_Report.md + LR2MapBuilder.cs + LR2MapBuilder.ExtraMaps.cs + Logs/LR2_P3/LR2_*_frame_timing.txt + qa_LR2_*.txt (0/5 failures)" },
+    { id: "G43", when: "10:33", agent: "Gemini", board: "B14.1/B16/B74", task: "Cross-review B14.1, B16, B74 against 7e2b37d diffs + C10 report/frames (B74 VERIFIED; B14.1/B16 REOPENED) &amp; HDRP upscaler/perf static audit", src: "AGENT_COORDINATION.md + Logs/LR2_PoseCheck_C10_mk18/report.txt + kc_*.png + HDRP 17.5 DynamicResolution audit" },
+    { id: "G42", when: "10:22", agent: "Gemini", board: "B1/B5/B20/B57/B65/D37", task: "0-failure 5-scene QA verification (LR2Firearm tactical bolt hold, LR2QABotRunner active-part + IsBusy fixes), grounded MainMenu lantern + CaptureAllBatch map previews, open-courtyard Saltworks captures &amp; gameplay_combat.gif (11.18.26.3)", src: "LR2Firearm.cs + LR2QABotRunner.cs + LR2MapBuilder.cs + LR2MapPreviewCapture.cs + Docs/Media/gameplay_combat.gif + Preview_LR2_*.png + qa_LR2_*.txt (0 failures across 5 scenes)" }
+  ];
+  function renderTaskLog() {
+    const body = $('task-log-body'); if (!body) return;
+    const af = ($('task-agent-filter')?.value || 'all').toLowerCase();
+    const q = ($('task-search')?.value || '').trim().toLowerCase();
+    body.innerHTML = TASKS_LOG.filter(t =>
+      (af === 'all' || t.agent.toLowerCase() === af) &&
+      (!q || (t.id + ' ' + t.board + ' ' + t.task + ' ' + t.src).toLowerCase().includes(q))
+    ).map(t => `<tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 6px"><code>${t.id}</code></td><td style="padding:5px 6px">${t.when}</td><td style="padding:5px 6px"><b>${t.agent}</b></td><td style="padding:5px 6px"><code>${t.board}</code></td><td style="padding:5px 6px">${t.task}</td><td style="padding:5px 6px;color:var(--ink-2)">${t.src}</td></tr>`).join('');
+  }
+  $('task-agent-filter')?.addEventListener('change', renderTaskLog);
+  $('task-search')?.addEventListener('input', renderTaskLog);
+  renderTaskLog();
+
+  // ---------------- TAB 3: RESEARCH SPECS ----------------
+  const SPECS = [
+    { id: 'B51 / B63', cat: 'ai', title: 'Unified CTF, Half & Half 50/50 Split & Smart Flag Bot AI', cite: 'FlagZoneController · TacticalBotBrain Step 2.5 & 6.5 · Tracer · SoldierVisuals', desc: 'Combines Team/Half&Half/FFA CTF across 5 BotTeamModes with Navy-SWAT vs Desert-Crimson uniforms, Green vs Red lasers & tracers, plus Step 2.5 Urgent Contest, Core 2.25× Anchor & Overwatch.' },
+    { id: 'B14 / B62', cat: 'wpn', title: 'First-Person Killcam Recoil & Funny Bot Gamertags', cite: 'KillcamDirector · CameraShake · MatchManager', desc: 'Replays killer procedural gun & camera recoil + FOV kick matching player view, plus 32 Fisher-Yates randomized funny bot gamertags.' },
+    { id: 'B60 / B60a–g', cat: 'wpn', title: 'HyperMotion Research & Hybrid Motion Matching', cite: 'Bollo Inertialization (GDC 2017) · EA Delannoy Motion Matching (GDC 2023) · AcceleRATE', desc: 'Applies C2 inertial transitions (B60a), foot-plant locking (<0.35 m/s, B60b), weight curves (B60c), kinetic close-wall tuck (B60d), ML-Flow finger tension (B60e) & locomotion DB query behind A/B flag.' },
+    { id: 'B56 / B57', cat: 'ai', title: 'Four-Agent Token Telemetry & Known-Bad QA Gates', cite: 'Protocol v3 Rule 1 (Check-the-Check) · Honest Telemetry Audit', desc: 'Tracks quota caps, context compactions & client API visibility across Claude, Gemini, Copilot, and Codex alongside death-ADS & close-range weapon QA assertions.' },
+    { id: 'B53', cat: 'ai', title: 'Empirical Human Miss Pattern & Pathfinding', cite: 'ESTA (2022), CSKnow (2024), Aim Lab (2021), Meyer (1988), van Beers (2004)', desc: '125 ms velocity lag, 1.55:1 wrist/arm sway, σ∥/σ⊥ ≈ 2.27 flick ellipse, calm undershoot.' },
+    { id: 'B22/B24', cat: 'ai', title: 'Biomechanical Bot Aim & Believable Bots', cite: 'Fitts (1954), Flash & Hogan (1985), Harris & Wolpert (1998), BotPrize', desc: 'Minimum-jerk flicks, eccentric detection latency, adaptive EMA skill & tactical corner-slicing.' },
+    { id: 'B47', cat: 'wpn', title: 'Caliber Recoil & TTK Realism Balance', cite: '5.45x39, 5.56x45, 7.62x51 & .45 ACP impulse anchors', desc: 'Tuned per-gun RPM, rise, learnable patterns (≤10% seeded drift), 0.3 s 80% recovery.' },
+    { id: 'B26/B35/B49', cat: 'wpn', title: 'Full-Body Procedural Retarget & Reloads', cite: 'Unity HumanPose normalization & Kinemation bridge', desc: 'Fixes 33 cm body drift, weapon-bone separation on reloads, tucked thumb & per-gun IK grips.' },
+    { id: 'B30', cat: 'gfx', title: 'Physically Based Soda-Lime Glass (HDRP)', cite: 'Refractive Index IOR 1.52 · 8 mm Thin Refraction', desc: 'Iron green transmittance, procedural grime & crack roughness masks in HDRP Lit.' },
+    { id: 'B42/B46', cat: 'gfx', title: '3-Lane Competitive Map Design & Realism', cite: 'Contact Shadows, SSAO, Sightline Budgets & 8–12 m Cover', desc: 'Saltworks, Deadsector, Foundry & TestRange redesigned for 6–10 s first contact & readable contrast.' },
+    { id: 'P1/B36', cat: 'aud', title: 'War-Torn D-Phrygian Score & Indoor/Outdoor Tails', cite: 'LUFS loudness targets · Raycast roof occlusion', desc: 'Voice-limited tails (1.0x indoor / 0.65x outdoor, <=4 concurrent) + distant battle bed.' },
+    { id: 'B32/P4', cat: 'aud', title: 'Saira Stencil UI Typography & Okabe-Ito Hitmarkers', cite: 'WCAG 3:1/4.5:1 Contrast + Deuteranopia/Protanopia checks', desc: 'Google Fonts OFL Saira Stencil One + outlined colorblind-safe hit zone readouts.' },
+    { id: 'B48/P3', cat: 'aud', title: 'HDRP 17.5 Upscaling & Frame-Time Profiling', cite: 'Native/STP · 30 s per-map CPU/GPU/p99 telemetry', desc: 'Automated LR2QABotRunner captures frametime budgets across all 4 combat arenas.' },
+    { id: 'B54', cat: 'gfx', title: 'Local Repo, Cache & CC0 Internet Asset Audit', cite: 'Poly Haven CC0, ambientCG CC0, MeasuredMaterialLibraryHDRP, AppData Cache', desc: 'Catalogs unused Kinemation scopes/grips/clips, downloaded AK-74 HDRP & Apocalypse Playground packs, and CC0 replacements to unblock B33 releases.' },
+    { id: 'P2', cat: 'gfx', title: 'Surface-Aware Ballistic Decals & Impact FX', cite: 'SurfaceDecalPolicy · Metal, Concrete, Glass, Fabric, Wood', desc: 'Ring-buffered HDRP DecalProjector variants keyed cleanly to material SurfaceIdentifier.' },
+    { id: 'B71', cat: 'wpn', title: 'Post-death weapon and hand pose recovery', cite: 'RetargetProxy · SoldierController.ResetAnimationState · LR2PlayablesController (D56/D57)', desc: 'Respawn resets the animator parameters and states, clears inertial and foot-plant state, and gates the FullBodyWeight and ProneWeight curves that stayed stale after death. Dying in any of six states recovers to 1.5° or less within 3 s.' },
+    { id: 'B67', cat: 'gfx', title: 'Weapon heat, smoke and heat shimmer', cite: 'Army TC 3-22.9 §§2-19 to 2-23 · HDRP distortion · LR2FxLibrary (D60)', desc: 'A narrow rising mirage plume at the muzzle instead of a coloured volume; fire and smoke use Unity Particle Pack flipbooks through Resources materials that survive player builds.' },
+    { id: 'B66', cat: 'ai', title: 'Task difficulty in the contribution score', cite: 'Al-Haque and Johnson, ESEM 2026 (45,769 issue-resolution tasks)', desc: 'Each task is weighted by peer-rated difficulty from patch and repository structure, not prompt text alone, so a hard row counts for more than an easy one.' },
+    { id: 'B74b', cat: 'ai', title: 'Disengaged bot resupply at ammo stations', cite: 'Orkin, Three States and a Plan: The A.I. of F.E.A.R. (GDC 2006)', desc: 'Bots with broken armour or low ammo walk to the nearest ready AmmoCrate (120 rounds, 50 armour, shared 20 s cooldown) only when nothing has been in sight for 2.5 s and they are not under fire.' }
+  ];
+  let specCat = 'all';
+  function renderSpecs() {
+    $('spec-grid').innerHTML = SPECS.map(s => `
+      <div class="spec-item ${specCat !== 'all' && s.cat !== specCat ? 'hidden' : ''}">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+          <h3>${s.id} · ${s.title}</h3>
+        </div>
+        <div class="mono" style="color:var(--accent);font-size:12px">${s.cite}</div>
+        <div class="note" style="margin:0">${s.desc}</div>
+      </div>
+    `).join('');
+  }
+  document.querySelectorAll('#spec-filters button').forEach(b => b.onclick = () => {
+    specCat = b.dataset.cat;
+    document.querySelectorAll('#spec-filters button').forEach(x => { x.classList.toggle('active', x === b); x.classList.toggle('ghost', x !== b); });
+    renderSpecs();
+  });
+  renderSpecs();
+
 })();
 </script>
 

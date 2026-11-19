@@ -72,8 +72,10 @@ In-game captures, 1920 x 1080, build 11.18.26.4 (2026-11-18).
 | ![Bot armour breaks, it hunts, then walks to an ammo station](Docs/Media/bot/lab-6-armour-break-and-resupply.gif) | ![Bot leaves the lane and flanks a player who camps](Docs/Media/bot/lab-4-flank-a-camper.gif) |
 
 Eight scenarios run on a compact copy of the game's bot brain in the interactive **[LR2 Bot Lab](Docs/Bot/bot-lab.html)**
-(also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)): detection meter, goal ladder, Fitts flicks and the
-human miss pattern, strafe tracking, recoil pull-down, armour and resupply, skill presets. All eight as GIFs:
+(also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)). Since 11-18 it also holds the former Bot Brain page, in three parts: the bot
+(detection and sightlines, the priority waterfall, pathfinding, Fitts flicks and the human miss pattern, strafe tracking,
+recoil, armour and resupply, presets and adaptive skill, the LLM hook), game modes (rotating CTF, chat orders) and how it
+was built (agent ledgers, protocol results, research specs). All eight scenarios as GIFs:
 [Bot explainer](Docs/LR2_Bot_Explainer.md#bot-lab-scenarios).
 
 ---

@@ -25,8 +25,9 @@ Run commands from the Unity project root unless a command explicitly names a pro
 
 ## Bot explainer manual and media
 
-- [`Docs/Bot/bot-brain.html`](Bot/bot-brain.html) is the three-tab interactive manual:
-  Bot Brain/Aim Lab, Game Modes/CTF/Chat, and AI Build/Research Lab.
+- [`Docs/Bot/bot-lab.html`](Bot/bot-lab.html) is the interactive manual in three parts: the bot, game modes, and how it
+  was built. Its artifact source is `Docs/Bot/src/bot-lab.html`; `python Tools/make_bot_lab_gifs.py` rebuilds the
+  GitHub copy and the eight scenario GIFs. `Docs/Bot/bot-brain.html` redirects to it (merged 2026-11-18).
 - `Tools\make_bot_gifs.py` regenerates the nine looping 1:1 explainer GIFs in
   `Docs\Media\bot\`, including `watch-a-bot-play.gif`, perception, Fitts flick,
   human miss pattern, recoil, adaptive skill, dual pathfinding, CTF/chat, and the
