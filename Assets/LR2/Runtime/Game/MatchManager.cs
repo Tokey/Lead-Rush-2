@@ -279,6 +279,7 @@ namespace LR2.Game
                 // every old tag stays in the pool, and no two bots share a name in one match.
                 var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length + FriendCallsigns.Length);
                 var seen = new HashSet<string>();
+                if (!string.IsNullOrWhiteSpace(LR2Settings.PlayerName)) seen.Add(LR2Settings.PlayerName); // never a bot with your name
                 // friends first, in random order (keys above 1 beat every weighted key, which stay in 0..1)
                 foreach (string n in FriendCallsigns)
                     if (seen.Add(n)) pool.Add((n, 1f + Random.value));
