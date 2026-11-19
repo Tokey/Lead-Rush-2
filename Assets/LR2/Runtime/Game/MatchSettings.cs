@@ -156,7 +156,7 @@ namespace LR2.Game
             "SALTWORKS  -  RECLAIMED HARBOUR",
             "DEADSECTOR  -  WAR-TORN CITY",
             "FOUNDRY  -  PIPE REFINERY",
-            "TEST RANGE  -  BOT ARENA"
+            "BLACKLINE  -  PROVING GROUNDS" // user 11-19: a cooler name like the others (scene stays LR2_TestRange)
         };
 
         public static readonly string[] MapDescriptions =

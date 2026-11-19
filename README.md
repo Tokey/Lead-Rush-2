@@ -70,9 +70,9 @@ In-game captures, 1920 x 1080, build 11.18.26.4 (2026-11-18).
 |---|---|
 | ![Enemy with a red laser near a fire in Foundry](Docs/Media/foundry_trench_01.png) | ![Saltworks with fog, trees and fire](Docs/Media/saltworks_fire_02.png) |
 
-| Deadsector: fog in the streets | Test Range at dusk |
+| Deadsector: fog in the streets | Blackline at dusk |
 |---|---|
-| ![Deadsector street in ground fog](Docs/Media/deadsector_fog_01.png) | ![Test Range firing lane with fire](Docs/Media/testrange_fire_02.png) |
+| ![Deadsector street in ground fog](Docs/Media/deadsector_fog_01.png) | ![Blackline firing lane with fire](Docs/Media/testrange_fire_02.png) |
 
 | Killcam: the killer's own sights | Killcam: the replay ends on your ragdoll |
 |---|---|
@@ -104,7 +104,7 @@ was built (agent ledgers, protocol results, research specs). All eight scenarios
 | **Saltworks — Reclaimed Harbour** (`LR2_Saltworks`) | Coastal salt-flat industrial harbour with shipping containers, flooded sightlines, and sniper lanes. | ![Saltworks Preview](Assets/LR2/Resources/LR2/MapPreviews/Preview_LR2_Saltworks.png) |
 | **Deadsector — War-Torn City** (`LR2_Deadsector`) | Rubble-choked urban quarantine sector tuned for aggressive flanking, street fights, and interior breaches. | ![Deadsector Preview](Assets/LR2/Resources/LR2/MapPreviews/Preview_LR2_Deadsector.png) |
 | **Foundry — Pipe Refinery** (`LR2_Foundry`) | Multi-level chemical pipe refinery featuring steel catwalks, heavy cover, and tight chokepoints. | ![Foundry Preview](Assets/LR2/Resources/LR2/MapPreviews/Preview_LR2_Foundry.png) |
-| **Test Range — Bot Arena** (`LR2_TestRange`) | Open tactical proving ground with clean symmetrical cover for recoil drills and bot scrimmages. | ![Test Range Preview](Assets/LR2/Resources/LR2/MapPreviews/Preview_LR2_TestRange.png) |
+| **Blackline — Proving Grounds** (`LR2_TestRange`) | Open tactical proving ground with clean symmetrical cover for recoil drills and bot scrimmages. | ![Test Range Preview](Assets/LR2/Resources/LR2/MapPreviews/Preview_LR2_TestRange.png) |
 
 ---
 

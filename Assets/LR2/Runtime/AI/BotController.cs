@@ -67,6 +67,65 @@ namespace LR2.AI
         private float _sprayHeat;
         private float _combatStress;
         private float _glanceOffsetYaw;
+
+        // B118 (user 11-19: bots in AI vs AI "turn very roboticly ... look at human mouse moving data, fit a curve through it").
+        // Fitted to the Balabit Mouse Dynamics Challenge raw logs (9 sessions, 4,636 movements; Tools-free fit in the commit):
+        // speed peaks at 34 % of a movement (IQR 19-56 %) -> beta(2.0, 3.3) speed profile; duration T = 0.167 * A^0.198 with
+        // A in px (0.13 deg per px: a median 258 px movement ~ a 34 deg glance in 0.5 s); the path bows a median 8 % of its
+        // length (p90 25 %, either side); the primary movement covers a median 92 % and 71 % end with a correction after a
+        // short dwell; pauses between movements are log-normal (mu -0.373, sigma 1.036: median 0.72 s).
+        private const float HumanBetaA = 2.0f, HumanBetaB = 3.3f;
+        /// <summary>A/B switch for QA (<c>-lr2LegacyAim</c>): the pre-B118 aim (minimum-jerk flicks, no bow, Fitts timing for every look).</summary>
+        public static readonly bool LegacyAim = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2LegacyAim") >= 0;
+        private static float[] _humanCdf;
+        private float _flickCurve, _flickPerpYaw, _flickPerpPitch, _lookHoldUntil;
+        private bool _flickCasual;
+
+        private static float HumanProfile(float u)
+        {
+            if (_humanCdf == null)
+            {
+                const int n = 128;
+                var c = new float[n + 1];
+                float acc = 0f;
+                for (int i = 1; i <= n; i++)
+                {
+                    float x = (i - 0.5f) / n;
+                    acc += Mathf.Pow(x, HumanBetaA - 1f) * Mathf.Pow(1f - x, HumanBetaB - 1f);
+                    c[i] = acc;
+                }
+                for (int i = 1; i <= n; i++) c[i] /= acc;
+                _humanCdf = c;
+            }
+            float f = Mathf.Clamp01(u) * (_humanCdf.Length - 1);
+            int k = Mathf.Min((int)f, _humanCdf.Length - 2);
+            return Mathf.Lerp(_humanCdf[k], _humanCdf[k + 1], f - k);
+        }
+
+        private static float Gauss()
+        {
+            float u1 = Mathf.Max(1e-6f, Random.value), u2 = Random.value;
+            return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
+        }
+
+        /// <summary>Pause before the next look-around, from the fitted log-normal (seconds).</summary>
+        private static float HumanPause(float shift = 0f) => Mathf.Clamp(Mathf.Exp(-0.373f + shift + 1.036f * Gauss()), 0.15f, 3.5f);
+
+        /// <summary>Duration of a casual look of <paramref name="deg"/> degrees: the fitted power law with its spread, a bit quicker for better aimers.</summary>
+        private static float HumanLookDuration(float deg, float aimSpeed)
+        {
+            float t = 0.1669f * Mathf.Pow(Mathf.Max(1f, deg / 0.13f), 0.198f) * Mathf.Exp(0.22f * Gauss());
+            t *= Mathf.Lerp(1.15f, 0.82f, Mathf.InverseLerp(4.2f, 10.5f, aimSpeed));
+            return Mathf.Clamp(t, 0.22f, 1.1f);
+        }
+
+        /// <summary>Next scan offset: sweeps back and forth, mostly small steps, sometimes a wide check (half-normal, sigma 38 deg).</summary>
+        private float NextScanOffset(float limit)
+        {
+            float step = Mathf.Clamp(Mathf.Abs(Gauss()) * 38f + 6f, 6f, limit * 1.6f);
+            float sign = Random.value < 0.7f ? -Mathf.Sign(_glanceOffsetYaw == 0f ? (Random.value - 0.5f) : _glanceOffsetYaw) : Mathf.Sign(Random.value - 0.5f);
+            return Mathf.Clamp(_glanceOffsetYaw + sign * step, -limit, limit);
+        }
         private float _nextGlanceAt;
 
         // Primary ballistic saccade + secondary closed-loop correction state (Meyer 1988; Flash & Hogan 1985)
@@ -482,8 +541,8 @@ namespace LR2.AI
                 {
                     if (now >= _nextGlanceAt)
                     {
-                        _nextGlanceAt = now + Random.Range(1.1f, 2.1f);
-                        _glanceOffsetYaw = Random.Range(-75f, 75f); // clear the angles around the spot
+                        _nextGlanceAt = now + 0.45f + HumanPause();  // B118: human rhythm, not a metronome
+                        _glanceOffsetYaw = NextScanOffset(78f);      // clear the angles around the spot, sweeping
                     }
                     Vector3 dir = horiz > 0.3f ? flat / horiz : transform.forward;
                     dir = Quaternion.AngleAxis(_glanceOffsetYaw, Vector3.up) * dir;
@@ -502,8 +561,8 @@ namespace LR2.AI
                 // Slice corners & periodically scan open flanks instead of staring blindly at feet
                 if (now >= _nextGlanceAt)
                 {
-                    _nextGlanceAt = now + Random.Range(1.8f, 3.4f);
-                    _glanceOffsetYaw = Random.value < 0.55f ? Random.Range(-28f, 28f) : 0f;
+                    _nextGlanceAt = now + 0.6f + HumanPause(0.5f);
+                    _glanceOffsetYaw = Random.value < 0.55f ? Mathf.Clamp(Gauss() * 16f, -32f, 32f) : 0f;
                 }
                 Vector3 corner = Agent.path.corners[1];
                 Vector3 lookDir = corner - eye;
@@ -580,7 +639,9 @@ namespace LR2.AI
                 float halfWidthDeg = Mathf.Atan2(_useHead ? 0.16f : 0.34f, targetDist) * Mathf.Rad2Deg;
                 float id = Mathf.Log(1f + angularDist / Mathf.Max(0.4f, halfWidthDeg), 2f); // Fitts's ID = log2(D/W + 1)
                 float skillScale = Mathf.Clamp(7.5f / Mathf.Max(2.5f, w), 0.62f, 1.55f);
-                _flickDuration = Mathf.Clamp((0.065f + 0.042f * id) * skillScale, 0.085f, 0.38f);
+                _flickCasual = !LegacyAim && !(engaging && bb.targetVisible && target != null); // looking around, not acquiring someone
+                _flickDuration = _flickCasual ? HumanLookDuration(angularDist, w)
+                                              : Mathf.Clamp((0.065f + 0.042f * id) * skillScale, 0.085f, 0.38f);
                 _flickStartTime = now;
                 _flickStartYaw = _aimYaw;
                 _flickStartPitch = _aimPitch;
@@ -611,18 +672,37 @@ namespace LR2.AI
                 float endErrPitch = (uy * epsAlong + ny * epsPerp) * 0.70f;
                 _flickGoalYaw = _aimYaw + rawYawErr + endErrYaw;
                 _flickGoalPitch = Mathf.Clamp(_aimPitch + rawPitchErr + endErrPitch, -82f, 82f);
+                if (_flickCasual)
+                {
+                    // B118: the primary movement covers ~92 % of the way (the rest is a correction after a short dwell)
+                    float cover = Mathf.Clamp(0.92f + 0.09f * Gauss(), 0.75f, 1.02f);
+                    _flickGoalYaw = _aimYaw + rawYawErr * cover + nx * 0.02f * angularDist * Gauss();
+                    _flickGoalPitch = Mathf.Clamp(_aimPitch + rawPitchErr * cover + ny * 0.02f * angularDist * Gauss(), -82f, 82f);
+                    _flickOvershoot = false;
+                    _flickPreFire = false;
+                }
+                // B118: the path bows sideways (half-normal, median ~8 % of the distance for casual looks, half that in a fight)
+                _flickCurve = LegacyAim ? 0f : angularDist * Mathf.Min(Mathf.Abs(Gauss()) * (_flickCasual ? 0.1f : 0.05f), _flickCasual ? 0.25f : 0.12f)
+                              * (Random.value < 0.5f ? -1f : 1f);
+                _flickPerpYaw = nx;
+                _flickPerpPitch = ny;
                 _flickActive = true;
                 _nextFlickAllowedAt = now + _flickDuration + Random.Range(0.11f, 0.165f); // human visual feedback refractory period
             }
 
             float yawStepDeg, pitchStepDeg;
+            // B118: a casual look never delays a reaction: an enemy in sight ends it at once (a combat flick takes over)
+            if (_flickActive && _flickCasual && engaging && bb.targetVisible && target != null) { _flickActive = false; _nextFlickAllowedAt = now; }
+            if (engaging) _lookHoldUntil = 0f;
             if (_flickActive)
             {
                 float u = Mathf.Clamp01((now - _flickStartTime) / Mathf.Max(0.05f, _flickDuration));
-                // Flash & Hogan (1985) minimum-jerk quintic s(u) = 10u^3 - 15u^4 + 6u^5
-                float s = u * u * u * (10f + u * (-15f + 6f * u));
-                float subYaw = Mathf.LerpAngle(_flickStartYaw, _flickGoalYaw, s);
-                float subPitch = Mathf.Lerp(_flickStartPitch, _flickGoalPitch, s);
+                // B118: human speed profile fitted to real mouse movements (peak at ~1/3, long deceleration), replacing the
+                // symmetric Flash & Hogan minimum-jerk quintic; the path bows sideways like a wrist arc
+                float s = LegacyAim ? u * u * u * (10f + u * (-15f + 6f * u)) : HumanProfile(u);
+                float bow = _flickCurve * Mathf.Sin(Mathf.PI * s);
+                float subYaw = Mathf.LerpAngle(_flickStartYaw, _flickGoalYaw, s) + _flickPerpYaw * bow;
+                float subPitch = Mathf.Lerp(_flickStartPitch, _flickGoalPitch, s) + _flickPerpPitch * bow * 0.7f;
                 yawStepDeg = Mathf.DeltaAngle(_aimYaw, subYaw);
                 pitchStepDeg = subPitch - _aimPitch;
 
@@ -633,7 +713,11 @@ namespace LR2.AI
                 _flickProgress = u;
                 // an overshooting flick runs to its end point (passing through the target on the way)
                 if (u >= 1f || (!_flickOvershoot && angularDist < 2.2f))
+                {
                     _flickActive = false;
+                    // B118: 71 % of human movements pause 60-140 ms before the corrective submovement
+                    if (_flickCasual && Random.value < 0.71f) _lookHoldUntil = now + Random.Range(0.06f, 0.14f);
+                }
             }
             else
             {
@@ -657,6 +741,7 @@ namespace LR2.AI
                 yawErr += Mathf.Sin(_sdnPhase * 1.37f + _noiseSeed) * sdnAmp * 1.15f;
                 pitchErr += Mathf.Cos(_sdnPhase * 1.71f + _noiseSeed) * sdnAmp * 0.74f;
 
+                if (now < _lookHoldUntil && !engaging) { yawErr = 0f; pitchErr = 0f; _yawVel = 0f; _pitchVel = 0f; } // the dwell
                 _yawVel += (w * w * yawErr - 2f * zeta * w * _yawVel) * dt;
                 _pitchVel += (w * w * pitchErr - 2f * zeta * w * _pitchVel) * dt;
                 _yawVel = Mathf.Clamp(_yawVel, -900f, 900f);

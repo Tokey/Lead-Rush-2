@@ -112,8 +112,8 @@ ol.log li.bad span { color: var(--bad); }
 ol.log li.good span { color: var(--good); }
 ol.log li.bot span { color: var(--bot); }
 .note { font-size: 13px; color: var(--muted); }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
-.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.legend { font-size: 13.5px;  display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend i { width: 13px; height: 13px;  display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
 .big { font: 700 34px/1 var(--display); font-variant-numeric: tabular-nums; }
 .verdict { padding: 12px; border-radius: var(--radius); border: 1px solid var(--bot); background: color-mix(in srgb, var(--bot) 10%, transparent); }
 .verdict .big { color: var(--bot); }
@@ -248,6 +248,7 @@ body.gifmode .wrap { display: none; }
 <aside class="panel news" id="news" aria-labelledby="h-news">
   <div class="head"><span class="num">WHAT CHANGED · 2026-11-19</span><h2 id="h-news">Latest bot and combat updates</h2></div>
   <ul class="news-list">
+    <li><code>B118</code><div><b>Looks around like a person.</b> Casual looks now follow 4,636 real mouse movements: speed peaks a third of the way, the path bows, the first move stops about 8 % short and corrects after a short pause, and glances come at uneven, human gaps. An enemy in sight ends a glance at once, so reactions are unchanged.</div></li>
     <li><code>B109</code><div><b>AI vs AI test bench.</b> The new skirmish lobby gives every bot its own difficulty and team: up to 20 bots, two to four teams, or free for all. In AI vs AI you watch from a spectator camera while a panel counts kills, deaths and K/D per difficulty. Adaptive can be set per bot.</div></li>
     <li><code>B114</code><div><b>See the clock.</b> <a href="#clock">02.1</a> shows every bot loop ticking at its real rate; <a href="#react">02.2</a> times the path from in view to the first shot for each preset.</div></li>
     <li><code>D61</code><div><b>Hardened and Veteran bots press a weak target.</b> With aggression 0.68 or more they push a target that is reloading, under 45 % health or 35 points weaker, and sprint when it is out of sight beyond 9 m. <a href="#decide">Try it in 05</a>.</div></li>
@@ -265,7 +266,7 @@ body.gifmode .wrap { display: none; }
 
 <section id="theater" aria-labelledby="h-theater">
   <div class="head"><span class="num">01 · WATCH A BOT PLAY</span><h2 id="h-theater">Eight scenarios, one brain</h2>
-    <p>The blue bot runs a compact copy of the game's brain: detection meter, the goal ladder every 0.25 s, reaction time, Fitts flicks with a minimum-jerk path, 125 ms lag on your velocity, bursts and recoil heat. You are orange, on a script. Nothing about the bot's choices is scripted.</p></div>
+    <p>The blue bot runs a compact copy of the game's brain: detection meter, the goal ladder every 0.25 s, reaction time, Fitts flicks shaped like real mouse movements, 125 ms lag on your velocity, bursts and recoil heat. You are orange, on a script. Nothing about the bot's choices is scripted.</p></div>
   <div class="drill">
     <div class="stage">
       <div class="seg" id="scnButtons" role="group" aria-label="Scenario"></div>
@@ -444,7 +445,7 @@ body.gifmode .wrap { display: none; }
     </section>
 <section id="flick" aria-labelledby="h-flick">
   <div class="head"><span class="num">07 · TURN</span><h2 id="h-flick">Reaction, flick and where it lands</h2>
-    <p>After the meter fills the bot waits a human reaction time, longer when you are far off to the side. Then it flicks with one fast, bell-shaped movement whose duration follows Fitts's law, and lands near you, not on you: errors along the flick are about 2.3 times larger than across it, and calm bots tend to land a little short.</p></div>
+    <p>After the meter fills the bot waits a human reaction time, longer when you are far off to the side. Then it flicks with one fast movement whose speed peaks a third of the way in and then tails off slowly (the shape of 4,636 real mouse movements); its duration follows Fitts's law, and lands near you, not on you: errors along the flick are about 2.3 times larger than across it, and calm bots tend to land a little short.</p></div>
   <div class="drill">
     <div class="stage">
       <canvas id="cvFlick" class="cv-wide" aria-label="First-person view of a bot flicking onto a target"></canvas>
@@ -627,7 +628,7 @@ body.gifmode .wrap { display: none; }
 
 <section id="modes" class="bb" aria-labelledby="h-modes">
       <div class="head"><span class="num">15 · MODES</span><h2 id="h-modes">Four modes, one brain</h2><span class="src">MatchManager.cs · MatchSettings.cs</span>
-        <p>Every match runs through <code>MatchManager.cs</code> with customizable <code>ModeRuleConfig</code> rules (score limit 1–100, time limit 60–1800 s, respawn delay, optional seeker drones, per-mode difficulty override) and four selectable modes from the Main Menu across all 4 maps (Saltworks, Deadsector, Foundry, TestRange).</p></div>
+        <p>Every match runs through <code>MatchManager.cs</code> with customizable <code>ModeRuleConfig</code> rules (score limit 1–100, time limit 60–1800 s, respawn delay, optional seeker drones, per-mode difficulty override) and four selectable modes from the Main Menu across all 4 maps (Saltworks, Deadsector, Foundry, Blackline).</p></div>
       <div class="four">
         <div class="card">
           <h3>1v1 Duel</h3>
@@ -928,6 +929,11 @@ const AIM = {
   },
   reaction(p, eccDeg, r) { return lerp(p.react[0], p.react[1], r()) * lerp(0.76, 1.58, clamp01(eccDeg / 115)); },
   minJerk(u) { u = clamp01(u); return u * u * u * (10 - 15 * u + 6 * u * u); },
+  // B118/B119: speed profile fitted to 4,636 real mouse movements (Balabit Mouse Dynamics Challenge): beta(2.0, 3.3)
+  _hc: null,
+  human(u) { u = clamp01(u); if (!this._hc) { const n = 128, c = [0]; let acc = 0; for (let i = 1; i <= n; i++) { const x = (i - 0.5) / n; acc += x * Math.pow(1 - x, 2.3); c.push(acc); } this._hc = c.map(v => v / acc); }
+    const f = u * 128, k = Math.min(127, Math.floor(f)); return this._hc[k] + (this._hc[k + 1] - this._hc[k]) * (f - k); },
+  humanVel(u) { u = clamp01(u); const pk = (1 / 3.3) * Math.pow(1 - 1 / 3.3, 2.3); return u * Math.pow(1 - u, 2.3) / pk; },
   minJerkVel(u) { u = clamp01(u); return 30 * u * u * (1 - u) * (1 - u); }
 };
 
@@ -1453,7 +1459,7 @@ function botAim(S, dt) {
     }
     if (b.flick) {
       const u = (t - b.flick.t0) / b.flick.T;
-      b.aim = lerp(b.flick.from, b.flick.to, AIM.minJerk(u));
+      b.aim = lerp(b.flick.from, b.flick.to, AIM.human(u));
       if (u >= 1) { b.flick = null; b.nextFlickAt = t + lerp(0.11, 0.165, S.rng()); }
       return;
     }
@@ -1551,7 +1557,7 @@ function renderArena(g, w, h, S) {
   if (S.ctf) {
     g.fillStyle = rgba(T.zone, S.zone.contested ? 0.28 : 0.16); g.beginPath(); g.arc(X(ZONE.x), Y(ZONE.y), ZONE.r * s, 0, Math.PI * 2); g.fill();
     g.strokeStyle = T.zone; g.lineWidth = 2; g.beginPath(); g.arc(X(ZONE.x), Y(ZONE.y), ZONE.r * s, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * S.zone.progress); g.stroke();
-    g.fillStyle = T.zone; g.font = `600 ${Math.max(10, s * 0.55)}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.fillText('FLAG', X(ZONE.x), Y(ZONE.y) + 4);
+    g.fillStyle = T.zone; g.font = `600 ${Math.max(13, s * 0.62)}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.fillText('FLAG', X(ZONE.x), Y(ZONE.y) + 4);
   }
   for (const r of WALLS) { g.fillStyle = T.raised; g.fillRect(X(r[0]), Y(r[1]), r[2] * s, r[3] * s); g.strokeStyle = T.line; g.strokeRect(X(r[0]) + 0.5, Y(r[1]) + 0.5, r[2] * s - 1, r[3] * s - 1); }
   for (const c of S.crates) {
@@ -1590,7 +1596,7 @@ function renderArena(g, w, h, S) {
   }
   const drawAgent = (a, col, label) => {
     if (!a.present) return;
-    const r = s * 0.45;
+    const r = s * 0.62; // B119: readable soldiers (were s * 0.45)
     g.globalAlpha = a.alive ? 1 : 0.35;
     g.fillStyle = col; g.beginPath(); g.arc(X(a.x), Y(a.y), a.crouch ? r * 0.85 : r, 0, Math.PI * 2); g.fill();
     g.strokeStyle = T.panel; g.lineWidth = 2; g.beginPath(); g.moveTo(X(a.x), Y(a.y)); g.lineTo(X(a.x) + Math.cos(a.aim * D2R) * r * 1.6, Y(a.y) + Math.sin(a.aim * D2R) * r * 1.6); g.stroke();
@@ -1599,7 +1605,7 @@ function renderArena(g, w, h, S) {
     g.fillStyle = T.grid; g.fillRect(bx, by, bw, 3); g.fillRect(bx, by + 4, bw, 3);
     g.fillStyle = T.bot; g.fillRect(bx, by, bw * a.armour / 50, 3);
     g.fillStyle = T.good; g.fillRect(bx, by + 4, bw * a.hp / 100, 3);
-    if (label) { g.fillStyle = T.ink; g.font = `600 ${Math.max(10, Math.round(s * 0.52))}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.fillText(label, X(a.x), by - 5); }
+    if (label) { g.fillStyle = T.ink; g.font = `600 ${Math.max(13, Math.round(s * 0.62))}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = T.panel; g.lineJoin = "round"; g.strokeText(label, X(a.x), by - 5); g.fillText(label, X(a.x), by - 5); }
   };
   p.aim = p.face;
   drawAgent(p, T.accent, 'YOU');
@@ -1671,7 +1677,7 @@ if (gifMode) {
     g.fillStyle = T.ink; g.font = `600 15px ${font}`; g.textAlign = 'left';
     g.fillText(`${n + 1}. ${SCENARIOS[n].name}`, 10, 370);
     g.fillStyle = T.bot; g.textAlign = 'right'; g.fillText(`${rung ? rung.goal : ''}  ·  t ${S.t.toFixed(1)} s`, 630, 370);
-    g.fillStyle = T.muted; g.font = `12px ${font}`; g.textAlign = 'left';
+    g.fillStyle = T.muted; g.font = `13.5px ${font}`; g.textAlign = 'left';
     g.fillText((S.lastLog || '').slice(0, 96), 10, 391);
   }
 }
@@ -1720,7 +1726,7 @@ function drawSenses() {
   const xm = 70, ym = 3;
   const X = d => L + d / xm * pw, Y = s => Tp + ph - Math.min(s, ym) / ym * ph;
   g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
-  g.strokeStyle = T.grid; g.lineWidth = 1; g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`;
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.fillStyle = T.muted; g.font = `12.5px ${getComputedStyle(document.body).fontFamily}`;
   g.textAlign = 'right';
   for (let s = 0; s <= 3; s += 0.5) { g.beginPath(); g.moveTo(L, Y(s)); g.lineTo(w - R, Y(s)); g.stroke(); g.fillText(`${s.toFixed(1)} s`, L - 6, Y(s) + 4); }
   g.textAlign = 'center';
@@ -1805,7 +1811,7 @@ function drawFlick() {
   let aimX = 0, aimY = 0, phase = 'Ready', tgt = a ? a.D : D, dd = a ? a.dist : dist;
   if (a) {
     if (a.t < a.react) { phase = `Reacting ${Math.round(a.t * 1000)} / ${Math.round(a.react * 1000)} ms`; }
-    else if (a.t < a.react + a.T) { const u = (a.t - a.react) / a.T; aimX = a.endX * AIM.minJerk(u); aimY = a.endY * AIM.minJerk(u); phase = `Flick ${Math.round(u * a.T * 1000)} / ${Math.round(a.T * 1000)} ms`; }
+    else if (a.t < a.react + a.T) { const u = (a.t - a.react) / a.T; aimX = a.endX * AIM.human(u); aimY = a.endY * AIM.human(u); phase = `Flick ${Math.round(u * a.T * 1000)} / ${Math.round(a.T * 1000)} ms`; }
     else if (a.t < a.react + a.T + a.pause) { aimX = a.endX; aimY = a.endY; phase = `Landed ${Math.abs(a.endX - a.D).toFixed(1)}° ${a.endX < a.D ? 'short' : 'long'}, pause`; }
     else { const k = 1 - Math.exp(-(a.t - a.react - a.T - a.pause) * a.P.aimSpeed * 1.4); aimX = lerp(a.endX, a.D, k); aimY = lerp(a.endY, 0, k); phase = k > 0.97 ? 'On target' : 'Correcting'; }
   }
@@ -1826,10 +1832,17 @@ function drawFlick() {
   g.beginPath(); g.arc(sx, footY - 1.67 * scale, 0.12 * scale, 0, Math.PI * 2); g.fill();
   if (sx < 0 || sx > w) { g.fillStyle = T.accent; g.font = `600 13px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = sx < 0 ? 'left' : 'right'; g.fillText(sx < 0 ? '◀ target' : 'target ▶', sx < 0 ? 8 : w - 8, hy - 8); }
   // crosshair
-  g.strokeStyle = T.bot; g.lineWidth = 2; const c = 9;
-  g.beginPath(); g.moveTo(w / 2 - c, h * 0.55); g.lineTo(w / 2 - 3, h * 0.55); g.moveTo(w / 2 + 3, h * 0.55); g.lineTo(w / 2 + c, h * 0.55); g.moveTo(w / 2, h * 0.55 - c); g.lineTo(w / 2, h * 0.55 - 3); g.moveTo(w / 2, h * 0.55 + 3); g.lineTo(w / 2, h * 0.55 + c); g.stroke();
-  g.fillStyle = T.ink; g.font = `500 13px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  g.strokeStyle = T.bot; g.lineWidth = 2.5; const c = 16; // B119: a crosshair you can see
+  g.beginPath(); g.moveTo(w / 2 - c, h * 0.55); g.lineTo(w / 2 - 5, h * 0.55); g.moveTo(w / 2 + 5, h * 0.55); g.lineTo(w / 2 + c, h * 0.55); g.moveTo(w / 2, h * 0.55 - c); g.lineTo(w / 2, h * 0.55 - 5); g.moveTo(w / 2, h * 0.55 + 5); g.lineTo(w / 2, h * 0.55 + c); g.stroke();
+  g.fillStyle = T.ink; g.font = `500 14px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
   g.fillText(phase, 10, 20);
+  if (phase === 'Ready') {
+    // B119: say what this view is before anything moves
+    g.textAlign = 'center'; g.fillStyle = T.muted; g.font = `500 14px ${getComputedStyle(document.body).fontFamily}`;
+    g.fillText("The bot's view. You are off-screen to the right (▶).", w / 2, h * 0.32);
+    g.fillText('Press Flick once: it waits its reaction time, then swings onto you.', w / 2, h * 0.32 + 20);
+    g.textAlign = 'left';
+  }
   g.fillStyle = T.muted; g.fillText(`${dd} m, ${head ? 'head' : 'body'}`, 10, 38);
   drawJerk();
 }
@@ -1853,7 +1866,7 @@ function drawCloud() {
     const onTarget = Math.abs(p[0]) < (head ? hh : hw) && Math.abs(p[1]) < (head ? hh : hw * 1.3);
     g.fillStyle = onTarget ? T.good : T.bad; g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill();
   }
-  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  g.fillStyle = T.muted; g.font = `12.5px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
   g.fillText(`flick direction → · 1° per grid line · ${flick.cloud.length ? flick.cloud.length + ' flicks' : 'press Run 60 flicks'}`, 8, h - 8);
   if (flick.cloud.length) {
     const hits = flick.cloud.filter(p => Math.abs(p[0]) < (head ? hh : hw) && Math.abs(p[1]) < (head ? hh : hw * 1.3)).length;
@@ -1868,14 +1881,14 @@ function drawJerk() {
   g.strokeStyle = T.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(L, Tp + ph); g.lineTo(L + pw, Tp + ph); g.moveTo(L, Tp); g.lineTo(L, Tp + ph); g.stroke();
   g.lineWidth = 2;
   g.strokeStyle = T.bot; g.beginPath();
-  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.minJerk(u) * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
+  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.human(u) * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
   g.stroke();
   g.strokeStyle = T.accent; g.beginPath();
-  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.minJerkVel(u) / 1.875 * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
+  for (let i = 0; i <= 60; i++) { const u = i / 60, x = L + u * pw, y = Tp + ph - AIM.humanVel(u) * ph; if (!i) g.moveTo(x, y); else g.lineTo(x, y); }
   g.stroke();
   const a = flick.anim;
-  if (a && a.t >= a.react && a.t <= a.react + a.T) { const u = (a.t - a.react) / a.T; g.fillStyle = T.ink; g.beginPath(); g.arc(L + u * pw, Tp + ph - AIM.minJerk(u) * ph, 4, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
+  if (a && a.t >= a.react && a.t <= a.react + a.T) { const u = (a.t - a.react) / a.T; g.fillStyle = T.ink; g.beginPath(); g.arc(L + u * pw, Tp + ph - AIM.human(u) * ph, 4, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = T.muted; g.font = `12.5px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left';
   g.fillText('position', L + 6, Tp + 12); g.fillStyle = T.accent; g.fillText('speed', L + 66, Tp + 12);
   g.fillStyle = T.muted; g.textAlign = 'right'; g.fillText(`${Math.round(r.ft.T * 1000)} ms`, L + pw, h - 6); g.textAlign = 'left'; g.fillText('0', L, h - 6);
 }
@@ -1949,7 +1962,7 @@ function drawStrafe(dist) {
   const line = (idx, col) => { g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); st.hist.forEach((p, i) => { const x = cx + p[idx] * ppm, y = Yt(p[0]); if (!i) g.moveTo(x, y); else g.lineTo(x, y); }); g.stroke(); };
   line(1, T.accent); line(2, T.bot);
   for (const s of st.shots) { g.fillStyle = s.hit ? T.good : T.bad; g.beginPath(); g.arc(cx + s.x * ppm, Yt(s.t), 2.6, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = T.muted; g.font = `11px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left'; g.fillText('now', 6, c0 + ch - 2); g.fillText('4 s ago', 6, c0 + 10);
+  g.fillStyle = T.muted; g.font = `12.5px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'left'; g.fillText('now', 6, c0 + ch - 2); g.fillText('4 s ago', 6, c0 + 10);
   const n = st.shots.length, hits = st.shots.filter(s => s.hit).length, trail = st.shots.filter(s => s.trail).length, miss = n - hits;
   $('stHit').textContent = n ? `${Math.round(hits / n * 100)} %` : '-';
   $('stWhy').textContent = miss ? `${Math.round(trail / miss * 100)} % of the misses came within 0.25 s after a direction change, at ${dist} m.` : 'No misses in the last 4 s.';
@@ -1995,15 +2008,26 @@ function drawRecoil() {
   rc.runs.forEach((r, i) => {
     const cx = cw * i + cw / 2, cy = h * 0.72;
     const mpd = Math.atan2(1, 15) * R2D;
-    const s = ppd / mpd;
-    g.fillStyle = T.grid; g.fillRect(cx - 0.34 * s, cy - 1.25 * s, 0.68 * s, 0.7 * s); g.fillRect(cx - 0.25 * s, cy - 0.55 * s, 0.5 * s, 0.8 * s);
+    const s = ppd * mpd; // px per metre (B119: was ppd / mpd, which drew the target ~14x too small)
+    g.fillStyle = rgba(T.ink, 0.13); g.fillRect(cx - 0.34 * s, cy - 1.25 * s, 0.68 * s, 0.7 * s); g.fillRect(cx - 0.25 * s, cy - 0.55 * s, 0.5 * s, 0.8 * s);
     g.beginPath(); g.arc(cx, cy - 1.42 * s, 0.13 * s, 0, Math.PI * 2); g.fill();
-    for (const sh of r.shots) {
+    // B119: the spray as a path from the first round to the last, rounds big enough to see
+    g.strokeStyle = rgba(T.bot, 0.45); g.lineWidth = 1.5; g.beginPath();
+    r.shots.forEach((sh, q) => { const x = cx + sh[0] * ppd, y = cy - 0.9 * s - sh[1] * ppd; if (!q) g.moveTo(x, y); else g.lineTo(x, y); });
+    g.stroke();
+    r.shots.forEach((sh, q) => {
       const x = cx + sh[0] * ppd, y = cy - 0.9 * s - sh[1] * ppd;
-      g.fillStyle = T.bot; g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = q === 0 ? T.good : q === r.shots.length - 1 ? T.bad : T.bot; g.beginPath(); g.arc(x, y, q === 0 || q === r.shots.length - 1 ? 5.5 : 4, 0, Math.PI * 2); g.fill();
+    });
+    if (r.shots.length) {
+      const f0 = r.shots[0], fl = r.shots[r.shots.length - 1];
+      g.font = `600 12px ${font}`; g.textAlign = 'left';
+      g.fillStyle = T.good; g.fillText('1st', cx + f0[0] * ppd + 8, cy - 0.9 * s - f0[1] * ppd + 4);
+      g.fillStyle = T.bad; const nth = r.shots.length, sfx = (nth % 100 >= 11 && nth % 100 <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][nth % 10] || 'th'; g.fillText(`${nth}${sfx}`, cx + fl[0] * ppd + 8, cy - 0.9 * s - fl[1] * ppd + 4);
+      g.textAlign = 'center';
     }
     g.fillStyle = T.ink; g.font = `600 13px ${font}`; g.textAlign = 'center'; g.fillText(r.name, cx, 18);
-    g.fillStyle = T.muted; g.font = `11px ${font}`;
+    g.fillStyle = T.muted; g.font = `12.5px ${font}`;
     const eff = clamp(r.P.aimSpeed / 10.5, 0.55, 0.92);
     g.fillText(`pull-down ${Math.round(eff * 100)} %, ${Math.round(r.latency * 1000)} ms late`, cx, 34);
     if (i > 0) { g.strokeStyle = T.line; g.beginPath(); g.moveTo(cw * i, 8); g.lineTo(cw * i, h - 8); g.stroke(); }
@@ -2213,14 +2237,14 @@ requestAnimationFrame(frame);
     ctx.fillStyle = ink2; walls.forEach(r => ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k));
     ctx.strokeStyle = s.visible ? good : bad; ctx.lineWidth = 2; ctx.setLineDash(s.visible ? [] : [6, 5]);
     ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(pl.x * k, pl.y * k); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bot.x * k, bot.y * k, 11, 0, Math.PI * 2); ctx.fill(); ctx.font = '600 14px ' + css('--mono'); ctx.lineWidth = 4; ctx.strokeStyle = css('--panel'); ctx.strokeText('BOT', bot.x * k - 16, bot.y * k - 17); ctx.fillText('BOT', bot.x * k - 16, bot.y * k - 17);
     ctx.strokeStyle = botC; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bot.x * k, bot.y * k); ctx.lineTo(bot.x * k + Math.cos(s.gaze) * 22, bot.y * k + Math.sin(s.gaze) * 22); ctx.stroke();
-    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, $('see-crouch').checked ? 6 : 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, $('see-crouch').checked ? 9 : 12, 0, Math.PI * 2); ctx.fill(); ctx.font = '600 14px ' + css('--mono'); ctx.lineWidth = 4; ctx.strokeStyle = css('--panel'); ctx.strokeText('YOU (drag)', pl.x * k - 38, pl.y * k - 18); ctx.fillText('YOU (drag)', pl.x * k - 38, pl.y * k - 18);
     if (simTime - lastShot < 1) { ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(pl.x * k, pl.y * k, 14 + (simTime - lastShot) * 30, 0, Math.PI * 2); ctx.stroke(); }
     const bx = 10, by = h - 22, bw = Math.min(220, w - 20), bh = 10;
     ctx.fillStyle = grid; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = spotted ? bad : acc; ctx.fillRect(bx, by, bw * meter / 1.25, bh);
     ctx.strokeStyle = ink; ctx.beginPath(); ctx.moveTo(bx + bw / 1.25, by - 3); ctx.lineTo(bx + bw / 1.25, by + bh + 3); ctx.stroke();
-    ctx.fillStyle = ink; ctx.font = '12px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
+    ctx.fillStyle = ink; ctx.font = '13.5px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
     ctx.fillStyle = ink2; ctx.fillText('6 m (±100°)', bot.x * k + 6 * k * 0.7, bot.y * k - 6 * k * 0.7);
     $('r-state').innerHTML = spotted ? '<span class="off">Spotted</span>' : (s.visible ? '<span class="warn">Seeing</span>' : (s.blocked ? 'Behind cover' : 'Out of view'));
     $('r-dist').textContent = s.dist.toFixed(1) + ' m'; $('r-ang').textContent = s.ang.toFixed(0) + '°';
@@ -2333,14 +2357,14 @@ requestAnimationFrame(frame);
       ctx.beginPath(); corners.forEach((p, i) => i ? ctx.lineTo(p.x * k, p.y * k) : ctx.moveTo(p.x * k, p.y * k)); ctx.stroke(); ctx.setLineDash([]);
       corners.forEach((c, i) => {
         ctx.fillStyle = i === 1 ? acc : botC; ctx.beginPath(); ctx.arc(c.x * k, c.y * k, i === 1 ? 6 : 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText(i === 1 ? 'corners[1] steer + slice' : 'c[' + i + ']', c.x * k + 8, c.y * k - 6);
+        ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText(i === 1 ? 'next corner: steer + slice' : 'corner ' + i, c.x * k + 9, c.y * k - 8);
       });
       // Corner slicing gaze sweep (±28°)
       const gAng = Math.atan2(corners[1].y - bPos.y, corners[1].x - bPos.x) + Math.sin(navAnim * 1.4) * 28 * Math.PI / 180;
       ctx.strokeStyle = warn; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo(bPos.x * k + Math.cos(gAng) * 3.8 * k, bPos.y * k + Math.sin(gAng) * 3.8 * k); ctx.stroke();
       if (strafe) {
         ctx.strokeStyle = good; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bPos.x * k, bPos.y * k); ctx.lineTo((bPos.x + 1.8) * k, (bPos.y + Math.sin(navAnim * 3) * 2.2) * k); ctx.stroke();
-        ctx.fillStyle = good; ctx.fillText('ADAD: 0.65·steer + 0.85·right', (bPos.x + 0.4) * k, (bPos.y + 3.2) * k);
+        ctx.fillStyle = good; ctx.fillText('strafe: 65 % path + 85 % sideways', (bPos.x + 0.4) * k, (bPos.y + 3.2) * k);
       }
       if (stuck) {
         ctx.strokeStyle = css('--bad'); ctx.lineWidth = 2; ctx.strokeRect(7.4 * k, 8.6 * k, 1.4 * k, 1.4 * k);
@@ -2363,7 +2387,7 @@ requestAnimationFrame(frame);
         ctx.beginPath(); ctx.moveTo(threat.x * k, threat.y * k); ctx.lineTo(c.x * k, c.y * k); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = win ? acc : (c.hidden ? good : ink2);
         ctx.beginPath(); ctx.arc(c.x * k, c.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+        ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono');
         ctx.fillText(c.hidden ? (c.sc.toFixed(1) + (c.crouch ? ' crouch' : '')) : 'EXPOSED', c.x * k + 8, c.y * k + 4);
       });
       outStats = [['Winner', best ? best.sc.toFixed(1) : 'None'], ['Max Radius', '10 m / 22 m'], ['LOS Check', 'threatEye(+1.5m)'], ['Winner Cover', best && best.crouch ? '0.9 m crouch' : '1.5 m stand']];
@@ -2385,7 +2409,7 @@ requestAnimationFrame(frame);
         const win = p === best;
         ctx.fillStyle = !p.valid ? grid : (win ? acc : botC);
         ctx.beginPath(); ctx.arc(p.x * k, p.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
-        if (p.valid) { ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText(Math.round(p.ang) + '° (' + p.sc.toFixed(1) + ')', p.x * k + 8, p.y * k + 4); }
+        if (p.valid) { ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText(Math.round(p.ang) + '° (' + p.sc.toFixed(1) + ')', p.x * k + 8, p.y * k + 4); }
       });
       outStats = [['Best Angle', best ? Math.round(best.ang) + '°' : '-'], ['Target Band', '6–30 m off threat'], ['Cooldown', '18 s'], ['Duration', '9 s max']];
       formulaNote = 'TryPickFlank scores each TacticalPoint by -|angle(-toTarget, fromTarget) - 90°| + weight*10 + rng*15.';
@@ -2398,11 +2422,11 @@ requestAnimationFrame(frame);
         p.since = since; p.sc = sc; if (sc > bs) { bs = sc; best = p; }
       });
       ctx.strokeStyle = good; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(bPos.x * k, bPos.y * k, 18 * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = good; ctx.font = '11px ' + css('--mono'); ctx.fillText('18 m sweet spot', (bPos.x + 13) * k, 2.2 * k);
+      ctx.fillStyle = good; ctx.font = '12.5px ' + css('--mono'); ctx.fillText('18 m sweet spot', (bPos.x + 13) * k, 2.2 * k);
       pts.forEach(p => {
         const win = p === best;
         ctx.fillStyle = win ? acc : botC; ctx.beginPath(); ctx.arc(p.x * k, p.y * k, win ? 8 : 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('t=' + p.since + 's sc=' + p.sc.toFixed(0), p.x * k + 8, p.y * k + 4);
+        ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText('t=' + p.since + 's sc=' + p.sc.toFixed(0), p.x * k + 8, p.y * k + 4);
       });
       outStats = [['Winning Score', best.sc.toFixed(1)], ['Optimal Dist', '18 m'], ['Repick Timer', '25 s'], ['Sprint If', '> 14 m & agg>0.45']];
       formulaNote = 'PickPatrol: score = p.weight*20 + min(60, sinceVisit)*0.5 - |dist - 18m|*0.3 + rng*12.';
@@ -2415,13 +2439,13 @@ requestAnimationFrame(frame);
         const a = s * Math.PI / 4, sx = fx + Math.cos(a) * (coreR * 0.65), sy = fy + Math.sin(a) * (coreR * 0.65);
         ctx.fillStyle = s % 2 ? botC : acc; ctx.beginPath(); ctx.arc(sx * k, sy * k, 4.5, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('8 golden slots: coreRadius*0.65 (~1.69 m)', fx * k - 105, (fy - outerR - 0.4) * k);
+      ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText('8 golden slots: coreRadius*0.65 (~1.69 m)', fx * k - 105, (fy - outerR - 0.4) * k);
       outStats = [['Slot Hash', 'DisplayName & 7'], ['Slot Spacing', '45° steps'], ['Normal Rad', '1.69 m (2.25×)'], ['Contested Rad', 'min(R*0.5, 4.5 m)']];
       formulaNote = 'TacticalBotBrain Step 6.5: deterministic 8-slot offset prevents bots stacking on identical coordinates inside the flag zone.';
     }
     ctx.fillStyle = botC; ctx.beginPath(); ctx.arc(bPos.x * k, bPos.y * k, 7, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(threat.x * k, threat.y * k, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono'); ctx.fillText('BOT', bPos.x * k - 10, bPos.y * k - 10); ctx.fillText('THREAT', threat.x * k - 18, threat.y * k - 10);
+    ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono'); ctx.fillText('BOT', bPos.x * k - 10, bPos.y * k - 10); ctx.fillText('THREAT', threat.x * k - 18, threat.y * k - 10);
     $('nav-out').innerHTML = outStats.map(([k2, v]) => `<div class="stat"><div class="k">${k2}</div><div class="v">${v}</div></div>`).join('');
     $('nav-formula').textContent = formulaNote;
   }
@@ -2482,7 +2506,7 @@ requestAnimationFrame(frame);
     // Incoming flick trajectory arrow
     ctx.strokeStyle = ink2; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(cx - ux * w * 0.42, cy - uy * w * 0.42); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    ctx.fillStyle = ink2; ctx.font = '12.5px ' + css('--mono');
     ctx.fillText('flick vector (' + $('m-flick').value + '°)', 14, 22);
 
     // Draw 95% empirical covariance ellipse
@@ -2511,10 +2535,10 @@ requestAnimationFrame(frame);
       if (inHead || inTorso) hits++;
       ctx.fillStyle = inHead ? bad : (inTorso ? good : acc);
       ctx.globalAlpha = inHead || inTorso ? 0.85 : 0.45;
-      ctx.beginPath(); ctx.arc(sx, sy, inHead ? 3.5 : 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx, sy, inHead ? 4.6 : 3.6, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+    ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono');
     ctx.fillText('95% anisotropic scatter ellipse (green=torso, red=head, orange=near miss)', 14, h - 10);
     $('r-mhit').textContent = Math.round(hits * 100 / N) + '%';
     $('r-mlag').textContent = Math.abs(lagDeg).toFixed(2) + '°';
@@ -2547,7 +2571,7 @@ requestAnimationFrame(frame);
     const { ctx, w, h } = f, ink2 = css('--ink-2'), grid = css('--grid'), acc = css('--accent');
     ctx.fillStyle = css('--panel'); ctx.fillRect(0, 0, w, h);
     const L = 40, B = 18, T = 10, n = Math.max(hist.length, 10), X = i => L + (w - L - 10) * i / (n - 1), Y = s => T + (h - T - B) * (1 - s);
-    ctx.strokeStyle = grid; ctx.fillStyle = ink2; ctx.font = '11px ' + css('--mono');
+    ctx.strokeStyle = grid; ctx.fillStyle = ink2; ctx.font = '12.5px ' + css('--mono');
     [0.12, 0.48, 0.96].forEach(s => { ctx.beginPath(); ctx.moveTo(L, Y(s)); ctx.lineTo(w - 10, Y(s)); ctx.stroke(); ctx.fillText(s.toFixed(2), 4, Y(s) + 4); });
     ctx.strokeStyle = acc; ctx.lineWidth = 2.5; ctx.beginPath(); hist.forEach((s, i) => i ? ctx.lineTo(X(i), Y(s)) : ctx.moveTo(X(i), Y(s))); ctx.stroke();
     ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(X(hist.length - 1), Y(skill), 4, 0, Math.PI * 2); ctx.fill();
@@ -2619,7 +2643,7 @@ requestAnimationFrame(frame);
     ctfPlazas.forEach((p, idx) => {
       if (idx === ctfIdx) return;
       ctx.strokeStyle = ink2; ctx.globalAlpha = 0.3; ctx.beginPath(); ctx.arc(p.x * k, p.y * k, 1.2 * k, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.fillStyle = ink2; ctx.font = '10px ' + css('--mono'); ctx.fillText(p.name, p.x * k - 34, p.y * k - 14);
+      ctx.fillStyle = ink2; ctx.font = '12px ' + css('--mono'); ctx.fillText(p.name, p.x * k - 34, p.y * k - 14);
     });
     const z = st.z;
     // Outer ring (11.5m) & Core ring (2.6m)
@@ -2643,7 +2667,7 @@ requestAnimationFrame(frame);
     }
     // Dragged Player
     ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(ctfPl.x * k, ctfPl.y * k, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ink; ctx.font = '11px ' + css('--mono');
+    ctx.fillStyle = ink; ctx.font = '12.5px ' + css('--mono');
     ctx.fillText(z.name + ' (CORE ≤2.6m = 2.25× | OUTER 11.5m = 0.28×)', 12, 18);
     ctx.fillText('YOU', ctfPl.x * k + 10, ctfPl.y * k + 4);
     $('o-ctfbots').textContent = st.nBots;
@@ -2764,9 +2788,9 @@ requestAnimationFrame(frame);
       const bx = n.x * w, by = n.y * h, rw = Math.min(165, w * 0.28), rh = 44;
       ctx.fillStyle = css('--panel-2'); ctx.strokeStyle = n.off ? css('--line') : n.c; ctx.lineWidth = 2; ctx.setLineDash(n.off ? [4, 4] : []);
       ctx.beginPath(); ctx.roundRect(bx - rw / 2, by - rh / 2, rw, rh, 6); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = n.off ? ink2 : ink; ctx.font = '600 12px ' + css('--label'); ctx.textAlign = 'center';
+      ctx.fillStyle = n.off ? ink2 : ink; ctx.font = '600 13.5px ' + css('--label'); ctx.textAlign = 'center';
       ctx.fillText(n.lbl, bx, by - 3);
-      ctx.fillStyle = ink2; ctx.font = '10.5px ' + css('--mono');
+      ctx.fillStyle = ink2; ctx.font = '12px ' + css('--mono');
       ctx.fillText(n.sub, bx, by + 13);
     });
     ctx.textAlign = 'left';
@@ -2802,7 +2826,7 @@ requestAnimationFrame(frame);
     QUALITY_ROWS.forEach((r, i) => {
       const y = T + i * rowH + rowH * 0.18, bh = rowH * 0.64;
       const vx = L + (w - L - R) * ((r[key] - minV) / (maxV - minV));
-      ctx.fillStyle = ink; ctx.font = '11.5px ' + css('--mono');
+      ctx.fillStyle = ink; ctx.font = '13px ' + css('--mono');
       ctx.fillText(r.lbl, 8, y + bh * 0.68);
       ctx.fillStyle = r.c; ctx.fillRect(Math.min(zeroX, vx), y, Math.max(2, Math.abs(vx - zeroX)), bh);
       ctx.fillStyle = ink2; ctx.fillText(r[key].toFixed(key === 'tasks' || key === 'caught' ? 0 : 1), Math.max(zeroX, vx) + 6, y + bh * 0.68);

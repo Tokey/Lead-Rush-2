@@ -286,9 +286,14 @@ namespace LR2.World
             Vector3 n = new Vector3(Mathf.PerlinNoise(t, 1.3f) - 0.5f, Mathf.PerlinNoise(2.7f, t) - 0.5f, Mathf.PerlinNoise(t, 5.1f) - 0.5f) * 2f;
             Vector3 r = new Vector3(Mathf.PerlinNoise(t * 0.8f, 9.1f) - 0.5f, Mathf.PerlinNoise(4.4f, t * 0.8f) - 0.5f, 0f) * 2f;
             float hand = shot.firstPerson ? 0f : 1f;
-            Vector3 p = pos + Vector3.Scale(n, new Vector3(0.05f, 0.035f, 0.03f)) * hand;
+            // user 11-19 "handheld perlin noise camera motion ... very slight": a faint faster octave (~0.85 Hz, ~0.2 deg,
+            // under 1 cm) on top of the slow drift, so the camera breathes like it is held
+            float t2 = Time.unscaledTime * 0.85f;
+            Vector3 n2 = new Vector3(Mathf.PerlinNoise(t2, 11.3f) - 0.5f, Mathf.PerlinNoise(12.7f, t2) - 0.5f, Mathf.PerlinNoise(t2, 15.1f) - 0.5f) * 2f;
+            Vector3 r2 = new Vector3(Mathf.PerlinNoise(t2 * 1.1f, 19.1f) - 0.5f, Mathf.PerlinNoise(14.4f, t2 * 1.1f) - 0.5f, Mathf.PerlinNoise(t2 * 0.9f, 17.7f) - 0.5f) * 2f;
+            Vector3 p = pos + (Vector3.Scale(n, new Vector3(0.05f, 0.035f, 0.03f)) + Vector3.Scale(n2, new Vector3(0.006f, 0.005f, 0.004f))) * hand;
             Quaternion q = Quaternion.LookRotation((look - pos).sqrMagnitude > 1e-4f ? look - pos : Vector3.forward, Vector3.up)
-                           * Quaternion.Euler(Vector3.Scale(r, new Vector3(0.5f, 0.8f, 0f)) * hand);
+                           * Quaternion.Euler((Vector3.Scale(r, new Vector3(0.5f, 0.8f, 0f)) + Vector3.Scale(r2, new Vector3(0.18f, 0.22f, 0.12f))) * hand);
             _cam.transform.SetPositionAndRotation(Vector3.Lerp(_fromPos, p, e), Quaternion.Slerp(_fromRot, q, e));
             float fov = shot.fov > 1f ? shot.fov : _mainFov;
             _cam.fieldOfView = Mathf.Lerp(_fromFov, fov, e);

@@ -167,6 +167,7 @@ namespace LR2.UI
 
             CacheBaseModeLabels();
             LR2.World.MenuCinematic.Ensure();
+            LR2.World.SkyCloudMotion.Ensure();
             BuildSkirmishLobby();
 
             if (duelButton != null && _lobby == null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));

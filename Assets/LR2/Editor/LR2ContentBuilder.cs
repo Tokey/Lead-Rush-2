@@ -9,6 +9,7 @@ using KINEMATION.FPSAnimationFramework.Runtime.Layers.AttachHandLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.CollisionLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.PoseSamplerLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.SwayLayer;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.TurnLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.ViewLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Playables;
 using KINEMATION.Shared.KAnimationCore.Runtime.Core;
@@ -933,6 +934,7 @@ namespace LR2.EditorTools
                     entity.animatorProfile = humProfile;
                 TuneHumanoidCollision(humProfile, spec.cls == WeaponClass.Pistol);
                 TuneHumanoidSway(humProfile);
+                TuneHumanoidTurn(humProfile);
                 if (spec.id == "Mk18")
                 {
                     var ironAp = go.transform.Find("AimPoint_Iron");
@@ -1448,6 +1450,57 @@ namespace LR2.EditorTools
             }
         }
 
+        /// <summary>
+        /// B117 (user 11-19 "can the turn in place animation be faster and more seemless?"). Kinemation's turn layer let the
+        /// upper body twist 90 deg before the feet reacted, then unwound the counter-rotation over 1 s (turnSpeed 1) on an
+        /// ease-in-out curve: a long lag, then a slow shuffle. Now the feet follow at 50 deg and catch up in about 0.45 s on an
+        /// ease-out curve (quick start, soft landing). The turn clips speed up to match (<see cref="ConfigureFastTurns"/>).
+        /// Idempotent: safe on every build.
+        /// </summary>
+        private static void TuneHumanoidTurn(FPSAnimatorProfile profile)
+        {
+            if (profile == null) return;
+            int n = 0;
+            foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(profile)))
+            {
+                if (!(sub is TurnLayerSettings turn)) continue;
+                turn.angleThreshold = 50f;
+                turn.turnSpeed = 2.2f;
+                turn.turnCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 2.3f), new Keyframe(1f, 1f, 0f, 0f));
+                EditorUtility.SetDirty(turn);
+                n++;
+            }
+            Debug.Log($"[LR2] B117 turn in place: {n} turn layer(s) in {profile.name} at 50 deg, ~0.45 s, ease-out");
+        }
+
+        /// <summary>B117: the TurnLeft/TurnRight clips of the driver controller play at 1.7x, blend in over 0.08 s and out over at most 0.15 s.</summary>
+        private static void ConfigureFastTurns(UnityEditor.Animations.AnimatorController ctrl)
+        {
+            int states = 0, entries = 0;
+            static bool IsTurn(UnityEditor.Animations.AnimatorStateTransition t) =>
+                t.conditions.Any(c => c.parameter == "TurnLeft" || c.parameter == "TurnRight");
+            void Walk(UnityEditor.Animations.AnimatorStateMachine sm, bool inTurn)
+            {
+                foreach (var cs in sm.states)
+                {
+                    if (inTurn)
+                    {
+                        cs.state.speed = 1.7f;
+                        states++;
+                        foreach (var t in cs.state.transitions) t.duration = Mathf.Min(t.duration, 0.15f);
+                    }
+                    foreach (var t in cs.state.transitions)
+                        if (IsTurn(t)) { t.duration = 0.08f; entries++; }
+                }
+                foreach (var t in sm.anyStateTransitions)
+                    if (IsTurn(t)) { t.duration = 0.08f; entries++; }
+                foreach (var sub in sm.stateMachines) Walk(sub.stateMachine, inTurn || sub.stateMachine.name.StartsWith("Turn"));
+            }
+            foreach (var layer in ctrl.layers)
+                if (layer.name == "TurnInPlace") Walk(layer.stateMachine, false);
+            Debug.Log($"[LR2] B117 turn in place: {states} turn clip state(s) at 1.7x, {entries} turn entries at 0.08 s");
+        }
+
         private static void TuneHumanoidSway(FPSAnimatorProfile profile)
         {
             if (profile == null) return;
@@ -1852,6 +1905,7 @@ namespace LR2.EditorTools
             }
             foreach (var layer in ctrl.layers) Walk(layer.stateMachine);
             ConfigureFastStances(ctrl);
+            ConfigureFastTurns(ctrl);
             EditorUtility.SetDirty(ctrl);
             AssetDatabase.SaveAssets();
             Debug.Log($"[LR2] LocoSpeed driving {count} locomotion states");
