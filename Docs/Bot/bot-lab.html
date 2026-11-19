@@ -324,9 +324,11 @@ body.gifmode .wrap { display: none; }
     <svg class="viz-svg" id="clock-svg" viewBox="0 0 1000 300" role="img" aria-label="Animated timeline with one row per bot loop and one mark per tick"></svg>
     <p class="viz-sum"><b>Who gives orders?</b> The 1.5 s Orders poll runs only when a commander is plugged in: an LLM or any script that
     implements <code>IBotDirectiveProvider</code> (hollow marks show where it would ask). Out of the box none is attached, so nothing is
-    polled. Every bot decides for itself with its own priority waterfall (05), and the only orders come from you, the player. Squad chat
-    (Flank, Hold, Push) reaches your team's bots instantly, not on a tick, and each order lasts 12 s. In team modes your bots also follow
-    you on their own (the waterfall's Follow leader rule), which is a decision, not an order.</p>
+    polled and every bot decides for itself with its priority waterfall (05). The only orders come from you, and they work today with no
+    LLM. In a team match press <b>T</b>, type, and press <b>Enter</b>. Every living teammate bot obeys at once (not on a tick), fanned out
+    so they do not stack, for 12 s: <b>flank left</b> / <b>flank right</b> (14 m to that side and a little ahead), <b>hold</b>
+    (stay on the current angle), <b>push</b> or <b>flag</b> (the capture zone, or 16 m ahead of you), and <b>regroup</b> / <b>on me</b>
+    (back to you). Two of them answer in chat. In free-for-all and duels nobody is on your side, so nobody obeys.</p>
   </div>
 </section>
 
@@ -3069,7 +3071,7 @@ requestAnimationFrame(frame);
       { name: 'Brain', rate: '~4 Hz ±15 %', per: 0.25, jit: 0.15, col: 'var(--accent)', what: 'goal, target, destination' },
       { name: 'Legs', rate: 'every 0.6 s', per: 0.6, col: 'var(--good)', what: 'NavMesh path refresh' },
       { name: 'Adaptive', rate: 'every 0.75 s', per: 0.75, col: 'var(--zone)', what: 'skill re-blend (Adaptive bots)' },
-      { name: 'Orders', rate: '1.5 s, with a commander', per: 1.5, col: 'var(--warn)', what: 'no LLM: none (you order by chat)', optional: true },
+      { name: 'Orders', rate: '1.5 s, with a commander', per: 1.5, col: 'var(--warn)', what: 'no LLM: none; you order by chat (T)', optional: true },
     ];
     const X0 = 248, X1 = 990, W = X1 - X0, TOP = 28, ROW = 40, WIN = 4;
     mk('text', { x: X0, y: 16, class: 'dim', 'font-size': 11 }, csvg, '4 s ago');

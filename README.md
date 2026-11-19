@@ -12,16 +12,16 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 
 ### By the numbers
 
-As of build `11.19.26.6` (2026-11-19). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
+As of 2026-11-19 13:10 (build `11.19.26.6`, code pushed since). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
 from the [ledgers](Docs/AI_Collaboration/data), board items from [AGENT_COORDINATION.md](AGENT_COORDINATION.md).
 
 | Developer prompts | Tasks delivered | Defects logged | Board items | Commits | C# code |
 |---:|---:|---:|---:|---:|---:|
-| **222** | **176** | **73** | **131** | **92** | **40,320** lines in 129 files |
+| **236** | **192** | **76** | **137** | **115** | **41,322** lines in 132 files |
 
-- **Prompts by agent:** Claude Code 119, Antigravity ("Gemini") 102, GitHub Copilot 1. The list is built from the Claude Code
+- **Prompts by agent:** Claude Code 133, Antigravity ("Gemini") 102, GitHub Copilot 1. The list is built from the Claude Code
   session logs and the Antigravity conversation database, so prompts given to Codex and Copilot inside their own apps are not in it.
-- **Tasks by agent:** Claude 72, Gemini 53, Copilot 35, Codex 16. **Defects found by:** Gemini 27, Claude 23, Copilot 8, Codex 2
+- **Tasks by agent:** Claude 88, Gemini 53, Copilot 35, Codex 16. **Defects found by:** Gemini 27, Claude 25, Copilot 8, Codex 2
   (13 found by the developer).
 - **Scope:** 4 days of development (2026-11-16 to 11-19), 4 AI agents, 4 combat maps, up to 20 bots per match in 2 to 4 teams.
 
@@ -139,6 +139,7 @@ was built (agent ledgers, protocol results, research specs). All eight scenarios
 | `F` | — | Interact (Ammo Crates) |
 | `Tab` | — | Scoreboard |
 | `Esc` | — | Pause / Back |
+| `T`, type, `Enter` | - | Squad orders by chat (team modes, no LLM needed): **flank left** / **flank right**, **hold**, **push** / **flag**, **regroup** / **on me**. Every teammate bot obeys for 12 s. |
 
 ---
 

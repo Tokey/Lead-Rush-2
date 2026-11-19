@@ -478,27 +478,49 @@ namespace LR2.UI
             Post(pName, TeamUtil.FriendlyColor, msg);
 
             string lower = msg.ToLowerInvariant();
-            Combatant ally = FindFriendlyBot();
-            if (ally != null && _playerCombatant != null)
+            // B122 (user 11-19 "how can i order by chat? does it work?"): squad orders by chat, no LLM needed. T, type, Enter.
+            // Every living teammate bot takes the order (spread out, not stacked); "left"/"right" pick the flank side;
+            // "regroup" / "on me" / "follow" brings them back to you. Orders last 12 s, then the bots decide for themselves.
+            var squad = FindFriendlyBots();
+            if (squad.Count > 0 && _playerCombatant != null)
             {
-                var bot = ally.GetComponent<BotController>();
+                Vector3 me = _playerCombatant.Position, fwd = _playerCombatant.transform.forward, right = _playerCombatant.transform.right;
+                BotOrder order = BotOrder.None;
+                Vector3 goal = me;
+                string ack = null;
                 if (lower.Contains("flank"))
                 {
-                    if (bot != null) bot.IssueDirective(new BotDirective { order = BotOrder.Flank, position = _playerCombatant.Position + _playerCombatant.transform.right * 14f, duration = 12f });
-                    Enqueue(0.9f, ally.DisplayName + " [TEAM]", TeamUtil.FriendlyColor, "Copy! Swinging wide flank right now!");
-                    return;
+                    float side = lower.Contains("left") ? -1f : 1f;
+                    order = BotOrder.Flank; goal = me + right * (14f * side) + fwd * 6f;
+                    ack = side < 0f ? "Copy, swinging wide left!" : "Copy, swinging wide right!";
                 }
-                if (lower.Contains("hold"))
+                else if (lower.Contains("hold") || lower.Contains("stay") || lower.Contains("wait"))
                 {
-                    if (bot != null) bot.IssueDirective(new BotDirective { order = BotOrder.HoldPosition, position = ally.Position, duration = 12f });
-                    Enqueue(0.9f, ally.DisplayName + " [TEAM]", TeamUtil.FriendlyColor, "Holding current angle, call when you push!");
-                    return;
+                    order = BotOrder.HoldPosition; ack = "Holding this angle, call when you push!";
                 }
-                if (lower.Contains("push") || lower.Contains("flag"))
+                else if (lower.Contains("push") || lower.Contains("flag") || lower.Contains("attack") || lower.Contains("go go"))
                 {
-                    Vector3 targetPos = FlagZoneController.Instance != null ? FlagZoneController.Instance.ActiveFlagPosition : _playerCombatant.Position + _playerCombatant.transform.forward * 16f;
-                    if (bot != null) bot.IssueDirective(new BotDirective { order = BotOrder.MoveTo, position = targetPos, duration = 12f });
-                    Enqueue(0.9f, ally.DisplayName + " [TEAM]", TeamUtil.FriendlyColor, "Rogering up — crashing the objective with you!");
+                    order = BotOrder.MoveTo;
+                    goal = FlagZoneController.Instance != null ? FlagZoneController.Instance.ActiveFlagPosition : me + fwd * 16f;
+                    ack = "Rogering up, crashing the objective with you!";
+                }
+                else if (lower.Contains("regroup") || lower.Contains("on me") || lower.Contains("follow") || lower.Contains("back"))
+                {
+                    order = BotOrder.FollowLeader; goal = me; ack = "On you, moving up!";
+                }
+                if (order != BotOrder.None)
+                {
+                    for (int i = 0; i < squad.Count; i++)
+                    {
+                        var bot = squad[i].GetComponent<BotController>();
+                        if (bot == null) continue;
+                        // fan the squad out around the goal so they do not stack on one spot
+                        Vector3 spread = Quaternion.Euler(0f, i * 137.5f, 0f) * Vector3.forward * (i == 0 ? 0f : 1.8f + 0.6f * i);
+                        Vector3 pos = order == BotOrder.HoldPosition ? squad[i].Position : goal + spread;
+                        bot.IssueDirective(new BotDirective { order = order, position = pos, target = order == BotOrder.FollowLeader ? _playerCombatant : null, duration = 12f, rationale = "player chat: " + msg });
+                    }
+                    for (int i = 0; i < Mathf.Min(2, squad.Count); i++)
+                        Enqueue(0.7f + 0.5f * i, squad[i].DisplayName + " [TEAM]", TeamUtil.FriendlyColor, i == 0 ? ack : "Copy that.");
                     return;
                 }
             }
@@ -511,6 +533,17 @@ namespace LR2.UI
                                "talk all you want, peek mid then 👀";
                 Enqueue(Random.Range(1.0f, 1.9f), responder.DisplayName, ColorOf(responder), reply);
             }
+        }
+
+        private System.Collections.Generic.List<Combatant> FindFriendlyBots()
+        {
+            var list = new System.Collections.Generic.List<Combatant>();
+            if (_playerCombatant == null) return list;
+            foreach (var c in Combatant.All)
+                if (c != null && c != _playerCombatant && c.IsAlive && !TeamUtil.AreHostile(_playerCombatant, c) && c.GetComponent<BotController>() != null)
+                    list.Add(c);
+            list.Sort((x, y) => Vector3.Distance(x.Position, _playerCombatant.Position).CompareTo(Vector3.Distance(y.Position, _playerCombatant.Position)));
+            return list;
         }
 
         private Combatant FindFriendlyBot()

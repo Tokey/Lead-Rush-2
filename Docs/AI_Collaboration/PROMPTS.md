@@ -1052,6 +1052,69 @@ tool notifications are left out here and documented once below.
 
 > add total prompts as a stats in the main github page. among other stats.
 
+**12:18 · to Claude Code**
+
+> make the colors consistent through the game. red and blue in menu, but different inside gameplay is weird.
+
+**12:20 · to Claude Code**
+
+> also play settings stuff should be larger with more icon and stuff. where are the slomo stuff?
+
+**12:21 · to Claude Code**
+
+> sorry they exist my bad. animations look a bit janky during strafing on menu maybe work on that a bit
+
+**12:24 · to Claude Code**
+
+> the slomo pan can have my dynamism, currently its not as visible. also, make it slomo a bit more. on the last shot, if its too slow, take it from the respawn time if needed. but make it look nice and cinematic like in the sniper movies.
+
+**12:26 · to Claude Code**
+
+> also did u fix finger positions for all guns? if not do so, for all anims too, reload, sprint strafe. 
+>
+> also can the turn in place animation be faster and more seemless?
+
+**12:29 · to Claude Code**
+
+> during ai v ai, when they are scoping around, turning etc, they turn very roboticly. humans dont do that. look at human mouse moving data, fit a cruve through it and then try to mimic that realistic human like movement. so it feels like watching a human. 
+>
+> also in the artifact, check all the plots and figs, some of the plots m aybe the firing range the icon is too tiny and cofusing. look at those graphs and make it more easily understandable. then push all
+
+**12:32 · to Claude Code**
+
+> make the main menu have some handheld perlin noise camera motion so it feels nice. very slight tho.
+
+**12:32 · to Claude Code**
+
+> unity is closed
+
+**12:38 · to Claude Code**
+
+> also make sure the accuracy K/D does not drop or alter a lot after making these changes
+
+**12:39 · to Claude Code**
+
+> change the test range map name to something cooler like the others
+
+**12:42 · to Claude Code**
+
+> make the skybox clouds move like real life a bit
+
+**12:42 · to Claude Code**
+
+> specially during storms.
+
+**12:49 · to Claude Code**
+
+> Add a ticker dot beside the text. like it was done in the first artifact
+
+**12:51 · to Claude Code**
+
+> Orders · every 1.5 s
+> squad or LLM directive
+>
+> when  no llm who gives orders? specify and clarify
+
 ### The automatic tick prompt (Claude Code to itself, every 20 minutes)
 
 Claude Code has no command line the other agents can call, so it schedules its own wake-up: a session job (`CronCreate`,
