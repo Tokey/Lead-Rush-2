@@ -678,7 +678,7 @@ body.gifmode .wrap { display: none; }
 
 <section id="ai-story" class="bb" aria-labelledby="h-ai-story">
       <div class="head"><span class="num">18 · BUILD</span><h2 id="h-ai-story">One developer, four AI agents, one board</h2><span class="src">AGENT_COORDINATION.md · protocol v3</span>
-        <p>Four AI coding tools have worked on LeadRush 2: <b>Claude Code</b> (<code>claude-opus-5-5</code>), <b>Antigravity "Gemini"</b> (<code>gemini-4-hydrogen</code>, then <code>hydrogen-high</code> and <code>neon-high</code>), <b>GitHub Copilot</b> (<code>gpt-5.6-luna</code>) and <b>OpenAI Codex</b> (<code>gpt-6</code>). They never talk directly. Everything goes through one Markdown board (<code>AGENT_COORDINATION.md</code>), one <code>UNITY</code> lock line, code-generated builders (<code>LR2BuildPipeline</code>) and a review by another agent before a row counts. Since 11-18 19:48 only Claude Code and Gemini are running: Claude takes the hard rows, Gemini the easy ones.</p></div>
+        <p>Four AI coding tools have worked on LeadRush 2: <b>Claude Code</b> (<code>claude-opus-5-5</code>), <b>Antigravity "Gemini"</b> (<code>gemini-4-hydrogen</code>, then <code>hydrogen-high</code> and <code>neon-high</code>), <b>GitHub Copilot</b> (<code>gpt-5.6-luna</code>) and <b>OpenAI Codex</b> (<code>gpt-6</code>). They never talk directly. Everything goes through one Markdown board (<code>AGENT_COORDINATION.md</code>), one <code>UNITY</code> lock line, code-generated builders (<code>LR2BuildPipeline</code>) and a review by another agent before a row counts. Current liveness and ownership are recorded in AGENT_COORDINATION.md; historical handoffs and prompt sections are in PROMPTS.md.</p></div>
       <div class="instrument">
         <canvas id="cv-agents" aria-label="Animated workflow of the developer, Claude Code, Gemini, the board and the Unity lock; Copilot and Codex shown offline"></canvas>
         <div class="controls">
@@ -692,27 +692,25 @@ body.gifmode .wrap { display: none; }
           <div id="proto-desc" class="card" style="margin-top:4px"></div>
           <div class="readout">
             <div class="stat"><div class="k">Board rows</div><div class="v">B1–B85 + P1–P5</div></div>
-            <div class="stat"><div class="k">Ledger rows</div><div class="v">148 tasks · 66 bugs</div></div>
-            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">37 of 66</div></div>
-            <div class="stat"><div class="k">Running now</div><div class="v">2 of 4 AI + 1 human</div></div>
+            <div class="stat"><div class="k">Ledger rows</div><div class="v">167 non-open task rows · 1 open · 70 bugs</div></div>
+            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">38 of 70</div></div>
+            <div class="stat"><div class="k">Running now</div><div class="v">See AGENT_COORDINATION.md</div></div>
           </div>
         </div>
       </div>
     </section>
 <section id="ai-quality" class="bb" aria-labelledby="h-ai-quality">
       <div class="head"><span class="num">19 · MEASURE</span><h2 id="h-ai-quality">Who wrote what, and what broke</h2><span class="src">data/tasks.csv · data/bugs.csv · analysis/analyze.py</span>
-        <p>Every delivered task (<code>tasks.csv</code>, 148 rows) and bug (<code>bugs.csv</code>, 66 rows) records which agent &amp; model wrote it, who reviewed it, its explicit <code>source</code> (prompt, board row, or evidence), and whether it escaped to the developer or was caught in review (+3 cross-catch, +2 own catch, +3 adopted suggestion, +1 verified task, -2 escaped defect). Scores are weighted by peer-rated task difficulty (B66), and a <b>time-adjusted score</b> (<code>Score + 1.5 × Hrs − 3.0 × QuotaStops</code>) also surfaces multi-hour reliability alongside raw Score/Hr. Client IDE API billing totals are <b>never guessed</b>: where a client does not export raw token counts into the repository, the table explicitly marks telemetry as <i>not recorded</i> instead of inventing numbers.</p></div>
+        <p>The current ledgers contain 168 task rows (167 non-open, 1 open) and 70 bug rows. Tasks retain agent/model and source evidence; bug records distinguish escaped defects, review catches, and pre-push breaks. Scores use peer-rated task difficulty (B66). There is no hour-based score: measured active duration, exact context resets, and raw client API tokens are not exported to this repository, so missing telemetry stays unrecorded.</p></div>
       <div class="instrument">
         <canvas id="cv-quality" aria-label="Bar chart of contribution score and defect rates by agent and model"></canvas>
         <div class="controls">
           <div class="ctl"><label for="q-metric">Ledger Metric</label>
             <select id="q-metric">
               <option value="score">Difficulty-adjusted score</option>
-              <option value="endurance">Time-adjusted score (hours and quota stops)</option>
-              <option value="scoreHr">Adjusted points per hour</option>
-              <option value="tasks">Tasks delivered</option>
+                                          <option value="tasks">Tasks delivered</option>
               <option value="escaped">Escaped defects per 10 tasks (lower is better)</option>
-              <option value="caught">Review catches</option>
+              <option value="caught">Review and pre-push catches</option>
             </select>
           </div>
           <p class="note"><b>Reading honestly:</b> Role bias gives the coordinator/reviewer (Claude Code) higher catch scores while solo overnight shifts (Gemini before cross-review existed) accumulated higher escaped rates. Once cross-review &amp; v3 compile gates engaged (23:25–00:05), Copilot caught 6+ pre-merge defects and Codex added independent assertion QA (<code>B57</code>).</p>
@@ -733,24 +731,25 @@ body.gifmode .wrap { display: none; }
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Claude</b> · Claude Code</td><td style="padding:6px 8px"><code>claude-opus-5-5</code></td><td style="padding:6px 8px">11-16 11:19 → 11-18 20:05 (4.8 h recorded active)</td><td style="padding:6px 8px"><b>6 quota stops</b> (11-16 pm 97 % cap, 14:55, 15:07, 18:13, 23:14, 00:44–04:13, 04:30–09:13) plus 20-minute coordinator ticks</td><td style="padding:6px 8px">55 tasks (<code>C01–C55</code>: rig and animation fixes <code>D56–D59</code>, FX library <code>D60</code>, bot pressure <code>D61/D65</code>, learnable spray <code>B47</code>, spawn capsule test <code>D66</code>, Bot Lab), 21 bug finds (16 in others' work, 5 own); time-adjusted score <b>79.3</b></td><td style="padding:6px 8px">User-reported <code>97%</code> plus quota timestamps; raw vendor token count not recorded in the repo</td></tr>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Gemini</b> · Antigravity</td><td style="padding:6px 8px"><code>argon</code> / <code>argon/hydrogen</code> / <code>gemini-4-hydrogen</code> / <code>gemini-4-hydrogen-high</code> / <code>gemini-4-neon-high</code> / <code>orchestrator-neon</code></td><td style="padding:6px 8px">11-16 23:44 → 11-18 20:09</td><td style="padding:6px 8px"><b>1 quota switch (02:24)</b>; <code>hydrogen-high</code> from 09:23, <code>neon-high</code> in the evening</td><td style="padding:6px 8px">50 ledger rows (<code>G01–G50</code>: <code>B55</code> MK18, <code>B76/B77</code> CTF and uniforms, <code>B74b</code> resupply, <code>P3/B48</code> upscalers, <code>B36</code> war-torn audio, <code>B44</code> checkboxes, reviews of <code>D61/D65</code>, <code>B47</code> and <code>B85</code>); time-adjusted <b>22.5 + 16.8 + 4.2</b></td><td style="padding:6px 8px"><code>BUDGET: OK</code> on the board; raw IDE token count not recorded in the repo</td></tr>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Copilot</b> · VS Code Chat</td><td style="padding:6px 8px"><code>gpt-5.6-luna</code></td><td style="padding:6px 8px">11-17 23:12 → 11-18 02:07</td><td style="padding:6px 8px"><b>1 monthly limit stop (02:40)</b> after cross-review, the P1–P5 research specs, pose checks #7–#10 and HyperMotion <code>B60b</code></td><td style="padding:6px 8px">35 ledger rows (<code>P01–P35</code>), 6 review catches, <code>B60.md</code>; time-adjusted <b>33.8</b></td><td style="padding:6px 8px"><code>OFFLINE</code> since 02:40 (monthly limit); raw token count not recorded in the repo</td></tr>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex CLI</td><td style="padding:6px 8px"><code>gpt-6</code></td><td style="padding:6px 8px">11-18 01:54 → 11-18 04:14</td><td style="padding:6px 8px">Quota and context resets not logged in the repo; down per the user note of 11-18 19:48</td><td style="padding:6px 8px">8 ledger rows (<code>X01–X08</code>: <code>B56/B57</code>, <code>B61</code> backlog, <code>B66</code> difficulty rubric, <code>B67–B70</code> VFX, laser, ADS, TDM), 1 review catch (<code>D39</code>); time-adjusted <b>7.8</b></td><td style="padding:6px 8px"><code>OFFLINE</code>; raw Codex CLI token counter not recorded in git</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Claude</b> · Claude Code</td><td style="padding:6px 8px">claude-opus-5-5</td><td style="padding:6px 8px">11-16 11:19 → 11-19 01:16 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">6 documented limit/stop events; exact context-reset count not recorded. 104 developer/board prompt sections.</td><td style="padding:6px 8px">65 rows (65 non-open); 12 escaped attributed; 19 review + 3 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Gemini</b> · Antigravity</td><td style="padding:6px 8px">argon; argon/hydrogen; gemini-4-hydrogen; gemini-4-hydrogen-high; gemini-4-neon-high; orchestrator-neon; claude-opus-5-5-high</td><td style="padding:6px 8px">11-16 23:44 → 11-18 22:09 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">2 documented quota events: Argon → Hydrogen at 02:24; old Hydrogen-high conversation rejected at 09:20 (157h30m reset), new conversation at 09:22. Exact context-reset count not recorded. 88 developer/board sections + 4 Claude-to-Gemini handoff sections.</td><td style="padding:6px 8px">53 rows (52 non-open, 1 open); 11 escaped attributed; 9 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Copilot</b> · GitHub Copilot Chat</td><td style="padding:6px 8px">gpt-5.6-luna</td><td style="padding:6px 8px">11-17 23:12 → 11-18 02:40 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">1 user-reported monthly limit stop at 02:40; exact context-reset count not recorded. 1 developer/board section + 4 agent-to-Copilot prompt sections.</td><td style="padding:6px 8px">35 rows (35 non-open, 3 reopened, 1 partial); 2 escaped attributed; 6 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex</td><td style="padding:6px 8px">gpt-6</td><td style="padding:6px 8px">11-18 01:54 → 11-19 02:50 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file.</td><td style="padding:6px 8px">15 rows (15 non-open, 2 reopened); 0 escaped attributed; 1 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
           </tbody>
-        </table>
+          </table>
+
       </div>
       <div class="card" style="overflow-x:auto;margin-top:14px">
         <h3>Did the protocol help? Bugs per 10 tasks by protocol period</h3>
         <table>
           <thead><tr><th>Protocol period</th><th>Tasks</th><th>Reached the developer (weighted)</th><th>Per 10 tasks</th><th>Caught before the developer</th><th>Per 10 tasks</th></tr></thead>
           <tbody>
-            <tr><td>v1: before 11-17 23:25</td><td class="num">23</td><td class="num">13.8</td><td class="num">6.0</td><td class="num">1</td><td class="num">0.4</td></tr>
-            <tr><td>v2: 11-17 23:25 to 11-18 00:05</td><td class="num">15</td><td class="num">2.0</td><td class="num">1.3</td><td class="num">8</td><td class="num">5.3</td></tr>
-            <tr><td>v3: after 11-18 00:05</td><td class="num">109</td><td class="num">6.9</td><td class="num">0.6</td><td class="num">28</td><td class="num">2.6</td></tr>
+            <tr><td class="num">v1: before 11-17 23:25</td><td class="num">23</td><td class="num">13.8</td><td class="num">6.0</td><td class="num">1</td><td class="num">0.4</td></tr>
+            <tr><td class="num">v2: 11-17 23:25 to 11-18 00:05</td><td class="num">15</td><td class="num">2.0</td><td class="num">1.3</td><td class="num">8</td><td class="num">5.3</td></tr>
+            <tr><td class="num">v3: after 11-18 00:05</td><td class="num">129</td><td class="num">9.9</td><td class="num">0.8</td><td class="num">29</td><td class="num">2.2</td></tr>
           </tbody>
-        </table>
-        <p class="note">From <code>analyze.py</code> at 20:15 on 11-18. Cross-review (v2) and the compile gate plus check-the-check (v3) cut the bugs that reached the developer from 6.0 to 0.6 per 10 tasks.</p>
+          </table>
+        <p class="note">Regenerated from the current task and bug ledgers on 2026-11-19; attribution gaps remain visible instead of being assigned to a model.</p>
       </div>
       <div class="card" style="overflow-x:auto;margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
@@ -2733,18 +2732,18 @@ requestAnimationFrame(frame);
   redrawers.push(drawAgents); drawAgents();
   if (!reduce) (function agLoop() { agAnim += 0.016; drawAgents(); requestAnimationFrame(agLoop); })();
 
-  // ---------------- TAB 3: QUALITY METRICS CHART (real analyze.py values incl. Endurance Score) ----------------
+  // ---------------- TAB 3: QUALITY METRICS CHART (ledger-derived, no time estimates) ----------------
   const QUALITY_ROWS = [
-    { lbl: 'Claude · opus-5-5', score: 90.1, endurance: 79.3, scoreHr: 18.8, tasks: 55, escaped: 1.2, caught: 7, c: '#b388ff' },
-    { lbl: 'Copilot · gpt-5.6-luna', score: 31.5, endurance: 33.8, scoreHr: 9.0, tasks: 35, escaped: 0.6, caught: 6, c: '#5cc46a' },
-    { lbl: 'Gemini · hydrogen', score: 5.2, endurance: 22.5, scoreHr: 0.5, tasks: 31, escaped: 1.4, caught: 8, c: '#6eaee6' },
-    { lbl: 'Gemini · hydrogen-high', score: 14.5, endurance: 16.8, scoreHr: 9.7, tasks: 10, escaped: 0.0, caught: 4, c: '#47d9ff' },
-    { lbl: 'Codex · gpt-6', score: 6.2, endurance: 7.8, scoreHr: 6.2, tasks: 8, escaped: 0.0, caught: 2, c: '#2dd4bf' },
-    { lbl: 'Gemini · neon-high', score: 3.5, endurance: 4.2, scoreHr: 7.0, tasks: 3, escaped: 0.0, caught: 0, c: '#e8a33d' },
-    { lbl: 'Gemini · opus-5-5-high', score: 3.0, endurance: 3.9, scoreHr: 5.0, tasks: 0, escaped: 0.0, caught: 0, c: '#e2b54a' },
-    { lbl: 'Gemini · orch-neon', score: 0.0, endurance: 0.8, scoreHr: 0.0, tasks: 1, escaped: 0.0, caught: 0, c: '#c9a227' },
-    { lbl: 'Gemini · argon/hyd', score: -1.2, endurance: -0.4, scoreHr: -2.4, tasks: 1, escaped: 6.0, caught: 0, c: '#6eaee6' },
-    { lbl: 'Gemini · argon', score: -3.0, endurance: -3.7, scoreHr: -2.0, tasks: 3, escaped: 12.0, caught: 2, c: '#ff7d3b' }
+    {"lbl": "Claude · opus-5-5", "score": 87.6, "tasks": 65, "escaped": 1.5, "caught": 22, "c": "#b388ff"},
+    {"lbl": "Copilot · gpt-5.6-luna", "score": 31.5, "tasks": 35, "escaped": 0.6, "caught": 6, "c": "#5cc46a"},
+    {"lbl": "Gemini · hydrogen-high", "score": 14.5, "tasks": 10, "escaped": 0.0, "caught": 6, "c": "#47d9ff"},
+    {"lbl": "Codex · gpt-6", "score": 8.8, "tasks": 15, "escaped": 0.0, "caught": 1, "c": "#2dd4bf"},
+    {"lbl": "Gemini · hydrogen", "score": 5.2, "tasks": 31, "escaped": 1.4, "caught": 1, "c": "#6eaee6"},
+    {"lbl": "Gemini · neon-high", "score": 3.5, "tasks": 3, "escaped": 0.0, "caught": 1, "c": "#e8a33d"},
+    {"lbl": "Gemini · opus-5-5-high", "score": 3.0, "tasks": 0, "escaped": 0.0, "caught": 0, "c": "#e2b54a"},
+    {"lbl": "Gemini · orch-neon", "score": 0.0, "tasks": 4, "escaped": 0.0, "caught": 0, "c": "#c9a227"},
+    {"lbl": "Gemini · argon/hyd", "score": -1.2, "tasks": 1, "escaped": 6.0, "caught": 0, "c": "#6eaee6"},
+    {"lbl": "Gemini · argon", "score": -3.0, "tasks": 3, "escaped": 12.0, "caught": 1, "c": "#ff7d3b"}
   ];
   function drawQuality() {
     const f = fit($('cv-quality'), 0.56); if (!f) return;
@@ -2772,6 +2771,86 @@ requestAnimationFrame(frame);
 
   // ---------------- TAB 3: TASK LOG WITH SOURCE ----------------
   const TASKS_LOG = [
+    {"id": "X14", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B107", "task": "Slower distinct weapon fire rates with damage tuned to keep body TTK close", "src": "user request 02:22; five distinct WeaponSpec rates + damage thresholds; standalone player build succeeded 02:56"},
+    {"id": "X15", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B91", "task": "Apply ADS sway reduction through active Kinemation SwayLayer profile settings", "src": "user reported prior sway change did not help; LR2ContentBuilder persists 22% ADS mask"},
+    {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user said the sway change did not help; direct profile assets are ignored by git and were not a durable build setting"},
+    {"id": "X12", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B87", "task": "Remove opaque black smoke cards from fire particles", "src": "user request 02:01; D67 reopened; luminance-derived alpha on smoke/mist/barrel-smoke; Unity player build succeeded 02:56"},
+    {"id": "X13", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B56", "task": "Refresh B56 usage telemetry across all four tools", "src": "user asks to continue undone work; PROMPTS.md; tasks.csv; bugs.csv; analyze.py; README; Bot Lab Tab 19"},
+    {"id": "X10", "when": "2026-11-19 01:46", "agent": "Codex", "board": "B91", "task": "Restore authored ADS pose and smoothly reduce additive weapon sway", "src": "user report 01:35 + removed AdsSightLock; authored pose/IK restored; retained 5090b3e ADS timing/FOV sync"},
+    {"id": "X09", "when": "2026-11-19 01:32", "agent": "Codex", "board": "B91", "task": "Keep ADS sight-lock correction aligned with visible hand IK", "src": "user report 01:31 + AdsSightLock.cs + RetargetProxy.cs + Runtime/Editor builds 0/0; user still felt forced motion"},
+    {"id": "C65", "when": "2026-11-19 01:16", "agent": "Claude", "board": "B98", "task": "Trimmed 83-164 ms lead-in from four AK reload clips", "src": "user prompt 00:27; onset analysis"},
+    {"id": "C64", "when": "2026-11-19 01:12", "agent": "Claude", "board": "B87/B93", "task": "Boxy smoke root cause (flipbooks without alpha), radial heat-shimmer map, Saltworks opens in drizzle, FX shots harness", "src": "user prompt 01:10; C29"},
+    {"id": "C63", "when": "2026-11-19 01:08", "agent": "Claude", "board": "B93/B97/B101/B105/B91", "task": "Visible rain + near layer, splashes, footstep dust, cinematic post-processing, banter library, ADS camera bob filter", "src": "user prompts 00:27-01:06; e648bbf"},
+    {"id": "C62", "when": "2026-11-19 00:59", "agent": "Claude", "board": "B91/B88", "task": "ADS-while-moving measurement (-lr2AdsWalkCheck) and FIRST TO flicker fix", "src": "user prompts 00:57; C28 reports"},
+    {"id": "C60", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B88/B96", "task": "Labelled score panel and BF6 minimap with settings toggle", "src": "user prompt 00:27; f988938"},
+    {"id": "C61", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B87/B100", "task": "Particle Pack style layered fire with soft particles; capture zone as HDRP ground decals", "src": "user prompt 00:27; f988938"},
+    {"id": "C59", "when": "2026-11-19 00:44", "agent": "Claude", "board": "B89", "task": "Bot flick overshoot and pro pre-fire (flick and corner)", "src": "user prompt 00:27; de6b9e2"},
+    {"id": "C57", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B90", "task": "Snappy movement: hold-X crouch, double-tap slide, 2x sprint blend, faster gaits, prone/crouch stance transitions about 5x faster", "src": "user prompt 00:27; ee73874; BuildAll log B90 fast stances"},
+
+    {"id": "X14", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B107", "task": "Slower distinct weapon fire rates with damage tuned to keep body TTK close", "src": "user request 02:22; WeaponSpec changes; damage threshold analysis; specs/B107_Weapon_FireRate_TTK.md"},
+    {"id": "X15", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B91", "task": "Apply ADS sway reduction through active Kinemation SwayLayer profile settings", "src": "user reported prior sway change did not help; LR2ContentBuilder.TuneHumanoidSway writes the AimingWeight mask and Y spring scales to profile subassets"},
+    {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user said the sway change did not help; direct profile assets are ignored by git and were not a durable build setting"},
+    {"id": "X12", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B87", "task": "Remove opaque black smoke cards from fire particles", "src": "user request 02:01; D67 reopened; LR2_ParticleUnlit luminance-to-alpha mode plus smoke/mist/barrel-smoke material settings; player build pending"},
+    {"id": "X13", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B56", "task": "Refresh B56 usage telemetry across all four tools", "src": "user asks to continue undone work; PROMPTS.md; tasks.csv; bugs.csv; analyze.py; README; Bot Lab Tab 19"},
+    {"id": "X10", "when": "2026-11-19 01:46", "agent": "Codex", "board": "B91", "task": "Restore authored ADS pose and smoothly reduce additive weapon sway", "src": "user report 01:35 + removed AdsSightLock; authored pose/IK restored; retained 5090b3e ADS timing/FOV sync"},
+    {"id": "X09", "when": "2026-11-19 01:32", "agent": "Codex", "board": "B91", "task": "Keep ADS sight-lock correction aligned with visible hand IK", "src": "user report 01:31 + AdsSightLock.cs + RetargetProxy.cs + Runtime/Editor builds 0/0; user still felt forced motion"},
+    {"id": "C65", "when": "2026-11-19 01:16", "agent": "Claude", "board": "B98", "task": "Trimmed 83-164 ms lead-in from four AK reload clips", "src": "user prompt 00:27; onset analysis"},
+    {"id": "C64", "when": "2026-11-19 01:12", "agent": "Claude", "board": "B87/B93", "task": "Boxy smoke root cause (flipbooks without alpha), radial heat-shimmer map, Saltworks opens in drizzle, FX shots harness", "src": "user prompt 01:10; C29"},
+    {"id": "C63", "when": "2026-11-19 01:08", "agent": "Claude", "board": "B93/B97/B101/B105/B91", "task": "Visible rain + near layer, splashes, footstep dust, cinematic post-processing, banter library, ADS camera bob filter", "src": "user prompts 00:27-01:06; e648bbf"},
+    {"id": "C62", "when": "2026-11-19 00:59", "agent": "Claude", "board": "B91/B88", "task": "ADS-while-moving measurement (-lr2AdsWalkCheck) and FIRST TO flicker fix", "src": "user prompts 00:57; C28 reports"},
+    {"id": "C60", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B88/B96", "task": "Labelled score panel and BF6 minimap with settings toggle", "src": "user prompt 00:27; f988938"},
+    {"id": "C61", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B87/B100", "task": "Particle Pack style layered fire with soft particles; capture zone as HDRP ground decals", "src": "user prompt 00:27; f988938"},
+    {"id": "C59", "when": "2026-11-19 00:44", "agent": "Claude", "board": "B89", "task": "Bot flick overshoot and pro pre-fire (flick and corner)", "src": "user prompt 00:27; de6b9e2"},
+    {"id": "C57", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B90", "task": "Snappy movement: hold-X crouch, double-tap slide, 2x sprint blend, faster gaits, prone/crouch stance transitions about 5x faster", "src": "user prompt 00:27; ee73874; BuildAll log B90 fast stances"},
+
+    {"id": "X14", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B107", "task": "Slower distinct weapon fire rates with damage tuned to keep body TTK close", "src": "user request 02:22; WeaponSpec changes; damage threshold analysis; specs/B107_Weapon_FireRate_TTK.md"},
+    {"id": "X15", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B91", "task": "Apply ADS sway reduction through active Kinemation SwayLayer profile settings", "src": "user reported prior sway change did not help; LR2ContentBuilder.TuneHumanoidSway writes the AimingWeight mask and Y spring scales to profile subassets"},
+    {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user said the sway change did not help; direct profile assets are ignored by git and were not a durable build setting"},
+    {"id": "X12", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B87", "task": "Remove opaque black smoke cards from fire particles", "src": "user request 02:01; D67 reopened; LR2_ParticleUnlit luminance-to-alpha mode plus smoke/mist/barrel-smoke material settings; player build pending"},
+    {"id": "X13", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B56", "task": "Refresh B56 usage telemetry across all four tools", "src": "user asks to continue undone work; PROMPTS.md; tasks.csv; bugs.csv; analyze.py; README; Bot Lab Tab 19"},
+    {"id": "X10", "when": "2026-11-19 01:46", "agent": "Codex", "board": "B91", "task": "Restore authored ADS pose and smoothly reduce additive weapon sway", "src": "user report 01:35 + removed AdsSightLock; authored pose/IK restored; retained 5090b3e ADS timing/FOV sync"},
+    {"id": "X09", "when": "2026-11-19 01:32", "agent": "Codex", "board": "B91", "task": "Keep ADS sight-lock correction aligned with visible hand IK", "src": "user report 01:31 + AdsSightLock.cs + RetargetProxy.cs + Runtime/Editor builds 0/0; user still felt forced motion"},
+    {"id": "C65", "when": "2026-11-19 01:16", "agent": "Claude", "board": "B98", "task": "Trimmed 83-164 ms lead-in from four AK reload clips", "src": "user prompt 00:27; onset analysis"},
+    {"id": "C64", "when": "2026-11-19 01:12", "agent": "Claude", "board": "B87/B93", "task": "Boxy smoke root cause (flipbooks without alpha), radial heat-shimmer map, Saltworks opens in drizzle, FX shots harness", "src": "user prompt 01:10; C29"},
+    {"id": "C63", "when": "2026-11-19 01:08", "agent": "Claude", "board": "B93/B97/B101/B105/B91", "task": "Visible rain + near layer, splashes, footstep dust, cinematic post-processing, banter library, ADS camera bob filter", "src": "user prompts 00:27-01:06; e648bbf"},
+    {"id": "C62", "when": "2026-11-19 00:59", "agent": "Claude", "board": "B91/B88", "task": "ADS-while-moving measurement (-lr2AdsWalkCheck) and FIRST TO flicker fix", "src": "user prompts 00:57; C28 reports"},
+    {"id": "C60", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B88/B96", "task": "Labelled score panel and BF6 minimap with settings toggle", "src": "user prompt 00:27; f988938"},
+    {"id": "C61", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B87/B100", "task": "Particle Pack style layered fire with soft particles; capture zone as HDRP ground decals", "src": "user prompt 00:27; f988938"},
+    {"id": "C59", "when": "2026-11-19 00:44", "agent": "Claude", "board": "B89", "task": "Bot flick overshoot and pro pre-fire (flick and corner)", "src": "user prompt 00:27; de6b9e2"},
+    {"id": "C57", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B90", "task": "Snappy movement: hold-X crouch, double-tap slide, 2x sprint blend, faster gaits, prone/crouch stance transitions about 5x faster", "src": "user prompt 00:27; ee73874; BuildAll log B90 fast stances"},
+
+    {"id": "X14", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B107", "task": "Slower distinct weapon fire rates with damage tuned to keep body TTK close", "src": "user request 02:22; WeaponSpec changes; damage threshold analysis; specs/B107_Weapon_FireRate_TTK.md"},
+    {"id": "X15", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B91", "task": "Apply ADS sway reduction through active Kinemation SwayLayer profile settings", "src": "user reported prior sway change did not help; LR2ContentBuilder.TuneHumanoidSway writes the AimingWeight mask and Y spring scales to profile subassets"},
+    {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user said the sway change did not help; direct profile assets are ignored by git and were not a durable build setting"},
+    {"id": "X12", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B87", "task": "Remove opaque black smoke cards from fire particles", "src": "user request 02:01; D67 reopened; LR2_ParticleUnlit luminance-to-alpha mode plus smoke/mist/barrel-smoke material settings; player build pending"},
+    {"id": "X13", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B56", "task": "Refresh B56 usage telemetry across all four tools", "src": "user asks to continue undone work; PROMPTS.md; tasks.csv; bugs.csv; analyze.py; README; Bot Lab Tab 19"},
+    {"id": "X10", "when": "2026-11-19 01:46", "agent": "Codex", "board": "B91", "task": "Restore authored ADS pose and smoothly reduce additive weapon sway", "src": "user report 01:35 + removed AdsSightLock; authored pose/IK restored; retained 5090b3e ADS timing/FOV sync"},
+    {"id": "X09", "when": "2026-11-19 01:32", "agent": "Codex", "board": "B91", "task": "Keep ADS sight-lock correction aligned with visible hand IK", "src": "user report 01:31 + AdsSightLock.cs + RetargetProxy.cs + Runtime/Editor builds 0/0; user still felt forced motion"},
+    {"id": "C65", "when": "2026-11-19 01:16", "agent": "Claude", "board": "B98", "task": "Trimmed 83-164 ms lead-in from four AK reload clips", "src": "user prompt 00:27; onset analysis"},
+    {"id": "C64", "when": "2026-11-19 01:12", "agent": "Claude", "board": "B87/B93", "task": "Boxy smoke root cause (flipbooks without alpha), radial heat-shimmer map, Saltworks opens in drizzle, FX shots harness", "src": "user prompt 01:10; C29"},
+    {"id": "C63", "when": "2026-11-19 01:08", "agent": "Claude", "board": "B93/B97/B101/B105/B91", "task": "Visible rain + near layer, splashes, footstep dust, cinematic post-processing, banter library, ADS camera bob filter", "src": "user prompts 00:27-01:06; e648bbf"},
+    {"id": "C62", "when": "2026-11-19 00:59", "agent": "Claude", "board": "B91/B88", "task": "ADS-while-moving measurement (-lr2AdsWalkCheck) and FIRST TO flicker fix", "src": "user prompts 00:57; C28 reports"},
+    {"id": "C60", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B88/B96", "task": "Labelled score panel and BF6 minimap with settings toggle", "src": "user prompt 00:27; f988938"},
+    {"id": "C61", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B87/B100", "task": "Particle Pack style layered fire with soft particles; capture zone as HDRP ground decals", "src": "user prompt 00:27; f988938"},
+    {"id": "C59", "when": "2026-11-19 00:44", "agent": "Claude", "board": "B89", "task": "Bot flick overshoot and pro pre-fire (flick and corner)", "src": "user prompt 00:27; de6b9e2"},
+    {"id": "C57", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B90", "task": "Snappy movement: hold-X crouch, double-tap slide, 2x sprint blend, faster gaits, prone/crouch stance transitions about 5x faster", "src": "user prompt 00:27; ee73874; BuildAll log B90 fast stances"},
+
+    {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user correction 02:02; AnimatorProfile_Rifle_Humanoid and AnimatorProfile_Pistol_Humanoid SwayLayerSettings: AimingWeight mask to 22% at full ADS; move/aim position Y spring scales reduced"},
+    {"id": "X12", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B87", "task": "Remove opaque black smoke cards from fire particles", "src": "user request 02:01; D67 reopened; LR2_ParticleUnlit luminance-to-alpha mode plus smoke/mist/barrel-smoke material settings"},
+    {"id": "X13", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B56", "task": "Refresh B56 usage telemetry across all four tools", "src": "user asks to continue undone work; PROMPTS.md; tasks.csv; bugs.csv; analyze.py; README; Bot Lab Tab 19"},
+    {"id": "X10", "when": "2026-11-19 01:46", "agent": "Codex", "board": "B91", "task": "Restore authored ADS pose and smoothly reduce additive weapon sway", "src": "user report 01:35 + removed AdsSightLock; authored pose/IK restored; retained 5090b3e ADS timing/FOV sync"},
+    {"id": "X09", "when": "2026-11-19 01:32", "agent": "Codex", "board": "B91", "task": "Keep ADS sight-lock correction aligned with visible hand IK", "src": "user report 01:31 + AdsSightLock.cs + RetargetProxy.cs + Runtime/Editor builds 0/0; user still felt forced motion"},
+    {"id": "C65", "when": "2026-11-19 01:16", "agent": "Claude", "board": "B98", "task": "Trimmed 83-164 ms lead-in from four AK reload clips", "src": "user prompt 00:27; onset analysis"},
+    {"id": "C64", "when": "2026-11-19 01:12", "agent": "Claude", "board": "B87/B93", "task": "Boxy smoke root cause (flipbooks without alpha), radial heat-shimmer map, Saltworks opens in drizzle, FX shots harness", "src": "user prompt 01:10; C29"},
+    {"id": "C63", "when": "2026-11-19 01:08", "agent": "Claude", "board": "B93/B97/B101/B105/B91", "task": "Visible rain + near layer, splashes, footstep dust, cinematic post-processing, banter library, ADS camera bob filter", "src": "user prompts 00:27-01:06; e648bbf"},
+    {"id": "C62", "when": "2026-11-19 00:59", "agent": "Claude", "board": "B91/B88", "task": "ADS-while-moving measurement (-lr2AdsWalkCheck) and FIRST TO flicker fix", "src": "user prompts 00:57; C28 reports"},
+    {"id": "C60", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B88/B96", "task": "Labelled score panel and BF6 minimap with settings toggle", "src": "user prompt 00:27; f988938"},
+    {"id": "C61", "when": "2026-11-19 00:56", "agent": "Claude", "board": "B87/B100", "task": "Particle Pack style layered fire with soft particles; capture zone as HDRP ground decals", "src": "user prompt 00:27; f988938"},
+    {"id": "C59", "when": "2026-11-19 00:44", "agent": "Claude", "board": "B89", "task": "Bot flick overshoot and pro pre-fire (flick and corner)", "src": "user prompt 00:27; de6b9e2"},
+    {"id": "C57", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B90", "task": "Snappy movement: hold-X crouch, double-tap slide, 2x sprint blend, faster gaits, prone/crouch stance transitions about 5x faster", "src": "user prompt 00:27; ee73874; BuildAll log B90 fast stances"},
+    {"id": "C58", "when": "2026-11-19 00:39", "agent": "Claude", "board": "B91", "task": "ADS sight lock (sight within 0.35 deg / 3.5 mm of the view), ADS sway 15 %, bodycam 4 %, shake x0.3", "src": "user prompt 00:27; ee73874"},
+    {"id": "G51", "when": "2026-11-18 22:09", "agent": "Gemini", "board": "-", "task": "2x faster ADS in/out with the camera FOV zoom synced per gun (MK23 0.14 s, MK18 0.18 s, AK-74N 0.22 s, FAL 0.27 s); runtime ADS profile clones; B26/D63 grip offsets and finger clamps", "src": "user prompt 21:56 (to Gemini); qa_LR2_Saltworks.txt 22:09 ADS.SpeedAndFovSync + known-bad PASS, 0 failures; committed by Claude after review (5090b3e); model from its last signature"},
+
     { id: "G50", when: "20:09", agent: "Gemini", board: "B47/B85", task: "Cross-review of Claude B47 learnable spray + 0.10 s recovery hold (verified KMath.ExpDecayAlpha(0)=0) and D66 SpawnPoint.ClearPosition capsule check", src: "LR2Firearm.cs, RecoilPattern.cs, KMath.cs, SpawnPoint.cs" },
     { id: "G48", when: "20:05", agent: "Gemini", board: "B83/B14.1/B18/B82/B14/B55/B58/B59/B60a/B60d", task: "Cross-review of Claude B83 (D65), B14.1 (C26 kc_*), B18 (Player.log), B82 build binary scan + easy-lane audits of B14, B55, B58, B59, B60a, B60d against C21-C26 &amp; Saltworks QA", src: "TacticalBotBrain.cs; C26/kc_02/05/08; Player.log; LeadRush 2_Data binary scan; C21/C22/C24 death+wall logs &amp; frames; qa_LR2_Saltworks.txt" },
     { id: "G49", when: "20:05", agent: "Gemini", board: "B36/B44/B31/B41/B82", task: "Implement B36 war-torn audio (A26 stolen-voice tail release, 5-ray IsIndoors, horizon artillery/wind, brass surge, radio grit/anvil), B44 bright amber checkboxes, and B31/B41/B82 automated capture hooks", src: "specs/B36.md, LR2Audio.cs, AmbientOneShots.cs, LR2AudioEnvironment.cs, LR2MusicDirector.cs, LR2MusicGenerator.cs, LR2UIBuilder.cs, LR2LoadingIntro.cs, LR2MapPreviewCapture.cs, LR2QABotRunner.cs; Runtime+Editor 0 errors" },

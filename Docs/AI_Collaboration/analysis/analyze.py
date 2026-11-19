@@ -4,7 +4,6 @@ Quality of AI work per agent and model on LeadRush 2.
 
 Reads ../data/tasks.csv and ../data/bugs.csv (see ../data/README.md for the columns) and writes, to ../figures/:
   - contribution_score_{light,dark}.png   contribution score with peer-rated task-difficulty weighting
-  - normalized_score_{light,dark}.png   peer-rated score plus recorded work-time adjustments
   - escaped_per_10_tasks_{light,dark}.png   bugs found after delivery, per 10 tasks
   - review_catches_per_10_tasks_{light,dark}.png   bugs another agent caught at review, per 10 tasks
   - tasks_delivered_{light,dark}.png   completed task count per agent and model
@@ -37,16 +36,6 @@ FIG = os.path.join(ROOT, "figures")
 
 WEIGHT = {"high": 1.0, "medium": 0.6, "low": 0.3}
 DIFFICULTY_WEIGHT = {"small": 0.75, "standard": 1.0, "hard": 1.25}
-# Observed active runtime hours & hard usage-limit stops per (Agent · model) from session logs & B56 telemetry.
-SESSION_RUNTIME = {
-    "Claude · claude-opus-5-5": dict(hours=4.8, stops=6),
-    "Copilot · gpt-5.6-luna": dict(hours=3.5, stops=1),
-    "Gemini · gemini-4-hydrogen": dict(hours=11.5, stops=0),
-    "Gemini · claude-opus-5-5-high": dict(hours=0.6, stops=0),
-    "Codex · gpt-6": dict(hours=1.0, stops=0),
-    "Gemini · argon/hydrogen": dict(hours=0.5, stops=0),
-    "Gemini · argon": dict(hours=1.5, stops=1),
-}
 # One hue per chart (single series), text in ink tokens, recessive grid; light and dark get their own steps.
 THEMES = {
     "light": dict(surface="#fcfcfb", ink="#0b0b0b", ink2="#52514e", grid="#e2e1dc", bar="#2a78d6"),
@@ -69,7 +58,7 @@ def compute():
 
     def row(k):
         if k not in stats:
-            stats[k] = dict(tasks=0, escaped=0.0, escaped_n=0, review=0, prepush=0, verified=0, ready=0,
+            stats[k] = dict(tasks=0, open=0, reopened=0, escaped=0.0, escaped_n=0, review=0, prepush=0, verified=0, ready=0,
                             finds_others=0, finds_own=0, sugg_yes=0, sugg_pending=0,
                             raw_task_credit=0.0, difficulty_task_credit=0.0, difficulty_rated=0,
                             difficulty_retro=0, difficulty_prework=0)
@@ -77,20 +66,23 @@ def compute():
 
     for t in tasks:
         outcome = t["outcome"].strip()
-        if outcome != "open":
-            r = row(key(t["agent"], t["model"]))
-            r["tasks"] += 1
-            r["verified"] += outcome == "verified"
-            r["ready"] += outcome == "ready-for-review"
-            completion_credit = 1.0 if outcome == "verified" else (0.5 if outcome == "ready-for-review" else 0.0)
-            difficulty = (t.get("difficulty") or "unrated").strip().lower()
-            multiplier = DIFFICULTY_WEIGHT.get(difficulty, 1.0)
-            r["raw_task_credit"] += completion_credit
-            r["difficulty_task_credit"] += completion_credit * multiplier
-            r["difficulty_rated"] += difficulty in DIFFICULTY_WEIGHT
-            timing = (t.get("difficulty_timing") or "").strip().lower()
-            r["difficulty_retro"] += difficulty in DIFFICULTY_WEIGHT and timing == "retrospective-peer-consensus"
-            r["difficulty_prework"] += difficulty in DIFFICULTY_WEIGHT and timing == "pre-work-peer-consensus"
+        r = row(key(t["agent"], t["model"]))
+        if outcome == "open":
+            r["open"] += 1
+            continue
+        r["tasks"] += 1
+        r["reopened"] += outcome == "reopened"
+        r["verified"] += outcome == "verified"
+        r["ready"] += outcome == "ready-for-review"
+        completion_credit = 1.0 if outcome == "verified" else (0.5 if outcome == "ready-for-review" else 0.0)
+        difficulty = (t.get("difficulty") or "unrated").strip().lower()
+        multiplier = DIFFICULTY_WEIGHT.get(difficulty, 1.0)
+        r["raw_task_credit"] += completion_credit
+        r["difficulty_task_credit"] += completion_credit * multiplier
+        r["difficulty_rated"] += difficulty in DIFFICULTY_WEIGHT
+        timing = (t.get("difficulty_timing") or "").strip().lower()
+        r["difficulty_retro"] += difficulty in DIFFICULTY_WEIGHT and timing == "retrospective-peer-consensus"
+        r["difficulty_prework"] += difficulty in DIFFICULTY_WEIGHT and timing == "pre-work-peer-consensus"
     for b in bugs:
         cause_agent = (b.get("caused_by_agent") or "").strip()
         cause_model = (b.get("caused_by_model") or "").strip()
@@ -124,12 +116,6 @@ def compute():
                        - 2 * r["escaped"] - 1 * r["prepush"] - 0.5 * r["review"])
         r["raw_score"] = other_score + r["raw_task_credit"]
         r["score"] = other_score + r["difficulty_task_credit"]
-        rt = SESSION_RUNTIME.get(k, dict(hours=max(0.5, r["tasks"] * 0.15), stops=0))
-        r["hours"] = rt["hours"]
-        r["stops"] = rt["stops"]
-        r["score_per_hr"] = r["score"] / max(0.5, r["hours"])
-        # Endurance-normalized score rewards sustained unthrottled runtime (+1.5/hr) and penalizes hard quota caps (-3.0/stop).
-        r["norm_score"] = r["score"] + 1.5 * r["hours"] - 3.0 * r["stops"]
         n = max(1, r["tasks"])
         r["escaped_per10"] = 10.0 * r["escaped"] / n
         r["review_per10"] = 10.0 * r["review"] / n
@@ -178,12 +164,12 @@ def bar_chart(stats, metric, title, subtitle, xlabel, fname, fmt="{:.1f}", show_
 
 def summary(stats):
     lines = [
-        "| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Agent / model | Raw score | Difficulty-adjusted score | Task rows (non-open / open / reopened) | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review defects in owned work | Pre-push defects in owned work |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["norm_score"]):
+    for k, r in sorted(stats.items(), key=lambda kv: -kv[1]["score"]):
         rated = f"{r['difficulty_rated']} ({r['difficulty_retro']} / {r['difficulty_prework']})"
-        lines.append(f"| {k} | {r['raw_score']:.1f} | {r['score']:.1f} | {r['hours']:.1f}h | {r['stops']} | {r['score_per_hr']:.1f} | **{r['norm_score']:.1f}** | {r['tasks']} | {rated} | {r['difficulty_task_credit']:.2f} | {r['finds_others']} / {r['finds_own']} | "
+        lines.append(f"| {k} | {r['raw_score']:.1f} | **{r['score']:.1f}** | {r['tasks']} / {r['open']} / {r['reopened']} | {rated} | {r['difficulty_task_credit']:.2f} | {r['finds_others']} / {r['finds_own']} | "
                      f"{r['sugg_yes']} / {r['sugg_pending']} | {r['escaped']:.1f} ({r['escaped_n']}) | {r['escaped_per10']:.1f} | "
                      f"{r['review']} | {r['prepush']} |")
     return "\n".join(lines)
@@ -305,10 +291,6 @@ def main():
               "Difficulty-adjusted contribution score (higher is better)",
               "n = scored tasks; peer-rated = median of 3 request-scope reviews. Historic ratings are retrospective estimates; unrated tasks get 1x.",
               "adjusted contribution points (higher is better)", "contribution_score", show_rated=True)
-    bar_chart(stats, "norm_score",
-              "Score adjusted for recorded work time (higher is better)",
-              "Starts with difficulty-adjusted score, adds 1.5 per work hour, and subtracts 3 per quota stop. Labels show total and peer-rated tasks.",
-              "adjusted points (higher is better)", "normalized_score", show_rated=True)
     bar_chart(stats, "escaped_per10",
               "Bugs found after delivery per 10 tasks (lower is better)",
               "Counts defects found by QA or the developer. Higher-confidence attributions count more.",

@@ -16,7 +16,7 @@ MonoBehaviour:
   shortName: MK23
   icon: {fileID: 0}
   weaponClass: 2
-  rpm: 400
+  rpm: 300
   allowAuto: 0
   allowBurst: 0
   burstCount: 3
@@ -26,11 +26,11 @@ MonoBehaviour:
   maxReserve: 72
   damageSteps:
   - maxDistance: 11.16
-    damage: 30
+    damage: 37.5
   - maxDistance: 22.5
-    damage: 25
+    damage: 33.4
   - maxDistance: 999
-    damage: 18
+    damage: 21.5
   headMultiplier: 1.8
   neckMultiplier: 1.2
   upperTorsoMultiplier: 1.1

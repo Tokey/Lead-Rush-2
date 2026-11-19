@@ -221,7 +221,6 @@ namespace LR2.Characters
                 }
             }
             if (GetComponent<WeaponAntiClip>() == null) gameObject.AddComponent<WeaponAntiClip>();
-            if (GetComponent<AdsSightLock>() == null) gameObject.AddComponent<AdsSightLock>(); // B91: sights stay on the view in ADS
             if (IsLocalPlayer) LR2Settings.Changed += OnSettingsChanged;
 
             var rig = GetComponentInChildren<KRigComponent>();

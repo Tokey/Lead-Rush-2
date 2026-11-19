@@ -16,7 +16,7 @@ MonoBehaviour:
   shortName: FAL
   icon: {fileID: 0}
   weaponClass: 0
-  rpm: 600
+  rpm: 500
   allowAuto: 1
   allowBurst: 0
   burstCount: 3
@@ -30,7 +30,7 @@ MonoBehaviour:
   - maxDistance: 56.25
     damage: 42
   - maxDistance: 999
-    damage: 36
+    damage: 37.5
   headMultiplier: 1.5
   neckMultiplier: 1.2
   upperTorsoMultiplier: 1.1

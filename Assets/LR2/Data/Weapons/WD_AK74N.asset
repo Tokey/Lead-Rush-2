@@ -16,7 +16,7 @@ MonoBehaviour:
   shortName: AK-74N
   icon: {fileID: 0}
   weaponClass: 0
-  rpm: 650
+  rpm: 550
   allowAuto: 1
   allowBurst: 0
   burstCount: 3
@@ -26,11 +26,11 @@ MonoBehaviour:
   maxReserve: 210
   damageSteps:
   - maxDistance: 19.84
-    damage: 33
+    damage: 37.5
   - maxDistance: 40
-    damage: 28
+    damage: 30
   - maxDistance: 999
-    damage: 23
+    damage: 25
   headMultiplier: 1.5
   neckMultiplier: 1.2
   upperTorsoMultiplier: 1.1

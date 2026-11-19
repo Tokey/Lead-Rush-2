@@ -92,9 +92,7 @@ namespace LR2.Characters
             if (!_ready || _soldier.IsDead || !_soldier.IsLocalPlayer) return;
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
-            // B91: this moves the camera alone (the gun stays where the body put it), so in ADS it shifts the sight picture off
-            // the bullets' line: keep at most 4 % of it at full ADS (prefabs serialized 0.88 = 12 %)
-            float k = intensity * LR2Settings.BodycamMotion * Mathf.Lerp(1f, 1f - Mathf.Max(adsDamping, 0.96f), _soldier.AimBlend);
+            float k = intensity * LR2Settings.BodycamMotion * Mathf.Lerp(1f, 1f - adsDamping, _soldier.AimBlend);
             if (k <= 0.001f) return;
 
             var move = _soldier.Movement;

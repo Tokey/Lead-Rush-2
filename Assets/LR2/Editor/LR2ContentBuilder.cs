@@ -8,6 +8,7 @@ using KINEMATION.FPSAnimationFramework.Runtime.Core;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.AttachHandLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.CollisionLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.PoseSamplerLayer;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.SwayLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.ViewLayer;
 using KINEMATION.FPSAnimationFramework.Runtime.Playables;
 using KINEMATION.Shared.KAnimationCore.Runtime.Core;
@@ -668,18 +669,19 @@ namespace LR2.EditorTools
         {
             // B55/B49/B26(D63): LeadRushHDRP default MK18 Mod 1 (clean, attachment-free iron-sight primary) is Slot 0 default; AK-12 remains selectable alongside Mk23 sidearm.
             new WeaponSpec { id = "Mk18", display = "MK18", source = DemoDir + "/Prefabs/Mk18/Mk18_Scriptable.prefab", audio = "M4", akMaterials = true,
-                             rpm = 850f, near = 32f, mid = 26f, far = 21f, range = 28f, hip = 2.0f, adsTime = 0.18f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
+                             rpm = 700f, near = 37.5f, mid = 33.4f, far = 21.5f, range = 28f, hip = 2.0f, adsTime = 0.18f, sprintToFire = 0.2f, kick = new Vector2(0.1f, 0.06f),
                              pattern = 0.3f, adsRecoil = 0.50f, rightGripOffset = new Vector3(-0.004f, -0.022f, 0.012f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 5.56 recoils less than 5.45 in ADS
             new WeaponSpec { id = "Mk23", display = "MK23", source = DemoDir + "/Prefabs/Humanoid/Mk23Mod0_Scriptable_Humanoid.prefab", audio = "Pistol",
-                             cls = WeaponClass.Pistol, rpm = 400f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 30f, mid = 25f, far = 18f,
+                             cls = WeaponClass.Pistol, rpm = 300f, auto = false, mag = 12, reserve = 48, maxReserve = 72, near = 37.5f, mid = 33.4f, far = 21.5f,
                              head = 1.8f, range = 18f, hip = 1.6f, ads = 0.08f, adsTime = 0.14f, sprintToFire = 0.12f, adsFov = 0.82f, kick = new Vector2(0.4f, 0.1f),
                              pattern = 1f, patternH = 1f, rightGripOffset = Vector3.zero, leftGripOffset = Vector3.zero },
-            // TTK (100 HP): AK-12 3 body shots <= ~20 m (171 ms), 4 to ~40 m (257 ms), 5 beyond. Mk23 4 body shots (450 ms), 2 headshots.
-            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true, near = 35f, mid = 29f, far = 24f, hip = 2.2f },
-            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", akMaterials = true, rpm = 650f, near = 33f, mid = 28f, far = 23f,
+            // B107: slower, distinct per-weapon cadence; damage tiers compensate for the slower cycle while staying near current
+            // body-shot TTK against both 100 HP and 100 HP + 50 armor (discrete shot counts limit exact matching).
+            new WeaponSpec { id = "AK12", display = "AK-12", source = HumanoidAk12, akMaterials = true, rpm = 600f, near = 37.5f, mid = 30f, far = 25f, hip = 2.2f },
+            new WeaponSpec { id = "AK74N", display = "AK-74N", source = DemoDir + "/Prefabs/AK12/AK74N_Scriptable.prefab", akMaterials = true, rpm = 550f, near = 37.5f, mid = 30f, far = 25f,
                              adsTime = 0.22f, pattern = 0.36f, rightGripOffset = new Vector3(0.002f, -0.014f, -0.030f), leftGripOffset = new Vector3(0f, -0.036f, 0f) },
-            new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", akMaterials = true, rpm = 600f, mag = 20, reserve = 80, maxReserve = 140,
-                             near = 48f, mid = 42f, far = 36f, range = 45f, hip = 3.0f, adsTime = 0.27f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
+            new WeaponSpec { id = "FAL", display = "FAL", source = DemoDir + "/Prefabs/FAL/FAL_Scriptable.prefab", akMaterials = true, rpm = 500f, mag = 20, reserve = 80, maxReserve = 140,
+                             near = 48f, mid = 42f, far = 37.5f, range = 45f, hip = 3.0f, adsTime = 0.27f, sprintToFire = 0.3f, adsFov = 0.66f, kick = new Vector2(0.24f, 0.12f),
                              pattern = 0.5f, patternH = 0.4f, adsRecoil = 0.60f, rightGripOffset = new Vector3(0.000f, -0.016f, -0.010f), leftGripOffset = new Vector3(0f, -0.036f, 0f) }, // B47: 7.62x51 stays harder in ADS
         };
 
@@ -930,6 +932,7 @@ namespace LR2.EditorTools
                 if (humProfile != null && (entity.animatorProfile == null || !entity.animatorProfile.name.Contains("Humanoid")))
                     entity.animatorProfile = humProfile;
                 TuneHumanoidCollision(humProfile, spec.cls == WeaponClass.Pistol);
+                TuneHumanoidSway(humProfile);
                 if (spec.id == "Mk18")
                 {
                     var ironAp = go.transform.Find("AimPoint_Iron");
@@ -1356,31 +1359,28 @@ namespace LR2.EditorTools
             const string pack = "Assets/UnityTechnologies/ParticlePack/EffectExamples";
             var flameSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Fire & Explosion Effects/Textures/Explosion.tif");
             var steamSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Smoke & Steam Effects/Textures/smokeysteam.tif");
-            // B87 (user 11-19 01:1x "flame smokes or something still boxy"): the Particle Pack flipbooks are RGB on black with no
-            // alpha channel. The pack draws them additively (black adds nothing); our alpha-blended smoke drew every particle as an
-            // opaque dark square. Alpha comes from luminance now, so the black background is transparent in both blend modes.
-            foreach (var sheet in new[] { flameSheet, steamSheet })
-            {
-                if (sheet == null) continue;
-                var imp = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(sheet)) as TextureImporter;
-                if (imp == null || (imp.alphaSource == TextureImporterAlphaSource.FromGrayScale && imp.alphaIsTransparency)) continue;
-                imp.alphaSource = TextureImporterAlphaSource.FromGrayScale;
-                imp.alphaIsTransparency = true;
-                imp.SaveAndReimport();
-            }
+            // B87: the Particle Pack smoke sheet is RGB on black but Unity imports it without alpha. Use the shader's
+            // luminance-to-alpha mode on blended smoke materials so the black card background stays transparent.
             Texture2D smokeTex = steamSheet != null ? steamSheet : puff;
             Vector2Int smokeTiles = steamSheet != null ? new Vector2Int(8, 8) : Vector2Int.one;
+
+            Material SoftSmoke(Texture2D texture)
+            {
+                var material = NewParticle(texture, Color.white, 1f, false);
+                if (material.HasProperty("_LuminanceToAlpha")) material.SetFloat("_LuminanceToAlpha", 1f);
+                return material;
+            }
 
             var lib = LoadOrCreate<LR2FxLibrary>("Assets/LR2/Resources/LR2/FXLibrary.asset");
             lib.fire = SaveMaterial(NewParticle(flameSheet != null ? flameSheet : sparkTex, new Color(1f, 0.7f, 0.42f),
                 flameSheet != null ? 2.4f : 2.6f, true), res + "/M_FX_Fire.mat"); // 2.4: luminance alpha dims the mid-tones
             lib.fireTiles = flameSheet != null ? new Vector2Int(6, 6) : Vector2Int.one;
-            lib.smoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_Smoke.mat");
+            lib.smoke = SaveMaterial(SoftSmoke(smokeTex), res + "/M_FX_Smoke.mat");
             lib.smokeTiles = smokeTiles;
             lib.embers = SaveMaterial(NewParticle(sparkTex, new Color(1f, 0.72f, 0.38f), 3.2f, true), res + "/M_FX_Spark.mat");
-            lib.mist = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_Mist.mat");
+            lib.mist = SaveMaterial(SoftSmoke(smokeTex), res + "/M_FX_Mist.mat");
             lib.mistTiles = smokeTiles;
-            lib.barrelSmoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_BarrelSmoke.mat");
+            lib.barrelSmoke = SaveMaterial(SoftSmoke(smokeTex), res + "/M_FX_BarrelSmoke.mat");
             lib.barrelSmokeTiles = smokeTiles;
             lib.muzzleHeat = SaveMaterial(NewParticle(softDot, new Color(1f, 0.12f, 0.015f, 0.2f), 1f, true), res + "/M_FX_MuzzleHeat.mat");
             lib.fireGlow = SaveMaterial(NewParticle(softDot, Color.white, 1.35f, true), res + "/M_FX_FireGlow.mat");
@@ -1445,6 +1445,38 @@ namespace LR2.EditorTools
                 // view at 74 degrees against a wall) and the pistol's drops it 20 cm. One tuck for both.
                 col.secondaryPose = col.primaryPose;
                 EditorUtility.SetDirty(col);
+            }
+        }
+
+        private static void TuneHumanoidSway(FPSAnimatorProfile profile)
+        {
+            if (profile == null) return;
+            foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(profile)))
+            {
+                if (!(sub is SwayLayerSettings sway)) continue;
+
+                // B91: Kinemation's sway runs on the weapon bone. Mask it down smoothly with the actual ADS input,
+                // and cut its vertical position spring response so the rifle keeps its authored sight alignment.
+                sway.curveBlending = new List<CurveBlend>
+                {
+                    new CurveBlend
+                    {
+                        name = FPSANames.AimingWeight,
+                        mode = ECurveBlendMode.Mask,
+                        clampMin = 0.22f,
+                        source = ECurveSource.Input
+                    }
+                };
+
+                var movePosition = sway.moveSwayPositionSpring;
+                movePosition.scale.y = -0.15f;
+                sway.moveSwayPositionSpring = movePosition;
+
+                var aimPosition = sway.aimSwayPositionSpring;
+                aimPosition.scale.y = -0.12f;
+                sway.aimSwayPositionSpring = aimPosition;
+
+                EditorUtility.SetDirty(sway);
             }
         }
 

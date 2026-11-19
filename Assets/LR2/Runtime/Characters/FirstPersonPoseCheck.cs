@@ -906,8 +906,8 @@ namespace LR2.Characters
         /// <summary>
         /// B91 (user 11-19: "ads is specially bad while moving, not while steady"). In ADS: stand, walk forward, strafe right and
         /// left, walk back; every frame (after all LateUpdates, so BodycamRig's camera motion is included) it records where the
-        /// sight line points relative to the view, how far the view itself is off the bullet line (AimDirection), the camera's
-        /// vertical bob, and the correction AdsSightLock had to apply. One first-person capture per phase.
+        /// sight line points relative to the view, how far the view itself is off the bullet line (AimDirection), and the camera's
+        /// vertical bob. The weapon stays on its authored animation pose. One first-person capture per phase.
         /// </summary>
         private IEnumerator AdsWalkCheck()
         {
@@ -984,8 +984,7 @@ namespace LR2.Characters
             var cam = _soldier.ViewCamera;
             var entity = fa != null ? fa.GetComponent<KINEMATION.FPSAnimationFramework.Runtime.Core.FPSAnimatorEntity>() : null;
             Transform ap = entity != null ? entity.defaultAimPoint : null;
-            var sightLock = _soldier.GetComponent<AdsSightLock>();
-            float maxAng = 0f, sumAng = 0f, maxOff = 0f, sumOff = 0f, maxView = 0f, sumView = 0f, maxCorr = 0f;
+            float maxAng = 0f, sumAng = 0f, maxOff = 0f, sumOff = 0f, maxView = 0f, sumView = 0f;
             float yMin = float.MaxValue, yMax = float.MinValue, speed = 0f;
             int n = 0;
             float end = Time.time + seconds;
@@ -1000,7 +999,6 @@ namespace LR2.Characters
                 maxAng = Mathf.Max(maxAng, ang); sumAng += ang;
                 maxOff = Mathf.Max(maxOff, off); sumOff += off;
                 maxView = Mathf.Max(maxView, view); sumView += view;
-                if (sightLock != null) maxCorr = Mathf.Max(maxCorr, sightLock.LastCorrection.x);
                 float camY = cam.transform.position.y - _soldier.transform.position.y;
                 yMin = Mathf.Min(yMin, camY); yMax = Mathf.Max(yMax, camY);
                 speed += _soldier.Movement != null ? _soldier.Movement.Speed : 0f;
@@ -1009,8 +1007,7 @@ namespace LR2.Characters
             if (n == 0) { Note($"ADS-MOVE [{label}] no samples (gun/camera/aim point missing)"); yield break; }
             Note($"ADS-MOVE [{label}] gun={fa.DisplayName} frames={n} speed={speed / n:0.00} m/s aimBlend={_soldier.AimBlend:0.00} | " +
                  $"sight vs view: angle max {maxAng:0.00} mean {sumAng / n:0.00} deg, offset max {maxOff:0.00} mean {sumOff / n:0.00} cm | " +
-                 $"view vs bullet line: max {maxView:0.00} mean {sumView / n:0.00} deg | camera bob {(yMax - yMin) * 100f:0.0} cm | " +
-                 $"sight-lock correction max {maxCorr:0.00} deg");
+                 $"view vs bullet line: max {maxView:0.00} mean {sumView / n:0.00} deg | camera bob {(yMax - yMin) * 100f:0.0} cm | authored weapon pose");
             yield return Capture($"adsmove_{label}", $"ADS {label}");
         }
 

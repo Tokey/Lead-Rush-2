@@ -12,6 +12,7 @@ Shader "LR2/ParticleUnlit"
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
         [Toggle] _PremultiplyAlpha ("Premultiply alpha into color (for additive)", Float) = 0
         _SoftFade ("Soft particle fade distance (m, 0 = off)", Float) = 0
+        [Toggle] _LuminanceToAlpha ("Use texture luminance as alpha", Float) = 0
     }
 
     SubShader
@@ -48,6 +49,7 @@ Shader "LR2/ParticleUnlit"
                 float _Cull;
                 float _PremultiplyAlpha;
                 float _SoftFade;
+                float _LuminanceToAlpha;
             CBUFFER_END
 
             struct Attributes
@@ -82,6 +84,13 @@ Shader "LR2/ParticleUnlit"
             {
                 float4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 float4 c = tex * i.color * _Color;
+                if (_LuminanceToAlpha > 0.5)
+                {
+                    // Particle Pack flipbooks are RGB on black. Their alpha can import as fully opaque, so shape the
+                    // smoke from RGB luminance directly and preserve particle/material tint alpha.
+                    float luma = dot(tex.rgb, float3(0.2126, 0.7152, 0.0722));
+                    c.a = smoothstep(0.015, 0.38, luma) * i.color.a * _Color.a;
+                }
                 c.rgb *= _Intensity;
                 if (_PremultiplyAlpha > 0.5) c.rgb *= c.a;
                 // B87 soft particles: fade where the quad meets geometry (no hard line where flames cut into a barrel)

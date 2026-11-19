@@ -6,16 +6,16 @@ written by AI coding agents that work in the same repository **at the same time*
 They coordinate through one Markdown file in the repo, [`AGENT_COORDINATION.md`](../../AGENT_COORDINATION.md) (the "board").
 
 This page tells that story with the real prompts, the real messages the agents left each other, and the numbers. It covers
-**2026-11-16 11:19 to 2026-11-18 12:40+** (local time, America/New_York) and keeps growing as all four agents commit to the repo.
+**2026-11-16 11:19 to 2026-11-19 02:32** (local time, America/New_York); this is the evidence window, not active work duration.
 
 | | |
 |---|---|
 | **Developer** | 1: directs, playtests, decides |
 | **AI agents (4)** | **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`argon` = `gemini-pro-orchestrator-g1-pro` + `gemini-flash-worker-agy`, `claude-opus-5-5-high`, `gemini-4-hydrogen`), **GitHub Copilot** (`gpt-5.6-luna`, joined `11-17 23:12`), **OpenAI Codex** (`gpt-6`, joined `11-18 01:54`) |
-| **Developer prompts** | 135+ recorded verbatim headings across sessions ([every prompt, verbatim](PROMPTS.md)) |
+| **Prompt archive** | 201 timestamped sections in [`PROMPTS.md`](PROMPTS.md); Codex direct user requests are not recorded there |
 | **Board** | v1 archived verbatim; v2 (`23:25`); v3 (`00:05+`) with compile gate, Check-the-Check & ledger integrity |
 | **Handoffs & Limit Stops** | 6 documented Claude Code usage-limit / token-cap handoffs (`11-16` afternoon; `11-17 14:55`, `15:07`, `18:13`, `23:14` sub-agent cap; `11-18 00:44` reset wait) |
-| **Tracked work items** | `B1–B78` (incl. `B60a–B60g` & `B60.1–B60.10` HyperMotion subtasks) + research specs `P1–P5` |
+| **Tracked work items** | `B1–B107` (incl. `B60a–B60g` & `B60.1–B60.10` HyperMotion subtasks) + research specs `P1–P5` |
 
 ## The team
 
@@ -229,7 +229,7 @@ before a planned push (caught by the push rule: never push a tree that doesn't c
 
 ### 9. Four agents, three usage limits, one evidence harness (2026-11-18 04:10 to 09:45)
 
-**Codex** (`gpt-6`) joined at 02:50. Within two hours every other agent hit a wall: Copilot its monthly limit (02:40), Gemini
+**Codex** (`gpt-6`) joined at 01:54. Within two hours every other agent hit a wall: Copilot its monthly limit (02:40), Gemini
 an account quota that resets in 157 hours (its existing conversation refused every prompt), and Claude its 5-hour limit
 (04:30 to 09:10, the scheduled ticks queued up). The fallback in the protocol worked: a *new* Antigravity conversation on
 `gemini-4-hydrogen-high` accepted work, and Gemini delivered two reviewed rows within 15 minutes of being prompted.
@@ -263,7 +263,7 @@ worker writes into the shared Assets folder, and Claude's process check only loo
 | Antigravity | `gemini-4-hydrogen` | 11-17 13:30 to 22:28 | Hit feedback, map fixes, README and pushes, QA bot, music, weather, loading screen, build-crash fix |
 | Antigravity | "argon" | 11-17 22:51 onwards | CTF mode, tactical chat, lighting and HDRI skies, human-like bot aiming |
 | GitHub Copilot | `gpt-5.6-luna` | 11-17 23:12 to 11-18 02:40 | Pain/death voices (`B12`), weapon laser (`B13`), bot research write-up (`B24`), project history & tooling docs (`B45`), glass materials (`B30`), specs (`B42`/`B44`/`B46`/`B47`/`B48`/`B60`/`P1–P5`), per-gun pose runs, review catches |
-| OpenAI Codex | `gpt-6` | 11-18 01:54 onwards | 4-agent token/limit telemetry (`B56`), independent known-bad QA assertions (`B57`), 390-leaf realism backlog (`B61`), pre-rated task difficulty rubric (`B66a`), heat-haze/laser/TDM/ADS-FOV fixes (`B67a`/`B68a`/`B69`/`B70`), `D39` review catch |
+| OpenAI Codex | `gpt-6` | 11-18 01:54 onwards | 4-agent token/limit telemetry (`B56`), independent known-bad QA assertions (`B57`), 390-leaf realism backlog (`B61`), pre-rated task difficulty rubric (`B66a`), heat-haze/laser/TDM/ADS-FOV fixes (`B67a`/`B68a`/`B69`/`B70`), Kinemation ADS / smoke / weapon-cadence tuning (`B87`/`B91`/`B107`), `D39` review catch |
 
 ## Quality: which model produced what quality of work
 
@@ -277,17 +277,13 @@ another agent stopped it first.
 
 **Task difficulty.** Research on coding-agent tasks finds that edit spread and repository structure predict difficulty better overall than prompt length; prompt clarity matters more for mid-range tasks. Three independent reviewers retrospectively rated the 99 existing task definitions using scope/integration, uncertainty, and verification burden; the median rubric total sets each band. Reviewers were instructed to ignore implementer/model, outcome, and implementation. Six records were flagged as under-specified by a majority. These ratings estimate requested scope, not actual effort. Small tasks count 0.75x, standard 1x, and hard 1.25x toward verified or ready-for-review task credit; other score terms stay unchanged, and unrated work is neutral at 1x. Raw score remains for comparison. Future tasks should be rated before work starts. See the [B66 rating method](specs/B66_Task_Difficulty.md), [review votes](data/task_difficulty_reviews.csv), and [ESEM 2026 study](https://drops.dagstuhl.net/entities/document/10.4230/LIPIcs.ESEM.2026.3).
 
-**Time-adjusted score.** The chart starts with the difficulty-adjusted contribution score, adds 1.5 points per recorded work hour, and subtracts 3 points per recorded quota stop. Higher is better. The table also preserves the raw contribution score for comparison.
+**Recorded evidence only.** The repository stores timestamps, task rows, bug findings, prompt sections, and reported quota events, but not measured active work duration, exact context resets, or client token totals. Charts therefore show score, task, and defect evidence without converting elapsed wall-clock spans into work hours.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/contribution_score_dark.png">
   <img alt="Bar chart: difficulty-adjusted contribution score per agent and model; higher is better" src="figures/contribution_score_light.png">
 </picture>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="figures/normalized_score_dark.png">
-  <img alt="Bar chart: contribution score adjusted for recorded work time and quota stops; higher is better" src="figures/normalized_score_light.png">
-</picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/escaped_per_10_tasks_dark.png">
@@ -304,23 +300,22 @@ another agent stopped it first.
   <img alt="Bar chart: completed task count per agent and model" src="figures/tasks_delivered_light.png">
 </picture>
 
-| Agent / model | Raw score | Difficulty-adjusted score | Active hours | Quota stops | Adjusted points / hour | Time-adjusted score | Tasks | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review catches | Pre-push breaks |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Claude · `claude-opus-5-5` | 76.6 | 76.6 | 4.8h | 6 | 16.0 | **65.8** | 32 | 21 (21 / 0) | 13.50 | 13 / 4 | 10 / 2 | 5.7 (8) | 1.8 | 5 | 2 |
-| Copilot · `gpt-5.6-luna` | 32.5 | 31.5 | 3.5h | 1 | 9.0 | **33.8** | 35 | 35 (35 / 0) | 20.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
-| Gemini · `gemini-4-hydrogen` | 3.6 | 5.7 | 11.5h | 0 | 0.5 | **23.0** | 31 | 30 (30 / 0) | 14.62 | 1 / 0 | 0 / 0 | 4.2 (6) | 1.4 | 7 | 0 |
-| Gemini · `gemini-4-hydrogen-high` | 14.5 | 14.5 | 1.5h | 0 | 9.7 | **16.8** | 10 | 0 (0 / 0) | 4.50 | 0 / 6 | 0 / 0 | 0.0 (0) | 0.0 | 4 | 0 |
-| Codex · `gpt-6` | 6.0 | 6.2 | 1.0h | 0 | 6.2 | **7.8** | 8 | 8 (8 / 0) | 4.25 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 2 | 0 |
-| Gemini · `claude-opus-5-5-high` | 3.0 | 3.0 | 0.6h | 0 | 5.0 | **3.9** | 0 | 0 (0 / 0) | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
-| Gemini · `argon/hydrogen` | -1.2 | -1.2 | 0.5h | 0 | -2.4 | **-0.4** | 1 | 1 (1 / 0) | 0.00 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
-| Gemini · `argon` | -3.2 | -3.0 | 1.5h | 1 | -2.0 | **-3.7** | 3 | 3 (3 / 0) | 1.25 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
+| Agent / model | Raw score | Difficulty-adjusted score | Task rows (non-open / open / reopened) | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review defects in owned work | Pre-push defects in owned work |
+| Claude · claude-opus-5-5 | 87.6 | **87.6** | 65 / 0 / 0 | 21 (21 / 0) | 19.50 | 17 / 5 | 10 / 2 | 9.7 (12) | 1.5 | 7 | 2 |
+| Copilot · gpt-5.6-luna | 32.5 | **31.5** | 35 / 0 / 3 | 35 (35 / 0) | 20.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
+| Gemini · gemini-4-hydrogen-high | 14.5 | **14.5** | 10 / 0 / 0 | 0 (0 / 0) | 4.50 | 0 / 6 | 0 / 0 | 0.0 (0) | 0.0 | 4 | 0 |
+| Codex · gpt-6 | 8.5 | **8.8** | 15 / 0 / 2 | 8 (8 / 0) | 6.75 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 2 | 0 |
+| Gemini · gemini-4-hydrogen | 3.1 | **5.2** | 31 / 1 / 0 | 30 (30 / 0) | 14.62 | 1 / 0 | 0 / 0 | 4.2 (6) | 1.4 | 8 | 0 |
+| Gemini · gemini-4-neon-high | 3.5 | **3.5** | 3 / 0 / 0 | 0 (0 / 0) | 0.50 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · claude-opus-5-5-high | 3.0 | **3.0** | 0 / 0 / 0 | 0 (0 / 0) | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · orchestrator-neon | 0.0 | **0.0** | 4 / 0 / 0 | 0 (0 / 0) | 0.00 | 0 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
+| Gemini · argon/hydrogen | -1.2 | **-1.2** | 1 / 0 / 0 | 1 (1 / 0) | 0.00 | 0 / 0 | 0 / 0 | 0.6 (1) | 6.0 | 0 | 0 |
+| Gemini · argon | -3.2 | **-3.0** | 3 / 0 / 0 | 3 (3 / 0) | 1.25 | 0 / 1 | 1 / 0 | 3.6 (4) | 12.0 | 2 | 1 |
 
-**Read these numbers with care** (regenerated from the current ledgers at 2026-11-18 12:46):
+**Read these numbers with care** (regenerated from current ledgers on 2026-11-19):
 - **Role bias.** Claude Code is the coordinator and lead reviewer, so its role produces most process suggestions and review finds;
   Gemini worked solo for hours with nobody reviewing it, so its defects surfaced later, in the developer's playtests.
 - **Small samples.** Some model groups have 1-3 tasks, so one defect moves their rate a lot. Every label shows n.
-- **Time at risk differs.** Copilot's work is minutes old and not yet playtested: its 0 escaped defects means "none found yet",
-  and its review catches show the defects exist. Older work has had more playtests to reveal problems.
 - **Historic task ratings are retrospective peer estimates.** Plot counts show tasks with independent scope ratings; all existing ratings come from the task request/spec, not observed effort. The raw score appears beside the adjusted score, and future work should be rated before implementation.
 - **Attribution before the tracker is reconstructed** from timing and prompts, so it carries a confidence weight. From 2026-11-17
   23:25 on, agents log model and cause as they work, which makes later data much more reliable.
@@ -329,14 +324,16 @@ another agent stopped it first.
 
 ## Token, Context & Usage-Limit Telemetry (`B56` — All 4 Agents)
 
-Every tool isolates its own quota and context management. PROMPTS.md currently has **135 recorded prompt sections** (131 developer/board-routed sections and 4 agent-to-agent records). Counting each section once by its first listed destination gives Claude 42, Gemini 88, Copilot 1, and Codex 0; grouped sections can contain multiple prompts, so this is a section count, not a count of every user message. The time spans below are first/last recorded activity, **not measured active hours**. Exact context-reset counts and raw API token totals are not exported by the clients; "not recorded" must not be read as zero.
+`PROMPTS.md` contains **201 timestamped prompt sections**: **193 developer/board-routed** (Claude 104, Gemini 88, Copilot 1; Codex has no heading in that file) and **8 agent-to-agent** (4 Claude-to-Gemini and 4 to Copilot). A section can group multiple messages. Codex's 0 is PROMPTS.md file coverage, not zero direct user requests. The activity windows below use first/last timestamps; they are not measured active work duration. Exact context-reset counts, measured active hours, and raw client token totals are tool-unreported. No score below normalizes by elapsed time.
 
-| Agent (Board Name) | Reported Model(s) | First -> last recorded activity (Local NY; not active duration) | Recorded limit / context evidence | Prompt sections; task rows / findings | API token visibility |
+| Agent / tool | Reported model(s) | First → last recorded activity | Limit / context evidence and prompt sections | Ledger work proxies | Token visibility |
 |---|---|---|---|---|---|
-| **Claude** (Claude Code) | claude-opus-5-5 | 11-16 11:19 -> 11-18 00:45 (first prompt to handoff) | **6 limit/stop records** across 11-16 and 11-17 14:55, 15:07, 18:13, 23:14, 11-18 00:44; exact context-reset count not recorded | 42 routed sections; 21 task rows; 8 other-work findings + 2 own pre-push catches | Raw API token totals: tool-unreported |
-| **Gemini** (Antigravity, Lead) | argon (g1-pro/flash), claude-opus-5-5-high, gemini-4-hydrogen (Gemini 4 Hydrogen) | 11-16 23:44 -> 11-18 02:32 (first prompt to latest task row; continuity/active hours unmeasured) | One explicit Argon usage-limit/model switch at 02:24; other model changes are recorded, but exact context-reset count is not | 88 routed sections; 35 task rows; 2 review catches | Raw API token totals: tool-unreported |
-| **Copilot** (VS Code Agent) | gpt-5.6-luna (earlier claude misattribution corrected at v2) | 11-17 23:12 -> 11-18 02:40 (first prompt to user-reported monthly cap) | One user-reported monthly limit stop at 02:40; context-reset count not recorded; Unity lock retry at 23:36 was not a usage stop | 1 routed section; 35 task rows; 6 review catches | Monthly cap is reported, but raw API token totals are tool-unreported |
-| **Codex** (OpenAI Codex CLI) | gpt-6 | 11-18 01:54 -> 11-18 02:40 (onboarding to latest recorded activity) | No limit-stop event recorded in the available sources; exact context-reset count not recorded | 0 routed sections; 2 task rows; 1 review catch (D39) | Raw API token totals: tool-unreported; board budget tags are coarse snapshots only |
+| **Claude** (Claude Code) | claude-opus-5-5 | 11-16 11:19 → 11-19 01:16 (ET; first/last evidence, not work duration) | 6 documented limit/stop events; exact context-reset count not recorded. 104 developer/board prompt sections. | 65 task rows (65 non-open); 12 attributed escaped defects; 19 review + 3 pre-push findings (17 others / 5 own) | Raw API token totals and measured active work time are tool-unreported. |
+| **Gemini** (Antigravity) | argon; argon/hydrogen; gemini-4-hydrogen; gemini-4-hydrogen-high; gemini-4-neon-high; orchestrator-neon; claude-opus-5-5-high | 11-16 23:44 → 11-18 22:09 (ET; first/last evidence, not work duration) | 2 documented quota events: Argon → Hydrogen at 02:24; old Hydrogen-high conversation rejected at 09:20 (157h30m reset), new conversation at 09:22. Exact context-reset count not recorded. 88 developer/board sections + 4 Claude-to-Gemini handoff sections. | 53 task rows (52 non-open; 1 open); 11 attributed escaped defects; 9 review + 0 pre-push findings (2 others / 7 own) | Raw API token totals and measured active work time are tool-unreported. |
+| **Copilot** (GitHub Copilot Chat) | gpt-5.6-luna | 11-17 23:12 → 11-18 02:40 (ET; first/last evidence, not work duration) | 1 user-reported monthly limit stop at 02:40; exact context-reset count not recorded. 1 developer/board section + 4 agent-to-Copilot prompt sections. | 35 task rows (35 non-open; 3 reopened; 1 partial); 2 attributed escaped defects; 6 review + 0 pre-push findings (6 others / 0 own) | Raw API token totals and measured active work time are tool-unreported. |
+| **Codex** (OpenAI Codex) | gpt-6 | 11-18 01:54 → 11-19 02:50 (ET; first/last evidence, not work duration) | No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file. | 15 task rows (15 non-open; 2 reopened); 0 attributed escaped defects; 1 review + 0 pre-push findings (1 others / 0 own) | Raw API token totals and measured active work time are tool-unreported. |
+
+**Ledger scope:** the current files contain **168 task rows** (167 non-open, 1 open) and **70 bug rows**; 32 escaped, 35 review, and 3 pre-push. 38 defects were recorded before the developer saw them. Seven escaped rows currently have no causing agent attribution; those remain unassigned.
 
 ## Complete Task Log with Source (`tasks.csv`)
 

@@ -16,7 +16,7 @@ MonoBehaviour:
   shortName: MK18
   icon: {fileID: 0}
   weaponClass: 0
-  rpm: 850
+  rpm: 700
   allowAuto: 1
   allowBurst: 0
   burstCount: 3
@@ -26,11 +26,11 @@ MonoBehaviour:
   maxReserve: 210
   damageSteps:
   - maxDistance: 17.36
-    damage: 32
+    damage: 37.5
   - maxDistance: 35
-    damage: 26
+    damage: 33.4
   - maxDistance: 999
-    damage: 21
+    damage: 21.5
   headMultiplier: 1.5
   neckMultiplier: 1.2
   upperTorsoMultiplier: 1.1
