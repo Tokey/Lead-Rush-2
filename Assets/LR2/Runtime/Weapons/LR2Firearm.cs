@@ -190,7 +190,15 @@ namespace LR2.Weapons
             shellEjector = ejector;
         }
 
-        private void Awake() => EnsureAmmo();
+        private void Awake()
+        {
+            EnsureAmmo();
+            // B125: a held gun must not be a physics or ray obstacle. The Mk18 import carried four MeshColliders (scope Reticle
+            // and Plane) on the Default layer, which is in EnvironmentMask: the owner's and nearby bots' Kinemation wall-tuck
+            // rays, sight lines and bullets all hit guns. Dropped guns get their own BoxCollider when they fall.
+            foreach (var col in GetComponentsInChildren<Collider>(true))
+                if (col != null && !col.isTrigger) Destroy(col);
+        }
 
         private void EnsureAmmo()
         {

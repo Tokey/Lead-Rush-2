@@ -295,6 +295,7 @@ namespace LR2.Characters
                 ApplyProneWeaponPose(itemTf, ref lPos, ref lRot, ref rPos, ref rRot);
                 ApplyGloveClearance(itemTf, ref lPos, ref lRot, ref rPos);
                 ApplyGripOffsets(itemTf, ref lPos, ref rPos);
+                ApplyFlipGuard(itemTf, ref lPos, ref lRot, ref rPos, ref rRot);
 
                 // B59b / B60d: Prevent collision pullback or IK deltas from ever pulling the weapon backwards through the eye/chest plane.
                 if (itemTf != null && _soldier != null)
@@ -377,6 +378,61 @@ namespace LR2.Characters
             }
             pose.bodyPosition = bodyWorld / ds;
             pose.bodyRotation = rotWorld;
+        }
+
+        /// <summary>B125 flip guard: larger of the muzzle-to-aim angle and the gun roll this frame, before the clamp (deg).</summary>
+        public float FlipGuardAngle { get; private set; }
+        /// <summary>B125: frames on which the guard turned the gun back since this soldier spawned.</summary>
+        public int FlipGuardFrames { get; private set; }
+        /// <summary>B125 A/B switch: -lr2NoFlipGuard turns the guard off (the bench then reproduces the flips).</summary>
+        public static readonly bool FlipGuardEnabled =
+            System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2NoFlipGuard") < 0;
+        /// <summary>
+        /// B125 (user 11-19: "the weapon keeps on going up then rotating fully ... happens to all the weapons"). Kinemation's
+        /// "IK WeaponBone" (a child of the driver head that carries the gun) turned 60-180 deg for single frames in AI vs AI while
+        /// the driver's animated WeaponBone stayed on the soldier's facing (flip bench 11-19: 0.6-7 % of bot samples, rates up to
+        /// 13,000 deg/s; finger edits, wall tuck and the hand weapon bone ruled out by A/B, Kinemation's IK motion layer group
+        /// implicated by ablation). The guard needs no learned pose: the muzzle must stay within a cone around the aim and the
+        /// gun's up axis within a roll limit around the barrel; past either, gun and both hand targets turn back to the limit as
+        /// one rigid piece. Normal motions (wall tuck 26 deg, ADS, equip, sprint carry, reload tilt) stay inside.
+        /// </summary>
+        private void ApplyFlipGuard(Transform item, ref Vector3 lPos, ref Quaternion lRot, ref Vector3 rPos, ref Quaternion rRot)
+        {
+            FlipGuardAngle = 0f;
+            if (!FlipGuardEnabled || item == null || _soldier == null) return;
+            Vector3 aimFwd = FirstPersonActive && _soldier.ViewCamera != null ? _soldier.ViewCamera.transform.forward : _soldier.AimDirection;
+            if (aimFwd.sqrMagnitude < 1e-4f) return;
+            aimFwd.Normalize();
+            var fw = _soldier.ActiveFirearm;
+            Transform muzzleTf = fw != null && fw.Muzzle != null && fw.Muzzle != fw.transform ? fw.Muzzle : item;
+            bool special = _soldier.IsSprinting || _soldier.IsReloading || _soldier.IsSwitchingWeapon || _soldier.ProneWeightEffective > 0.05f;
+            float coneLimit = special ? 70f : 45f, rollLimit = special ? 75f : 50f;
+
+            Vector3 muzzle = muzzleTf.forward;
+            float cone = Vector3.Angle(muzzle, aimFwd);
+            Quaternion delta = Quaternion.identity;
+            if (cone > coneLimit)
+            {
+                Vector3 clamped = Vector3.RotateTowards(aimFwd, muzzle, coneLimit * Mathf.Deg2Rad, 0f);
+                delta = Quaternion.FromToRotation(muzzle, clamped);
+                muzzle = clamped;
+            }
+            // roll: the gun's up (after the swing) against world up, both flattened onto the plane across the barrel
+            Vector3 up = delta * item.up;
+            Vector3 upFlat = Vector3.ProjectOnPlane(up, muzzle), worldFlat = Vector3.ProjectOnPlane(Vector3.up, muzzle);
+            float roll = upFlat.sqrMagnitude > 1e-4f && worldFlat.sqrMagnitude > 1e-4f ? Vector3.SignedAngle(worldFlat, upFlat, muzzle) : 0f;
+            if (Mathf.Abs(roll) > rollLimit)
+                delta = Quaternion.AngleAxis(Mathf.Sign(roll) * rollLimit - roll, muzzle) * delta;
+            FlipGuardAngle = Mathf.Max(cone, Mathf.Abs(roll));
+            if (delta == Quaternion.identity) return;
+
+            Vector3 pivot = item.position;
+            item.rotation = delta * item.rotation;
+            lPos = pivot + delta * (lPos - pivot);
+            rPos = pivot + delta * (rPos - pivot);
+            lRot = delta * lRot;
+            rRot = delta * rRot;
+            FlipGuardFrames++;
         }
 
         /// <summary>Kinemation's prone pose arches the rifle high and across the camera; rotate/tuck the gun+hands rigidly together.</summary>

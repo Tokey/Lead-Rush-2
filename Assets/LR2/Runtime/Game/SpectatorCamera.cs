@@ -82,7 +82,7 @@ namespace LR2.Game
             if (e.victim == _target || Time.time >= _nextAutoCut) { SetTarget(e.killer); _nextAutoCut = Time.time + 5f; }
         }
 
-        private void SetTarget(Combatant c)
+        public void SetTarget(Combatant c)
         {
             if (c == null || c == _target) return;
             _target = c;

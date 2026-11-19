@@ -1471,7 +1471,7 @@ namespace LR2.EditorTools
                 EditorUtility.SetDirty(turn);
                 n++;
             }
-            Debug.Log($"[LR2] B117 turn in place: {n} turn layer(s) in {profile.name} at 50 deg, ~0.45 s, ease-out");
+            Debug.Log($"[LR2] B117 turn in place: {n} turn layer(s) in {profile.name} at Kinemation defaults (90 deg, speed 1, ease-in-out)");
         }
 
         /// <summary>B117: the TurnLeft/TurnRight clips of the driver controller play at 1.7x, blend in over 0.08 s and out over at most 0.15 s.</summary>
@@ -1499,7 +1499,7 @@ namespace LR2.EditorTools
             }
             foreach (var layer in ctrl.layers)
                 if (layer.name == "TurnInPlace") Walk(layer.stateMachine, false);
-            Debug.Log($"[LR2] B117 turn in place: {states} turn clip state(s) at 1.7x, {entries} turn entries at 0.08 s");
+            Debug.Log($"[LR2] B117 turn in place: {states} turn clip state(s) at 1x, {entries} turn entries at 0.12 s (reverted from B117)");
         }
 
         private static void TuneHumanoidSway(FPSAnimatorProfile profile)

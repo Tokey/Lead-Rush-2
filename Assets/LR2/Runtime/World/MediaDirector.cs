@@ -131,6 +131,48 @@ namespace LR2.World
             yield return Shot("aivsai_bench");
         }
 
+        /// <summary>Flip detector context: the hidden driver rig's clips per animator layer, Kinemation inputs, the gun's parent bone.</summary>
+        private static string RigState(LR2.Characters.SoldierController sc, Transform item)
+        {
+            var sb = new System.Text.StringBuilder(" |");
+            var ui = sc.UserInput;
+            if (ui != null)
+            {
+                int ti = ui.GetPropertyIndex(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.TurnOffset);
+                int di = ui.GetPropertyIndex(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.MouseDeltaInput);
+                if (ti >= 0) sb.Append(FormattableString.Invariant($" turnOff={ui.GetValue<float>(ti):0}"));
+                if (di >= 0) { var d = ui.GetValue<Vector4>(di); sb.Append(FormattableString.Invariant($" dLook=({d.x:0.0},{d.y:0.0})")); }
+            }
+            sb.Append(" chain=");
+            Quaternion soldierRot = Quaternion.Euler(0f, sc.Yaw, 0f);
+            for (Transform t = item; t != null && t != sc.transform; t = t.parent)
+            {
+                // each link: local rotation (deg from identity) and world rotation against the soldier's yaw
+                var le = t.localRotation.eulerAngles;
+                sb.Append(FormattableString.Invariant($"{t.name}(L{Quaternion.Angle(Quaternion.identity, t.localRotation):0}:{le.x:0},{le.y:0},{le.z:0} W{Quaternion.Angle(soldierRot, t.rotation):0})>"));
+            }
+            // every weapon bone of the driver rig, against the IK WeaponBone that carries the gun and against the soldier
+            if (item.parent != null && sc.Animator != null)
+                foreach (var wb in sc.Animator.GetComponentsInChildren<Transform>(true))
+                    if (wb != item.parent && wb.name.IndexOf("Weapon", StringComparison.OrdinalIgnoreCase) >= 0 && wb.GetComponent<LR2.Weapons.LR2Item>() == null)
+                        sb.Append(FormattableString.Invariant($" {wb.name}:vsIK{Quaternion.Angle(wb.rotation, item.parent.rotation):0}/vsSoldier{Quaternion.Angle(wb.rotation, soldierRot):0}"));
+            var pc = sc.Animator != null ? sc.Animator.GetComponent<KINEMATION.FPSAnimationFramework.Runtime.Playables.FPSPlayablesController>() : null;
+            if (pc != null)
+                foreach (var cn in new[] { "WeaponBoneWeight", "FullBodyWeight", "MaskAttachHand" })
+                    try { sb.Append(FormattableString.Invariant($" {cn}={pc.GetCurveValue(cn):0.00}/{pc.GetCurveValue(cn, true):0.00}")); } catch (Exception) { }
+            var an = sc.Animator;
+            if (an != null)
+                for (int l = 0; l < an.layerCount; l++)
+                {
+                    float w = l == 0 ? 1f : an.GetLayerWeight(l);
+                    if (w < 0.05f) continue;
+                    var ci = an.GetCurrentAnimatorClipInfo(l);
+                    string clip = ci.Length > 0 && ci[0].clip != null ? ci[0].clip.name : "-";
+                    sb.Append(FormattableString.Invariant($" [{an.GetLayerName(l)} {w:0.0} {clip}{(an.IsInTransition(l) ? " ~" : "")}]"));
+                }
+            return sb.ToString();
+        }
+
         // ------------------------------------------------------------------ accuracy and K/D bench
         /// <summary>Plays the AI vs AI bench for -lr2BenchSeconds (default 120) and writes shots, hits, kills and deaths per difficulty.</summary>
         private IEnumerator BenchRun()
@@ -139,39 +181,111 @@ namespace LR2.World
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-lr2BenchSeconds") float.TryParse(args[i + 1], out secs);
             float t0 = Time.time;
-            // weapon-flip detector (user 11-19: "the weapon keeps on going up then rotating fully"): muzzle vs aim per living bot
-            int samples = 0, flips = 0, flipsNearWall = 0, flipsSprint = 0, flipsReload = 0;
+            // B125 layer ablation: -lr2AblateLayers Sway,Ads,... sets those Kinemation layer types' alpha to 0 (read live) for the
+            // bench, restored at the end, to find which layer turns the weapon bone
+            var ablated = new System.Collections.Generic.List<(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSAnimatorLayerSettings s, float a)>();
+            string ablate = "";
+            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-lr2AblateLayers") ablate = args[i + 1];
+            if (ablate.Length > 0)
+                foreach (var ls in Resources.FindObjectsOfTypeAll<KINEMATION.FPSAnimationFramework.Runtime.Core.FPSAnimatorLayerSettings>())
+                    foreach (var key in ablate.Split(','))
+                        if (key.Length > 0 && ls.GetType().Name.StartsWith(key, StringComparison.Ordinal)) { ablated.Add((ls, ls.alpha)); ls.alpha = 0f; }
+            Note($"ablated layers: {ablate} ({ablated.Count} settings)");
+            // weapon-flip detector v2 (user 11-19: "the weapon keeps on going up then rotating fully ... mainly during collision"):
+            // every frame, each living bot's gun rotation in its own aim frame against that weapon's usual pose (the first steady
+            // sample). Catches roll around the barrel too, which a muzzle-vs-aim angle misses. Context per event: sprint, reload,
+            // weapon switch, ADS, prone weight, wall in front, nearest other soldier. The first big events get a chase-cam burst.
+            int samples = 0, flips = 0, flipsNearWall = 0, flipsSprint = 0, flipsReload = 0, flipsNearSoldier = 0, flipsSwitch = 0, bursts = 0;
+            float maxDev = 0f;
+            int normalLogged = 0;
+            int holdShots = 0;
             var flipLog = new System.Text.StringBuilder();
-            float nextSample = Time.time;
+            var baseline = new System.Collections.Generic.Dictionary<string, Quaternion>();
+            var lastLog = new System.Collections.Generic.Dictionary<Combatant, float>();
+            var prevRot = new System.Collections.Generic.Dictionary<Combatant, Quaternion>();
             while (Time.time - t0 < secs && (MatchManager.Instance == null || MatchManager.Instance.State != MatchState.Ended))
             {
-                if (Time.time >= nextSample)
+                if (holdShots < 2 && Time.time - t0 > 15f + 25f * holdShots && SpectatorCamera.Instance != null)
                 {
-                    nextSample = Time.time + 0.1f;
-                    foreach (var c in Combatant.All)
+                    // normal holds for the visual check of any weapon-bone change (chase view, then eye view)
+                    SpectatorCamera.Instance.SetView(holdShots);
+                    yield return Frames($"hold{holdShots}", 8, 0.35f);
+                    SpectatorCamera.Instance.SetView(0);
+                    holdShots++;
+                }
+                Combatant burstOn = null; float burstDev = 0f;
+                foreach (var c in Combatant.All)
+                {
+                    if (c == null || !c.IsAlive) { if (c != null) prevRot.Remove(c); continue; }
+                    var sc = c.GetComponent<LR2.Characters.SoldierController>();
+                    var item = sc != null ? sc.ActiveItem : null;
+                    var gun = sc != null ? sc.ActiveFirearm : null;
+                    if (item == null || gun == null || gun.Muzzle == null) continue;
+                    samples++;
+                    Quaternion aimRot = Quaternion.Euler(sc.Pitch, sc.Yaw, 0f);
+                    Quaternion local = Quaternion.Inverse(aimRot) * item.transform.rotation;
+                    string key = gun.Definition != null ? gun.Definition.name : item.name;
+                    float muzzleAng = Vector3.Angle(gun.Muzzle.forward, aimRot * Vector3.forward);
+                    bool sprint = sc.IsSprinting;
+                    if (!baseline.ContainsKey(key))
                     {
-                        if (c == null || !c.IsAlive) continue;
-                        var sc = c.GetComponent<LR2.Characters.SoldierController>();
-                        var gun = sc != null ? sc.ActiveFirearm : null;
-                        if (gun == null || gun.Muzzle == null) continue;
-                        samples++;
-                        Vector3 aim = Quaternion.Euler(sc.Pitch, sc.Yaw, 0f) * Vector3.forward;
-                        float ang = Vector3.Angle(gun.Muzzle.forward, aim);
-                        if (ang < 50f) continue;
-                        flips++;
-                        bool wall = Physics.Raycast(sc.EyeTransform.position, aim, 1.2f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore);
-                        bool sprint = sc.Movement != null && sc.Movement.Speed > 4.5f;
-                        if (wall) flipsNearWall++;
-                        if (sprint) flipsSprint++;
-                        if (gun.IsReloading) flipsReload++;
-                        if (flipLog.Length < 6000)
-                            flipLog.AppendLine(FormattableString.Invariant($"{Time.time - t0:0.0}s {c.DisplayName} angle={ang:0} wall={wall} sprint={sprint} reload={gun.IsReloading} pitch={sc.Pitch:0} goal={c.GetComponent<LR2.AI.BotController>()?.CurrentGoalName}"));
+                        if (muzzleAng < 8f && !sprint && !gun.IsReloading && !sc.IsSwitchingWeapon) baseline[key] = local;
+                        continue;
                     }
+                    float dev = Quaternion.Angle(local, baseline[key]);
+                    float rate = prevRot.TryGetValue(c, out var pr) && Time.deltaTime > 1e-4f ? Quaternion.Angle(pr, item.transform.rotation) / Time.deltaTime : 0f;
+                    prevRot[c] = item.transform.rotation;
+                    if (dev < 10f && normalLogged < 3 && !sprint && Time.time - t0 > 5f)
+                    {
+                        normalLogged++;
+                        flipLog.AppendLine(FormattableString.Invariant($"NORMAL {c.DisplayName} dev={dev:0}") + RigState(sc, item.transform));
+                    }
+                    if (dev < 60f) continue;
+                    flips++;
+                    maxDev = Mathf.Max(maxDev, dev);
+                    Vector3 eye = sc.EyeTransform != null ? sc.EyeTransform.position : c.transform.position + Vector3.up * 1.5f;
+                    bool wall = Physics.SphereCast(eye, 0.15f, aimRot * Vector3.forward, out _, 1.0f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore);
+                    float near = 99f; string nearName = "";
+                    foreach (var o in Combatant.All)
+                        if (o != null && o != c && o.IsAlive)
+                        {
+                            float d = Vector3.Distance(o.transform.position, c.transform.position);
+                            if (d < near) { near = d; nearName = o.DisplayName; }
+                        }
+                    if (wall) flipsNearWall++;
+                    if (sprint) flipsSprint++;
+                    if (gun.IsReloading) flipsReload++;
+                    if (sc.IsSwitchingWeapon) flipsSwitch++;
+                    if (near < 1.2f) flipsNearSoldier++;
+                    if (dev > burstDev && bursts < 4) { burstOn = c; burstDev = dev; }
+                    if (lastLog.TryGetValue(c, out var lt) && Time.time - lt < 0.4f) continue;
+                    lastLog[c] = Time.time;
+                    if (flipLog.Length < 90000)
+                    {
+                        Vector3 e = local.eulerAngles, be = baseline[key].eulerAngles;
+                        flipLog.AppendLine(FormattableString.Invariant(
+                            $"{Time.time - t0:0.00}s {c.DisplayName} {key} dev={dev:0} rate={rate:0}dps muzzle={muzzleAng:0} local=({e.x:0},{e.y:0},{e.z:0}) base=({be.x:0},{be.y:0},{be.z:0}) ") + FormattableString.Invariant(
+                            $"sprint={sprint} reload={gun.IsReloading} switch={sc.IsSwitchingWeapon} ads={sc.IsAiming} prone={sc.ProneWeightEffective:0.00} wall={wall} ") + FormattableString.Invariant(
+                            $"near={near:0.0}m({nearName}) speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} pitch={sc.Pitch:0} goal={c.GetComponent<LR2.AI.BotController>()?.CurrentGoalName}") + RigState(sc, item.transform));
+                    }
+                }
+                if (burstOn != null && burstDev > 80f && SpectatorCamera.Instance != null)
+                {
+                    bursts++;
+                    flipLog.AppendLine(FormattableString.Invariant($"   -> burst flip{bursts} on {burstOn.DisplayName} dev={burstDev:0}"));
+                    SpectatorCamera.Instance.SetTarget(burstOn);
+                    SpectatorCamera.Instance.SetView(0);
+                    yield return Frames($"flip{bursts}", 10, 0.06f);
+                    continue;
                 }
                 yield return null;
             }
-            File.WriteAllText(Path.Combine(_out, "flips.txt"), FormattableString.Invariant($"samples={samples} flips(>50deg)={flips} nearWall={flipsNearWall} sprint={flipsSprint} reload={flipsReload}") + "\n" + flipLog);
-            Note($"weapon flips: {flips} of {samples} samples (near wall {flipsNearWall}, sprint {flipsSprint}, reload {flipsReload})");
+            foreach (var (ls, a) in ablated) if (ls != null) ls.alpha = a;
+            int guardFrames = 0;
+            foreach (var px in FindObjectsByType<LR2.Characters.RetargetProxy>(FindObjectsSortMode.None)) guardFrames += px.FlipGuardFrames;
+            File.WriteAllText(Path.Combine(_out, "flips.txt"), FormattableString.Invariant(
+                $"guard={LR2.Characters.RetargetProxy.FlipGuardEnabled} guardFrames={guardFrames} ablate={ablate} samples={samples} flips(dev>60)={flips} max={maxDev:0} nearWall={flipsNearWall} nearSoldier(<1.2m)={flipsNearSoldier} sprint={flipsSprint} reload={flipsReload} switch={flipsSwitch} bursts={bursts}") + "\n" + flipLog);
+            Note($"weapon flips: {flips} of {samples} (max {maxDev:0}, wall {flipsNearWall}, soldier {flipsNearSoldier}, sprint {flipsSprint}, reload {flipsReload}, switch {flipsSwitch})");
             var rows = new System.Collections.Generic.SortedDictionary<string, int[]>();
             foreach (var c in Combatant.All)
             {
