@@ -265,7 +265,7 @@ namespace LR2.Game
         private Combatant Spawn(GameObject prefab, TeamId team, string displayName, bool local)
         {
             var sp = PickSpawn(team, null);
-            Vector3 pos = sp != null ? sp.transform.position : Vector3.zero;
+            Vector3 pos = sp != null ? SpawnPoint.ClearPosition(sp.transform.position, null, sp.name) : Vector3.zero;
             float yaw = sp != null ? sp.transform.eulerAngles.y : 0f;
             if (sp != null) sp.lastUsedTime = Time.time;
 
@@ -352,7 +352,8 @@ namespace LR2.Game
                 if (soldier == null) continue;
                 var sp = PickSpawn(c.Team, c);
                 if (sp != null) sp.lastUsedTime = Time.time;
-                soldier.Respawn(sp != null ? sp.transform.position : c.Position, sp != null ? sp.transform.eulerAngles.y : 0f);
+                Vector3 at = sp != null ? SpawnPoint.ClearPosition(sp.transform.position, c, sp.name) : c.Position;
+                soldier.Respawn(at, sp != null ? sp.transform.eulerAngles.y : 0f);
                 soldier.ControlsEnabled = State == MatchState.Playing;
             }
         }

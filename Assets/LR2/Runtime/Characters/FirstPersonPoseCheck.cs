@@ -1217,6 +1217,49 @@ namespace LR2.Characters
         /// world speed along the move direction is the slide. Natural clip speed = (move speed - slide) / LocoSpeed;
         /// set SoldierMovement's *AnimReferenceSpeed to that value for zero foot sliding.
         /// </summary>
+        /// <summary>Touchdown = first frame a visible foot is back within 2 cm of its lowest height after rising 3.5 cm above it.</summary>
+        private static List<float> Touchdowns(List<float> t, List<float> h)
+        {
+            var result = new List<float>();
+            float min = float.MaxValue;
+            foreach (var v in h) min = Mathf.Min(min, v);
+            bool lifted = false;
+            for (int i = 0; i < h.Count; i++)
+            {
+                if (h[i] > min + 0.035f) lifted = true;
+                else if (lifted && h[i] < min + 0.02f) { result.Add(t[i]); lifted = false; }
+            }
+            return result;
+        }
+
+        private static string FootSync(string label, List<float> t, List<float> hl, List<float> hr, List<float> steps)
+        {
+            var downs = Touchdowns(t, hl);
+            downs.AddRange(Touchdowns(t, hr));
+            downs.Sort();
+            var dts = new List<float>();
+            int unmatchedSteps = 0;
+            foreach (float st in steps)
+            {
+                float best = float.MaxValue;
+                foreach (float d in downs) best = Mathf.Min(best, Mathf.Abs(st - d));
+                if (best <= 0.15f) dts.Add(best * 1000f); else unmatchedSteps++;
+            }
+            int missed = 0;
+            foreach (float d in downs)
+            {
+                float best = float.MaxValue;
+                foreach (float st in steps) best = Mathf.Min(best, Mathf.Abs(st - d));
+                if (best > 0.15f) missed++;
+            }
+            dts.Sort();
+            string stats = dts.Count > 0
+                ? $"median|dt|={dts[dts.Count / 2]:0} ms p90={dts[Mathf.Min(dts.Count - 1, (int)(dts.Count * 0.9f))]:0} ms max={dts[dts.Count - 1]:0} ms"
+                : "no matched steps";
+            return $"FOOTSYNC [{label}] footstepEvents={steps.Count} visibleTouchdowns={downs.Count} {stats} " +
+                   $"stepsWithoutTouchdown={unmatchedSteps} touchdownsWithoutStep={missed} (match window 150 ms)";
+        }
+
         private IEnumerator MeasureGait(string label, float seconds)
         {
             var drv = _proxy != null ? _proxy.Driver : null;
@@ -1228,6 +1271,14 @@ namespace LR2.Characters
             var sl = new List<float>(); var sr = new List<float>();
             float speed = 0f, loco = 0f;
             int n = 0;
+            // B9: footstep events vs touchdowns of the VISIBLE (SWAT) feet, timed independently of SoldierMovement's driver-foot rule
+            var vis = _proxy != null ? _proxy.Visual : null;
+            var vlf = vis != null && vis.isHuman ? vis.GetBoneTransform(HumanBodyBones.LeftFoot) : null;
+            var vrf = vis != null && vis.isHuman ? vis.GetBoneTransform(HumanBodyBones.RightFoot) : null;
+            var ft = new List<float>(); var fvl = new List<float>(); var fvr = new List<float>();
+            var steps = new List<float>();
+            Action<float> onStep = _ => steps.Add(Time.time);
+            _soldier.Movement.Footstep += onStep;
             float end = Time.time + seconds;
             yield return null;
             while (Time.time < end)
@@ -1259,10 +1310,17 @@ namespace LR2.Characters
                             $"{(cam != null ? cam.transform.eulerAngles.y : 0f):0.000},{(cam != null ? cam.transform.eulerAngles.x : 0f):0.000}\n");
                     }
                 }
+                if (vlf != null && vrf != null)
+                {
+                    float g = _soldier.transform.position.y;
+                    ft.Add(Time.time); fvl.Add(vlf.position.y - g); fvr.Add(vrf.position.y - g);
+                }
                 pl = lf.position;
                 pr = rf.position;
                 yield return null;
             }
+            _soldier.Movement.Footstep -= onStep;
+            if (ft.Count > 10) Note(FootSync(label, ft, fvl, fvr, steps));
             if (n == 0) { Note($"GAIT [{label}] not moving"); yield break; }
             speed /= n; loco /= n;
             // stance = foot within 1.5 cm of its lowest point in the window (planted, not swinging or airborne)
