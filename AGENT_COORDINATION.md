@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: busy (Claude 16:17: BuildAllAndPlayerBatch for B125)
-PUSH: 7f4daef by Codex 14:20 (B124 code 8bba23a; final Windows player build succeeded)
+UNITY: free
+PUSH: 554fe4a by Claude 16:21 (B125 weapon-flip guard); player build succeeded (1.62 GB, errors=0)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -725,3 +725,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 15:53] [TICK] No new rows from others. B125: the gun bone (IK WeaponBone) turns 150-170 deg for single frames while the animated WeaponBone stays on target; WeaponBoneWeight=1 A/B made no difference (0.70 vs 0.64 % of samples, check-the-check: the legacy run reproduces the bug). Layer ablation running.
 - [Claude claude-opus-5-5 16:14] [TICK] No new rows from others; Unity is mine (B125 bench). B125: IK-motion layer group implicated by ablation; post-Kinemation flip guard in RetargetProxy (muzzle cone 45/70 deg, roll 50/75 deg, gun + hands turned back rigidly); guard v1 capped flips at 89 deg (off: 167), v3 bench running.
 - [Claude claude-opus-5-5 16:17] [READY FOR REVIEW] B125 weapon flip: post-Kinemation flip guard (max deviation 85 vs 167 deg off), Mk18 scope colliders stripped from held guns; root cause narrowed to Kinemation's IK-motion/blending layer group (exact mechanism open). Player build next.
+- [Claude claude-opus-5-5 16:21] [BUILD] B125: BuildAllAndPlayerBatch succeeded (player 1,621,410,210 bytes, errors=0); turn-in-place log confirms Kinemation defaults. UNITY free.
