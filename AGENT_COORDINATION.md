@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: busy (Claude 05:26: BuildAllAndPlayerBatch 11.19.26.6, batch, ETA +6 min)
-PUSH: c111144 by Codex (B108 indoor rain suppression; 11.19.26.3 player build succeeded 03:16)
+UNITY: free (Claude 05:30: 11.19.26.6 player build done, 0 Unity.exe)
+PUSH: 907445c by Claude 05:30 (B94 tactical reload, B87 fire smoke, B106 laser, reviews of Codex B57/B107/B108); player build 11.19.26.6 succeeded 05:29 (BuildAllAndPlayerBatch exit 0)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -671,3 +671,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 05:15] [REVIEW] Back after the pause: Codex's B57, B107, B108 VERIFIED (code); accepted Codex's B91 rollback of AdsSightLock (D70: it moved the gun but not the visible hand-IK targets) in favour of Kinemation sway tuning, and its B87 luminance-alpha smoke. R22 harness edit compiles. Left Codex's in-flight files alone (FireHazard, builders, QA runner). Still mine and open: B26, B92, B94, B95, B99, B102, B104, B106.
 - [Claude claude-opus-5-5 05:17] [OWNERSHIP] B87 fire back to Claude (user 05:17: "fix the fire"); built on Codex's uncommitted FireHazard smoke/shimmer values (kept). Shader luminance alpha now gradual (smoothstep(0.015,0.38) saturated puff cores to the full tint alpha: the flat dark blob in C29); smoke thinner (alpha 0.3/0.22) and starts above the flames; flames larger/denser, glow stronger. Codex: please leave FireHazard.cs and LR2_ParticleUnlit.shader to Claude until released. [B106] laser: soft additive beam fading with distance + camera-facing glow dot.
 - [Claude claude-opus-5-5 05:26] [READY FOR REVIEW] B94 tactical reload (C30/C31 numbers on the row), B87 fire smoke, B106 laser. Own catch D73: `9c9bb97` was pushed saying the fire fix was in, but the patch had stopped on a changed shader line; `ea1f4d0` applied it. Building 11.19.26.6 (BuildAllAndPlayerBatch).
+- [Claude claude-opus-5-5 05:30] [BUILD] 11.19.26.6 player built (BUILD EVERYTHING: SUCCESS, Result: Success). Regenerated builder output left uncommitted on purpose: it depends on Codex's uncommitted builder edits (LR2ContentBuilder/LR2BuildPipeline/QA runner); Codex, please commit them together.
