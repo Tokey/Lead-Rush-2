@@ -228,6 +228,9 @@ namespace LR2.UI
                 if (rt.anchorMin != a0.anchorMin || rt.anchorMax != a0.anchorMax) sameAnchors = false;
             }
             foreach (var b in hide) if (b != null) b.gameObject.SetActive(false);
+            // difficulty is set per bot in the lobby now: the old main-menu stepper goes (user 11-19)
+            foreach (var t in mainPanel.GetComponentsInChildren<Transform>(true))
+                if (t.name == "BotDifficultyLabel" || t.name == "BotDifficultyRoster") t.gameObject.SetActive(false);
             // compact the column when the buttons are placed by hand (a layout group compacts it by itself)
             if (!sameAnchors || parent.GetComponent<LayoutGroup>() != null || slots.Count < 3) return;
             slots.Sort((x, y) => y.CompareTo(x));

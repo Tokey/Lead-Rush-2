@@ -682,7 +682,8 @@ namespace LR2.AI
                     _flickPreFire = false;
                 }
                 // B118: the path bows sideways (half-normal, median ~8 % of the distance for casual looks, half that in a fight)
-                _flickCurve = LegacyAim ? 0f : angularDist * Mathf.Min(Mathf.Abs(Gauss()) * (_flickCasual ? 0.1f : 0.05f), _flickCasual ? 0.25f : 0.12f)
+                // the bow is a small wrist arc, never a swing: capped at 2 deg (user 11-19: the gun "keeps on going up then rotating")
+                _flickCurve = LegacyAim ? 0f : Mathf.Min(2f, angularDist * Mathf.Min(Mathf.Abs(Gauss()) * (_flickCasual ? 0.1f : 0.05f), _flickCasual ? 0.25f : 0.12f))
                               * (Random.value < 0.5f ? -1f : 1f);
                 _flickPerpYaw = nx;
                 _flickPerpPitch = ny;
@@ -702,7 +703,7 @@ namespace LR2.AI
                 float s = LegacyAim ? u * u * u * (10f + u * (-15f + 6f * u)) : HumanProfile(u);
                 float bow = _flickCurve * Mathf.Sin(Mathf.PI * s);
                 float subYaw = Mathf.LerpAngle(_flickStartYaw, _flickGoalYaw, s) + _flickPerpYaw * bow;
-                float subPitch = Mathf.Lerp(_flickStartPitch, _flickGoalPitch, s) + _flickPerpPitch * bow * 0.7f;
+                float subPitch = Mathf.Lerp(_flickStartPitch, _flickGoalPitch, s) + _flickPerpPitch * bow * 0.35f;
                 yawStepDeg = Mathf.DeltaAngle(_aimYaw, subYaw);
                 pitchStepDeg = subPitch - _aimPitch;
 

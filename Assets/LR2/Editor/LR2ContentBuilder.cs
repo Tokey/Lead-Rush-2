@@ -1464,9 +1464,10 @@ namespace LR2.EditorTools
             foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(profile)))
             {
                 if (!(sub is TurnLayerSettings turn)) continue;
-                turn.angleThreshold = 50f;
-                turn.turnSpeed = 2.2f;
-                turn.turnCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 2.3f), new Keyframe(1f, 1f, 0f, 0f));
+                // reverted to Kinemation's values (user 11-19: severe animation bugs in AI vs AI; remove anything forced)
+                turn.angleThreshold = 90f;
+                turn.turnSpeed = 1f;
+                turn.turnCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
                 EditorUtility.SetDirty(turn);
                 n++;
             }
@@ -1485,15 +1486,15 @@ namespace LR2.EditorTools
                 {
                     if (inTurn)
                     {
-                        cs.state.speed = 1.7f;
+                        cs.state.speed = 1f;
                         states++;
-                        foreach (var t in cs.state.transitions) t.duration = Mathf.Min(t.duration, 0.15f);
+
                     }
                     foreach (var t in cs.state.transitions)
-                        if (IsTurn(t)) { t.duration = 0.08f; entries++; }
+                        if (IsTurn(t)) { t.duration = 0.12f; entries++; }
                 }
                 foreach (var t in sm.anyStateTransitions)
-                    if (IsTurn(t)) { t.duration = 0.08f; entries++; }
+                    if (IsTurn(t)) { t.duration = 0.12f; entries++; }
                 foreach (var sub in sm.stateMachines) Walk(sub.stateMachine, inTurn || sub.stateMachine.name.StartsWith("Turn"));
             }
             foreach (var layer in ctrl.layers)

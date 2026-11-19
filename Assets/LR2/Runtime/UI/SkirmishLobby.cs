@@ -92,23 +92,23 @@ namespace LR2.UI
 
             // presets: icon tiles
             var presets = Rect(root, "Presets");
-            Anchor(presets.rectTransform(), 0.135f, 0.775f, 0.865f, 0.845f);
+            Anchor(presets.rectTransform(), 0.135f, 0.762f, 0.865f, 0.852f);
             var ph = presets.AddComponent<HorizontalLayoutGroup>();
             ph.spacing = 10f; ph.childForceExpandWidth = true; ph.childControlWidth = true; ph.childControlHeight = true;
             for (int i = 0; i < SkirmishSetup.Presets.Length; i++)
             {
                 string preset = SkirmishSetup.Presets[i];
                 bool aiVsAi = preset == "AI VS AI";
-                IconBtn(presets.transform, PresetIcons[i], preset, 19, () => { SkirmishSetup.ApplyPreset(preset); LoadRules(); Rebuild(); OnModeChanged?.Invoke(SkirmishSetup.Mode); },
+                IconBtn(presets.transform, PresetIcons[i], preset, 23, () => { SkirmishSetup.ApplyPreset(preset); LoadRules(); Rebuild(); OnModeChanged?.Invoke(SkirmishSetup.Mode); },
                         aiVsAi ? new Color(0.45f, 0.30f, 0.85f, 0.6f) : ButtonBg, aiVsAi ? new Color(0.85f, 0.75f, 1f) : Accent);
             }
 
             BuildRoster(root);
             BuildMatchColumn(root);
 
-            var back = IconBtn(root, "back", "BACK", 22, () => OnBack?.Invoke(), ButtonBg, Text);
+            var back = IconBtn(root, "back", "BACK", 26, () => OnBack?.Invoke(), ButtonBg, Text);
             Anchor((RectTransform)back.transform, 0.135f, 0.035f, 0.245f, 0.1f);
-            _startButton = IconBtn(root, "play", "START", 30, Start_, new Color(Accent.r, Accent.g, Accent.b, 0.9f), new Color(0.05f, 0.05f, 0.05f));
+            _startButton = IconBtn(root, "play", "START", 36, Start_, new Color(Accent.r, Accent.g, Accent.b, 0.9f), new Color(0.05f, 0.05f, 0.05f));
             Anchor((RectTransform)_startButton.transform, 0.665f, 0.03f, 0.865f, 0.11f);
             _startButton.GetComponentInChildren<TMP_Text>().color = new Color(0.05f, 0.05f, 0.05f);
             _summary = Label(root, "", 19, Dim);
@@ -171,7 +171,7 @@ namespace LR2.UI
             var pr = panel.rectTransform;
 
             Icon(pr, "tdm", Accent, 0.025f, 0.915f, 0.07f, 0.985f);
-            _countLabel = Label(pr, "", 25, Text, true);
+            _countLabel = Label(pr, "", 28, Text, true);
             Anchor(_countLabel.rectTransform, 0.08f, 0.912f, 0.42f, 0.988f);
             var all = Label(pr, "ALL BOTS", 16, Dim);
             Anchor(all.rectTransform, 0.43f, 0.912f, 0.56f, 0.988f);
@@ -219,11 +219,11 @@ namespace LR2.UI
             _scroll.verticalScrollbar = sb;
             _scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
-            var add = IconBtn(pr, "plus", "ADD BOT", 20, AddBot, ButtonBg, Accent);
+            var add = IconBtn(pr, "plus", "ADD BOT", 24, AddBot, ButtonBg, Accent);
             Anchor((RectTransform)add.transform, 0.025f, 0.02f, 0.37f, 0.098f);
-            var balance = IconBtn(pr, "balance", "BALANCE TEAMS", 18, BalanceTeams, ButtonBg, Text);
+            var balance = IconBtn(pr, "balance", "BALANCE TEAMS", 21, BalanceTeams, ButtonBg, Text);
             Anchor((RectTransform)balance.transform, 0.385f, 0.02f, 0.72f, 0.098f);
-            var clear = IconBtn(pr, "trash", "CLEAR", 18, () => { SkirmishSetup.Bots.Clear(); Rebuild(); }, ButtonBg, new Color(1f, 0.45f, 0.4f));
+            var clear = IconBtn(pr, "trash", "CLEAR", 21, () => { SkirmishSetup.Bots.Clear(); Rebuild(); }, ButtonBg, new Color(1f, 0.45f, 0.4f));
             Anchor((RectTransform)clear.transform, 0.735f, 0.02f, 0.975f, 0.098f);
         }
 
@@ -239,11 +239,11 @@ namespace LR2.UI
             float y = 0.905f;
             void Row(string icon, string label, Func<string> value, Action<int> step, Func<string> valueIcon = null)
             {
-                y -= 0.088f;
-                Icon(pr, icon, Dim, 0.05f, y + 0.052f, 0.1f, y + 0.086f);
-                var l = Label(pr, label, 15, Dim);
-                Anchor(l.rectTransform, 0.115f, y + 0.05f, 0.95f, y + 0.088f);
-                Stepper(pr, 0.045f, y, 0.955f, y + 0.052f, value, step, null, valueIcon);
+                y -= 0.094f;
+                Icon(pr, icon, Dim, 0.05f, y + 0.058f, 0.1f, y + 0.092f);
+                var l = Label(pr, label, 17, Dim);
+                Anchor(l.rectTransform, 0.115f, y + 0.056f, 0.95f, y + 0.094f);
+                Stepper(pr, 0.045f, y, 0.955f, y + 0.058f, value, step, null, valueIcon);
             }
             Row("mode", "MODE", () => SkirmishSetup.ModeNames[ModeIndex()], d =>
             {
@@ -257,10 +257,10 @@ namespace LR2.UI
                 LR2Session.SelectedMapIndex = (LR2Session.SelectedMapIndex + d + n) % n;
                 Rebuild();
             });
-            y -= 0.19f;
+            y -= 0.15f;
             _preview = Img(pr, "MapPreview", Color.white);
             _preview.preserveAspect = false;
-            Anchor(_preview.rectTransform, 0.05f, y + 0.008f, 0.95f, y + 0.188f);
+            Anchor(_preview.rectTransform, 0.05f, y + 0.008f, 0.95f, y + 0.148f);
             Row("score", "SCORE LIMIT", () => $"{_rules.scoreLimit}", d => { _rules.scoreLimit += d * (_rules.scoreLimit < 10 ? 1 : 5); SaveRules(); });
             Row("clock", "TIME LIMIT", () => _rules.timeLimitSeconds <= 0f ? "NONE" : $"{Mathf.RoundToInt(_rules.timeLimitSeconds / 60f)} MIN",
                 d => { _rules.timeLimitSeconds = Mathf.Max(60f, _rules.timeLimitSeconds + d * 60f); SaveRules(); });
@@ -273,10 +273,10 @@ namespace LR2.UI
                 Rebuild();
             });
 
-            var opt = IconBtn(pr, "gear", "OPTIONS", 18, () => OnOptions?.Invoke(), ButtonBg, Text);
-            Anchor((RectTransform)opt.transform, 0.045f, 0.02f, 0.49f, 0.098f);
-            var rules = IconBtn(pr, "rules", "ALL RULES", 18, () => OnRules?.Invoke(), ButtonBg, Text);
-            Anchor((RectTransform)rules.transform, 0.51f, 0.02f, 0.955f, 0.098f);
+            var opt = IconBtn(pr, "gear", "OPTIONS", 21, () => OnOptions?.Invoke(), ButtonBg, Text);
+            Anchor((RectTransform)opt.transform, 0.045f, 0.012f, 0.49f, 0.088f);
+            var rules = IconBtn(pr, "rules", "ALL RULES", 21, () => OnRules?.Invoke(), ButtonBg, Text);
+            Anchor((RectTransform)rules.transform, 0.51f, 0.012f, 0.955f, 0.088f);
         }
 
         // ------------------------------------------------------------------ roster
@@ -316,7 +316,7 @@ namespace LR2.UI
         private RectTransform Row(Color strip)
         {
             var row = Img(_content, "Row", RowColor);
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 72f;
             row.gameObject.AddComponent<CanvasGroup>();
             var s = Img(row.rectTransform, "Strip", strip);
             Anchor(s.rectTransform, 0f, 0f, 0f, 1f);
@@ -331,7 +331,7 @@ namespace LR2.UI
             Color purple = new Color(0.72f, 0.55f, 1f);
             var r = Row(spec ? purple : TeamUtil.FriendlyColor);
             Icon(r, spec ? "spectate" : "player", spec ? purple : TeamUtil.FriendlyColor, 0.03f, 0.2f, 0.085f, 0.8f);
-            var name = Label(r, spec ? "SPECTATOR" : $"YOU  <color=#{Hex(Dim)}><size=72%>{LR2Settings.PlayerName}</size></color>", 22, Text, true);
+            var name = Label(r, spec ? "SPECTATOR" : $"YOU  <color=#{Hex(Dim)}><size=72%>{LR2Settings.PlayerName}</size></color>", 26, Text, true);
             Anchor(name.rectTransform, 0.1f, 0f, 0.35f, 1f);
             Stepper(r, 0.355f, 0.14f, 0.66f, 0.86f, () => spec ? "AI VS AI" : "PLAYING", d =>
             {
@@ -358,7 +358,7 @@ namespace LR2.UI
             Color rowCol = teams && bot.team != TeamId.None ? TeamUtil.TeamColor(bot.team) : TeamUtil.EnemyColor; // FFA bots are red in the match too
             var r = Row(rowCol);
             Icon(r, "bot", rowCol, 0.03f, 0.22f, 0.085f, 0.78f);
-            var name = Label(r, $"<color=#{Hex(Dim)}>{index + 1:00}</color>  BOT", 22, Text);
+            var name = Label(r, $"<color=#{Hex(Dim)}>{index + 1:00}</color>  BOT", 26, Text);
             Anchor(name.rectTransform, 0.1f, 0f, 0.3f, 1f);
             int d0 = Mathf.Clamp(bot.difficulty, 0, DiffColors.Length - 1);
             Stepper(r, 0.3f, 0.14f, 0.655f, 0.86f, () => SkirmishSetup.DifficultyNames[Mathf.Clamp(bot.difficulty, 0, 4)], d =>
@@ -519,9 +519,9 @@ namespace LR2.UI
         {
             var box = Img(parent, "Stepper", Chip);
             Anchor(box.rectTransform, x0, y0, x1, y1);
-            var prev = IconBtn(box.rectTransform, null, "<", 22, () => step(-1), new Color(1f, 1f, 1f, 0.06f), Text);
+            var prev = IconBtn(box.rectTransform, null, "<", 27, () => step(-1), new Color(1f, 1f, 1f, 0.06f), Text);
             Anchor((RectTransform)prev.transform, 0f, 0f, 0.15f, 1f);
-            var next = IconBtn(box.rectTransform, null, ">", 22, () => step(1), new Color(1f, 1f, 1f, 0.06f), Text);
+            var next = IconBtn(box.rectTransform, null, ">", 27, () => step(1), new Color(1f, 1f, 1f, 0.06f), Text);
             Anchor((RectTransform)next.transform, 0.85f, 0f, 1f, 1f);
             Color vc = valueColor ?? Text;
             Image ic = null;
@@ -530,7 +530,7 @@ namespace LR2.UI
                 ic = Icon(box.rectTransform, icon(), vc, 0.17f, 0.18f, 0.27f, 0.82f);
                 ic.preserveAspect = true;
             }
-            var v = Label(box.rectTransform, value(), 20, vc, true);
+            var v = Label(box.rectTransform, value(), 24, vc, true);
             v.enableAutoSizing = true;
             v.fontSizeMin = 12f;
             v.fontSizeMax = 20f;
