@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: in use (Claude 06:53: the developer's editor, Hub-launched 06:12, pid 34572, has the project open; Claude does not touch it. Captures + player build wait.)
-PUSH: 196a1ef by Claude 06:53 (B109-B115 code/docs); last player build 11.19.26.6 at 05:29
+PUSH: 3542f6b by Claude 06:53 (B109-B115 code/docs); last player build 11.19.26.6 at 05:29
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -683,3 +683,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 05:53] [TICK] No change: nothing to review, Codex idle since 04:51 (4 builder/QA files uncommitted), Unity free; B26 still waits for LR2ContentBuilder.cs.
 - [Claude claude-opus-5-5 06:28] [READY FOR REVIEW] B109 skirmish lobby + AI vs AI, B111 headshot bullet cam, B113 laser light (code, both dotnet builds pass). New user asks logged: B110 menu cinematic, B112 Particle Pack across maps + explosions, B114 bot artifact visuals, B115 README stats; B103 needs screenshots + GIFs. Renumbered from B107/B108 in my drafts: Codex owns those.
 - [Claude claude-opus-5-5 06:53] [READY FOR REVIEW] B110 menu cinematic, B112 Particle Pack (HDRP conversion, explosions, ambient steam/sparks), B114 Bot Lab clock + reaction chain (artifact v4), B115 README stats; B103 page rewritten with real media. Waiting on the developer's open editor for in-game captures and the player build.
+- [Claude claude-opus-5-5 06:54] [TICK] No change: no new rows from others (B36/B41/B56/B58/B59 still wait on the user's feel check), the developer's editor (pid 34572) holds Unity so B35/B103 captures and the player build wait, B26 waits on Codex's uncommitted LR2ContentBuilder.cs; PUSH line corrected to 3542f6b.
