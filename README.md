@@ -12,7 +12,7 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 
 ### By the numbers
 
-As of 2026-11-19 13:10 (build `11.19.26.6`, code pushed since). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
+As of 2026-11-19 12:59 (build `11.19.26.6`, code pushed since). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
 from the [ledgers](Docs/AI_Collaboration/data), board items from [AGENT_COORDINATION.md](AGENT_COORDINATION.md).
 
 | Developer prompts | Tasks delivered | Defects logged | Board items | Commits | C# code |
@@ -21,8 +21,7 @@ from the [ledgers](Docs/AI_Collaboration/data), board items from [AGENT_COORDINA
 
 - **Prompts by agent:** Claude Code 133, Antigravity ("Gemini") 102, GitHub Copilot 1. The list is built from the Claude Code
   session logs and the Antigravity conversation database, so prompts given to Codex and Copilot inside their own apps are not in it.
-- **Tasks by agent:** Claude 88, Gemini 53, Copilot 35, Codex 16. **Defects found by:** Gemini 27, Claude 25, Copilot 8, Codex 2
-  (13 found by the developer).
+- **Tasks by agent:** Claude 88, Gemini 53, Copilot 35, Codex 16. **Defects:** 76 logged; the developer reported 30, the agents caught 46 before or after delivery (reviews and self-checks: Claude 22, Gemini 6, Copilot 6, Codex 2; automated runtime and QA-bot checks 9; other 1).
 - **Scope:** 4 days of development (2026-11-16 to 11-19), 4 AI agents, 4 combat maps, up to 20 bots per match in 2 to 4 teams.
 
 What changed most recently, with screenshots: [What's new on 2026-11-19](Docs/Updates/2026-11-19.md).
