@@ -223,33 +223,62 @@ namespace LR2.Game
                 GUILayout.EndArea();
             }
 
-            // test bench: per difficulty and per team
-            var diff = new Dictionary<string, (int k, int d, int n)>();
+            // test bench (user 11-19 "this table needs work fix alighment"): a real table with fixed columns and right-aligned
+            // numbers (IMGUI's font is proportional, so padding with spaces never lined up), sized to its rows
+            var diff = new Dictionary<string, int[]>(); // bots, kills, deaths, shots, hits
             foreach (var c in mm.Participants)
             {
                 if (c == null) continue;
                 string name = c.DisplayName ?? "";
                 int a = name.LastIndexOf('['), b = name.LastIndexOf(']');
                 string key = a >= 0 && b > a ? name.Substring(a + 1, b - a - 1) : "BOT";
-                diff.TryGetValue(key, out var v);
-                diff[key] = (v.k + c.stats.kills, v.d + c.stats.deaths, v.n + 1);
+                if (!diff.TryGetValue(key, out var v)) diff[key] = v = new int[5];
+                v[0]++; v[1] += c.stats.kills; v[2] += c.stats.deaths; v[3] += c.stats.shotsFired; v[4] += c.stats.shotsHit;
             }
-            float h = 64f + diff.Count * 22f + 30f + 4 * 22f;
-            GUILayout.BeginArea(new Rect(w - 330f, 300f, 310f, h), _box);
-            GUILayout.Label("AI TEST BENCH", _head);
-            GUILayout.Label("<color=#9AA0A6>DIFFICULTY       BOTS     K      D     K/D</color>", _row);
-            foreach (var kv in diff)
+            var order = new List<string>(diff.Keys);
+            string[] rank = { "REC", "REG", "HRD", "VET", "ADP", "BOT" };
+            order.Sort((x, y) => System.Array.IndexOf(rank, x).CompareTo(System.Array.IndexOf(rank, y)));
+            var teams = new List<TeamId>();
+            if (mm.IsTeamMode) foreach (var t in mm.TeamsInPlay) teams.Add(t);
+            const float rowH = 22f, pad = 14f, tw = 340f;
+            float th = pad + 26f + rowH + order.Count * rowH + (teams.Count > 0 ? 10f + teams.Count * rowH : 0f) + pad;
+            var area = new Rect(w - tw - 20f, 300f, tw, th);
+            GUI.Box(area, GUIContent.none, _box);
+            float x0 = area.x + pad, y = area.y + pad;
+            GUI.Label(new Rect(x0, y, tw, 24f), "AI TEST BENCH", _head);
+            y += 26f;
+            // columns: name | bots | K | D | K/D | ACC (right edges)
+            float[] right = { 0f, 150f, 192f, 234f, 286f, 326f };
+            var num = new GUIStyle(_row) { alignment = TextAnchor.MiddleRight };
+            var dim = new GUIStyle(_row) { normal = { textColor = new Color(0.6f, 0.63f, 0.65f) } };
+            var dimNum = new GUIStyle(num) { normal = { textColor = new Color(0.6f, 0.63f, 0.65f) } };
+            Rect Cell(int col, float yy) => col == 0 ? new Rect(x0, yy, 110f, rowH) : new Rect(area.x + right[col] - 60f, yy, 60f, rowH);
+            GUI.Label(Cell(0, y), "DIFFICULTY", dim);
+            string[] heads = { "", "BOTS", "K", "D", "K/D", "ACC" };
+            for (int col = 1; col < heads.Length; col++) GUI.Label(Cell(col, y), heads[col], dimNum);
+            y += rowH;
+            foreach (var key in order)
             {
-                float kd = kv.Value.d > 0 ? kv.Value.k / (float)kv.Value.d : kv.Value.k;
-                GUILayout.Label($"{kv.Key,-14}  {kv.Value.n,5}  {kv.Value.k,5}  {kv.Value.d,5}  {kd,6:0.00}", _row);
+                var v = diff[key];
+                float kd = v[2] > 0 ? v[1] / (float)v[2] : v[1];
+                GUI.Label(Cell(0, y), key, _row);
+                GUI.Label(Cell(1, y), v[0].ToString(), num);
+                GUI.Label(Cell(2, y), v[1].ToString(), num);
+                GUI.Label(Cell(3, y), v[2].ToString(), num);
+                GUI.Label(Cell(4, y), kd.ToString("0.00"), num);
+                GUI.Label(Cell(5, y), v[3] > 0 ? $"{100f * v[4] / v[3]:0}%" : "-", num);
+                y += rowH;
             }
-            if (mm.IsTeamMode)
+            if (teams.Count > 0)
             {
-                GUILayout.Space(8f);
-                foreach (var t in mm.TeamsInPlay)
-                    GUILayout.Label($"<color=#{Hex(TeamUtil.TeamColor(t))}>{TeamUtil.DisplayName(t),-12}</color>  {mm.GetTeamScore(t),4} / {mm.ScoreLimit}", _row);
+                y += 10f;
+                foreach (var t in teams)
+                {
+                    GUI.Label(new Rect(x0, y, 200f, rowH), $"<color=#{Hex(TeamUtil.TeamColor(t))}>{TeamUtil.DisplayName(t)}</color>", _row);
+                    GUI.Label(new Rect(area.x + right[5] - 120f, y, 120f, rowH), $"{mm.GetTeamScore(t)} / {mm.ScoreLimit}", num);
+                    y += rowH;
+                }
             }
-            GUILayout.EndArea();
 
             GUI.Label(new Rect(0f, 1080f - 40f, w, 24f),
                 "LMB / RMB  switch soldier     V  chase / eye / free     SPACE  auto director     SCROLL  zoom     ESC  menu", _hint);
