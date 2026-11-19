@@ -197,3 +197,4 @@ C91,2026-11-19 13:27,Claude,claude-opus-5-5,"AI vs AI accuracy and K/D A/B bench
 C92,2026-11-19 13:27,Claude,claude-opus-5-5,"Bot Lab overlap fixes, Fire a shot hearing, ledger chart labels, agents diagram",docs,B119,delivered,user prompts 12:56-13:21; artifact v9-v12,unrated,,
 C93,2026-11-19 13:27,Claude,claude-opus-5-5,Features page in-game captures and A/B table,docs,B103,delivered,user prompt 06:16; 28daf3e,unrated,,
 C94,2026-11-19 13:27,Claude,claude-opus-5-5,"Bot names: friends in friendly name tags, dealt first; edgier tags replaced",feature,-,delivered,user prompts 12:57-13:16; c254d74,unrated,,
+X17,2026-11-19 14:15,Codex,gpt-6,"Main menu cleanup; ultrawide Skirmish text; delayed headshot fall pan",bug,B124,ready-for-review,"user request 13:51; user confirmed UI fix 14:14; both scratch assemblies compile; player build pending",unrated,,

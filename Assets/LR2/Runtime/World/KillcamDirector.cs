@@ -659,12 +659,16 @@ namespace LR2.World
             var launch = new CamPose { pos = M + side * 0.62f + up * 0.12f + D * Mathf.Lerp(-0.18f, 0.12f, kL), look = M + D * 0.45f, fov = 38f, roll = 0f };
             float kC = Mathf.Clamp01((u - HsLaunch) / (HsChase - HsLaunch));
             var chase = new CamPose { pos = bullet - D * 0.34f + up * 0.07f + side * 0.09f, look = bullet + D * 6f, fov = Mathf.Lerp(50f, 60f, kC), roll = 14f * Smooth01(kC) };
+            // Hold the impact framing for a beat, then follow the head as the victim's body starts to collapse.
+            float postImpactTime = Mathf.Max(0f, u - HsImpact) / (1f - HsImpact) * HsTail;
+            float fallPan = Smooth01(Mathf.InverseLerp(0.12f, 0.28f, postImpactTime));
+            Vector3 fallLook = Vector3.Lerp(H, head, fallPan);
             float kO = Mathf.Clamp01((u - HsChase) / (HsImpact - HsChase));
             float r0 = near + 0.34f;
             var orbit = new CamPose
             {
                 pos = H + Quaternion.AngleAxis(95f * Smooth01(kO) * _hsSideSign, up) * (-D * Mathf.Lerp(r0, 0.95f, kO)) + up * Mathf.Lerp(0.07f, 0.05f, kO),
-                look = Vector3.Lerp(bullet + D * 2f, head, Smooth01(kO)),
+                look = Vector3.Lerp(bullet + D * 2f, fallLook, Smooth01(kO)),
                 fov = Mathf.Lerp(60f, 40f, kO),
                 roll = Mathf.Lerp(14f, 0f, Smooth01(kO))
             };
@@ -672,7 +676,7 @@ namespace LR2.World
             var impact = new CamPose
             {
                 pos = H + Quaternion.AngleAxis(Mathf.Lerp(95f, 112f, kI) * _hsSideSign, up) * (-D * Mathf.Lerp(0.95f, 0.78f, Smooth01(kI))) + up * 0.05f,
-                look = head,
+                look = fallLook,
                 fov = Mathf.Lerp(40f, 31f, Smooth01(kI)),
                 roll = 0f
             };

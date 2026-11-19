@@ -94,7 +94,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: busy (Claude 13:27: BuildAllAndPlayerBatch 11.19.26.7 (grip revert + B123 presets), then headshot-cam and AI vs AI captures)
+UNITY: busy (user Editor PID 38644; B124 scripts importing)
 PUSH: 28daf3e by Claude 13:27 (features page captures, B122, B123, grip revert, Bot Lab fixes); player build 11.19.26.7 running
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
@@ -103,7 +103,7 @@ BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02
 | Claude | IN PROGRESS | User 00:27 batch, all other models down: B90 movement, B91 ADS sight, B89 bot overshoot/pre-fire, B88 score panel, B96 minimap, B100 CTF zone, B87 fire, B93 rain, B97 particles, B92 lights, B99 floating props, B95/B98 audio, B94 tac reload, B26 fingers | Push at every stable point; build 11.18.26.7 when Unity is free | 00:31 |
 | Gemini (LEAD) | DOWN (user 00:13: "all other models are down") | User 21:56 request: 2x ADS in/out & FOV zoom sync across all 5 weapons (`WeaponDefinition`, `LR2ContentBuilder`, `LR2Firearm`, `SoldierController`, `LR2QAExtraChecks`/`LR2QABotRunner`); `dotnet build` 0 errors; running `BuildWeapons` + visible `Saltworks` QA | Release `UNITY:` lock, inspect QA telemetry, confirm feel/player build request with user | 00:31 (Claude) |
 | Copilot | IN PROGRESS | B54 evidence corrected/pushed; visible pose check #7 captured AK-12 + MK23 evidence; Codex auditing README | Checkpoint: B60.1 baseline CSV + B60.9 known-bad fixtures compile; standalone player build succeeded; push in progress | 02:25 |
-| Codex | IN PROGRESS | B87 review: smoke was still an opaque plume; alpha accumulation and B82's renderer assertion are being corrected. B57 live QA is complete. | rebuild and rerun isolated Saltworks QA, then push | 04:51 |
+| Codex | IN PROGRESS | B124: hide legacy bot-difficulty controls; make Skirmish value text autosize and refresh on canvas scale/rect changes; delay headshot-camera fall pan | build player when user Editor exits, then push | 14:13 |
 
 ## 2. Needs the user
 
@@ -270,6 +270,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B121 | feature | Cooler name for the test range (user 12:39) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 12:54 | BLACKLINE - PROVING GROUNDS (display name; scene stays LR2_TestRange). |
 | B122 | feature | Squad orders by chat without an LLM (user 12:54 "how can i order by chat? does it work?") | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 13:27 | T, type, Enter: every teammate bot obeys 12 s, fanned out: flank left/right, hold, push/flag, regroup/on me (858bf35). |
 | B123 | tune | Even skill gap between presets; Veteran far ahead (user 13:07) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 13:27 | One skill dial, Veteran trimmed a little; Monte Carlo duel model: adjacent edges 91 / 90.5 / 91 % (was 96 / 94 / 92 %), kill time 5.9 / 3.7 / 2.5 / 1.8 s (c254d74). Applied by the 13:2x player build. |
+| B124 | bug | Remove main-menu bot difficulty control; fix missing Skirmish match-panel text on initial display; delay headshot-killcam down-pan until victim collapse (user 13:51) | Codex (user handoff) | gpt-6 | user | IN PROGRESS | - | 13:56 | Runtime UI + killcam fixes; build/push requested. |
 
 ## 4. Ownership (who may edit what)
 
@@ -712,3 +713,5 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 13:06] [TICK] Nothing from others to review. Unity is Claude's chain (aim bench legacy/human, C33 grip checks, media runs); B26/B103/B118 results follow it. PUSH line updated.
 - [Claude claude-opus-5-5 13:27] [READY FOR REVIEW] B118 A/B: accuracy 14.2 -> 15.1 %, kills 72 -> 71 (no drop). B123 even presets, B122 squad chat orders, B119 Bot Lab overlaps. B26 iteration 1 reverted after the developer saw a spinning arm (D77). Own catches: D78 lobby title hidden by TMP ellipsis, D79 media staging made the player invulnerable so bots never fired.
 - [Claude claude-opus-5-5 13:34] [TICK] Nothing from others. Player build 11.19.26.7 succeeded 13:28 (B123 presets, grip revert). Claude's lobby capture (centred see-through lobby) running; README match-setup shot follows.
+- [Codex gpt-6 13:56] [USER][OWNERSHIP] B124 accepted from user: three UI/killcam fixes; will build and push a scoped commit. Unity is already open, so no new Unity process will be started.
+- [Codex gpt-6 14:13] [REVIEW-CATCH] User reports first Skirmish text refresh did not fix the ultrawide repro; added autosizing plus rect-size/Canvas.scaleFactor tracking, Runtime+Editor scratch builds pass; user Editor PID 38644 is reimporting, so player build waits for its exit.

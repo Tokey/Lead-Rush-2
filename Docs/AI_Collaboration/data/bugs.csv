@@ -78,3 +78,6 @@ D76,2026-11-19 12:54,runtime-check,Claude,claude-opus-5-5,review,"The -lr2AimTes
 D77,2026-11-19 13:20,user,,,escaped,"A bot arm spun while spectating after the B26 grip iteration 1 build (cause suspected, not confirmed; iteration reverted)",C87,Claude,claude-opus-5-5,low,fixed
 D78,2026-11-19 13:27,claude-self,Claude,claude-opus-5-5,review,Lobby SKIRMISH title never showed: TMP ellipsis hides a line taller than its box,C81,Claude,claude-opus-5-5,high,fixed
 D79,2026-11-19 13:27,claude-self,Claude,claude-opus-5-5,review,"Headshot-cam capture staged the player invulnerable; bots never target protected players, so the bot never fired",C88,Claude,claude-opus-5-5,high,fixed
+D80,2026-11-19 13:51,user,,,escaped,"Legacy bot difficulty selector remained on the main menu; moved difficulty selection into the Skirmish roster",,,,low,fixed
+D81,2026-11-19 13:51,user,,,escaped,"Ultrawide startup rendered Skirmish match values blank until a fullscreen toggle; added autosizing and canvas rect/scale refresh",,,,low,fixed
+D82,2026-11-19 13:51,user,,,escaped,"Headshot killcam panned down before the victim collapsed; delayed the camera look-target pan until later in the fall",,,,low,fixed

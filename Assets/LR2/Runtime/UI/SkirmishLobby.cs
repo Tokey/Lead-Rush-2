@@ -36,6 +36,9 @@ namespace LR2.UI
         private Func<GameModeType, MatchSettings> _templateFor;
         private Coroutine _intro;
         private bool _buildingRows; // row widgets are rebuilt, so they register no refresher
+        private int _textCanvasWidth, _textCanvasHeight;
+        private Vector2 _textCanvasRectSize;
+        private float _textCanvasScale = -1f;
 
         private Color Accent => _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f);
         private Color Text => _theme != null ? _theme.text : new Color(1f, 1f, 1f, 0.92f);
@@ -113,6 +116,52 @@ namespace LR2.UI
             Anchor(_summary.rectTransform, 0.255f, 0.035f, 0.655f, 0.1f);
 
             Rebuild();
+            RefreshCanvasText();
+            StartCoroutine(RefreshTextAfterInitialCanvasPass());
+        }
+
+        private void LateUpdate()
+        {
+            var rectSize = ((RectTransform)transform).rect.size;
+            var canvas = GetComponentInParent<Canvas>();
+            float scale = canvas != null ? canvas.scaleFactor : 1f;
+            if (Screen.width != _textCanvasWidth || Screen.height != _textCanvasHeight ||
+                (rectSize - _textCanvasRectSize).sqrMagnitude > 1f || Mathf.Abs(scale - _textCanvasScale) > 0.001f)
+                RefreshCanvasText();
+        }
+
+        private IEnumerator RefreshTextAfterInitialCanvasPass()
+        {
+            Vector2 lastSize = Vector2.zero;
+            int stableFrames = 0;
+            for (int i = 0; i < 8 && stableFrames < 2; i++)
+            {
+                yield return null;
+                Canvas.ForceUpdateCanvases();
+                Vector2 size = ((RectTransform)transform).rect.size;
+                stableFrames = size.x > 0f && size.y > 0f && (size - lastSize).sqrMagnitude < 0.5f ? stableFrames + 1 : 0;
+                lastSize = size;
+                RefreshCanvasText();
+            }
+        }
+
+        private void RefreshCanvasText()
+        {
+            Canvas.ForceUpdateCanvases();
+            _textCanvasWidth = Screen.width;
+            _textCanvasHeight = Screen.height;
+            _textCanvasRectSize = ((RectTransform)transform).rect.size;
+            var canvas = GetComponentInParent<Canvas>();
+            _textCanvasScale = canvas != null ? canvas.scaleFactor : 1f;
+            for (int i = 0; i < _refresh.Count; i++) _refresh[i]?.Invoke();
+            Canvas.ForceUpdateCanvases();
+            var labels = GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                if (labels[i] == null) continue;
+                labels[i].SetAllDirty();
+                labels[i].ForceMeshUpdate(true);
+            }
         }
 
         private void BuildRoster(RectTransform root)
@@ -482,6 +531,9 @@ namespace LR2.UI
                 ic.preserveAspect = true;
             }
             var v = Label(box.rectTransform, value(), 20, vc, true);
+            v.enableAutoSizing = true;
+            v.fontSizeMin = 12f;
+            v.fontSizeMax = 20f;
             v.alignment = TextAlignmentOptions.Center;
             Anchor(v.rectTransform, icon != null ? 0.26f : 0.15f, 0f, 0.85f, 1f);
             if (!_buildingRows)

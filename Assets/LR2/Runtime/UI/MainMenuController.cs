@@ -169,6 +169,7 @@ namespace LR2.UI
             LR2.World.MenuCinematic.Ensure();
             LR2.World.SkyCloudMotion.Ensure();
             BuildSkirmishLobby();
+            HideLegacyBotDifficultyControls();
 
             if (duelButton != null && _lobby == null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
             if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
@@ -238,6 +239,15 @@ namespace LR2.UI
                 var rt = (RectTransform)b.transform;
                 rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, slots[0] - step * k++);
             }
+        }
+
+        private void HideLegacyBotDifficultyControls()
+        {
+            if (mainPanel == null) return;
+            var label = mainPanel.transform.Find("BotDifficultyLabel");
+            if (label != null) label.gameObject.SetActive(false);
+            var stepper = mainPanel.transform.Find("BotDifficultyRoster");
+            if (stepper != null) stepper.gameObject.SetActive(false);
         }
 
         /// <summary>Menu background hook (B110): -1 = main menu, otherwise the GameModeType shown in the lobby.</summary>
