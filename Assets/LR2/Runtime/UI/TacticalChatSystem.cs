@@ -318,7 +318,7 @@ namespace LR2.UI
                     line = e.headshot && Random.value < 0.6f ? PickLine(HeadshotClean, HeadshotSpicy) : PickLine(KillPlayerClean, KillPlayerSpicy);
                 }
                 MarkBanter(e.killer);
-                Enqueue(Random.Range(1.0f, 2.4f), kName, TeamUtil.EnemyColor, string.Format(line, vName));
+                Enqueue(Random.Range(1.0f, 2.4f), kName, ColorOf(e.killer), string.Format(line, vName));
             }
             else if (!e.killer.IsLocalPlayer && !e.victim.IsLocalPlayer)
             {
@@ -427,7 +427,7 @@ namespace LR2.UI
                 if (enemy != null && BanterAllowed(enemy))
                 {
                     MarkBanter(enemy);
-                    Enqueue(0.2f, enemy.DisplayName, TeamUtil.EnemyColor, PickLine(IdleClean, IdleSpicy));
+                    Enqueue(0.2f, enemy.DisplayName, ColorOf(enemy), PickLine(IdleClean, IdleSpicy));
                 }
             }
         }
@@ -533,9 +533,7 @@ namespace LR2.UI
         private Color ColorOf(Combatant c)
         {
             if (c == null) return Color.white;
-            if (c.IsLocalPlayer || (_playerCombatant != null && !TeamUtil.AreHostile(_playerCombatant, c)))
-                return TeamUtil.FriendlyColor;
-            return TeamUtil.EnemyColor;
+            return c.IsLocalPlayer ? TeamUtil.FriendlyColor : TeamUtil.ColorFor(_playerCombatant, c);
         }
 
         private void Enqueue(float delay, string sender, Color color, string body)

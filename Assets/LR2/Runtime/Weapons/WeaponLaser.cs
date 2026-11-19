@@ -99,17 +99,29 @@ namespace LR2.Weapons
             return local != null ? !c.IsHostileTo(local) : !c.IsBot;
         }
 
+        private TeamId _appliedTeam = (TeamId)(-1);
+
+        /// <summary>B116: the beam has its owner's team colour (blue is always your team; FFA: you blue, the rest red).</summary>
+        private TeamId LaserTeam()
+        {
+            if (_externalMuzzle != null) return _externalIsPlayer ? TeamId.Alpha : TeamId.Bravo;
+            var c = _firearm != null && _firearm.Owner != null ? _firearm.Owner.Combatant : null;
+            if (c == null) return TeamId.Bravo;
+            return TeamUtil.ColorTeam(Combatant.FindLocalPlayer(), c);
+        }
+
         private void SyncLaserColor()
         {
-            bool isPlayer = IsPlayerTeamLaser();
-            if (_appliedColorValid && _appliedIsPlayer == isPlayer) return;
+            var team = LaserTeam();
+            if (_appliedColorValid && _appliedTeam == team) return;
             _appliedColorValid = true;
-            _appliedIsPlayer = isPlayer;
-            ApplyColor(_beamMaterial, isPlayer ? PlayerBeamColor : EnemyBeamColor);
-            ApplyColor(_dotMaterial, isPlayer ? PlayerDotColor : EnemyDotColor);
+            _appliedTeam = team;
+            _appliedIsPlayer = team == TeamId.Alpha;
+            Color beam = TeamUtil.LaserColor(team);
+            ApplyColor(_beamMaterial, beam);
+            ApplyColor(_dotMaterial, new Color(Mathf.Min(1f, beam.r * 1.05f + 0.03f), Mathf.Min(1f, beam.g * 1.05f + 0.03f), Mathf.Min(1f, beam.b * 1.05f + 0.03f), 0.94f));
             EnsureSpill();
-            var c = isPlayer ? PlayerBeamColor : EnemyBeamColor;
-            if (_spill != null) _spill.color = new Color(c.r, c.g, c.b, 1f);
+            if (_spill != null) _spill.color = new Color(beam.r, beam.g, beam.b, 1f);
         }
 
         private void EnsureSpill()

@@ -84,7 +84,7 @@ namespace LR2.Game
                     if (s != null)
                     {
                         PlayerSpectates = s.spectate;
-                        PlayerTeam = s.playerTeam;
+                        PlayerTeam = s.playerTeam == TeamId.None ? TeamId.None : TeamId.Alpha; // B116: your team is always Alpha
                         Mode = s.mode;
                         if (s.bots != null)
                             foreach (var b in s.bots)

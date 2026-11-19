@@ -275,14 +275,22 @@ namespace LR2.UI
                 if (!SkirmishSetup.PlayerSpectates && SkirmishSetup.PlayerTeam == TeamId.None && SkirmishSetup.IsTeamGame) SkirmishSetup.PlayerTeam = TeamId.Alpha;
                 Rebuild();
             }, spec ? new Color(0.72f, 0.55f, 1f) : Text);
-            if (!spec) TeamStepper(r, () => SkirmishSetup.PlayerTeam, t => SkirmishSetup.PlayerTeam = t);
+            if (!spec)
+            {
+                // B116: your team is always Alpha, so blue means your side in the lobby and in the match alike
+                bool teamMode = TeamsMatter;
+                if (teamMode) SkirmishSetup.PlayerTeam = TeamId.Alpha;
+                var t = Label(r, teamMode ? "ALPHA  \u00b7  YOUR TEAM" : "FREE FOR ALL", 15, teamMode ? TeamUtil.FriendlyColor : Dim, true);
+                t.alignment = TextAlignmentOptions.Center;
+                Anchor(t.rectTransform, 0.67f, 0f, 0.93f, 1f);
+            }
         }
 
         private void BotRow(int index)
         {
             var bot = SkirmishSetup.Bots[index];
             bool teams = TeamsMatter;
-            var r = Row(teams ? TeamUtil.TeamColor(bot.team) : new Color(0.6f, 0.6f, 0.6f));
+            var r = Row(teams && bot.team != TeamId.None ? TeamUtil.TeamColor(bot.team) : TeamUtil.EnemyColor); // FFA bots are red in the match too
             var name = Label(r, $"<color=#{Hex(Dim)}>{index + 1:00}</color>  BOT", 18, Text);
             Anchor(name.rectTransform, 0.03f, 0f, 0.34f, 1f);
             int d0 = Mathf.Clamp(bot.difficulty, 0, DiffColors.Length - 1);
@@ -307,7 +315,8 @@ namespace LR2.UI
                 Anchor(ffa.rectTransform, 0.67f, 0f, 0.93f, 1f);
                 return;
             }
-            Stepper(r, 0.67f, 0.12f, 0.93f, 0.88f, () => TeamUtil.ShortName(get()), d => { set(SkirmishSetup.NextTeam(get(), d)); Rebuild(); }, TeamUtil.TeamColor(get()));
+            var tc = get() == TeamId.None ? TeamUtil.EnemyColor : TeamUtil.TeamColor(get());
+            Stepper(r, 0.67f, 0.12f, 0.93f, 0.88f, () => TeamUtil.ShortName(get()), d => { set(SkirmishSetup.NextTeam(get(), d)); Rebuild(); }, tc);
         }
 
         private void AddBot()

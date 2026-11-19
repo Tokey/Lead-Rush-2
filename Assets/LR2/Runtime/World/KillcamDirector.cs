@@ -155,19 +155,22 @@ namespace LR2.World
         private float _killerBodyBack;
         private Transform[] _kArm; // puppet L upper/lower/hand, R upper/lower/hand
 
-        // B111 headshot bullet cam (user 11-19: "on killcams for headshots show a quick pan of the bullet hitting the head in
-        // slomo, but dont make it too long"). When the replay reaches the killing headshot it cuts beside the bullet's path:
-        // the round streaks the last 1.9 m in near-frozen time, the camera swings round to a side-on view as it hits, and the
-        // impact plays out at ~0.5x. It replaces 0.34 s of the normal replay, so a headshot killcam is only ~0.75 s longer.
-        private const float HsCamReal = 1.1f;     // real seconds of bullet cam
-        private const float HsLead = 0.035f;      // recorded seconds before the impact
-        private const float HsTail = 0.30f;       // recorded seconds after it
-        private const float HsApproach = 0.42f;   // share of the bullet cam the round is in flight
-        private bool _hsPending, _hsActive, _hsBloodDone;
-        private float _hsStartReal, _hsHitTime, _hsSideSign = 1f;
-        private Vector3 _hsPoint, _hsDir = Vector3.forward;
+        // B111 headshot bullet cam, v2 (user 11-19: "the slomo pan can have more dynamism ... make it slomo a bit more ... take it
+        // from the respawn time if needed ... cinematic like in the sniper movies"). Four beats, 2.5 s, letterboxed:
+        // launch (side view of the muzzle as the round leaves, time all but frozen), chase (the camera whips in behind the
+        // glowing round and rides it down the line with a slight rifling roll and a wide lens), swing (1.2 m out it swings
+        // round to a side-on view), impact (push-in, shake, blood, the head snaps at ~0.3x). The respawn waits for it.
+        private const float HsCamReal = 2.5f;     // real seconds of bullet cam
+        private const float HsLead = 0.04f;       // recorded seconds before the impact (the shot leaves the muzzle)
+        private const float HsTail = 0.32f;       // recorded seconds after it
+        private const float HsLaunch = 0.14f, HsChase = 0.60f, HsImpact = 0.78f; // beat boundaries (share of the bullet cam)
+        private bool _hsPending, _hsActive, _hsBloodDone, _hsHaveMuzzle;
+        private float _hsStartReal, _hsHitTime, _hsSideSign = 1f, _hsBars;
+        private Vector3 _hsPoint, _hsDir = Vector3.forward, _hsMuzzle, _hsShake;
         private Transform _hsHead;
         private LineRenderer _hsBullet;
+        private Transform _hsSlug;
+        private static Texture2D _hsBlack;
 
         /// <summary>Extra replay time a headshot kill adds (the bullet cam minus the replay time it stands in for).</summary>
         private float HeadshotExtra => HsCamReal - (HsLead + HsTail) * duration / Mathf.Max(0.1f, preKillWindow + postKillWindow);
@@ -464,6 +467,7 @@ namespace LR2.World
 
         private void LateUpdate()
         {
+            _hsBars = Mathf.MoveTowards(_hsBars, _playing && _hsActive ? 1f : 0f, Time.unscaledDeltaTime * 3.5f);
             if (!_playing) RecordSnapshots();
 
             if (_pending && Time.time >= _startAt)
@@ -550,6 +554,8 @@ namespace LR2.World
                 _hsPending = false;
                 _hsActive = true;
                 _hsBloodDone = false;
+                _hsHaveMuzzle = false;
+                _hsShake = Vector3.zero;
                 _hsStartReal = Time.time;
                 _endAt += HsCamReal; // re-timed on exit
                 _hsHead = FindHead(_puppets && _victimPuppet != null ? _victimPuppet.transform : _victim != null ? _victim.transform : null);
@@ -559,12 +565,13 @@ namespace LR2.World
             }
             if (!_hsActive) return false;
             float u = Mathf.Clamp01((Time.time - _hsStartReal) / HsCamReal);
-            sampleTime = u < HsApproach
-                ? Mathf.Lerp(_hsHitTime - HsLead, _hsHitTime, u / HsApproach)                       // near-frozen: the round flies
-                : Mathf.Lerp(_hsHitTime, _hsHitTime + HsTail, (u - HsApproach) / (1f - HsApproach)); // ~0.5x: the impact
+            sampleTime = u < HsImpact
+                ? Mathf.Lerp(_hsHitTime - HsLead, _hsHitTime, u / HsImpact)                      // all but frozen: the round flies
+                : Mathf.Lerp(_hsHitTime, _hsHitTime + HsTail, (u - HsImpact) / (1f - HsImpact)); // ~0.3x: the impact
             if (u < 1f) return true;
             _hsActive = false;
             if (_hsBullet != null) _hsBullet.enabled = false;
+            if (_hsSlug != null) _hsSlug.gameObject.SetActive(false);
             // carry on with the normal replay from where the slow motion stopped
             float exitNorm = Mathf.InverseLerp(_replayStartTime, _replayEndTime, sampleTime);
             _endAt = Time.time + (1f - exitNorm) * duration;
@@ -605,68 +612,180 @@ namespace LR2.World
             return null;
         }
 
+        private static float Smooth01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+        private struct CamPose { public Vector3 pos, look; public float fov, roll; }
+
+        private static CamPose Blend(CamPose a, CamPose b, float t)
+        {
+            t = Smooth01(t);
+            return new CamPose { pos = Vector3.Lerp(a.pos, b.pos, t), look = Vector3.Lerp(a.look, b.look, t), fov = Mathf.Lerp(a.fov, b.fov, t), roll = Mathf.Lerp(a.roll, b.roll, t) };
+        }
+
         private void ApplyBulletCam(Camera cam)
         {
             if (cam == null) return;
             float u = Mathf.Clamp01((Time.time - _hsStartReal) / HsCamReal);
-            float e = Mathf.SmoothStep(0f, 1f, u);
-            float fly = Mathf.Clamp01(u / HsApproach);
-            Vector3 bullet = _hsPoint - _hsDir * Mathf.Lerp(1.9f, 0f, fly * fly * (3f - 2f * fly) * 0.25f + fly * 0.75f);
-            Vector3 head = _hsHead != null ? _hsHead.position : _hsPoint;
-            Vector3 camPos = _hsPoint + BulletCamOffset(e, _hsSideSign);
-            Vector3 look = u < HsApproach ? Vector3.Lerp(bullet, _hsPoint, 0.5f + 0.5f * fly)
-                                          : Vector3.Lerp(_hsPoint, head, Mathf.Clamp01((u - HsApproach) * 2.5f));
-            cam.transform.SetPositionAndRotation(camPos, Quaternion.LookRotation(look - camPos, Vector3.up));
-            cam.fieldOfView = Mathf.Lerp(46f, 34f, e);
+            if (!_hsHaveMuzzle)
+            {
+                // the muzzle as the replay froze it; else the recorded origin of the killing shot
+                _hsHaveMuzzle = true;
+                _hsMuzzle = _hsPoint - _hsDir * 12f;
+                for (int i = _replayShots.Count - 1; i >= 0; i--)
+                    if (_replayShots[i].time <= _hsHitTime + 0.02f) { _hsMuzzle = _replayShots[i].origin; break; }
+                if (_puppetMuzzle != null) _hsMuzzle = _puppetMuzzle.position;
+                Vector3 line = _hsPoint - _hsMuzzle;
+                if (line.sqrMagnitude > 0.04f) _hsDir = line.normalized;
+            }
+            Vector3 M = _hsMuzzle, H = _hsPoint, D = _hsDir;
+            float L = Mathf.Max(0.5f, Vector3.Distance(M, H));
+            Vector3 side = Vector3.Cross(Vector3.up, D);
+            side = (side.sqrMagnitude > 1e-4f ? side.normalized : Vector3.right) * _hsSideSign;
+            Vector3 up = Vector3.Cross(D, side).normalized * _hsSideSign;
+            if (Vector3.Dot(up, Vector3.up) < 0f) up = -up;
+            Vector3 head = _hsHead != null ? _hsHead.position : H;
 
+            // where the round is: leaves the muzzle, rides the line, covers the last 1.2 m slowly, gone at the impact
+            float near = Mathf.Min(1.2f, L * 0.5f);
+            float bEnd = 1f - near / L;
+            float frac = u < HsLaunch ? Mathf.Lerp(0f, Mathf.Min(0.03f, bEnd), u / HsLaunch)
+                       : u < HsChase ? Mathf.Lerp(Mathf.Min(0.03f, bEnd), bEnd, Smooth01((u - HsLaunch) / (HsChase - HsLaunch)))
+                       : u < HsImpact ? Mathf.Lerp(bEnd, 1f, (u - HsChase) / (HsImpact - HsChase))
+                       : 1f;
+            Vector3 bullet = Vector3.Lerp(M, H, frac);
+
+            // the four beats, cross-faded where they meet
+            float kL = Mathf.Clamp01(u / HsLaunch);
+            var launch = new CamPose { pos = M + side * 0.62f + up * 0.12f + D * Mathf.Lerp(-0.18f, 0.12f, kL), look = M + D * 0.45f, fov = 38f, roll = 0f };
+            float kC = Mathf.Clamp01((u - HsLaunch) / (HsChase - HsLaunch));
+            var chase = new CamPose { pos = bullet - D * 0.34f + up * 0.07f + side * 0.09f, look = bullet + D * 6f, fov = Mathf.Lerp(50f, 60f, kC), roll = 14f * Smooth01(kC) };
+            float kO = Mathf.Clamp01((u - HsChase) / (HsImpact - HsChase));
+            float r0 = near + 0.34f;
+            var orbit = new CamPose
+            {
+                pos = H + Quaternion.AngleAxis(95f * Smooth01(kO) * _hsSideSign, up) * (-D * Mathf.Lerp(r0, 0.95f, kO)) + up * Mathf.Lerp(0.07f, 0.05f, kO),
+                look = Vector3.Lerp(bullet + D * 2f, head, Smooth01(kO)),
+                fov = Mathf.Lerp(60f, 40f, kO),
+                roll = Mathf.Lerp(14f, 0f, Smooth01(kO))
+            };
+            float kI = Mathf.Clamp01((u - HsImpact) / (1f - HsImpact));
+            var impact = new CamPose
+            {
+                pos = H + Quaternion.AngleAxis(Mathf.Lerp(95f, 112f, kI) * _hsSideSign, up) * (-D * Mathf.Lerp(0.95f, 0.78f, Smooth01(kI))) + up * 0.05f,
+                look = head,
+                fov = Mathf.Lerp(40f, 31f, Smooth01(kI)),
+                roll = 0f
+            };
+            const float X = 0.05f; // cross-fade half-width
+            CamPose pose;
+            if (u < HsLaunch - X) pose = launch;
+            else if (u < HsLaunch + X) pose = Blend(launch, chase, (u - (HsLaunch - X)) / (2f * X)); // the whip in behind the round
+            else if (u < HsChase) pose = chase;
+            else if (u < HsImpact) pose = orbit;
+            else pose = impact;
+
+            // impact shake (decays over ~0.4 s)
+            if (u >= HsImpact)
+            {
+                float since = (u - HsImpact) * HsCamReal;
+                float amp = 0.028f * Mathf.Exp(-since * 7f);
+                _hsShake = new Vector3(Mathf.PerlinNoise(Time.time * 40f, 1.7f) - 0.5f, Mathf.PerlinNoise(3.1f, Time.time * 40f) - 0.5f, 0f) * 2f * amp;
+            }
+            Vector3 camPos = pose.pos + side * _hsShake.x + up * _hsShake.y;
+            Vector3 fwd = pose.look - camPos;
+            if (fwd.sqrMagnitude < 1e-6f) fwd = D;
+            cam.transform.SetPositionAndRotation(camPos, Quaternion.LookRotation(fwd, up) * Quaternion.Euler(0f, 0f, pose.roll));
+            cam.fieldOfView = pose.fov;
+
+            // the round: a hot slug with a fading wake
             EnsureBullet();
+            bool inFlight = u < HsImpact;
+            if (_hsSlug != null)
+            {
+                _hsSlug.gameObject.SetActive(inFlight);
+                if (inFlight) _hsSlug.SetPositionAndRotation(bullet, Quaternion.LookRotation(D) * Quaternion.Euler(90f, 0f, 0f));
+            }
             if (_hsBullet != null)
             {
-                bool inFlight = u < HsApproach;
-                _hsBullet.enabled = inFlight;
-                if (inFlight)
+                _hsBullet.enabled = inFlight && frac > 0.005f;
+                if (_hsBullet.enabled)
                 {
-                    _hsBullet.SetPosition(0, bullet - _hsDir * 0.6f);
-                    _hsBullet.SetPosition(1, bullet);
+                    _hsBullet.SetPosition(0, Vector3.Lerp(M, bullet, Mathf.Max(0f, 1f - 1.6f / Mathf.Max(0.01f, Vector3.Distance(M, bullet)))));
+                    _hsBullet.SetPosition(1, bullet - D * 0.02f);
                 }
             }
-            if (!_hsBloodDone && u >= HsApproach)
+            if (!_hsBloodDone && u >= HsImpact)
             {
                 _hsBloodDone = true;
-                ImpactSystem.SpawnBlood(_hsPoint, -_hsDir, _hsDir, true);
+                ImpactSystem.SpawnBlood(H, -D, D, true);
+                ImpactSystem.SpawnBlood(H + D * 0.12f, D, D, true); // the exit spray
+                var sounds = LR2CommonSounds.Instance;
+                if (sounds != null) LR2Audio.PlayAt(sounds.bulletCrack, H, 1f);
             }
         }
 
-        /// <summary>The round: a hot additive streak (core plus soft halo) on the keyword-free LR2/ParticleUnlit shader.</summary>
+        /// <summary>The round: a glowing slug (capsule, additive) and a tapered wake, on the keyword-free LR2/ParticleUnlit shader.</summary>
         private void EnsureBullet()
         {
-            if (_hsBullet != null) return;
-            var go = new GameObject("[Killcam Bullet]");
-            go.transform.SetParent(transform, false);
-            _hsBullet = go.AddComponent<LineRenderer>();
-            _hsBullet.useWorldSpace = true;
-            _hsBullet.positionCount = 2;
-            _hsBullet.numCapVertices = 4;
-            _hsBullet.startWidth = 0.002f;
-            _hsBullet.endWidth = 0.016f;
-            _hsBullet.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _hsBullet.receiveShadows = false;
-            var g = new Gradient();
-            g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.55f, 0.25f), 0f), new GradientColorKey(new Color(1f, 0.92f, 0.78f), 1f) },
-                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.55f, 0.6f), new GradientAlphaKey(1f, 1f) });
-            _hsBullet.colorGradient = g;
+            if (_hsBullet != null && _hsSlug != null) return;
             var shader = Shader.Find("LR2/ParticleUnlit");
-            if (shader != null)
+            Material Glow(Color c, float intensity)
             {
+                if (shader == null) return null;
                 var m = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
-                m.SetColor("_Color", new Color(1f, 0.82f, 0.6f, 1f));
-                m.SetFloat("_Intensity", 3f);
+                m.SetColor("_Color", c);
+                m.SetFloat("_Intensity", intensity);
                 m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
                 m.renderQueue = 3100;
-                _hsBullet.sharedMaterial = m;
+                return m;
             }
-            _hsBullet.enabled = false;
+            if (_hsBullet == null)
+            {
+                var go = new GameObject("[Killcam Bullet Wake]");
+                go.transform.SetParent(transform, false);
+                _hsBullet = go.AddComponent<LineRenderer>();
+                _hsBullet.useWorldSpace = true;
+                _hsBullet.positionCount = 2;
+                _hsBullet.numCapVertices = 4;
+                _hsBullet.startWidth = 0.0f;
+                _hsBullet.endWidth = 0.014f;
+                _hsBullet.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _hsBullet.receiveShadows = false;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.5f, 0.2f), 0f), new GradientColorKey(new Color(1f, 0.9f, 0.75f), 1f) },
+                          new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.35f, 0.7f), new GradientAlphaKey(0.9f, 1f) });
+                _hsBullet.colorGradient = g;
+                var wm = Glow(new Color(1f, 0.82f, 0.6f, 1f), 2.2f);
+                if (wm != null) _hsBullet.sharedMaterial = wm;
+                _hsBullet.enabled = false;
+            }
+            if (_hsSlug == null)
+            {
+                var slug = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                slug.name = "[Killcam Bullet]";
+                var col = slug.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+                slug.transform.SetParent(transform, false);
+                slug.transform.localScale = new Vector3(0.011f, 0.018f, 0.011f); // capsule height 2 -> 3.6 cm round
+                var r = slug.GetComponent<Renderer>();
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                var sm = Glow(new Color(1f, 0.78f, 0.5f, 1f), 3.2f);
+                if (sm != null) r.sharedMaterial = sm;
+                _hsSlug = slug.transform;
+                slug.SetActive(false);
+            }
+        }
+
+        /// <summary>Letterbox bars slide in for the bullet cam.</summary>
+        private void OnGUI()
+        {
+            if (_hsBars <= 0.01f || Event.current.type != EventType.Repaint) return;
+            if (_hsBlack == null) { _hsBlack = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave }; _hsBlack.SetPixel(0, 0, Color.black); _hsBlack.Apply(); }
+            float h = Screen.height * 0.115f * _hsBars;
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, h), _hsBlack);
+            GUI.DrawTexture(new Rect(0f, Screen.height - h, Screen.width, h), _hsBlack);
         }
 
         private void ReplayShots(float sampleTime, Quaternion aimRot, float aimBlend = 0f)
@@ -687,7 +806,7 @@ namespace LR2.World
                 Combatant killerCombatant = _killer != null ? _killer.Combatant : null;
                 Combatant local = Combatant.FindLocalPlayer();
                 bool killerFriendly = killerCombatant != null && (killerCombatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, killerCombatant)));
-                TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f, killerFriendly);
+                if (!_hsActive) TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f, killerFriendly); // the bullet cam draws its own round
                 if (_puppetMuzzleFlashes != null)
                 {
                     for (int m = 0; m < _puppetMuzzleFlashes.Length; m++)
@@ -1038,6 +1157,7 @@ namespace LR2.World
             _playing = false;
             _hsActive = _hsPending = false;
             if (_hsBullet != null) _hsBullet.enabled = false;
+            if (_hsSlug != null) _hsSlug.gameObject.SetActive(false);
             DestroyPuppets();
             if (_killer != null)
             {

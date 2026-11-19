@@ -173,6 +173,15 @@ namespace LR2.UI
 
         private static string Short(string s) => string.IsNullOrEmpty(s) ? "-" : (s.Length > 14 ? s.Substring(0, 13) + "\u2026" : s);
 
+        /// <summary>B116: score numbers and their labels wear the team colours they stand for.</summary>
+        private void SetScoreColors(Color mine, Color theirs)
+        {
+            if (myScoreText != null) myScoreText.color = mine;
+            if (enemyScoreText != null) enemyScoreText.color = theirs;
+            if (_myScoreLabel != null) _myScoreLabel.color = new Color(mine.r, mine.g, mine.b, 0.85f);
+            if (_enemyScoreLabel != null) _enemyScoreLabel.color = new Color(theirs.r, theirs.g, theirs.b, 0.85f);
+        }
+
         private void UpdateScoreLabels(MatchManager mm)
         {
             if (_myScoreLabel == null || mm == null || mm.Settings == null || Time.unscaledTime < _nextScoreLabelAt) return;
@@ -182,10 +191,12 @@ namespace LR2.UI
                 var other = mm.BestOpponentTeam(_player.Team);
                 bool watching = LR2.Game.SkirmishSetup.Active && LR2.Game.SkirmishSetup.PlayerSpectates;
                 _myScoreLabel.text = $"{(watching ? "WATCHING" : "YOUR TEAM")} \u00b7 {_player.Team.ToString().ToUpperInvariant()}";
+                SetScoreColors(TeamUtil.TeamColor(_player.Team), TeamUtil.TeamColor(other));
                 _enemyScoreLabel.text = $"ENEMY \u00b7 {other.ToString().ToUpperInvariant()}";
                 return;
             }
             // Duel and free-for-all: you vs the best other player, with your place
+            SetScoreColors(Friendly, Enemy);
             int mine = mm.GetDisplayScore(_player);
             int place = 1, players = 0;
             Combatant best = null;
@@ -677,7 +688,7 @@ namespace LR2.UI
         private string ColoredName(Combatant c)
         {
             if (c == null) return "";
-            Color col = c == _player ? Accent : (_player != null && !TeamUtil.AreHostile(_player, c)) ? Friendly : Enemy;
+            Color col = c == _player ? Accent : TeamUtil.ColorFor(_player, c);
             return $"<color=#{ColorUtility.ToHtmlStringRGB(col)}>{c.DisplayName}</color>";
         }
 
@@ -870,7 +881,7 @@ namespace LR2.UI
                 icon.rectTransform.anchoredPosition = p;
                 float pingAge = Time.time - c.LastLoudShotTime;
                 float fade = friendly || drone ? 1f : Mathf.Clamp01(1f - Mathf.Max(0f, pingAge - 1.4f) / 1.1f);
-                Color baseCol = drone ? new Color(1f, 0.85f, 0.2f) : friendly ? Friendly : Enemy;
+                Color baseCol = drone ? TeamUtil.DroneColor : TeamUtil.ColorFor(_player, c);
                 baseCol.a *= fade;
                 icon.color = baseCol;
             }
@@ -905,7 +916,7 @@ namespace LR2.UI
                     _flagMinimapIcon.rectTransform.localScale = Vector3.one * pulse;
                     _flagMinimapIcon.color = flag.State == FlagZoneController.ZoneState.Contested
                         ? Accent
-                        : (flag.Progress >= 0f ? new Color(0.24f, 0.78f, 1f, 1f) : Enemy);
+                        : (flag.Progress >= 0f ? Friendly : Enemy);
                 }
                 else
                 {

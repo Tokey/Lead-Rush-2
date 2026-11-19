@@ -721,8 +721,8 @@ namespace LR2.Game
             Color col = state == ZoneState.Contested
                 ? Color.Lerp(new Color(1f, 0.72f, 0.15f), Color.white, 0.5f + 0.5f * Mathf.Sin(Time.time * 12f))
                 : prog >= 0f
-                    ? Color.Lerp(new Color(0.95f, 0.72f, 0.22f), new Color(0.18f, 0.76f, 1f), prog)
-                    : Color.Lerp(new Color(0.95f, 0.72f, 0.22f), new Color(0.96f, 0.24f, 0.22f), -prog);
+                    ? Color.Lerp(new Color(0.95f, 0.72f, 0.22f), TeamUtil.FriendlyColor, prog)
+                    : Color.Lerp(new Color(0.95f, 0.72f, 0.22f), TeamUtil.EnemyColor, -prog);
 
             float pulse = state == ZoneState.Contested ? 0.75f + 0.25f * Mathf.Sin(Time.time * 10f) : 1f;
             if (_bannerMat != null && _bannerMat.HasProperty("_BaseColor")) _bannerMat.SetColor("_BaseColor", col);

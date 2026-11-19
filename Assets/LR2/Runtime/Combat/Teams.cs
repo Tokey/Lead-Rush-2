@@ -49,13 +49,19 @@ namespace LR2.Combat
             }
         }
 
-        /// <summary>Fixed colour per team for lobby rows, the spectator overlay and scoreboards.</summary>
+        public static readonly Color DroneColor = new Color(1f, 0.85f, 0.2f);
+
+        /// <summary>
+        /// B116 (user 11-19 "make the colors consistent through the game"): one fixed colour per team everywhere, from the lobby
+        /// to uniforms, lasers, kill feed, minimap and scoreboard. The player's team is always Alpha, so blue always means your
+        /// side and red the main enemy; Charlie is green, Delta gold.
+        /// </summary>
         public static Color TeamColor(TeamId team)
         {
             switch (team)
             {
-                case TeamId.Alpha: return new Color(0.30f, 0.66f, 1.00f);
-                case TeamId.Bravo: return new Color(1.00f, 0.33f, 0.28f);
+                case TeamId.Alpha: return FriendlyColor;
+                case TeamId.Bravo: return EnemyColor;
                 case TeamId.Charlie: return new Color(0.42f, 0.86f, 0.38f);
                 case TeamId.Delta: return new Color(1.00f, 0.80f, 0.25f);
                 default: return new Color(0.85f, 0.85f, 0.85f);
@@ -65,12 +71,44 @@ namespace LR2.Combat
         /// <summary>Short team label for lobby rows ("ALPHA", "FFA").</summary>
         public static string ShortName(TeamId team) => team == TeamId.None ? "FFA" : team.ToString().ToUpperInvariant();
 
-        /// <summary>Colour of <paramref name="other"/> as seen by <paramref name="viewer"/>.</summary>
+        /// <summary>
+        /// The team whose colours a soldier shows: his own in team games; in free-for-all Alpha (blue) for the viewer himself
+        /// (the local player when there is no viewer) and Bravo (red) for everyone else.
+        /// </summary>
+        public static TeamId ColorTeam(Combatant viewer, Combatant other)
+        {
+            if (other == null) return TeamId.None;
+            if (other.Team != TeamId.None) return other.Team;
+            bool self = viewer != null ? viewer == other : other.IsLocalPlayer;
+            return self ? TeamId.Alpha : TeamId.Bravo;
+        }
+
+        /// <summary>The one colour rule (B116): team colour, drones gold-yellow, free-for-all you blue and the rest red.</summary>
+        public static Color ColorFor(Combatant viewer, Combatant other)
+        {
+            if (other == null) return NeutralColor;
+            if (other.Team == TeamId.Hostile) return DroneColor;
+            return TeamColor(ColorTeam(viewer, other));
+        }
+
+        /// <summary>Saturated laser beam colour with the same hue as the team colour.</summary>
+        public static Color LaserColor(TeamId team)
+        {
+            switch (team)
+            {
+                case TeamId.Alpha: return new Color(0.14f, 0.52f, 1f, 0.96f);
+                case TeamId.Charlie: return new Color(0.05f, 1f, 0.22f, 0.96f);
+                case TeamId.Delta: return new Color(1f, 0.70f, 0.04f, 0.96f);
+                default: return new Color(1f, 0.08f, 0.025f, 0.94f);
+            }
+        }
+
+        /// <summary>Colour of <paramref name="other"/> as seen by <paramref name="viewer"/> (white for the viewer himself).</summary>
         public static Color RelationColor(Combatant viewer, Combatant other)
         {
             if (other == null) return NeutralColor;
             if (viewer == other) return Color.white;
-            return AreHostile(viewer, other) ? EnemyColor : FriendlyColor;
+            return ColorFor(viewer, other);
         }
     }
 }

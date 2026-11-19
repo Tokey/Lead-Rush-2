@@ -233,7 +233,7 @@ namespace LR2.Game
             bool tag = mixed || SkirmishSetup.PlayerSpectates;
 
             if (!SkirmishSetup.PlayerSpectates)
-                LocalPlayer = Spawn(playerPrefab, teams ? SkirmishSetup.PlayerTeam : TeamId.None, LR2Settings.PlayerName, true);
+                LocalPlayer = Spawn(playerPrefab, teams ? TeamId.Alpha : TeamId.None, LR2Settings.PlayerName, true); // B116: you are always Alpha (blue)
             foreach (var slot in SkirmishSetup.Bots)
             {
                 TeamId t = teams ? slot.team : TeamId.None;

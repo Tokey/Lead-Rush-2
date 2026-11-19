@@ -171,7 +171,7 @@ namespace LR2.UI
             sb.Append("<color=#9AA0A6><size=80%>PLAYER<pos=55%>K<pos=65%>D<pos=75%>A<pos=87%>SCORE</size></color>\n");
             foreach (var c in list)
             {
-                Color col = c == local ? new Color(1f, 0.75f, 0.3f) : (local != null && !TeamUtil.AreHostile(local, c)) ? TeamUtil.FriendlyColor : TeamUtil.EnemyColor;
+                Color col = c == local ? new Color(1f, 0.75f, 0.3f) : TeamUtil.ColorFor(local, c);
                 sb.Append($"<color=#{ColorUtility.ToHtmlStringRGB(col)}>{c.DisplayName}</color>")
                   .Append($"<pos=55%>{c.stats.kills}<pos=65%>{c.stats.deaths}<pos=75%>{c.stats.assists}<pos=87%>{c.stats.score}\n");
             }

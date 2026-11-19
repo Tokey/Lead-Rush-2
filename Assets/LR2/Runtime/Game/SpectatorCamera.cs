@@ -215,7 +215,7 @@ namespace LR2.Game
                 string hp = _target.Health != null ? $"{Mathf.CeilToInt(_target.Health.Current)} HP" : "";
                 string team = _target.Team == TeamId.None ? "FREE FOR ALL" : TeamUtil.DisplayName(_target.Team);
                 GUILayout.BeginArea(new Rect(w * 0.5f - 230f, 104f, 460f, 64f), _box);
-                GUILayout.Label($"<color=#{Hex(TeamUtil.TeamColor(_target.Team))}>{team}</color>   {_target.DisplayName}   <color=#9AA0A6>{(_target.IsAlive ? hp : "KIA")}</color>", new GUIStyle(_row) { fontSize = 16, alignment = TextAnchor.MiddleCenter });
+                GUILayout.Label($"<color=#{Hex(TeamUtil.ColorFor(null, _target))}>{team}</color>   {_target.DisplayName}   <color=#9AA0A6>{(_target.IsAlive ? hp : "KIA")}</color>", new GUIStyle(_row) { fontSize = 16, alignment = TextAnchor.MiddleCenter });
                 GUILayout.Label($"{(_mode == ViewMode.Chase ? "CHASE CAM" : "EYE VIEW")}   {(_auto ? "AUTO DIRECTOR ON" : "MANUAL")}", _hint);
                 GUILayout.EndArea();
             }

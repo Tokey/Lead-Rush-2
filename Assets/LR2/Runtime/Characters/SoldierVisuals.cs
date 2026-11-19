@@ -40,12 +40,7 @@ namespace LR2.Characters
         private void Start()
         {
             // Apply final faction uniform immediately on spawn frame so no default model texture flashes on frame 0
-            if (!_uniformApplied)
-            {
-                var lp = Combatant.FindLocalPlayer();
-                if (_combatant != null && (_combatant.IsLocalPlayer || lp != null))
-                    ApplyUniform(lp);
-            }
+            if (!_uniformApplied) ApplyUniform(Combatant.FindLocalPlayer()); // team colours need no local player (B116)
         }
 
         /// <summary>Re-evaluates which uniform this soldier wears (call after team changes).</summary>
@@ -54,8 +49,11 @@ namespace LR2.Characters
         /// <summary>Applies baked uniform materials immediately (used both in prefab build and pre-reveal warmup).</summary>
         public void ApplyMaterialsNow(bool friendly)
         {
-            var uniform = friendly ? friendlyUniform : enemyUniform;
-            var mask = friendly ? faceMask : (enemyFaceMask != null ? enemyFaceMask : faceMask);
+            ApplySet(friendly ? friendlyUniform : enemyUniform, friendly ? faceMask : (enemyFaceMask != null ? enemyFaceMask : faceMask));
+        }
+
+        private void ApplySet(Material uniform, Material mask)
+        {
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 var mats = r.sharedMaterials;
@@ -81,19 +79,39 @@ namespace LR2.Characters
             }
         }
 
+        // B116: uniforms follow the one colour rule: Alpha (always your team) navy, Bravo crimson, Charlie and Delta tinted
+        // green and gold; in free-for-all you wear navy and everyone else crimson. AI vs AI has no local player, so the
+        // choice no longer depends on one.
         private void ApplyUniform(Combatant local)
         {
-            bool friendly = _combatant != null && (_combatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, _combatant)));
-            ApplyMaterialsNow(friendly);
+            var team = TeamUtil.ColorTeam(local, _combatant);
+            if (team == TeamId.Charlie || team == TeamId.Delta)
+            {
+                var mask = team == TeamId.Charlie ? faceMask : (enemyFaceMask != null ? enemyFaceMask : faceMask);
+                ApplySet(Tint(team == TeamId.Charlie ? friendlyUniform : enemyUniform, team), mask);
+                return;
+            }
+            ApplyMaterialsNow(team == TeamId.Alpha || (_combatant != null && _combatant.IsLocalPlayer));
+        }
+
+        private static readonly System.Collections.Generic.Dictionary<(Material, TeamId), Material> Tinted =
+            new System.Collections.Generic.Dictionary<(Material, TeamId), Material>();
+
+        private static Material Tint(Material src, TeamId team)
+        {
+            if (src == null) return null;
+            if (Tinted.TryGetValue((src, team), out var m) && m != null) return m;
+            m = new Material(src) { name = src.name + "_" + team, hideFlags = HideFlags.DontSave };
+            Color tint = team == TeamId.Charlie ? new Color(0.55f, 1f, 0.5f, 1f) : new Color(1f, 0.86f, 0.36f, 1f);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", m.GetColor("_BaseColor") * tint);
+            else if (m.HasProperty("_Color")) m.SetColor("_Color", m.GetColor("_Color") * tint);
+            Tinted[(src, team)] = m;
+            return m;
         }
 
         private void LateUpdate()
         {
-            if (!_uniformApplied)
-            {
-                var lp = Combatant.FindLocalPlayer();
-                if (lp != null || Time.timeSinceLevelLoad > 1f) ApplyUniform(lp);
-            }
+            if (!_uniformApplied) ApplyUniform(Combatant.FindLocalPlayer());
             var local = Combatant.FindLocalPlayer();
             bool show = local != null && _combatant != null && local != _combatant && _combatant.IsAlive
                         && !TeamUtil.AreHostile(local, _combatant) && friendlyMarkerMaterial != null;
