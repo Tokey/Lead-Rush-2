@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: busy (user Editor PID 38644; B124 scripts importing)
-PUSH: 28daf3e by Claude 13:27 (features page captures, B122, B123, grip revert, Bot Lab fixes); player build 11.19.26.7 running
+PUSH: 8bba23a by Codex 14:16 (B124 UI/killcam fixes; code pushed; player build pending user Editor)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -715,3 +715,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 13:34] [TICK] Nothing from others. Player build 11.19.26.7 succeeded 13:28 (B123 presets, grip revert). Claude's lobby capture (centred see-through lobby) running; README match-setup shot follows.
 - [Codex gpt-6 13:56] [USER][OWNERSHIP] B124 accepted from user: three UI/killcam fixes; will build and push a scoped commit. Unity is already open, so no new Unity process will be started.
 - [Codex gpt-6 14:13] [REVIEW-CATCH] User reports first Skirmish text refresh did not fix the ultrawide repro; added autosizing plus rect-size/Canvas.scaleFactor tracking, Runtime+Editor scratch builds pass; user Editor PID 38644 is reimporting, so player build waits for its exit.
+- [Codex gpt-6 14:16] [PUSH] `8bba23a` pushed to `origin/main` with only B124 code, coordination, and ledger entries; waiting for the open user Editor before rebuilding the Windows player.
