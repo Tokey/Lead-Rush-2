@@ -221,6 +221,7 @@ namespace LR2.Characters
                 }
             }
             if (GetComponent<WeaponAntiClip>() == null) gameObject.AddComponent<WeaponAntiClip>();
+            if (GetComponent<AdsSightLock>() == null) gameObject.AddComponent<AdsSightLock>(); // B91: sights stay on the view in ADS
             if (IsLocalPlayer) LR2Settings.Changed += OnSettingsChanged;
 
             var rig = GetComponentInChildren<KRigComponent>();
@@ -482,6 +483,9 @@ namespace LR2.Characters
             if (_input.jump) Movement.RequestJump();
             if (_input.crouch) Movement.RequestCrouchToggle();
             if (_input.prone) Movement.RequestProneToggle();
+            // B90: hold X to crouch, tap X twice to slide (the second press crouches again, then the slide takes over)
+            if (_input.crouchHold != Movement.CrouchHeld) Movement.SetCrouchHeld(_input.crouchHold);
+            if (_input.slide) Movement.RequestSlide();
 
             // Lean (Kinemation lean layer)
             if (UserInput != null && settings != null && !Mathf.Approximately(_input.lean, _lastLean))

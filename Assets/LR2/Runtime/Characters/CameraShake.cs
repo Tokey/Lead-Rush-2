@@ -32,7 +32,8 @@ namespace LR2.Characters
         [Header("Sources (trauma added)")]
         public float rifleShot = 0.075f;
         public float pistolShot = 0.05f;
-        [Tooltip("Multiplier on shot shake while aiming down sights.")] public float adsShotMultiplier = 0.55f;
+        [Tooltip("Multiplier on shot shake while aiming down sights (B91: 0.55 -> 0.3; the shake moves the camera, not the gun).")] public float adsShotMultiplier = 0.3f;
+        [Tooltip("B91: multiplier on hit-taken shake while aiming down sights.")] public float adsHitMultiplier = 0.6f;
         public float hitTakenBase = 0.22f;
         [Tooltip("Extra trauma per point of damage taken.")] public float hitTakenPerDamage = 0.006f;
         public float headshotTakenExtra = 0.15f;
@@ -155,6 +156,7 @@ namespace LR2.Characters
         {
             if (!IsLocal(e.victim) || e.damage <= 0f) return;
             float t = hitTakenBase + e.damage * hitTakenPerDamage + (e.zone == HitZone.Head ? headshotTakenExtra : 0f);
+            if (_local != null && _local.IsAiming) t *= adsHitMultiplier;
             AddTrauma(t);
 
             // Flinch away from the shooter: the head snaps up and turns away from the incoming side.

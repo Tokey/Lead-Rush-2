@@ -520,7 +520,7 @@ namespace LR2.EditorTools
             AddSectionHeader(bindTab, "BindLeft", "MOVEMENT & COMBAT", leftCol);
             AddSectionHeader(bindTab, "BindRight", "UTILITY & STANCES", rightCol);
             (string action, string label)[] leftBinds = { ("Move", "MOVE FORWARD"), ("Fire", "FIRE WEAPON"), ("Aim", "AIM DOWN SIGHTS"), ("Sprint", "SPRINT"), ("Jump", "JUMP / MANTLE"), ("Reload", "RELOAD") };
-            (string action, string label)[] rightBinds = { ("Crouch", "CROUCH"), ("Prone", "PRONE"), ("LeanLeft", "LEAN LEFT"), ("LeanRight", "LEAN RIGHT"), ("Interact", "INTERACT / RESUPPLY"), ("Laser", "TOGGLE LASER") };
+            (string action, string label)[] rightBinds = { ("Crouch", "CROUCH (TOGGLE)"), ("CrouchHold", "CROUCH (HOLD) · TAP TWICE: SLIDE"), ("Prone", "PRONE"), ("LeanLeft", "LEAN LEFT"), ("LeanRight", "LEAN RIGHT"), ("Interact", "INTERACT / RESUPPLY"), ("Laser", "TOGGLE LASER") };
             for (int bi = 0; bi < leftBinds.Length; bi++)
                 s.keybindSlots.Add(KeybindColRow(bindTab, leftBinds[bi].action, leftBinds[bi].label, leftCol, startY - bi * step));
             for (int bi = 0; bi < rightBinds.Length; bi++)

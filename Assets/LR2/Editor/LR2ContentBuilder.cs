@@ -1728,9 +1728,106 @@ namespace LR2.EditorTools
                 foreach (var sub in sm.stateMachines) Walk(sub.stateMachine);
             }
             foreach (var layer in ctrl.layers) Walk(layer.stateMachine);
+            ConfigureFastStances(ctrl);
             EditorUtility.SetDirty(ctrl);
             AssetDatabase.SaveAssets();
             Debug.Log($"[LR2] LocoSpeed driving {count} locomotion states");
+        }
+
+        /// <summary>
+        /// B90 (user 11-19 00:13: "proning should be 5x faster and smoother", crouching "more faster and seamless"). The demo
+        /// chained full-length stance clips, each played to 95 %: stand -> C_StandingToCrouch -> C_CrouchToProne -> prone
+        /// (about 6 s at 30 fps) and prone -> C_ProneToCrouch -> C_CrouchToStanding -> stand (about 5 s). Now going down skips
+        /// the stand-to-crouch clip and plays crouch-to-prone at 3.2x, leaving it at 82 %; crouch goes to prone directly;
+        /// getting up plays prone-to-crouch at 3.2x and crossfades straight to crouch or stand (about 0.9 s each way).
+        /// Stand/crouch crossfades 0.2 -> 0.12 s. Idempotent: safe on every build.
+        /// </summary>
+        private static void ConfigureFastStances(UnityEditor.Animations.AnimatorController ctrl)
+        {
+            static void Collect(UnityEditor.Animations.AnimatorStateMachine sm, List<UnityEditor.Animations.AnimatorState> into)
+            {
+                foreach (var cs in sm.states) into.Add(cs.state);
+                foreach (var sub in sm.stateMachines) Collect(sub.stateMachine, into);
+            }
+            foreach (var layer in ctrl.layers)
+            {
+                var all = new List<UnityEditor.Animations.AnimatorState>();
+                Collect(layer.stateMachine, all);
+                UnityEditor.Animations.AnimatorState S(string n) => all.Find(st => st.name == n);
+                var toProne = S("C_CrouchToProne_Humanoid");
+                if (toProne == null) continue;
+                var standing = all.Find(st => st.name == "Standing" && System.Array.Exists(st.transitions, t => t.destinationState != null
+                    && (t.destinationState.name == "Crouching" || t.destinationState.name.StartsWith("C_StandingToCrouch") || t.destinationState == toProne)));
+                var crouching = S("Crouching");
+                var prone = S("ProneTree");
+                var proneToCrouch = S("C_ProneToCrouch_Humanoid");
+                var standToCrouch = S("C_StandingToCrouch_Humanoid");
+                var crouchToStand = S("C_CrouchToStanding_Humanoid");
+                if (standing == null || crouching == null || prone == null || proneToCrouch == null)
+                {
+                    Debug.LogWarning("[LR2] B90: stance states not found, prone/crouch speed unchanged");
+                    continue;
+                }
+                toProne.speed = 3.2f;
+                proneToCrouch.speed = 3.2f;
+                if (standToCrouch != null) standToCrouch.speed = 3f;
+                if (crouchToStand != null) crouchToStand.speed = 3f;
+
+                foreach (var t in standing.transitions)
+                {
+                    if (t.destinationState == standToCrouch || t.destinationState == toProne)
+                    {
+                        t.destinationState = toProne;                // stand -> prone without the stand-to-crouch clip
+                        t.hasExitTime = false; t.duration = 0.1f; t.hasFixedDuration = true;
+                    }
+                    else if (t.destinationState == crouching) { t.duration = 0.12f; t.hasFixedDuration = true; }
+                }
+
+                UnityEditor.Animations.AnimatorStateTransition crouchToProne = null;
+                foreach (var t in crouching.transitions)
+                {
+                    if (t.destinationState == toProne) crouchToProne = t;
+                    else if (t.destinationState == standing) { t.duration = 0.12f; t.hasFixedDuration = true; }
+                }
+                if (crouchToProne == null)
+                {
+                    crouchToProne = crouching.AddTransition(toProne);
+                    crouchToProne.AddCondition(UnityEditor.Animations.AnimatorConditionMode.If, 0f, "Proning");
+                }
+                crouchToProne.hasExitTime = false; crouchToProne.duration = 0.1f; crouchToProne.hasFixedDuration = true;
+                // first in the list: EnterProne clears Crouching in the same frame, which would also fire crouch -> stand
+                var ordered = new List<UnityEditor.Animations.AnimatorStateTransition> { crouchToProne };
+                foreach (var t in crouching.transitions) if (t != crouchToProne) ordered.Add(t);
+                crouching.transitions = ordered.ToArray();
+
+                foreach (var t in toProne.transitions)
+                    if (t.destinationState == prone) { t.hasExitTime = true; t.exitTime = 0.82f; t.duration = 0.12f; t.hasFixedDuration = true; }
+                foreach (var t in prone.transitions)
+                    if (t.destinationState == proneToCrouch) { t.duration = 0.1f; t.hasFixedDuration = true; }
+
+                // prone -> up: crossfade straight to crouch (Crouching set by ExitProne(true)) or to stand
+                foreach (var t in new List<UnityEditor.Animations.AnimatorStateTransition>(proneToCrouch.transitions))
+                    if (crouchToStand != null && t.destinationState == crouchToStand) proneToCrouch.RemoveTransition(t);
+                UnityEditor.Animations.AnimatorStateTransition upCrouch = null, upStand = null;
+                foreach (var t in proneToCrouch.transitions)
+                {
+                    if (t.destinationState == crouching) upCrouch = t;
+                    else if (t.destinationState == standing) upStand = t;
+                }
+                if (upCrouch == null)
+                {
+                    upCrouch = proneToCrouch.AddTransition(crouching);
+                    upCrouch.AddCondition(UnityEditor.Animations.AnimatorConditionMode.If, 0f, "Crouching");
+                }
+                if (upStand == null)
+                {
+                    upStand = proneToCrouch.AddTransition(standing);
+                    upStand.AddCondition(UnityEditor.Animations.AnimatorConditionMode.IfNot, 0f, "Crouching");
+                }
+                upCrouch.hasExitTime = true; upCrouch.exitTime = 0.78f; upCrouch.duration = 0.15f; upCrouch.hasFixedDuration = true;
+                upStand.hasExitTime = true; upStand.exitTime = 0.78f; upStand.duration = 0.2f; upStand.hasFixedDuration = true;
+                Debug.Log("[LR2] B90 fast stances: prone ~0.9 s each way (was ~5-6 s), crouch crossfades 0.12 s");
+            }
         }
 
         /// <summary>Enables HDRP 17.5 dynamic resolution + STP (with DLSS/FSR2 priority when vendor plugins exist) on every HDRP asset; native cameras keep allowDynamicResolution = false via UpscalerBackend.</summary>
@@ -2024,9 +2121,10 @@ namespace LR2.EditorTools
                 moveSettings = SaveAsset(Object.Instantiate(srcMove), DataDir + "/Characters/LR2_MovementSettings.asset");
                 var mso = new SerializedObject(moveSettings);
                 void Gait(string n, float v, float smooth) { var p = mso.FindProperty(n); if (p == null) return; p.FindPropertyRelative("velocity").floatValue = v; if (smooth > 0f) p.FindPropertyRelative("velocitySmoothing").floatValue = smooth; }
-                Gait("walking", 3.5f, 13f);   // realistic pace, snappy response
-                Gait("sprinting", 6.1f, 9f);
-                Gait("crouching", 2.0f, 13f);
+                // B90 (user 11-19 00:13 "movement snappy, now it kinda feels sluggish"): quicker speed response (13/9/13 before)
+                Gait("walking", 3.5f, 16f);   // realistic pace, snappy response
+                Gait("sprinting", 6.1f, 12f);
+                Gait("crouching", 2.0f, 16f);
                 Gait("prone", 1.35f, 12f);     // brisk crawl + quick stance response
                 void F(string n, float v) { var p = mso.FindProperty(n); if (p != null) p.floatValue = v; }
                 F("jumpHeight", 5.2f);

@@ -8,6 +8,8 @@ using Demo.Scripts.Runtime.AttachmentSystem;
 using KINEMATION.FPSAnimationFramework.Runtime.Camera;
 using KINEMATION.FPSAnimationFramework.Runtime.Core;
 using KINEMATION.FPSAnimationFramework.Runtime.Layers.AdsLayer;
+using KINEMATION.FPSAnimationFramework.Runtime.Layers.SwayLayer;
+using SwaySpring = KINEMATION.FPSAnimationFramework.Runtime.Layers.SwayLayer.VectorSpring;
 using KINEMATION.FPSAnimationFramework.Runtime.Playables;
 using KINEMATION.FPSAnimationFramework.Runtime.Recoil;
 using KINEMATION.ProceduralRecoilAnimationSystem.Runtime;
@@ -162,6 +164,12 @@ namespace LR2.Weapons
         private static readonly EaseMode AdsFovEaseMode = new EaseMode(EEaseFunc.Sine);
         private FPSAnimatorProfile _runtimeProfile;
         private AdsLayerSettings _runtimeAdsSettings;
+        // B91 (user 11-19 00:13): Kinemation's sway layer moves the gun off the view with mouse and walking input and has no ADS
+        // setting; a per-weapon runtime copy has its spring scales eased to AdsSwayScale while aiming.
+        private const float AdsSwayScale = 0.15f;
+        private SwayLayerSettings _runtimeSway;
+        private SwaySpring _swayMovePos, _swayMoveRot, _swayAimPos, _swayAimRot;
+        private float _swayAppliedK = -1f;
 
         // Reload
         private float _reloadStart;
@@ -342,13 +350,23 @@ namespace LR2.Weapons
                 {
                     for (int i = 0; i < _runtimeProfile.settings.Count; i++)
                     {
-                        if (_runtimeProfile.settings[i] is AdsLayerSettings origAds)
+                        if (_runtimeAdsSettings == null && _runtimeProfile.settings[i] is AdsLayerSettings origAds)
                         {
                             _runtimeAdsSettings = Instantiate(origAds);
                             _runtimeAdsSettings.name = $"{origAds.name}_{name}_Runtime";
                             _runtimeAdsSettings.hideFlags = HideFlags.HideAndDontSave;
                             _runtimeProfile.settings[i] = _runtimeAdsSettings;
-                            break;
+                        }
+                        else if (_runtimeSway == null && _runtimeProfile.settings[i] is SwayLayerSettings origSway)
+                        {
+                            _runtimeSway = Instantiate(origSway);
+                            _runtimeSway.name = $"{origSway.name}_{name}_Runtime";
+                            _runtimeSway.hideFlags = HideFlags.HideAndDontSave;
+                            _runtimeProfile.settings[i] = _runtimeSway;
+                            _swayMovePos = origSway.moveSwayPositionSpring;
+                            _swayMoveRot = origSway.moveSwayRotationSpring;
+                            _swayAimPos = origSway.aimSwayPositionSpring;
+                            _swayAimRot = origSway.aimSwayRotationSpring;
                         }
                     }
                 }
@@ -523,8 +541,24 @@ namespace LR2.Weapons
             if (_recoilPattern != null) _recoilPattern.OnFireEnd();
         }
 
+        /// <summary>B91: ease the runtime sway springs between the authored hip values and AdsSwayScale of them by ADS blend.</summary>
+        private void UpdateAdsSway()
+        {
+            if (_runtimeSway == null) return;
+            float aim = Owner != null ? Owner.AimBlend : 0f;
+            float k = Mathf.Lerp(1f, AdsSwayScale, aim * aim * (3f - 2f * aim));
+            if (Mathf.Abs(k - _swayAppliedK) < 0.002f) return;
+            _swayAppliedK = k;
+            static SwaySpring Scaled(SwaySpring s, float f) { s.scale *= f; return s; }
+            _runtimeSway.moveSwayPositionSpring = Scaled(_swayMovePos, k);
+            _runtimeSway.moveSwayRotationSpring = Scaled(_swayMoveRot, k);
+            _runtimeSway.aimSwayPositionSpring = Scaled(_swayAimPos, k);
+            _runtimeSway.aimSwayRotationSpring = Scaled(_swayAimRot, k);
+        }
+
         public override void Tick(float deltaTime)
         {
+            UpdateAdsSway();
             if (definition != null) _bloom = Mathf.Max(0f, _bloom - definition.bloomRecovery * deltaTime);
             // B47: hold the climb for 0.10 s after the last shot, then recover at the pattern's own rate (damping 5: 80 % in ~0.32 s)
             if (_patternRuntime != null) _patternRuntime.damping = Time.time - _lastShotAt < RecoveryHoldSeconds ? 0f : _patternBaseDamping;
@@ -902,6 +936,7 @@ namespace LR2.Weapons
             if (_barrelSmokeMaterial != null) Destroy(_barrelSmokeMaterial);
             if (_barrelGlowMat != null) Destroy(_barrelGlowMat);
             if (_runtimeAdsSettings != null) Destroy(_runtimeAdsSettings);
+            if (_runtimeSway != null) Destroy(_runtimeSway);
             if (_runtimeProfile != null) Destroy(_runtimeProfile);
         }
 

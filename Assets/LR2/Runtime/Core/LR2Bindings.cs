@@ -135,6 +135,7 @@ namespace LR2.Core
             Add("Jump", InputActionType.Button, "<Keyboard>/space", "<Gamepad>/buttonSouth");
             Add("Crouch", InputActionType.Button, "<Keyboard>/c", "<Gamepad>/buttonEast");
             Add("Prone", InputActionType.Button, "<Keyboard>/z", "<Gamepad>/dpad/down");
+            Add("CrouchHold", InputActionType.Button, "<Keyboard>/x", "<Gamepad>/rightStickPress"); // B90: hold to crouch, double-tap to slide
             Add("Reload", InputActionType.Button, "<Keyboard>/r", "<Gamepad>/buttonWest");
             Add("LeanLeft", InputActionType.Button, "<Keyboard>/q");
             Add("LeanRight", InputActionType.Button, "<Keyboard>/e");

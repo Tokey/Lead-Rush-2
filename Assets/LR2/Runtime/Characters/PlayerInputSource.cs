@@ -27,8 +27,11 @@ namespace LR2.Characters
         [SerializeField] private bool autoSprint;
 
         private InputAction _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR,
-            _slot1, _slot2, _next, _scroll, _interact, _laser;
+            _slot1, _slot2, _next, _scroll, _interact, _laser, _crouchHold;
         private bool _aimToggled, _sprintToggled;
+        // B90 (user 00:13): hold X to crouch, double-tap X to slide
+        private const float SlideDoubleTapSeconds = 0.3f;
+        private float _lastCrouchHoldPress = -10f;
 
         private void OnEnable()
         {
@@ -52,6 +55,8 @@ namespace LR2.Characters
             _crouch.AddBinding("<Gamepad>/buttonEast");
             _prone = new InputAction("Prone", InputActionType.Button, "<Keyboard>/z");
             _prone.AddBinding("<Gamepad>/dpad/down");
+            _crouchHold = new InputAction("CrouchHold", InputActionType.Button, "<Keyboard>/x");
+            _crouchHold.AddBinding("<Gamepad>/rightStickPress");
             _reload = new InputAction("Reload", InputActionType.Button, "<Keyboard>/r");
             _reload.AddBinding("<Gamepad>/buttonWest");
             _leanL = new InputAction("LeanLeft", InputActionType.Button, "<Keyboard>/q");
@@ -98,6 +103,7 @@ namespace LR2.Characters
             "Jump" => _jump,
             "Crouch" => _crouch,
             "Prone" => _prone,
+            "CrouchHold" => _crouchHold,
             "Reload" => _reload,
             "LeanLeft" => _leanL,
             "LeanRight" => _leanR,
@@ -115,6 +121,7 @@ namespace LR2.Characters
             SyncAction(_jump, "Jump", 0, "<Keyboard>/space");
             SyncAction(_crouch, "Crouch", 0, "<Keyboard>/c");
             SyncAction(_prone, "Prone", 0, "<Keyboard>/z");
+            SyncAction(_crouchHold, "CrouchHold", 0, "<Keyboard>/x");
             SyncAction(_reload, "Reload", 0, "<Keyboard>/r");
             SyncAction(_leanL, "LeanLeft", 0, "<Keyboard>/q");
             SyncAction(_leanR, "LeanRight", 0, "<Keyboard>/e");
@@ -136,7 +143,7 @@ namespace LR2.Characters
         private InputAction[] All() => new[]
         {
             _move, _look, _lookStick, _fire, _aim, _sprint, _jump, _crouch, _prone, _reload, _leanL, _leanR, _slot1, _slot2, _next,
-            _scroll, _interact, _laser
+            _scroll, _interact, _laser, _crouchHold
         };
 
         public void GetInput(SoldierController soldier, ref SoldierInput input)
@@ -188,6 +195,13 @@ namespace LR2.Characters
             input.jump |= _jump.WasPressedThisFrame();
             input.crouch |= _crouch.WasPressedThisFrame();
             input.prone |= _prone.WasPressedThisFrame();
+            input.crouchHold = _crouchHold.IsPressed();
+            if (_crouchHold.WasPressedThisFrame())
+            {
+                // second press inside the window: slide (SoldierMovement checks that the player still carries sprint speed)
+                if (Time.unscaledTime - _lastCrouchHoldPress <= SlideDoubleTapSeconds) { input.slide = true; _lastCrouchHoldPress = -10f; }
+                else _lastCrouchHoldPress = Time.unscaledTime;
+            }
             input.reload |= _reload.WasPressedThisFrame();
             input.interact |= _interact.WasPressedThisFrame();
             if (_laser.WasPressedThisFrame()) LR2Settings.LaserEnabled = !LR2Settings.LaserEnabled;

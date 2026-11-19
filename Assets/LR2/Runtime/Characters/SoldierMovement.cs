@@ -102,6 +102,11 @@ namespace LR2.Characters
         private GaitSettings _cachedGait;
         private float _slideProgress;
         private Vector3 _slideVector;
+        // B90 (user 00:13): hold-to-crouch and double-tap slide
+        private bool _crouchFromHold, _standWhenClear;
+        private float _lastSprintTime = -10f;
+        /// <summary>True while the crouch-hold key (X) is down.</summary>
+        public bool CrouchHeld { get; private set; }
         private float _gaitProgress;
         private bool _wasMoving;
         private float _strideAccum;
@@ -243,6 +248,59 @@ namespace LR2.Characters
             EnterProne();
         }
 
+        /// <summary>B90: crouch while the hold key is down, stand again on release (once there is headroom).</summary>
+        public void SetCrouchHeld(bool held)
+        {
+            if (held == CrouchHeld) return;
+            CrouchHeld = held;
+            if (held)
+            {
+                _standWhenClear = false;
+                if (State is SoldierMoveState.InAir or SoldierMoveState.Mantling or SoldierMoveState.Sliding) { _crouchFromHold = true; return; }
+                if (Stance == SoldierStance.Prone)
+                {
+                    if (Time.time >= _proneTransitionUntil) ExitProne(true);
+                    _crouchFromHold = Stance == SoldierStance.Crouching;
+                    return;
+                }
+                if (Stance == SoldierStance.Standing)
+                {
+                    if (State == SoldierMoveState.Sprinting) StopSprint();
+                    Crouch();
+                    _desiredGait = Gait(GaitKind.Crouch);
+                    _crouchFromHold = true;
+                }
+                return;
+            }
+            if (!_crouchFromHold) return;
+            _crouchFromHold = false;
+            if (State == SoldierMoveState.Sliding) return; // the slide stands up by itself when it ends
+            if (Stance != SoldierStance.Crouching) return;
+            if (CanUnCrouch())
+            {
+                UnCrouch();
+                _desiredGait = IsMoving ? Gait(GaitKind.Walk) : Gait(GaitKind.Idle);
+            }
+            else _standWhenClear = true; // under a low ceiling: stand as soon as there is room
+        }
+
+        /// <summary>
+        /// B90: slide on a double tap of the crouch-hold key. Allowed while sprinting or within 0.45 s of a sprint (the first
+        /// tap already crouched and slowed the player), moving forward, standing or crouched, on the ground.
+        /// </summary>
+        public bool RequestSlide()
+        {
+            if (Time.time < _proneTransitionUntil) return false;
+            if (State is SoldierMoveState.InAir or SoldierMoveState.Mantling or SoldierMoveState.Sliding) return false;
+            if (Stance == SoldierStance.Prone || _inputDirection.y <= 0.35f) return false;
+            bool recentSprint = State == SoldierMoveState.Sprinting || Time.time - _lastSprintTime <= 0.45f;
+            if (!recentSprint) return false;
+            if (_slideActionCondition != null && !_slideActionCondition.Invoke()) return false;
+            _slideProgress = 0f;
+            State = SoldierMoveState.Sliding;
+            return true;
+        }
+
         public void ForceStand()
         {
             if (Stance == SoldierStance.Prone && CanUnCrouch()) ExitProne(false);
@@ -270,6 +328,8 @@ namespace LR2.Characters
             _sprintRequested = false;
             _airborneTime = 0f;
             _proneTransitionUntil = 0f;
+            CrouchHeld = _crouchFromHold = _standWhenClear = false; // B90
+            _lastSprintTime = -10f;
             if (_initialized && Stance != SoldierStance.Standing)
             {
                 if (_animator != null) _animator.SetBool(ProningHash, false);
@@ -433,7 +493,8 @@ namespace LR2.Characters
             if (_cachedState == SoldierMoveState.Sliding)
             {
                 onSlideEnded?.Invoke();
-                if (CanUnCrouch()) UnCrouch();
+                if (CrouchHeld) _crouchFromHold = true;          // B90: still holding X: stay crouched
+                else if (CanUnCrouch()) UnCrouch();
             }
 
             switch (State)
@@ -455,6 +516,8 @@ namespace LR2.Characters
                 case SoldierMoveState.Sliding:
                     _desiredGait.velocitySmoothing = movementSettings != null ? movementSettings.slideDirectionSmoothing : 2f;
                     _slideVector = _velocity.sqrMagnitude > 0.1f ? _velocity : transform.forward * Gait(GaitKind.Sprint).velocity;
+                    _slideVector.y = 0f;
+                    if (_slideVector.sqrMagnitude < 0.01f) _slideVector = transform.forward;
                     _slideProgress = 0f;
                     onSlideStarted?.Invoke();
                     SlideStarted?.Invoke();
@@ -623,7 +686,9 @@ namespace LR2.Characters
                 : (Stance == SoldierStance.Standing && _inputDirection.y > 0.35f && planar > 1.8f
                     ? Mathf.Clamp01((planar - 1.8f) / 1.7f) * walkSprintBlendMax
                     : 0f);
-            sprintWeight = Mathf.Lerp(sprintWeight, targetSprint, t);
+            // B90: the sprint pose blends in about twice as fast as before (95 % in ~0.15 s) so sprint starts feel snappy
+            float sprintT = targetSprint > sprintWeight ? KMath.ExpDecayAlpha(20f, Time.deltaTime) : t;
+            sprintWeight = Mathf.Lerp(sprintWeight, targetSprint, sprintT);
             if (targetSprint <= 0f && sprintWeight < 0.004f) sprintWeight = 0f;
             _animator.SetFloat(SprintingHash, sprintWeight);
 
@@ -752,6 +817,14 @@ namespace LR2.Characters
                 UpdateAnimatorParams();
                 _cachedState = State;
                 return;
+            }
+
+            if (State == SoldierMoveState.Sprinting) _lastSprintTime = Time.time;
+            if (_standWhenClear && !CrouchHeld && Stance == SoldierStance.Crouching && State != SoldierMoveState.Sliding && CanUnCrouch())
+            {
+                _standWhenClear = false;
+                UnCrouch();
+                _desiredGait = IsMoving ? Gait(GaitKind.Walk) : Gait(GaitKind.Idle);
             }
 
             UpdateMovementState();

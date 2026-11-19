@@ -26,6 +26,10 @@ namespace LR2.Characters
         public bool jump;
         public bool crouch;
         public bool prone;
+        /// <summary>B90: crouch while held (X). A held state, not a one-shot.</summary>
+        public bool crouchHold;
+        /// <summary>B90: slide request (double tap of the crouch-hold key). One-shot.</summary>
+        public bool slide;
         public float lean;
         public int weaponSlot;
         public bool nextWeapon;
@@ -39,6 +43,7 @@ namespace LR2.Characters
             jump = false;
             crouch = false;
             prone = false;
+            slide = false;
             nextWeapon = false;
             interact = false;
             weaponSlot = -1;
