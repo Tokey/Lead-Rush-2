@@ -105,6 +105,12 @@ namespace LR2.Characters
         private RetargetProxy _proxy;
         private LR2PlayablesController _lr2Playables;
         private float _fullBodyGate, _proneGate;
+        // D64: sprint start/end stepped Kinemation's look, stabilisation and playables weights in one frame (1 -> 0.8 / 0.78 /
+        // 0.78 and back): about a fifth of the weapon pose snapped at every sprint start and end (C25: a sprint-interrupted
+        // reload moved the gun 5.6 deg in the frame after the interrupt). The weights now ease toward their targets.
+        private const float SprintWeightTau = 0.06f; // ~95 % in 0.18 s
+        private float _lookWeight = 1f, _stabWeight = 1f, _playablesWeight = 1f;
+        private float _lookTarget = 1f, _stabTarget = 1f;
 
         /// <summary>FullBodyWeight as LR2 applies it (D57): the Animator curve, but only while sprinting, prone or sliding.</summary>
         public float FullBodyWeightEffective { get; private set; }
@@ -381,8 +387,17 @@ namespace LR2.Characters
 
             UpdateBodyCurveGates();
             float fullBody = FullBodyWeightEffective;
-            float playablesWeight = IsSprinting ? Mathf.Max(0.78f, 1f - fullBody * 0.22f) : (1f - fullBody);
-            if (UserInput != null) UserInput.SetValue(FPSANames.PlayablesWeight, playablesWeight);
+            float playablesTarget = IsSprinting ? Mathf.Max(0.78f, 1f - fullBody * 0.22f) : (1f - fullBody);
+            float ease = 1f - Mathf.Exp(-Time.deltaTime / SprintWeightTau);
+            _playablesWeight = Mathf.Lerp(_playablesWeight, playablesTarget, ease);
+            _lookWeight = Mathf.Lerp(_lookWeight, _lookTarget, ease);
+            _stabWeight = Mathf.Lerp(_stabWeight, _stabTarget, ease);
+            if (UserInput != null)
+            {
+                UserInput.SetValue(FPSANames.PlayablesWeight, _playablesWeight);
+                UserInput.SetValue("LookLayerWeight", _lookWeight);
+                UserInput.SetValue(FPSANames.StabilizationWeight, _stabWeight);
+            }
 
             float adsTime = ActiveFirearm != null && ActiveFirearm.Definition != null ? ActiveFirearm.Definition.adsTime : 0.25f;
             AimBlend = Mathf.MoveTowards(AimBlend, _isAiming ? 1f : 0f, Time.deltaTime / Mathf.Max(0.05f, adsTime));
@@ -602,18 +617,15 @@ namespace LR2.Characters
                 ActiveItem.OnFireReleased();
             }
             if (_isAiming) SetAim(false);
-            if (UserInput != null)
-            {
-                UserInput.SetValue(FPSANames.StabilizationWeight, 0.78f);
-                UserInput.SetValue("LookLayerWeight", 0.8f);
-            }
+            // targets only: Update eases the Kinemation weights toward them (D64)
+            _stabTarget = 0.78f;
+            _lookTarget = 0.8f;
         }
 
         private void OnSprintEnded()
         {
-            if (UserInput == null) return;
-            UserInput.SetValue(FPSANames.StabilizationWeight, 1f);
-            UserInput.SetValue("LookLayerWeight", 1f);
+            _stabTarget = 1f;
+            _lookTarget = 1f;
         }
 
         // ------------------------------------------------------------------ damage / death / respawn
@@ -699,6 +711,7 @@ namespace LR2.Characters
         /// </summary>
         private void ResetAnimationState()
         {
+            _lookWeight = _lookTarget = _stabWeight = _stabTarget = _playablesWeight = 1f; // a new life starts settled
             if (UserInput != null)
             {
                 UserInput.SetValue(FPSANames.StabilizationWeight, 1f);
