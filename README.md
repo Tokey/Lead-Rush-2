@@ -10,6 +10,23 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 > **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
 > Project documentation: [Project history](Docs/PROJECT_HISTORY.md), [Tooling](Docs/TOOLING.md), and [P3 + HDRP 17.5 Upscaler Benchmark Report](Docs/AI_Collaboration/specs/P3_Report.md).
 
+### By the numbers
+
+As of build `11.19.26.6` (2026-11-19). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
+from the [ledgers](Docs/AI_Collaboration/data), board items from [AGENT_COORDINATION.md](AGENT_COORDINATION.md).
+
+| Developer prompts | Tasks delivered | Defects logged | Board items | Commits | C# code |
+|---:|---:|---:|---:|---:|---:|
+| **222** | **176** | **73** | **131** | **92** | **40,320** lines in 129 files |
+
+- **Prompts by agent:** Claude Code 119, Antigravity ("Gemini") 102, GitHub Copilot 1. The list is built from the Claude Code
+  session logs and the Antigravity conversation database, so prompts given to Codex and Copilot inside their own apps are not in it.
+- **Tasks by agent:** Claude 72, Gemini 53, Copilot 35, Codex 16. **Defects found by:** Gemini 27, Claude 23, Copilot 8, Codex 2
+  (13 found by the developer).
+- **Scope:** 4 days of development (2026-11-16 to 11-19), 4 AI agents, 4 combat maps, up to 20 bots per match in 2 to 4 teams.
+
+What changed most recently, with screenshots: [What's new on 2026-11-19](Docs/Updates/2026-11-19.md).
+
 ### Who built what
 
 <picture>
@@ -99,6 +116,7 @@ was built (agent ledgers, protocol results, research specs). All eight scenarios
 - **Game Modes & Persistent Custom Rules (`Assets/LR2/Runtime/Game/`):** **Duel (1v1)**, **Free For All**, **Team Deathmatch**, and **Rotating Capture the Flag** (`FlagZoneController.cs` BF6-inspired proximity-weighted capture speed across 5 `BotTeamAlignment` modes including **Half & Half 50/50 split**, Squads, FFA, Pack, and Co-op) plus live **Tactical Bot Chat** (`[T]` keyword directives & delayed banter in `TacticalChatSystem.cs`). Horizontal FOV slider (`65–120`), Master/Effects/Music/UI audio sliders, `< VALUE >` stepper controls for graphics quality, **HDRP 17.5 multi-upscaler backend (`NATIVE`, `STP`, `TAAU`, `FSR 1.0`, `DLSS`, `FSR 2` in `UpscalerBackend.cs`)**, anti-aliasing (`None`, `FXAA`, `SMAA`, `TAA`), frame rate limit, bot difficulty, live keybind rebinding (`LR2Bindings.cs` -> `PlayerInputSource.cs`), and FPS counter persist via `PlayerPrefs` (`LR2Settings.cs`, `SettingsPanel.cs`, `MainMenuController.cs`).
 - **Four-Map Optimization & Automated Telemetry (`Assets/LR2/Runtime/World/PerformanceFrameTelemetry.cs`, `specs/P3_Report.md`):** Quality-aware shadow tiers, camera-distance light culling (`fadeDistance`/`shadowFadeDistance`), single-light burning barrels, time-sliced arena reflection probes, throttled `WeatherSystem` & `FoliageSway`, and spawn-to-spawn cover safety across all four maps bring steady 1080p frame times to `6.8–9.6 ms` avg (`15.7–19.1 ms` p99, `0` QA failures across all 5 scenes).
 - **War-Torn Procedural Arenas (`Assets/LR2/Editor/LR2MapBuilder*.cs`, `Assets/LR2/Meshes/Procedural/`):** Leartes/ScansFactory pack props preserving tactical cover heights (`B75`), tileable `_DetailMap` wear, HDRP `SSAO` + `ContactShadows`, per-map `ShadowsMidtonesHighlights` colour grading, ground-level `AtmosphereFX` fog, `FireHazard` burning barrels (`heat haze`), destructible thin-refraction `M_LR2_Glass_*` panes (`B30`), and tuned HDRP lighting across all four combat maps (`B1`/`B72`).
+- **Skirmish Lobby & AI vs AI (`Assets/LR2/Runtime/UI/SkirmishLobby.cs`, `Game/SkirmishSetup.cs`, `Game/SpectatorCamera.cs`):** The main menu is a single **PLAY**. It opens a Command & Conquer style lobby: up to 20 bots in a scrolling roster, each with its own difficulty (Recruit to Veteran, or Adaptive) and team (free for all, Alpha, Bravo, Charlie, Delta) for 2, 3 and 4-way games, plus presets, mode, map, limits and weapon. **AI vs AI** leaves you out of the match: a spectator camera (chase, eye view, free fly, auto director) follows the bots while an AI test bench tallies kills, deaths and K/D per difficulty. The menu background cuts to a matching slow-motion shot for each screen (`World/MenuCinematic.cs`).
 - **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, disengaged-only `AmmoCrate` ammo/armour resupply (`B74b`), stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling, Fitts/ESTA/CSKnow/Aim Lab biomechanical aiming (`BotController.cs`), per-preset detection speed and composure with Hardened/Veteran bots pressing a reloading or hurt target ([explainer 4b](Docs/LR2_Bot_Explainer.md)), Adaptive difficulty (`AdaptiveDifficultyTracker.cs`), and external LLM/commander hooks (`IBotDirectiveProvider`). Explore the **[LR2 Bot Lab](Docs/Bot/bot-lab.html)** (eight live scenarios, also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)), the **[Bot explainer with animated GIFs](Docs/LR2_Bot_Explainer.md)**, or the [3-tab manual](Docs/Bot/bot-brain.html).
 
 ---

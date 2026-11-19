@@ -992,6 +992,66 @@ tool notifications are left out here and documented once below.
 
 > when done
 
+**01:04 · to Claude Code**
+
+> improve the diss dialogue library. make it realistic with censored slangs if used.
+
+**01:05 · to Claude Code**
+
+> not always slangs, sometimes normal. gg at the end of the match. and not as frequent as now.
+
+**01:09 · to Claude Code**
+
+> flame smokes or something still boxy, also not seering rain.
+
+**01:11 · to Claude Code**
+
+> improve the look of the laser.
+
+**01:11 · to Claude Code**
+
+> also make changes asap, running out of tokens
+
+**05:15 · to Claude Code**
+
+> fix the fire
+
+**05:17 · to Claude Code**
+
+> closing unity
+
+**05:17 · to Claude Code**
+
+> fix the tactical reload bug
+
+**06:07 · to Claude Code**
+
+> change the menu, just have play, then in that have all the settings, also some settings can be unified, some can be broken. like give me max flexibily, 3 way, 4 way, so i can select how many bots and which team they can be in, maybe if all too much it can be in a sub mentu. one main thing i want, have a AI vs AI mode where i can test various difficulties of AI. like command and conquer skirmish menu. make it scrllable as i can want a lot of bots. maybe max 20.
+
+**06:09 · to Claude Code**
+
+> make the animations super nice. while changing menu, change camera of bg too. maybe for TDM show two soldiers, for 1v1 show current, free for all show soldiers fighting or something in slomo. infact add slomo to the menu and add motion to the enemies. 3p view, sometimes 1p.
+
+**06:13 · to Claude Code**
+
+> on killcams for headshots show a quick pan of the bullet hitting the hit in slomo, but dont make it too long, so it takes up time. just for headshot kills.
+
+**06:16 · to Claude Code**
+
+> use more of the unity particle effects throuout the entire map and maybe for expliosions too, they look really good. try to use all of them and lots of places, but dont spam them, let them be tasteful choices and serve purpose. also add GI to the laser, laser should light up area too when hitting a surface like real laser.
+
+**06:16 · to Claude Code**
+
+> push at the end. also did you write the new features page? That needs to be detailed with SS gifs and all
+
+**06:19 · to Claude Code**
+
+> have the tickrate brain etc stuff in the artifact also add more visuals so that its even more easily understandable, the bot behavior.
+
+**06:22 · to Claude Code**
+
+> add total prompts as a stats in the main github page. among other stats.
+
 ### The automatic tick prompt (Claude Code to itself, every 20 minutes)
 
 Claude Code has no command line the other agents can call, so it schedules its own wake-up: a session job (`CronCreate`,
