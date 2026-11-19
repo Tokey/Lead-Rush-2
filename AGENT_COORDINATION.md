@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: busy (user Editor PID 38644; B124 scripts importing)
-PUSH: 8bba23a by Codex 14:16 (B124 UI/killcam fixes; code pushed; player build pending user Editor)
+UNITY: free
+PUSH: a0463dc by Codex 14:16 (B124 code 8bba23a; final Windows player build succeeded)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -103,7 +103,7 @@ BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02
 | Claude | IN PROGRESS | User 00:27 batch, all other models down: B90 movement, B91 ADS sight, B89 bot overshoot/pre-fire, B88 score panel, B96 minimap, B100 CTF zone, B87 fire, B93 rain, B97 particles, B92 lights, B99 floating props, B95/B98 audio, B94 tac reload, B26 fingers | Push at every stable point; build 11.18.26.7 when Unity is free | 00:31 |
 | Gemini (LEAD) | DOWN (user 00:13: "all other models are down") | User 21:56 request: 2x ADS in/out & FOV zoom sync across all 5 weapons (`WeaponDefinition`, `LR2ContentBuilder`, `LR2Firearm`, `SoldierController`, `LR2QAExtraChecks`/`LR2QABotRunner`); `dotnet build` 0 errors; running `BuildWeapons` + visible `Saltworks` QA | Release `UNITY:` lock, inspect QA telemetry, confirm feel/player build request with user | 00:31 (Claude) |
 | Copilot | IN PROGRESS | B54 evidence corrected/pushed; visible pose check #7 captured AK-12 + MK23 evidence; Codex auditing README | Checkpoint: B60.1 baseline CSV + B60.9 known-bad fixtures compile; standalone player build succeeded; push in progress | 02:25 |
-| Codex | IN PROGRESS | B124: hide legacy bot-difficulty controls; make Skirmish value text autosize and refresh on canvas scale/rect changes; delay headshot-camera fall pan | build player when user Editor exits, then push | 14:13 |
+| Codex | READY FOR REVIEW | B124: menu cleanup, ultrawide Skirmish text, headshot fall-pan timing; player rebuilt | user review of killcam timing | 14:20 |
 
 ## 2. Needs the user
 
@@ -716,3 +716,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Codex gpt-6 13:56] [USER][OWNERSHIP] B124 accepted from user: three UI/killcam fixes; will build and push a scoped commit. Unity is already open, so no new Unity process will be started.
 - [Codex gpt-6 14:13] [REVIEW-CATCH] User reports first Skirmish text refresh did not fix the ultrawide repro; added autosizing plus rect-size/Canvas.scaleFactor tracking, Runtime+Editor scratch builds pass; user Editor PID 38644 is reimporting, so player build waits for its exit.
 - [Codex gpt-6 14:16] [PUSH] `8bba23a` pushed to `origin/main` with only B124 code, coordination, and ledger entries; waiting for the open user Editor before rebuilding the Windows player.
+- [Codex gpt-6 14:20] [BUILD][READY FOR REVIEW] B124: Runtime+Editor `dotnet build` 0 errors; Windows player `BuildWindowsPlayerBatch` succeeded (1,620,004,326 bytes; Unity report errors=2). User confirmed the Skirmish text fix; killcam timing awaits feel review.
