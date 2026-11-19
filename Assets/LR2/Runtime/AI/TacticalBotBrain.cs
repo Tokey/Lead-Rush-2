@@ -197,10 +197,12 @@ namespace LR2.AI
                 intent.goal = BotGoal.Hunt;
                 intent.target = bb.target;
                 float huntDist = Vector3.Distance(bb.position, bb.targetLastKnown);
-                bool slicingCorner = huntDist < 10f && huntDist > 2.5f && bb.TimeSinceSeen > 0.9f && bb.TimeSinceSeen < 4.5f;
+                // D65: an aggressive bot hunting a reloading or hurt target rushes it instead of slicing the corner slowly
+                bool pressing = aggression >= 0.68f && TargetIsVulnerable(bb);
+                bool slicingCorner = !pressing && huntDist < 10f && huntDist > 2.5f && bb.TimeSinceSeen > 0.9f && bb.TimeSinceSeen < 4.5f;
                 intent.hasDestination = !slicingCorner || (huntDist > 4.2f);
                 intent.destination = bb.targetLastKnown;
-                intent.allowSprint = huntDist > 16f && aggression > 0.5f;
+                intent.allowSprint = (huntDist > 16f && aggression > 0.5f) || (pressing && huntDist > 9f);
                 intent.crouch = slicingCorner && (Mathf.FloorToInt(now * 0.9f) % 3 == 0);
                 intent.hasLookPoint = true;
                 intent.lookPoint = bb.targetLastKnown + Vector3.up * 1.42f; // pre-aim angle while slicing corner
@@ -299,7 +301,18 @@ namespace LR2.AI
             float dist = bb.targetDistance;
             if (allowMove)
             {
-                if (dist > intent.desiredRange * 1.35f || !bb.targetVisible)
+                // D61: aggressive bots press an advantage instead of trading from range: the target is reloading, hurt, or
+                // clearly weaker (user 11-18: "engage more aggressively", "it rarely wins against me"). D65 (Gemini review
+                // 19:39): this test has to come first; below the range/sight branch it never saw an out-of-sight target, so
+                // the sprint could not fire.
+                bool press = dist > 4.5f && bb.target != null && bb.difficulty != null && bb.difficulty.aggression >= 0.68f && TargetIsVulnerable(bb);
+                if (press)
+                {
+                    intent.hasDestination = true;
+                    intent.destination = bb.targetLastKnown;
+                    intent.allowSprint = !bb.targetVisible && dist > 9f;
+                }
+                else if (dist > intent.desiredRange * 1.35f || !bb.targetVisible)
                 {
                     intent.hasDestination = true;
                     intent.destination = bb.targetLastKnown;
@@ -308,14 +321,6 @@ namespace LR2.AI
                 {
                     intent.hasDestination = true;
                     intent.destination = AwayFrom(bb.position, bb.targetLastKnown, 4f);
-                }
-                else if (dist > 4.5f && bb.target != null && bb.difficulty != null && bb.difficulty.aggression >= 0.68f && TargetIsVulnerable(bb))
-                {
-                    // D61: aggressive bots press an advantage instead of trading from range: the target is reloading, hurt,
-                    // or clearly weaker (user 11-18: "engage more aggressively", "it rarely wins against me")
-                    intent.hasDestination = true;
-                    intent.destination = bb.targetLastKnown;
-                    intent.allowSprint = !bb.targetVisible && dist > 9f;
                 }
 
                 // Objective discipline: if fighting inside an active flag zone, stay anchored inside the zone instead of chasing out
