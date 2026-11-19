@@ -201,6 +201,19 @@ body.gifmode .wrap { display: none; }
 .bb table td, .bb table th { white-space: normal; vertical-align: top; }
 .bb .card table { min-width: 760px; }
 
+
+/* B114: what runs when + reaction chain */
+.clock-wrap, .react-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; overflow-x: auto; }
+.viz-ctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
+.viz-ctl label { font: 500 12px/1.3 var(--mono); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.viz-ctl label b { color: var(--ink); min-width: 3.2em; }
+.viz-ctl input[type=range] { width: 150px; accent-color: var(--accent); }
+.viz-ctl button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.viz-svg { width: 100%; min-width: 640px; height: auto; display: block; }
+.viz-svg text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
+.viz-svg .dim { fill: var(--muted); }
+.viz-sum { font: 14px/1.55 var(--body); color: var(--ink); margin-top: 10px; max-width: 78ch; }
+.viz-sum b { font-family: var(--mono); font-weight: 500; }
 </style>
 
 <div class="wrap">
@@ -222,8 +235,10 @@ body.gifmode .wrap { display: none; }
 </header>
 
 <aside class="panel news" id="news" aria-labelledby="h-news">
-  <div class="head"><span class="num">WHAT CHANGED · 2026-11-18</span><h2 id="h-news">Latest bot and combat updates</h2></div>
+  <div class="head"><span class="num">WHAT CHANGED · 2026-11-19</span><h2 id="h-news">Latest bot and combat updates</h2></div>
   <ul class="news-list">
+    <li><code>B109</code><div><b>AI vs AI test bench.</b> The new skirmish lobby gives every bot its own difficulty and team: up to 20 bots, two to four teams, or free for all. In AI vs AI you watch from a spectator camera while a panel counts kills, deaths and K/D per difficulty. Adaptive can be set per bot.</div></li>
+    <li><code>B114</code><div><b>See the clock.</b> <a href="#clock">02.1</a> shows every bot loop ticking at its real rate; <a href="#react">02.2</a> times the path from in view to the first shot for each preset.</div></li>
     <li><code>D61</code><div><b>Hardened and Veteran bots press a weak target.</b> With aggression 0.68 or more they push a target that is reloading, under 45 % health or 35 points weaker, and sprint when it is out of sight beyond 9 m. <a href="#decide">Try it in 05</a>.</div></li>
     <li><code>D65</code><div><b>The press is checked first.</b> Gemini's review found the sprint could never fire behind the range test. Hunting a weak target now skips the slow corner slice.</div></li>
     <li><code>D61</code><div><b>Searching at eye level.</b> Noise and last-known positions snap to the floor, and a search glances ±75° along the horizon every 1.1 to 2.1 s instead of looking up.</div></li>
@@ -288,6 +303,32 @@ body.gifmode .wrap { display: none; }
       <div class="comp-grid" id="comp-grid"></div>
       <div class="comp-detail" id="comp-detail"></div>
     </section>
+
+<section id="clock" aria-labelledby="h-clock">
+  <div class="head"><span class="num">02.1 &middot; CLOCK</span><h2 id="h-clock">What runs when</h2><span class="src">BotController.cs &middot; BotPerception.cs &middot; TacticalBotBrain.cs</span>
+    <p>A bot is six loops running at different speeds. Its hands run every frame and its eyes ten times a second. Its brain runs about four times a second, jittered by &plusmn;15 % so a squad never thinks in lockstep. Slower loops refresh the path, the adaptive profile and squad orders. Each mark below is one real tick. Press <b>Show a sighting</b> to watch an enemy go from the eyes to the trigger. Slow motion makes the hand-offs easy to follow.</p></div>
+  <div class="clock-wrap">
+    <div class="viz-ctl"><div class="seg" role="group" aria-label="Clock controls"><button type="button" id="clock-spot">Show a sighting</button><button type="button" id="clock-slow" aria-pressed="false">Slow motion 0.25&times;</button><button type="button" id="clock-pause" aria-pressed="false">Pause</button></div><span class="note">Regular bot; the enemy walks into view 20 m away, 25&deg; off its aim.</span></div>
+    <svg class="viz-svg" id="clock-svg" viewBox="0 0 1000 300" role="img" aria-label="Animated timeline with one row per bot loop and one mark per tick"></svg>
+  </div>
+</section>
+
+<section id="react" aria-labelledby="h-react">
+  <div class="head"><span class="num">02.2 &middot; REACT</span><h2 id="h-react">From in view to the first shot</h2><span class="src">BotPerception detection meter &middot; BotController reaction latency &middot; Fitts flick &middot; BotDifficulty presets</span>
+    <p>Bots are not instant. First the detection meter has to fill. It fills faster up close, when you move or have just fired, and when you are near the middle of the bot's view. The brain's next tick then makes you the target. After that the trigger waits a human reaction time, longer when you are far off its aim, while the flick swings across. Set a situation and compare the four presets. The bars use the same formulas and preset values as the game.</p></div>
+  <div class="react-wrap">
+    <div class="viz-ctl">
+      <label>Distance <input type="range" id="re-dist" min="3" max="80" value="20"><b id="re-dist-v">20 m</b></label>
+      <label>Off its aim <input type="range" id="re-ang" min="0" max="60" value="25"><b id="re-ang-v">25&deg;</b></label>
+      <label><input type="checkbox" id="re-move" checked> you are moving</label>
+      <label><input type="checkbox" id="re-fired"> you just fired</label>
+      <label><input type="checkbox" id="re-crouch"> you are crouched</label>
+    </div>
+    <svg class="viz-svg" id="react-svg" viewBox="0 0 1000 250" role="img" aria-label="Stacked time bars per preset: noticing, brain tick, reaction and flick"></svg>
+    <div class="viz-sum" id="react-sum" aria-live="polite"></div>
+  </div>
+</section>
+
 <section id="senses" aria-labelledby="h-senses">
   <div class="head"><span class="num">03 · NOTICE</span><h2 id="h-senses">The detection meter</h2>
     <p>A bot never knows where you are just because you exist. While you are in its view cone and in line of sight, a meter fills at <code>0.9 + 9 / distance</code> per second, faster if you move, much faster if you just fired. It must reach 100 % before the bot reacts. Out of sight it drains at 0.5 per second.</p></div>
@@ -2929,5 +2970,224 @@ requestAnimationFrame(frame);
   });
   renderSpecs();
 
+})();
+</script>
+
+<script>
+/* B114 (user 11-19 "have the tickrate brain etc stuff ... more visuals"). Constants from the game:
+   BotPerception VisionInterval 0.1 s, ShareDelay 0.6 s, detection += detectionSpeed*(0.9+9/max(d,1.5)) per s (x1.35 moving,
+   x2.2 just fired, x1.4 within 12 deg, x0.7 crouched); BotController thinkInterval 0.25 s x0.85-1.15, repath 0.6 s,
+   adaptive refresh 0.75 s, directive poll 1.5 s, reaction x lerp(0.76,1.58,angle/115), flick (0.065+0.042*ID)*clamp(7.5/aim)
+   clamped 0.085-0.38 s above 10.5 deg; presets from Assets/LR2/Data/AI/BotDifficulty_*.asset. */
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs, parent, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const PRESETS = [
+    { name: 'Recruit', react: [0.55, 0.80], det: 0.85, aim: 4.2 },
+    { name: 'Regular', react: [0.32, 0.50], det: 1.15, aim: 6.2 },
+    { name: 'Hardened', react: [0.22, 0.34], det: 1.55, aim: 8.2 },
+    { name: 'Veteran', react: [0.15, 0.23], det: 2.20, aim: 10.5 },
+  ];
+  const detRate = (p, s) => {
+    let r = p.det * (0.9 + 9 / Math.max(s.dist, 1.5));
+    if (s.moving) r *= 1.35;
+    if (s.fired) r *= 2.2;
+    if (s.ang < 12) r *= 1.4;
+    if (s.crouched) r *= 0.7;
+    return r;
+  };
+  const fittsId = s => Math.log2(1 + s.ang / Math.max(0.4, Math.atan2(0.34, s.dist) * 180 / Math.PI));
+  const flick = (p, s) => {
+    if (s.ang <= 10.5) return 0;
+    const skill = Math.min(1.55, Math.max(0.62, 7.5 / Math.max(2.5, p.aim)));
+    return Math.min(0.38, Math.max(0.085, (0.065 + 0.042 * fittsId(s)) * skill));
+  };
+  const chain = (p, s) => {
+    const r = detRate(p, s);
+    const n = Math.max(1, Math.ceil(1 / (r * 0.1) - 1e-9));
+    const notice = [(n - 1) * 0.1, (n - 0.5) * 0.1, n * 0.1];
+    const brain = [0, 0.125, 0.25 * 1.15];
+    const e = 0.76 + 0.82 * Math.min(1, s.ang / 115), f = flick(p, s);
+    const wait = [Math.max(p.react[0] * e, f), Math.max((p.react[0] + p.react[1]) / 2 * e, f), Math.max(p.react[1] * e, f)];
+    const total = [0, 1, 2].map(i => notice[i] + brain[i] + wait[i]);
+    return { r, n, notice, brain, wait, flick: f, e, total };
+  };
+
+  // ------------------------------------------------------------------ 02.1 clock
+  const csvg = document.getElementById('clock-svg');
+  if (csvg) {
+    const LANES = [
+      { name: 'Hands', rate: 'every frame', per: 0, col: 'var(--muted)', what: 'aim, recoil pull-down, trigger' },
+      { name: 'Eyes', rate: '10 Hz', per: 0.1, col: 'var(--bot)', what: 'view cone, line of sight, meter' },
+      { name: 'Brain', rate: '~4 Hz ±15 %', per: 0.25, jit: 0.15, col: 'var(--accent)', what: 'goal, target, destination' },
+      { name: 'Legs', rate: 'every 0.6 s', per: 0.6, col: 'var(--good)', what: 'NavMesh path refresh' },
+      { name: 'Adaptive', rate: 'every 0.75 s', per: 0.75, col: 'var(--zone)', what: 'skill re-blend (Adaptive bots)' },
+      { name: 'Orders', rate: 'every 1.5 s', per: 1.5, col: 'var(--warn)', what: 'squad or LLM directive' },
+    ];
+    const X0 = 230, X1 = 990, W = X1 - X0, TOP = 28, ROW = 40, WIN = 4;
+    mk('text', { x: X0, y: 16, class: 'dim', 'font-size': 11 }, csvg, '4 s ago');
+    mk('text', { x: X1, y: 16, class: 'dim', 'font-size': 11, 'text-anchor': 'end' }, csvg, 'now');
+    const pat = mk('pattern', { id: 'clock-frames', width: 3.2, height: 10, patternUnits: 'userSpaceOnUse' }, mk('defs', {}, csvg));
+    mk('rect', { x: 0, y: 0, width: 1.1, height: 10, fill: 'var(--muted)', opacity: 0.6 }, pat);
+    LANES.forEach((L, i) => {
+      L.y = TOP + i * ROW;
+      mk('rect', { x: X0, y: L.y + 5, width: W, height: ROW - 10, rx: 3, fill: 'var(--grid)' }, csvg);
+      mk('text', { x: 4, y: L.y + 18, 'font-weight': 600 }, csvg, `${L.name} · ${L.rate}`);
+      mk('text', { x: 4, y: L.y + 32, class: 'dim', 'font-size': 11 }, csvg, L.what);
+      if (!L.per) mk('rect', { x: X0, y: L.y + 9, width: W, height: ROW - 18, fill: 'url(#clock-frames)' }, csvg);
+      L.g = mk('g', {}, csvg);
+    });
+    const meterY = TOP + LANES.length * ROW + 6;
+    mk('text', { x: 4, y: meterY + 12, 'font-weight': 600 }, csvg, 'Detection meter');
+    mk('rect', { x: X0, y: meterY, width: W, height: 16, rx: 3, fill: 'var(--grid)' }, csvg);
+    const meter = mk('rect', { x: X0, y: meterY, width: 0, height: 16, rx: 3, fill: 'var(--bot)' }, csvg);
+    const meterTxt = mk('text', { x: X0 + 6, y: meterY + 12, 'font-size': 11 }, csvg, '');
+    const evG = mk('g', {}, csvg);
+
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    LANES.forEach(L => { L.ticks = []; L.next = L.per ? rnd() * L.per : Infinity; });
+    let t = 0, speed = 1, paused = false, sight = null;
+    const xOf = tt => X1 - (t - tt) / WIN * W;
+    const SCENE = { dist: 20, ang: 25, moving: true, fired: false, crouched: false };
+    const startSight = () => {
+      const c = chain(PRESETS[1], SCENE);
+      sight = { t0: t, rate: c.r, need: c.n, wait: c.wait[1], det: 0, spotted: null, picked: null, marks: [{ t, lane: 1, label: 'enemy walks into view' }] };
+    };
+    const step = dt => {
+      t += dt;
+      for (const L of LANES) {
+        while (L.next <= t) { L.ticks.push(L.next); L.next += L.per * (L.jit ? 1 + (rnd() * 2 - 1) * L.jit : 1); }
+        while (L.ticks.length && L.ticks[0] < t - WIN - 0.5) L.ticks.shift();
+      }
+      if (!sight) return;
+      const s = sight;
+      const eye = LANES[1].ticks.filter(x => x > s.t0);
+      s.det = Math.min(1.25, eye.length * s.rate * 0.1);
+      if (s.spotted == null && eye.length >= s.need) { s.spotted = eye[s.need - 1]; s.marks.push({ t: s.spotted, lane: 1, label: 'meter full: spotted' }); }
+      if (s.spotted != null && s.picked == null) {
+        const b = LANES[2].ticks.find(x => x >= s.spotted);
+        if (b != null) { s.picked = b; s.marks.push({ t: b, lane: 2, label: 'brain: ENGAGE, target set' }); }
+      }
+      if (s.spotted != null && !s.told && t >= s.spotted + 0.6) { s.told = true; s.marks.push({ t: s.spotted + 0.6, lane: 5, label: 'squad told (+0.6 s)' }); }
+      if (s.picked != null && !s.shot && t >= s.picked + s.wait) { s.shot = true; s.marks.push({ t: s.picked + s.wait, lane: 0, label: 'first shot' }); }
+      if (t - s.t0 > WIN + 1.2) sight = null;
+    };
+    const draw = () => {
+      for (const L of LANES) {
+        if (!L.per) continue;
+        L.g.replaceChildren();
+        for (const tt of L.ticks) {
+          const x = xOf(tt);
+          if (x >= X0 && x <= X1) mk('rect', { x: x - 2, y: L.y + 9, width: 4, height: ROW - 18, rx: 1.5, fill: L.col }, L.g);
+        }
+      }
+      evG.replaceChildren();
+      if (!sight) { meter.setAttribute('width', 0); meterTxt.textContent = 'nobody in view: press Show a sighting'; return; }
+      const s = sight;
+      meter.setAttribute('width', Math.min(1, s.det) * W);
+      meterTxt.textContent = s.spotted != null ? 'spotted' : `${Math.round(s.det * 100)} %  (+${Math.round(s.rate * 10)} % per eye tick, ${s.need} ticks to fill)`;
+      let prev = null;
+      for (const m of s.marks) {
+        const x = xOf(m.t), y = TOP + m.lane * ROW + ROW / 2;
+        if (x < X0) { prev = { x: X0, y }; continue; }
+        if (prev) mk('line', { x1: prev.x, y1: prev.y, x2: x, y2: y, stroke: 'var(--ink)', 'stroke-width': 1.3, 'stroke-dasharray': '4 3' }, evG);
+        mk('circle', { cx: x, cy: y, r: 6.5, fill: 'var(--panel)', stroke: 'var(--ink)', 'stroke-width': 2 }, evG);
+        const right = x < X1 - 190;
+        mk('text', { x: right ? x + 10 : x - 10, y: y - 9, 'text-anchor': right ? 'start' : 'end', 'font-size': 11, 'font-weight': 600 }, evG, m.label);
+        prev = { x, y };
+      }
+    };
+    for (let i = 0; i < 260; i++) step(1 / 60); // start with a full window of history
+    const still = () => { for (let i = 0; i < 170; i++) step(1 / 60); draw(); };
+    const btnSpot = document.getElementById('clock-spot'), btnSlow = document.getElementById('clock-slow'), btnPause = document.getElementById('clock-pause');
+    if (btnSpot) btnSpot.addEventListener('click', () => { startSight(); if (reduceMotion) still(); });
+    if (btnSlow) btnSlow.addEventListener('click', () => { speed = speed === 1 ? 0.25 : 1; btnSlow.setAttribute('aria-pressed', String(speed !== 1)); });
+    if (btnPause) btnPause.addEventListener('click', () => { paused = !paused; btnPause.setAttribute('aria-pressed', String(paused)); btnPause.textContent = paused ? 'Resume' : 'Pause'; });
+    if (reduceMotion) { startSight(); still(); }
+    else {
+      startSight();
+      let last = performance.now(), auto = 0;
+      const frame = now => {
+        const dt = Math.min(0.1, (now - last) / 1000); last = now;
+        if (!paused) step(dt * speed);
+        if (!sight && !paused) { if (!auto) auto = now + 2500; else if (now > auto) { startSight(); auto = 0; } } // replays itself
+        draw();
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }
+  }
+
+  // ------------------------------------------------------------------ 02.2 reaction chain
+  const rsvg = document.getElementById('react-svg');
+  if (rsvg) {
+    const $ = id => document.getElementById(id);
+    const SEG = [
+      { k: 'notice', col: 'var(--bot)', label: 'noticing (meter fills on eye ticks)' },
+      { k: 'brain', col: 'var(--accent)', label: 'waiting for the brain tick' },
+      { k: 'wait', col: 'var(--warn)', label: 'reaction time, flick under way' },
+    ];
+    const render = () => {
+      const s = { dist: +$('re-dist').value, ang: +$('re-ang').value, moving: $('re-move').checked, fired: $('re-fired').checked, crouched: $('re-crouch').checked };
+      $('re-dist-v').textContent = s.dist + ' m';
+      $('re-ang-v').textContent = s.ang + '°';
+      const rows = PRESETS.map(p => ({ p, c: chain(p, s) }));
+      const maxT = Math.max(1, ...rows.map(r => r.c.total[2])) * 1.06;
+      const X0 = 100, X1 = 880, W = X1 - X0, TOP = 30, H = 42;
+      const sx = v => X0 + v / maxT * W;
+      rsvg.replaceChildren();
+      const tick = maxT > 2.4 ? 0.5 : 0.25;
+      for (let v = 0; v <= maxT + 1e-6; v += tick) {
+        mk('line', { x1: sx(v), y1: TOP - 4, x2: sx(v), y2: TOP + rows.length * H, stroke: 'var(--grid)', 'stroke-width': 1 }, rsvg);
+        mk('text', { x: sx(v), y: TOP - 10, 'text-anchor': 'middle', class: 'dim', 'font-size': 11 }, rsvg, `${+v.toFixed(2)} s`);
+      }
+      rows.forEach((r, i) => {
+        const y = TOP + i * H + 6, h = H - 20;
+        mk('text', { x: 4, y: y + h / 2 + 4, 'font-weight': 600 }, rsvg, r.p.name);
+        let x = 0;
+        for (const sg of SEG) {
+          const v = r.c[sg.k][1];
+          if (v > 0) mk('rect', { x: sx(x), y, width: Math.max(1, sx(x + v) - sx(x) - 2), height: h, rx: 2, fill: sg.col }, rsvg);
+          x += v;
+        }
+        if (r.c.flick > 0) {
+          const fx = sx(r.c.notice[1] + r.c.brain[1] + r.c.flick);
+          mk('line', { x1: fx, y1: y - 3, x2: fx, y2: y + h + 3, stroke: 'var(--ink)', 'stroke-width': 2 }, rsvg);
+        }
+        const wy = y + h + 5;
+        mk('line', { x1: sx(r.c.total[0]), y1: wy, x2: sx(r.c.total[2]), y2: wy, stroke: 'var(--ink)', 'stroke-width': 1.2 }, rsvg);
+        for (const v of [r.c.total[0], r.c.total[2]]) mk('line', { x1: sx(v), y1: wy - 3, x2: sx(v), y2: wy + 3, stroke: 'var(--ink)', 'stroke-width': 1.2 }, rsvg);
+        mk('text', { x: X1 + 10, y: y + h / 2 + 4, 'font-weight': 600 }, rsvg, `${r.c.total[1].toFixed(2)} s`);
+      });
+      const ly = TOP + rows.length * H + 14;
+      let lx = X0;
+      for (const sg of SEG) {
+        mk('rect', { x: lx, y: ly - 9, width: 12, height: 12, rx: 2, fill: sg.col }, rsvg);
+        const tx = mk('text', { x: lx + 18, y: ly + 1, 'font-size': 11 }, rsvg, sg.label);
+        lx += 30 + sg.label.length * 6.7;
+      }
+      mk('line', { x1: lx, y1: ly - 10, x2: lx, y2: ly + 3, stroke: 'var(--ink)', 'stroke-width': 2 }, rsvg);
+      mk('text', { x: lx + 8, y: ly + 1, 'font-size': 11 }, rsvg, 'flick lands');
+      const rec = rows[0].c, reg = rows[1].c, vet = rows[3].c;
+      const where = `${s.dist} m away and ${s.ang}° off its aim${s.moving ? ', moving' : ''}${s.fired ? ', just after you fired' : ''}${s.crouched ? ', crouched' : ''}`;
+      $('react-sum').innerHTML =
+        `You are ${where}. A <b>Veteran</b> can shoot after about <b>${vet.total[1].toFixed(2)} s</b> (${vet.total[0].toFixed(2)} to ${vet.total[2].toFixed(2)}), ` +
+        `a <b>Regular</b> after <b>${reg.total[1].toFixed(2)} s</b> and a <b>Recruit</b> after <b>${rec.total[1].toFixed(2)} s</b>. ` +
+        `A Regular's meter gains ${Math.round(reg.r * 10)} % per eye tick, so it fills in ${reg.n} tick${reg.n > 1 ? 's' : ''}. ` +
+        (reg.flick > 0 ? `Its flick crosses ${fittsId(s).toFixed(1)} bits of Fitts difficulty in ${reg.flick.toFixed(2)} s. `
+                       : 'You are close enough to its aim that it tracks you without a flick. ') +
+        `The angle stretches its reaction time ×${reg.e.toFixed(2)}.`;
+    };
+    ['re-dist', 're-ang', 're-move', 're-fired', 're-crouch'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', render); });
+    render();
+  }
 })();
 </script>
