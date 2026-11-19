@@ -1356,12 +1356,24 @@ namespace LR2.EditorTools
             const string pack = "Assets/UnityTechnologies/ParticlePack/EffectExamples";
             var flameSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Fire & Explosion Effects/Textures/Explosion.tif");
             var steamSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Smoke & Steam Effects/Textures/smokeysteam.tif");
+            // B87 (user 11-19 01:1x "flame smokes or something still boxy"): the Particle Pack flipbooks are RGB on black with no
+            // alpha channel. The pack draws them additively (black adds nothing); our alpha-blended smoke drew every particle as an
+            // opaque dark square. Alpha comes from luminance now, so the black background is transparent in both blend modes.
+            foreach (var sheet in new[] { flameSheet, steamSheet })
+            {
+                if (sheet == null) continue;
+                var imp = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(sheet)) as TextureImporter;
+                if (imp == null || (imp.alphaSource == TextureImporterAlphaSource.FromGrayScale && imp.alphaIsTransparency)) continue;
+                imp.alphaSource = TextureImporterAlphaSource.FromGrayScale;
+                imp.alphaIsTransparency = true;
+                imp.SaveAndReimport();
+            }
             Texture2D smokeTex = steamSheet != null ? steamSheet : puff;
             Vector2Int smokeTiles = steamSheet != null ? new Vector2Int(8, 8) : Vector2Int.one;
 
             var lib = LoadOrCreate<LR2FxLibrary>("Assets/LR2/Resources/LR2/FXLibrary.asset");
             lib.fire = SaveMaterial(NewParticle(flameSheet != null ? flameSheet : sparkTex, new Color(1f, 0.7f, 0.42f),
-                flameSheet != null ? 1.7f : 2.6f, true), res + "/M_FX_Fire.mat");
+                flameSheet != null ? 2.4f : 2.6f, true), res + "/M_FX_Fire.mat"); // 2.4: luminance alpha dims the mid-tones
             lib.fireTiles = flameSheet != null ? new Vector2Int(6, 6) : Vector2Int.one;
             lib.smoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_Smoke.mat");
             lib.smokeTiles = smokeTiles;

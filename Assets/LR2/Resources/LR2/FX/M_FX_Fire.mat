@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _Cull: 0
     - _DstBlend: 1
-    - _Intensity: 1.7
+    - _Intensity: 2.4
     - _PremultiplyAlpha: 0
     - _SoftFade: 0.18
     - _SrcBlend: 5

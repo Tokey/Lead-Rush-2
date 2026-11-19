@@ -144,6 +144,8 @@ namespace LR2.Characters
             if (Array.IndexOf(args, "-lr2DeathTest") >= 0) { yield return DeathTest(); Finish(); yield break; }
             // -lr2GripCheck: where each hand sits on the gun (weapon space) + the gun's underside profile (B26/B49), then quit.
             if (Array.IndexOf(args, "-lr2GripCheck") >= 0) { yield return GripCheck(); Finish(); yield break; }
+            // -lr2FxShots: fire close-ups and forced thunderstorm rain (B87/B93/B97/B101), then quit.
+            if (Array.IndexOf(args, "-lr2FxShots") >= 0) { yield return FxShots(); Finish(); yield break; }
             // -lr2AdsWalkCheck: sight picture and view stability while moving in ADS (B91), then quit.
             if (Array.IndexOf(args, "-lr2AdsWalkCheck") >= 0) { yield return AdsWalkCheck(); Finish(); yield break; }
             if (aimRun) yield return BotAimTest();
@@ -924,6 +926,54 @@ namespace LR2.Characters
             _cmd.move = Vector2.zero;
             _cmd.aim = false;
             yield return Wait(0.5f);
+        }
+
+        /// <summary>B87/B93: fire from 4.5 m and 2.2 m, then a forced thunderstorm, looking at open ground (rain, splashes, wet sheen).</summary>
+        private IEnumerator FxShots()
+        {
+            var fires = FindObjectsByType<LR2.World.FireHazard>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            Note($"FX shots: {fires.Length} fire hazards in the scene");
+            int shot = 0;
+            foreach (var fire in fires)
+            {
+                if (shot >= 2) break;
+                Vector3 f = fire.transform.position;
+                foreach (float dist in new[] { 4.5f, 2.2f })
+                {
+                    Vector3 best = Vector3.zero; bool found = false;
+                    for (int i = 0; i < 12 && !found; i++)
+                    {
+                        Vector3 dir = Quaternion.Euler(0f, i * 30f, 0f) * Vector3.forward;
+                        Vector3 p = f + dir * dist;
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(p, out var hit, 0.8f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                        if (Physics.Linecast(hit.position + Vector3.up * 1.5f, f + Vector3.up * 0.8f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore)) continue;
+                        best = hit.position; found = true;
+                    }
+                    if (!found) continue;
+                    Vector3 to = f - best;
+                    float yaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+                    _soldier.Teleport(best, yaw);
+                    _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw; _cmd.aimPitch = dist < 3f ? 12f : 6f;
+                    yield return Wait(2.2f);
+                    yield return Capture($"fx_fire_{shot}_{dist:0.0}m", $"fire {shot} at {dist:0.0} m");
+                }
+                shot++;
+            }
+            var weather = LR2.World.WeatherSystem.Instance;
+            if (weather != null && weather.ForceWeatherNow(LR2.World.WeatherKind.Thunderstorm))
+            {
+                float yaw = OpenYaw();
+                _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+                _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw; _cmd.aimPitch = -4f;
+                yield return Wait(7f);
+                Note($"FX rain: effectiveRain={weather.EffectiveRain:0.00} wetness={weather.Wetness:0.00}");
+                yield return Capture("fx_rain_storm", "thunderstorm rain");
+                _cmd.move = new Vector2(0f, 1f);
+                yield return Wait(1.2f);
+                yield return Capture("fx_rain_walking", "walking in the rain");
+                _cmd.move = Vector2.zero;
+            }
+            else Note("FX rain: no WeatherSystem / thunderstorm preset in this scene");
         }
 
         private IEnumerator AdsSample(string label, float seconds, Vector2 move)

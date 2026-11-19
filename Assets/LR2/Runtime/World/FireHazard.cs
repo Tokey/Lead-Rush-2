@@ -352,7 +352,7 @@ namespace LR2.World
             if (lib.heatHaze != null)
             {
                 var hazeMat = new Material(lib.heatHaze) { name = "LR2 Fire Heat Shimmer", hideFlags = HideFlags.HideAndDontSave };
-                var vmap = HeatHazeEmitter.SharedVectorMap;
+                var vmap = HeatHazeEmitter.ParticleVectorMap; // radial falloff: no quad edges in the shimmer
                 if (hazeMat.HasProperty("_DistortionVectorMap")) hazeMat.SetTexture("_DistortionVectorMap", vmap);
                 if (hazeMat.HasProperty("_UnlitColorMap")) hazeMat.SetTexture("_UnlitColorMap", vmap);
                 if (hazeMat.HasProperty("_DistortionScale")) hazeMat.SetFloat("_DistortionScale", 0.016f);

@@ -101,8 +101,39 @@ namespace LR2.FX
             return _quadMesh;
         }
 
-        /// <summary>B87: the scrolling distortion vector map, shared with the fire's heat-shimmer particles.</summary>
+        /// <summary>B87: the scrolling distortion vector map (vertical plume, for the single billboard).</summary>
         public static Texture2D SharedVectorMap => GetVectorMap();
+
+        private static Texture2D _particleMap;
+
+        /// <summary>
+        /// B87: distortion map for heat-shimmer particles: swirling vectors that fade to zero toward every edge (radial falloff), so
+        /// a rotated particle never shows the rectangle of its quad (the plume map is full strength at the top edge).
+        /// </summary>
+        public static Texture2D ParticleVectorMap
+        {
+            get
+            {
+                if (_particleMap != null) return _particleMap;
+                const int n = 96;
+                _particleMap = new Texture2D(n, n, TextureFormat.RGBA32, false, true)
+                { name = "LR2 Heat Shimmer Particle Map", wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+                var px = new Color[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float u = (x + 0.5f) / n * 2f - 1f, v = (y + 0.5f) / n * 2f - 1f;
+                        float r = Mathf.Sqrt(u * u + v * v);
+                        float fall = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(r)) * Mathf.SmoothStep(0f, 0.25f, 1f - r);
+                        float dx = 0.5f + (Mathf.Sin(v * 9f + u * 3f) * 0.12f + Mathf.Sin(u * 13f - v * 5f) * 0.05f) * fall;
+                        float dy = 0.5f + (Mathf.Sin(u * 8f + v * 6f) * 0.08f) * fall;
+                        px[y * n + x] = new Color(dx, dy, 0.5f, fall);
+                    }
+                _particleMap.SetPixels(px);
+                _particleMap.Apply(false, true);
+                return _particleMap;
+            }
+        }
 
         private static Texture2D GetVectorMap()
         {

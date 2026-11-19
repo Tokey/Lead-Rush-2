@@ -170,6 +170,20 @@ namespace LR2.World
             if (_procThunderClip != null) Destroy(_procThunderClip);
         }
 
+        /// <summary>QA / features page: switch to the first preset of <paramref name="kind"/> immediately (no blend).</summary>
+        public bool ForceWeatherNow(WeatherKind kind)
+        {
+            for (int i = 0; i < presets.Length; i++)
+            {
+                if (presets[i].kind != kind) continue;
+                _from = _to = i;
+                _blend = 1f;
+                _nextChange = Time.time + Random.Range(holdTime.x, holdTime.y);
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>Force a weather state (blends over transitionTime).</summary>
         public void SetWeather(int index)
         {

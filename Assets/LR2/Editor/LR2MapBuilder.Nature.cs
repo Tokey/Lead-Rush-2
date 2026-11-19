@@ -524,6 +524,10 @@ namespace LR2.EditorTools
             var go = new GameObject("Weather");
             go.transform.SetParent(_systems, false);
             var ws = go.AddComponent<WeatherSystem>();
+            // B93 (user 11-19: "the rain is not visible at all"): Saltworks used to open in clear dusk; it opens in drizzle now (like
+            // Deadsector) and the dynamic cycle moves on from there
+            ws.startPreset = 2;
+            ws.randomStart = false;
             foreach (var l in _lighting.GetComponentsInChildren<Light>())
                 if (l.type == LightType.Directional && l.name == "Sun") ws.sun = l;
             var gv = _lighting.Find("GlobalVolume");
