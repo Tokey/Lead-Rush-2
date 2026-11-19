@@ -93,7 +93,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: free (Gemini 20:48: 11.18.26.6 build + media + QA done, 0 Unity.exe)
-PUSH: cff4c02 by Claude 20:46 (B86 Bot Brain merged into the Bot Lab: one page in three parts, current numbers, bot-brain.html redirects; prompt log to 20:05; Runtime+Editor 0 errors; over Gemini 5791ce8)
+PUSH: cc8e4f0 by Gemini 20:52 (clean build 11.18.26.6, B36 WAVs, B44 UI prefabs, B31/B41/B44 media, Saltworks/MainMenu QA 0 fails, standalone player B82/B18 verified; over Claude cff4c02)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
