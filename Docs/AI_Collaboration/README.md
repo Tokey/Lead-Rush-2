@@ -301,10 +301,11 @@ another agent stopped it first.
 </picture>
 
 | Agent / model | Raw score | Difficulty-adjusted score | Task rows (non-open / open / reopened) | Peer-rated tasks (retro / pre-work) | Weighted task credit | Bugs found (others / own) | Suggestions (adopted / pending) | Escaped defects, weighted (count) | Escaped per 10 tasks | Review defects in owned work | Pre-push defects in owned work |
-| Claude · claude-opus-5-5 | 87.6 | **87.6** | 65 / 0 / 0 | 21 (21 / 0) | 19.50 | 17 / 5 | 10 / 2 | 9.7 (12) | 1.5 | 7 | 2 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Claude · claude-opus-5-5 | 86.4 | **86.4** | 65 / 0 / 0 | 21 (21 / 0) | 19.50 | 17 / 5 | 10 / 2 | 10.3 (13) | 1.6 | 7 | 2 |
 | Copilot · gpt-5.6-luna | 32.5 | **31.5** | 35 / 0 / 3 | 35 (35 / 0) | 20.50 | 6 / 0 | 0 / 0 | 2.0 (2) | 0.6 | 6 | 0 |
 | Gemini · gemini-4-hydrogen-high | 14.5 | **14.5** | 10 / 0 / 0 | 0 (0 / 0) | 4.50 | 0 / 6 | 0 / 0 | 0.0 (0) | 0.0 | 4 | 0 |
-| Codex · gpt-6 | 8.5 | **8.8** | 15 / 0 / 2 | 8 (8 / 0) | 6.75 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 2 | 0 |
+| Codex · gpt-6 | 9.0 | **9.2** | 16 / 0 / 2 | 8 (8 / 0) | 7.25 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 2 | 0 |
 | Gemini · gemini-4-hydrogen | 3.1 | **5.2** | 31 / 1 / 0 | 30 (30 / 0) | 14.62 | 1 / 0 | 0 / 0 | 4.2 (6) | 1.4 | 8 | 0 |
 | Gemini · gemini-4-neon-high | 3.5 | **3.5** | 3 / 0 / 0 | 0 (0 / 0) | 0.50 | 1 / 0 | 0 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
 | Gemini · claude-opus-5-5-high | 3.0 | **3.0** | 0 / 0 / 0 | 0 (0 / 0) | 0.00 | 0 / 0 | 1 / 0 | 0.0 (0) | 0.0 | 0 | 0 |
@@ -331,9 +332,9 @@ another agent stopped it first.
 | **Claude** (Claude Code) | claude-opus-5-5 | 11-16 11:19 → 11-19 01:16 (ET; first/last evidence, not work duration) | 6 documented limit/stop events; exact context-reset count not recorded. 104 developer/board prompt sections. | 65 task rows (65 non-open); 12 attributed escaped defects; 19 review + 3 pre-push findings (17 others / 5 own) | Raw API token totals and measured active work time are tool-unreported. |
 | **Gemini** (Antigravity) | argon; argon/hydrogen; gemini-4-hydrogen; gemini-4-hydrogen-high; gemini-4-neon-high; orchestrator-neon; claude-opus-5-5-high | 11-16 23:44 → 11-18 22:09 (ET; first/last evidence, not work duration) | 2 documented quota events: Argon → Hydrogen at 02:24; old Hydrogen-high conversation rejected at 09:20 (157h30m reset), new conversation at 09:22. Exact context-reset count not recorded. 88 developer/board sections + 4 Claude-to-Gemini handoff sections. | 53 task rows (52 non-open; 1 open); 11 attributed escaped defects; 9 review + 0 pre-push findings (2 others / 7 own) | Raw API token totals and measured active work time are tool-unreported. |
 | **Copilot** (GitHub Copilot Chat) | gpt-5.6-luna | 11-17 23:12 → 11-18 02:40 (ET; first/last evidence, not work duration) | 1 user-reported monthly limit stop at 02:40; exact context-reset count not recorded. 1 developer/board section + 4 agent-to-Copilot prompt sections. | 35 task rows (35 non-open; 3 reopened; 1 partial); 2 attributed escaped defects; 6 review + 0 pre-push findings (6 others / 0 own) | Raw API token totals and measured active work time are tool-unreported. |
-| **Codex** (OpenAI Codex) | gpt-6 | 11-18 01:54 → 11-19 02:50 (ET; first/last evidence, not work duration) | No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file. | 15 task rows (15 non-open; 2 reopened); 0 attributed escaped defects; 1 review + 0 pre-push findings (1 others / 0 own) | Raw API token totals and measured active work time are tool-unreported. |
+| **Codex** (OpenAI Codex) | gpt-6 | 11-18 01:54 → 11-19 03:17 (ET; first/last evidence, not work duration) | No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file. | 16 task rows (16 non-open; 2 reopened); 0 attributed escaped defects; 1 review + 0 pre-push findings (1 others / 0 own) | Raw API token totals and measured active work time are tool-unreported. |
 
-**Ledger scope:** the current files contain **168 task rows** (167 non-open, 1 open) and **70 bug rows**; 32 escaped, 35 review, and 3 pre-push. 38 defects were recorded before the developer saw them. Seven escaped rows currently have no causing agent attribution; those remain unassigned.
+**Ledger scope:** the current files contain **169 task rows** (168 non-open, 1 open) and **71 bug rows**; 33 escaped, 35 review, and 3 pre-push. 38 defects were recorded before the developer saw them. Seven escaped rows currently have no causing agent attribution; those remain unassigned.
 
 ## Complete Task Log with Source (`tasks.csv`)
 

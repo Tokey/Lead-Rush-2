@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: free (Codex isolated worker PID 20504 exited 02:56; BuildAllAndPlayerBatch/player result Succeeded)
-PUSH: 14f1ccd by Codex 02:59 (B87/B91/B107 + B56; 11.19.26.2 BuildAllAndPlayerBatch succeeded 02:56; 4 headless RenderTexture.Create errors; visual feel review pending)
+UNITY: free (isolated worker PID 18048 exited; main editor PID 55788 remains open)
+PUSH: previous 14f1ccd/4544d77 by Codex; B108 11.19.26.3 player build succeeded 03:16, scoped commit/push pending
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -103,7 +103,7 @@ BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02
 | Claude | IN PROGRESS | User 00:27 batch, all other models down: B90 movement, B91 ADS sight, B89 bot overshoot/pre-fire, B88 score panel, B96 minimap, B100 CTF zone, B87 fire, B93 rain, B97 particles, B92 lights, B99 floating props, B95/B98 audio, B94 tac reload, B26 fingers | Push at every stable point; build 11.18.26.7 when Unity is free | 00:31 |
 | Gemini (LEAD) | DOWN (user 00:13: "all other models are down") | User 21:56 request: 2x ADS in/out & FOV zoom sync across all 5 weapons (`WeaponDefinition`, `LR2ContentBuilder`, `LR2Firearm`, `SoldierController`, `LR2QAExtraChecks`/`LR2QABotRunner`); `dotnet build` 0 errors; running `BuildWeapons` + visible `Saltworks` QA | Release `UNITY:` lock, inspect QA telemetry, confirm feel/player build request with user | 00:31 (Claude) |
 | Copilot | IN PROGRESS | B54 evidence corrected/pushed; visible pose check #7 captured AK-12 + MK23 evidence; Codex auditing README | Checkpoint: B60.1 baseline CSV + B60.9 known-bad fixtures compile; standalone player build succeeded; push in progress | 02:25 |
-| Codex | IN PROGRESS | B91: removed forced post-animation correction; durable Kinemation ADS mask with move Y -0.15 and aim Y -0.12. B87 luminance-derived smoke alpha. B107 distinct slower rates + retuned damage. B56 docs refreshed from ledgers. | record successful player build, commit scoped changes, then push | 02:59 |
+| Codex | READY FOR REVIEW | B108: camera-following rain, splashes, and visor drops are suppressed indoors; Runtime + Editor compile cleanly; BuildAllAndPlayerBatch succeeded (11.19.26.3). | user visual review in a roofed area; push scoped fix | 03:17 |
 
 ## 2. Needs the user
 
@@ -254,6 +254,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B105 | feature | Realistic banter: censored slang only sometimes, gg at match end, less often (user 01:0x) | Claude | claude-opus-5-5 | - | READY FOR REVIEW | - | 01:13 | Clean + spicy pools (~25 %), revenge/streak lines, gg from 2-4 bots, 9-15 s global gap, 25-40 s per bot. |
 | B106 | feature | Improve the look of the laser (user 01:1x) | Claude | claude-opus-5-5 | - | OPEN | - | 01:13 | WeaponLaser beam + dot. |
 | B107 | tune | Slow all weapon fire rates to distinct game cadences and preserve body-shot TTK with damage tuning (user 02:22) | Codex | gpt-6 | user | READY FOR REVIEW | - | 02:59 | `LR2ContentBuilder.Guns`: MK18 700, AK-12 600, AK-74N 550, FAL 500, MK23 300 RPM; damage steps adjusted against 100 HP and 150 effective HP. Rates are gameplay targets referenced against real cyclic specs; discrete shot counts limit exact TTK matching. Standalone player build succeeded; body-shot feel remains for review. See `specs/B107_Weapon_FireRate_TTK.md`. |
+| B108 | bug | Rain streaks show inside roofed spaces | Codex | gpt-6 | user | READY FOR REVIEW | D71 | 03:10 | Camera-following high and near rain emitters now stop and clear under roofs detected by `LR2Audio.IsIndoors`; indoor splashes and visor drops are suppressed. Runtime + Editor compile: 0 errors; `BuildAllAndPlayerBatch` succeeded 03:16, Windows player 1,611,063,828 bytes. |
 
 ## 4. Ownership (who may edit what)
 
@@ -274,6 +275,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | README screenshots | Gemini captures, Claude picks | `Docs/Media/*` |
 | **Temporary user-requested B67a thermal VFX handoff** (03:39) | Codex | Thermal effects only in `Runtime/Weapons/LR2Firearm.cs`; new `Runtime/FX/HeatHazeEmitter.cs`; flame haze in `Runtime/World/FireHazard.cs` |
 | **Temporary user-requested B70 ADS FOV pacing handoff** (04:02) | Codex | ADS camera transition duration in `Runtime/Weapons/LR2Firearm.cs`; preserve the unrelated Gemini tactical-reload edit |
+| **Temporary user-requested B108 indoor-rain handoff** (03:10) | Codex | `Runtime/World/WeatherSystem.cs`; preserve the outdoor rain, wetness, and weather-audio behavior |
 | **Temporary user-requested B71 death-pose reset handoff** (04:10) | Claude | Reset only reload bridge, retarget inertial/plant history, and camera FOV cache across death/respawn; preserve active Copilot B60b foot-plant edits |
 | **Temporary user-requested B68a laser visibility handoff** (03:41) | Codex | Visibility tuning only in `Runtime/Weapons/WeaponLaser.cs`; preserve green friendly/red enemy palette |
 | **Temporary user-requested B69 TDM label handoff** (03:41) | Codex | Remove the `[CUSTOM]` suffix only from TDM in `Runtime/UI/MainMenuController.cs`; preserve custom rules |
@@ -657,3 +659,5 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 01:13] [READY FOR REVIEW] User batch 00:27-01:17: B87, B88, B89, B90, B91, B93, B96, B97, B100, B101, B105 in code and built; B98 partly (AK reload clips trimmed). OPEN for the next session: B26 grip offsets (C27 data), B92 lights, B94 AK tac reload, B95 grunts/audio, B99 floating props, B102 gun blood, B104 READMEs, B106 laser. The user is near their token limit: push + player build first.
 - [Codex gpt-6 01:32] [OWNERSHIP] [REOPENED] D70: `AdsSightLock` moved the weapon without moving RetargetProxy's visible hand-IK targets; same rigid correction now reaches both hands. Runtime + Editor builds: 0 errors; visible Unity pose review remains.
 - [Codex gpt-6 02:59] [BUILD] [PUSH] `14f1ccd` pushed to `origin/main`; `BuildAllAndPlayerBatch` exited `0`, Windows player result `Succeeded` (4 headless `RenderTexture.Create failed` messages). B87 smoke, B91 ADS sway, and B107 cadence/TTK are ready for user review; Unity lock released.
+- [Codex gpt-6 03:10] [USER HANDOFF] B108: remove camera-following rain from roofed spaces; temporary weather ownership accepted from Gemini while Gemini is down.
+- [Codex gpt-6 03:17] [READY FOR REVIEW] B108: roof probe stops and clears both rain particle systems and suppresses splashes/visor drops indoors. Runtime + Editor compile cleanly; isolated `BuildAllAndPlayerBatch` succeeded at 03:16 (Windows player 1,611,063,828 bytes). D71 marked fixed; visual review still needed. Unity worker PID 18048 exited; main Editor PID 55788 remains open.

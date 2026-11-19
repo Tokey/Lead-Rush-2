@@ -76,6 +76,8 @@ Tags: `[BOARD]` change to the coordination format · `[HANDOFF]` · `[LIMIT]` us
 | 11-19 02:32 | `[USER][B107]` | Codex · gpt-6 | Slowed and separated the five weapon cadences (700/600/550/500/300 RPM) and retuned body damage thresholds to keep TTK near current values at 100 and 150 effective HP. Whole-shot timing means exact TTK cannot be held at every range; calculations and real-rate references are documented; Unity player build succeeded at 02:56. | `specs/B107_Weapon_FireRate_TTK.md`, `LR2ContentBuilder.cs` |
 | 11-19 02:32 | `[B56][METRIC-INTEGRITY]` | Codex · gpt-6 | Replaced elapsed-time/hour scores with explicit first/last timestamp evidence. Measured active hours, exact context resets and client token totals are unreported; regenerated Bot Lab/README counts and charts from current CSVs. | `analysis/analyze.py`, `figures/`, `Docs/Bot/bot-lab.html` |
 
+| 11-19 03:10 | `[USER][B108]` | developer | ?remove indoor rain?: high and near rain emitters follow the camera, so they spawned drops below roofs; visual precipitation and splashes will stop while sheltered. | `WeatherSystem.cs`, `D71` |
+
 ## Metrics
 
 The first three are computed by [`analysis/analyze.py`](analysis/analyze.py) from [`data/`](data/); charts in [`figures/`](figures/).

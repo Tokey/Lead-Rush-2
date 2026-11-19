@@ -692,8 +692,8 @@ body.gifmode .wrap { display: none; }
           <div id="proto-desc" class="card" style="margin-top:4px"></div>
           <div class="readout">
             <div class="stat"><div class="k">Board rows</div><div class="v">B1–B85 + P1–P5</div></div>
-            <div class="stat"><div class="k">Ledger rows</div><div class="v">167 non-open task rows · 1 open · 70 bugs</div></div>
-            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">38 of 70</div></div>
+            <div class="stat"><div class="k">Ledger rows</div><div class="v">168 non-open task rows · 1 open · 71 bugs</div></div>
+            <div class="stat"><div class="k">Bugs caught before you</div><div class="v">38 of 71</div></div>
             <div class="stat"><div class="k">Running now</div><div class="v">See AGENT_COORDINATION.md</div></div>
           </div>
         </div>
@@ -701,7 +701,7 @@ body.gifmode .wrap { display: none; }
     </section>
 <section id="ai-quality" class="bb" aria-labelledby="h-ai-quality">
       <div class="head"><span class="num">19 · MEASURE</span><h2 id="h-ai-quality">Who wrote what, and what broke</h2><span class="src">data/tasks.csv · data/bugs.csv · analysis/analyze.py</span>
-        <p>The current ledgers contain 168 task rows (167 non-open, 1 open) and 70 bug rows. Tasks retain agent/model and source evidence; bug records distinguish escaped defects, review catches, and pre-push breaks. Scores use peer-rated task difficulty (B66). There is no hour-based score: measured active duration, exact context resets, and raw client API tokens are not exported to this repository, so missing telemetry stays unrecorded.</p></div>
+        <p>The current ledgers contain 169 task rows (168 non-open, 1 open) and 71 bug rows. Tasks retain agent/model and source evidence; bug records distinguish escaped defects, review catches, and pre-push breaks. Scores use peer-rated task difficulty (B66). There is no hour-based score: measured active duration, exact context resets, and raw client API tokens are not exported to this repository, so missing telemetry stays unrecorded.</p></div>
       <div class="instrument">
         <canvas id="cv-quality" aria-label="Bar chart of contribution score and defect rates by agent and model"></canvas>
         <div class="controls">
@@ -731,10 +731,10 @@ body.gifmode .wrap { display: none; }
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Claude</b> · Claude Code</td><td style="padding:6px 8px">claude-opus-5-5</td><td style="padding:6px 8px">11-16 11:19 → 11-19 01:16 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">6 documented limit/stop events; exact context-reset count not recorded. 104 developer/board prompt sections.</td><td style="padding:6px 8px">65 rows (65 non-open); 12 escaped attributed; 19 review + 3 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Claude</b> · Claude Code</td><td style="padding:6px 8px">claude-opus-5-5</td><td style="padding:6px 8px">11-16 11:19 → 11-19 01:16 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">6 documented limit/stop events; exact context-reset count not recorded. 104 developer/board prompt sections.</td><td style="padding:6px 8px">65 rows (65 non-open); 13 escaped attributed; 19 review + 3 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
             <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Gemini</b> · Antigravity</td><td style="padding:6px 8px">argon; argon/hydrogen; gemini-4-hydrogen; gemini-4-hydrogen-high; gemini-4-neon-high; orchestrator-neon; claude-opus-5-5-high</td><td style="padding:6px 8px">11-16 23:44 → 11-18 22:09 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">2 documented quota events: Argon → Hydrogen at 02:24; old Hydrogen-high conversation rejected at 09:20 (157h30m reset), new conversation at 09:22. Exact context-reset count not recorded. 88 developer/board sections + 4 Claude-to-Gemini handoff sections.</td><td style="padding:6px 8px">53 rows (52 non-open, 1 open); 11 escaped attributed; 9 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
             <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Copilot</b> · GitHub Copilot Chat</td><td style="padding:6px 8px">gpt-5.6-luna</td><td style="padding:6px 8px">11-17 23:12 → 11-18 02:40 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">1 user-reported monthly limit stop at 02:40; exact context-reset count not recorded. 1 developer/board section + 4 agent-to-Copilot prompt sections.</td><td style="padding:6px 8px">35 rows (35 non-open, 3 reopened, 1 partial); 2 escaped attributed; 6 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex</td><td style="padding:6px 8px">gpt-6</td><td style="padding:6px 8px">11-18 01:54 → 11-19 02:50 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file.</td><td style="padding:6px 8px">15 rows (15 non-open, 2 reopened); 0 escaped attributed; 1 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
+            <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px"><b>Codex</b> · OpenAI Codex</td><td style="padding:6px 8px">gpt-6</td><td style="padding:6px 8px">11-18 01:54 → 11-19 03:17 (ET; first/last evidence, not work duration)</td><td style="padding:6px 8px">No limit-stop event recorded in the available sources; exact context-reset count not recorded. 0 headings routed to Codex in PROMPTS.md; direct user requests are not captured in that file.</td><td style="padding:6px 8px">16 rows (16 non-open, 2 reopened); 0 escaped attributed; 1 review + 0 pre-push findings</td><td style="padding:6px 8px">Raw API token totals and measured active work time are tool-unreported.</td></tr>
           </tbody>
           </table>
 
@@ -746,7 +746,7 @@ body.gifmode .wrap { display: none; }
           <tbody>
             <tr><td class="num">v1: before 11-17 23:25</td><td class="num">23</td><td class="num">13.8</td><td class="num">6.0</td><td class="num">1</td><td class="num">0.4</td></tr>
             <tr><td class="num">v2: 11-17 23:25 to 11-18 00:05</td><td class="num">15</td><td class="num">2.0</td><td class="num">1.3</td><td class="num">8</td><td class="num">5.3</td></tr>
-            <tr><td class="num">v3: after 11-18 00:05</td><td class="num">129</td><td class="num">9.9</td><td class="num">0.8</td><td class="num">29</td><td class="num">2.2</td></tr>
+            <tr><td class="num">v3: after 11-18 00:05</td><td class="num">130</td><td class="num">10.5</td><td class="num">0.8</td><td class="num">29</td><td class="num">2.2</td></tr>
           </tbody>
           </table>
         <p class="note">Regenerated from the current task and bug ledgers on 2026-11-19; attribution gaps remain visible instead of being assigned to a model.</p>
@@ -2734,10 +2734,10 @@ requestAnimationFrame(frame);
 
   // ---------------- TAB 3: QUALITY METRICS CHART (ledger-derived, no time estimates) ----------------
   const QUALITY_ROWS = [
-    {"lbl": "Claude · opus-5-5", "score": 87.6, "tasks": 65, "escaped": 1.5, "caught": 22, "c": "#b388ff"},
+    {"lbl": "Claude · opus-5-5", "score": 86.4, "tasks": 65, "escaped": 1.6, "caught": 22, "c": "#b388ff"},
     {"lbl": "Copilot · gpt-5.6-luna", "score": 31.5, "tasks": 35, "escaped": 0.6, "caught": 6, "c": "#5cc46a"},
     {"lbl": "Gemini · hydrogen-high", "score": 14.5, "tasks": 10, "escaped": 0.0, "caught": 6, "c": "#47d9ff"},
-    {"lbl": "Codex · gpt-6", "score": 8.8, "tasks": 15, "escaped": 0.0, "caught": 1, "c": "#2dd4bf"},
+    {"lbl": "Codex · gpt-6", "score": 9.2, "tasks": 16, "escaped": 0.0, "caught": 1, "c": "#2dd4bf"},
     {"lbl": "Gemini · hydrogen", "score": 5.2, "tasks": 31, "escaped": 1.4, "caught": 1, "c": "#6eaee6"},
     {"lbl": "Gemini · neon-high", "score": 3.5, "tasks": 3, "escaped": 0.0, "caught": 1, "c": "#e8a33d"},
     {"lbl": "Gemini · opus-5-5-high", "score": 3.0, "tasks": 0, "escaped": 0.0, "caught": 0, "c": "#e2b54a"},
@@ -2771,6 +2771,7 @@ requestAnimationFrame(frame);
 
   // ---------------- TAB 3: TASK LOG WITH SOURCE ----------------
   const TASKS_LOG = [
+    {"id": "X16", "when": "2026-11-19 03:17", "agent": "Codex", "board": "B108", "task": "Stop rain streaks appearing inside roofed spaces", "src": "user request 03:10; WeatherSystem indoor roof-probe gating; BuildAllAndPlayerBatch succeeded 03:16"},
     {"id": "X14", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B107", "task": "Slower distinct weapon fire rates with damage tuned to keep body TTK close", "src": "user request 02:22; five distinct WeaponSpec rates + damage thresholds; standalone player build succeeded 02:56"},
     {"id": "X15", "when": "2026-11-19 02:32", "agent": "Codex", "board": "B91", "task": "Apply ADS sway reduction through active Kinemation SwayLayer profile settings", "src": "user reported prior sway change did not help; LR2ContentBuilder persists 22% ADS mask"},
     {"id": "X11", "when": "2026-11-19 02:06", "agent": "Codex", "board": "B91", "task": "Tune ADS sway in Kinemation humanoid profiles with much lower vertical weapon movement", "src": "user said the sway change did not help; direct profile assets are ignored by git and were not a durable build setting"},

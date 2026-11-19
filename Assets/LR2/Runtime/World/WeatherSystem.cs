@@ -112,6 +112,7 @@ namespace LR2.World
         private AudioClip _procThunderClip;
         private ParticleSystem.EmitParams _splashEmit;
         private ParticleSystem _rainNear; // B93
+        private bool _cameraIndoors;
         private ParticleSystem.EmitParams _rippleEmit;
         private float _splashAcc;
         private readonly VisorDrop[] _visorDrops = new VisorDrop[18];
@@ -275,33 +276,43 @@ namespace LR2.World
 
         private void UpdateRain(float amount)
         {
+            var cam = Camera.main;
+            _cameraIndoors = cam != null && LR2Audio.IsIndoors(cam.transform.position);
+            float visibleRain = _cameraIndoors ? 0f : amount;
+
             if (rain != null)
             {
-                var cam = Camera.main;
-                if (cam != null) rain.transform.position = cam.transform.position + Vector3.up * 14f + cam.transform.forward * 5f;
+                // The camera-following volume otherwise drops below roofs and spawns rain indoors.
+                if (cam != null && !_cameraIndoors)
+                    rain.transform.position = cam.transform.position + Vector3.up * 14f + cam.transform.forward * 5f;
                 var em = rain.emission;
-                em.rateOverTime = amount * maxRainRate;
+                em.rateOverTime = visibleRain * maxRainRate;
                 var vel = rain.velocityOverLifetime;
                 float wx = Wind * 3.4f;
                 vel.x = new ParticleSystem.MinMaxCurve(wx * 0.85f, wx * 1.15f);
                 vel.y = new ParticleSystem.MinMaxCurve(-22f, -18f);
                 vel.z = new ParticleSystem.MinMaxCurve(-0.35f, 0.35f);
-                if (amount > 0.01f && !rain.isPlaying) rain.Play();
+                if (_cameraIndoors && (rain.isPlaying || rain.particleCount > 0))
+                    rain.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                else if (visibleRain > 0.01f && !rain.isPlaying) rain.Play();
                 else if (amount <= 0.01f && rain.isPlaying) rain.Stop();
                 if (_rainNear != null)
                 {
-                    if (cam != null) _rainNear.transform.position = cam.transform.position + Vector3.up * 5f + cam.transform.forward * 2.5f;
+                    if (cam != null && !_cameraIndoors)
+                        _rainNear.transform.position = cam.transform.position + Vector3.up * 5f + cam.transform.forward * 2.5f;
                     var nem = _rainNear.emission;
-                    nem.rateOverTime = amount * 950f;
+                    nem.rateOverTime = visibleRain * 950f;
                     var nv = _rainNear.velocityOverLifetime;
                     nv.x = new ParticleSystem.MinMaxCurve(wx * 0.85f, wx * 1.15f);
-                    if (amount > 0.01f && !_rainNear.isPlaying) _rainNear.Play();
+                    if (_cameraIndoors && (_rainNear.isPlaying || _rainNear.particleCount > 0))
+                        _rainNear.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    else if (visibleRain > 0.01f && !_rainNear.isPlaying) _rainNear.Play();
                     else if (amount <= 0.01f && _rainNear.isPlaying) _rainNear.Stop();
                 }
             }
             if (_rainSource != null)
             {
-                bool indoors = LR2Audio.IsIndoors(LR2Audio.ListenerPosition);
+                bool indoors = cam != null ? _cameraIndoors : LR2Audio.IsIndoors(LR2Audio.ListenerPosition);
                 float mix = LR2Audio.CategoryVolume(AudioCategory.Ambience) / 0.68f;
                 _rainSource.volume = Mathf.Lerp(_rainSource.volume, amount * rainVolume * mix * (indoors ? 0.45f : 1f), Time.deltaTime * 2f);
                 var lp = _rainSource.GetComponent<AudioLowPassFilter>();
@@ -331,7 +342,6 @@ namespace LR2.World
             if (Time.time >= _thunderRainUntil) _thunderStart = Time.time;
             _thunderRainUntil = Mathf.Max(_thunderRainUntil, Time.time + Mathf.Max(4f, durationSec));
             _thunderRainBoost = Mathf.Max(_thunderRainBoost, Mathf.Clamp01(intensity));
-            if (rain != null && !rain.isPlaying) rain.Play();
             if (withFlash) _flash = Mathf.Max(_flash, 0.75f);
         }
 
@@ -536,6 +546,11 @@ namespace LR2.World
             if (rainAmount <= 0.04f || _splashBurstPS == null || _puddleRipplePS == null) return;
             var cam = Camera.main;
             if (cam == null) return;
+            if (_cameraIndoors)
+            {
+                _splashAcc = 0f;
+                return;
+            }
 
             // Emit real ground crown splashes & concentric water ripples strictly on outdoor surfaces
             float targetPerSec = Mathf.Lerp(60f, 340f, rainAmount); // B97: splashes you can see (10-90/s before)
@@ -748,8 +763,7 @@ namespace LR2.World
             var cam = Camera.main;
             if (cam == null) return;
             // Subtle peripheral visor droplets only when outdoors under open rain
-            if (Physics.Raycast(cam.transform.position + Vector3.up * 0.25f, Vector3.up, 28f, LR2.Core.LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
-                return;
+            if (_cameraIndoors) return;
 
             if (!_visorInited)
             {
