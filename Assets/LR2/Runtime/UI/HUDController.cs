@@ -126,6 +126,132 @@ namespace LR2.UI
         private TMP_Text _flagCompassMarker;
         private Image _flagMinimapIcon;
 
+        // ------------------------------------------------------------------ B88 score labels + B96 minimap placement
+        // User 11-19 00:13: the score panel showed two bare numbers that read as "1st and 2nd" in CTF, TDM and FFA, and the
+        // minimap should sit at the bottom above the health bar like BF6 (top-left kept as an option).
+        private TMP_Text _myScoreLabel, _enemyScoreLabel;
+        private float _nextScoreLabelAt;
+        private RectTransform _minimapRoot, _statusRoot, _chatRoot;
+        private bool _layoutApplied, _layoutBottom;
+
+        private void BuildScoreLabels()
+        {
+            if (modeText == null || myScoreText == null || enemyScoreText == null || _myScoreLabel != null) return;
+            TMP_Text Label(string name, TMP_Text row, Color color)
+            {
+                var t = Instantiate(modeText, row.transform.parent);
+                t.name = name;
+                t.text = "";
+                t.fontSize = 15f;
+                t.enableAutoSizing = false;
+                t.alignment = TextAlignmentOptions.BottomLeft;
+                t.color = new Color(color.r, color.g, color.b, 0.95f);
+                t.overflowMode = TextOverflowModes.Ellipsis;
+                var rt = t.rectTransform;
+                var rowRt = row.rectTransform;
+                rt.anchorMin = rt.anchorMax = rowRt.anchorMin;
+                rt.pivot = new Vector2(0f, 0f);
+                rt.anchoredPosition = new Vector2(90f, rowRt.anchoredPosition.y + 3f);
+                rt.sizeDelta = new Vector2(205f, 20f);
+                return t;
+            }
+            _myScoreLabel = Label("MyScoreLabel", myScoreText, myScoreText.color);
+            _enemyScoreLabel = Label("EnemyScoreLabel", enemyScoreText, enemyScoreText.color);
+            if (limitText != null)
+            {
+                limitText.rectTransform.sizeDelta = new Vector2(170f, 24f);
+                limitText.fontSize = 15f;
+            }
+        }
+
+        private static string Ordinal(int n)
+        {
+            int t = n % 100;
+            if (t is >= 11 and <= 13) return n + "TH";
+            return n + (n % 10 == 1 ? "ST" : n % 10 == 2 ? "ND" : n % 10 == 3 ? "RD" : "TH");
+        }
+
+        private static string Short(string s) => string.IsNullOrEmpty(s) ? "-" : (s.Length > 14 ? s.Substring(0, 13) + "\u2026" : s);
+
+        private void UpdateScoreLabels(MatchManager mm)
+        {
+            if (_myScoreLabel == null || mm == null || mm.Settings == null || Time.unscaledTime < _nextScoreLabelAt) return;
+            _nextScoreLabelAt = Time.unscaledTime + 0.25f;
+            if (limitText != null) limitText.text = $"FIRST TO {Mathf.Max(1, mm.ScoreLimit)}";
+            if (mm.IsTeamMode && _player != null && _player.Team != TeamId.None)
+            {
+                var other = _player.Team == TeamId.Alpha ? TeamId.Bravo : TeamId.Alpha;
+                _myScoreLabel.text = $"YOUR TEAM \u00b7 {_player.Team.ToString().ToUpperInvariant()}";
+                _enemyScoreLabel.text = $"ENEMY \u00b7 {other.ToString().ToUpperInvariant()}";
+                return;
+            }
+            // Duel and free-for-all: you vs the best other player, with your place
+            int mine = mm.GetDisplayScore(_player);
+            int place = 1, players = 0;
+            Combatant best = null;
+            int bestScore = int.MinValue;
+            foreach (var c in Combatant.All)
+            {
+                if (c == null || !c.isActiveAndEnabled) continue;
+                players++;
+                if (c == _player) continue;
+                int sc = mm.GetDisplayScore(c);
+                if (sc > mine) place++;
+                if (sc > bestScore) { bestScore = sc; best = c; }
+            }
+            bool duel = mm.Settings.mode == GameModeType.Duel;
+            _myScoreLabel.text = duel ? "YOU" : $"YOU \u00b7 {Ordinal(place)} OF {Mathf.Max(players, 1)}";
+            string who = best != null ? Short(best.DisplayName) : "-";
+            _enemyScoreLabel.text = duel ? $"RIVAL \u00b7 {who}" : (place == 1 ? $"2ND \u00b7 {who}" : $"LEADER \u00b7 {who}");
+        }
+
+        private void ApplyHudLayout()
+        {
+            if (_minimapRoot == null && minimapRotator != null && minimapRotator.parent != null) _minimapRoot = minimapRotator.parent.parent as RectTransform;
+            if (_statusRoot == null && myScoreText != null) _statusRoot = myScoreText.transform.parent as RectTransform;
+            if (_chatRoot == null)
+            {
+                var root = hudGroup != null ? hudGroup.transform : transform;
+                foreach (var rt in root.GetComponentsInChildren<RectTransform>(true))
+                    if (rt.name.IndexOf("Chat", System.StringComparison.OrdinalIgnoreCase) >= 0 && rt.parent == root) { _chatRoot = rt; break; }
+            }
+            bool bottom = LR2Settings.MinimapBottom;
+            if (_layoutApplied && bottom == _layoutBottom) return;
+            _layoutApplied = true;
+            _layoutBottom = bottom;
+            if (_minimapRoot != null)
+            {
+                _minimapRoot.pivot = new Vector2(0.5f, 0.5f);
+                if (bottom)
+                {
+                    // BF6: bottom-left, sitting just above the health and armour bars
+                    _minimapRoot.anchorMin = _minimapRoot.anchorMax = new Vector2(0f, 0f);
+                    _minimapRoot.anchoredPosition = new Vector2(186f, 276f);
+                }
+                else
+                {
+                    _minimapRoot.anchorMin = _minimapRoot.anchorMax = new Vector2(0f, 1f);
+                    _minimapRoot.anchoredPosition = new Vector2(150f, -150f);
+                }
+            }
+            if (_statusRoot != null)
+            {
+                _statusRoot.anchorMin = _statusRoot.anchorMax = new Vector2(0f, 1f);
+                _statusRoot.pivot = new Vector2(0f, 1f);
+                _statusRoot.anchoredPosition = bottom ? new Vector2(40f, -36f) : new Vector2(40f, -290f);
+            }
+            if (_chatRoot != null)
+            {
+                // keep the chat clear of a bottom minimap (it sits at 30 % of the screen height by default)
+                _chatRoot.anchorMin = _chatRoot.anchorMax = new Vector2(0f, bottom ? 0.40f : 0.30f);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            LR2Settings.Changed -= ApplyHudLayout;
+        }
+
         private void Awake()
         {
             _theme = Resources.Load<UITheme>("LR2/UITheme");
@@ -138,6 +264,10 @@ namespace LR2.UI
             BuildCompass();
             BuildFlagHud();
             TacticalChatSystem.Mount(hudGroup != null ? hudGroup.transform : transform);
+            BuildScoreLabels();
+            ApplyHudLayout();
+            LR2Settings.Changed -= ApplyHudLayout;
+            LR2Settings.Changed += ApplyHudLayout;
             // BF6-style hit feedback (thick X, kill skull, layered hit/kill sounds) replaces the old small hitmarker
             _hitFeedback = GetComponentInChildren<HitFeedbackHUD>(true);
             if (_hitFeedback == null)
@@ -654,6 +784,7 @@ namespace LR2.UI
             if (myScoreBar != null) myScoreBar.fillAmount = Mathf.MoveTowards(myScoreBar.fillAmount, (float)mine / limit, dt * 3.5f);
             if (enemyScoreBar != null) enemyScoreBar.fillAmount = Mathf.MoveTowards(enemyScoreBar.fillAmount, (float)theirs / limit, dt * 3.5f);
             if (limitText != null) limitText.text = limit.ToString();
+            UpdateScoreLabels(mm);
         }
 
         private void UpdateCenter()

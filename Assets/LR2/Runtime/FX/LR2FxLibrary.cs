@@ -20,6 +20,14 @@ namespace LR2.FX
         public Material smoke;
         public Vector2Int smokeTiles = Vector2Int.one;
         public Material embers;
+        [Tooltip("B87: soft additive glow at the base of a fire.")]
+        public Material fireGlow;
+
+        [Header("Capture zone (B100)")]
+        [Tooltip("HDRP decal: crisp dashed outer capture ring, projected onto whatever ground is below.")]
+        public Material zoneRingOuter;
+        [Tooltip("HDRP decal: solid inner core ring.")]
+        public Material zoneRingCore;
 
         [Header("Atmosphere")]
         public Material mist;

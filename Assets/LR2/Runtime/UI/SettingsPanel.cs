@@ -22,6 +22,7 @@ namespace LR2.UI
         public Slider bodycamMotion;
         public Toggle motionBlur;
         public Toggle filmGrain;
+        public Toggle minimapBottom;   // B96
 
         [Header("Audio")]
         public Slider masterVolume;
@@ -122,6 +123,7 @@ namespace LR2.UI
             if (bodycamLook != null) bodycamLook.isOn = LR2Settings.BodycamLook;
             if (motionBlur != null) motionBlur.isOn = LR2Settings.MotionBlur;
             if (filmGrain != null) filmGrain.isOn = LR2Settings.FilmGrain;
+            if (minimapBottom != null) minimapBottom.isOn = LR2Settings.MinimapBottom;
             if (hitmarkerSound != null) hitmarkerSound.isOn = LR2Settings.HitmarkerSound;
             if (vsync != null) vsync.isOn = LR2Settings.VSync;
             if (showFps != null) showFps.isOn = LR2Settings.ShowFps;
@@ -159,6 +161,7 @@ namespace LR2.UI
             Hook(bodycamLook, v => LR2Settings.BodycamLook = v);
             Hook(motionBlur, v => LR2Settings.MotionBlur = v);
             Hook(filmGrain, v => LR2Settings.FilmGrain = v);
+            Hook(minimapBottom, v => LR2Settings.MinimapBottom = v);
             Hook(hitmarkerSound, v => LR2Settings.HitmarkerSound = v);
             Hook(vsync, v => { LR2Settings.VSync = v; LR2Settings.Apply(); });
             Hook(showFps, v => LR2Settings.ShowFps = v);

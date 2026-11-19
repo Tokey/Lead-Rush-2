@@ -11,6 +11,7 @@ Shader "LR2/ParticleUnlit"
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Float) = 10
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
         [Toggle] _PremultiplyAlpha ("Premultiply alpha into color (for additive)", Float) = 0
+        _SoftFade ("Soft particle fade distance (m, 0 = off)", Float) = 0
     }
 
     SubShader
@@ -46,6 +47,7 @@ Shader "LR2/ParticleUnlit"
                 float _DstBlend;
                 float _Cull;
                 float _PremultiplyAlpha;
+                float _SoftFade;
             CBUFFER_END
 
             struct Attributes
@@ -61,6 +63,7 @@ Shader "LR2/ParticleUnlit"
                 float4 positionCS : SV_POSITION;
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float eyeDepth : TEXCOORD1;
             };
 
             Varyings Vert(Attributes input)
@@ -71,6 +74,7 @@ Shader "LR2/ParticleUnlit"
                 o.positionCS = TransformWorldToHClip(positionRWS);
                 o.color = input.color;
                 o.uv = input.uv * _MainTex_ST.xy + _MainTex_ST.zw;
+                o.eyeDepth = -TransformWorldToView(positionRWS).z;
                 return o;
             }
 
@@ -80,6 +84,14 @@ Shader "LR2/ParticleUnlit"
                 float4 c = tex * i.color * _Color;
                 c.rgb *= _Intensity;
                 if (_PremultiplyAlpha > 0.5) c.rgb *= c.a;
+                // B87 soft particles: fade where the quad meets geometry (no hard line where flames cut into a barrel)
+                if (_SoftFade > 0.0001)
+                {
+                    float sceneEye = LinearEyeDepth(LoadCameraDepth(uint2(i.positionCS.xy)), _ZBufferParams);
+                    float fade = saturate((sceneEye - i.eyeDepth) / _SoftFade);
+                    if (_DstBlend == 1.0) c.rgb *= fade;
+                    c.a *= fade;
+                }
                 return c;
             }
             ENDHLSL

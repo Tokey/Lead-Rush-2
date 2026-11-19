@@ -85,6 +85,7 @@ namespace LR2.Game
             if (Instance == this) Instance = null;
             if (_ringMat != null) Destroy(_ringMat);
             if (_coreMat != null) Destroy(_coreMat);
+            foreach (var dm in _decalMatCache.Values) if (dm != null) Destroy(dm); // B100
             if (_bannerMat != null) Destroy(_bannerMat);
             if (_beamMat != null) Destroy(_beamMat);
             if (_burstMat != null) Destroy(_burstMat);
@@ -521,16 +522,34 @@ namespace LR2.Game
             _ringMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
             _ringMat.renderQueue = 3000;
 
-            var outerQuad = CreateHorizontalQuad("OuterCaptureRing", _rigRoot, new Vector3(0f, 0.05f, 0f), 1f, _ringMat);
-            _outerRingTf = outerQuad.transform;
+            var fxLib = LR2.FX.LR2FxLibrary.Instance;
+            _decalRings = fxLib != null && fxLib.zoneRingOuter != null && fxLib.zoneRingCore != null;
+            if (_decalRings)
+            {
+                // B100: rings are HDRP decals now (crisp, lying on the ground below, trench floors included)
+                _outerDecalBase = fxLib.zoneRingOuter;
+                _coreDecalBase = fxLib.zoneRingCore;
+                _outerDecal = CreateZoneDecal("OuterCaptureRing", _rigRoot, _outerDecalBase);
+                _coreDecal = CreateZoneDecal("CoreCaptureRing", _rigRoot, _coreDecalBase);
+                _outerRingTf = _outerDecal.transform;
+                _coreRingTf = _coreDecal.transform;
+            }
+            else
+            {
+                var outerQuad = CreateHorizontalQuad("OuterCaptureRing", _rigRoot, new Vector3(0f, 0.05f, 0f), 1f, _ringMat);
+                _outerRingTf = outerQuad.transform;
+            }
 
             var coreTex = BuildRingTex(256, 0.86f, 0.065f, dashed: false);
             _coreMat = new Material(_ringMat);
             _coreMat.SetTexture("_MainTex", coreTex);
             _coreMat.SetColor("_Color", new Color(1f, 0.72f, 0.18f, 0.48f));
             _coreMat.SetFloat("_Intensity", 1.85f);
-            var coreQuad = CreateHorizontalQuad("CoreCaptureRing", _rigRoot, new Vector3(0f, 0.06f, 0f), 1f, _coreMat);
-            _coreRingTf = coreQuad.transform;
+            if (!_decalRings)
+            {
+                var coreQuad = CreateHorizontalQuad("CoreCaptureRing", _rigRoot, new Vector3(0f, 0.06f, 0f), 1f, _coreMat);
+                _coreRingTf = coreQuad.transform;
+            }
 
             // Faint soft-gradient vertical light column (crossed billboards so no hard cylinder silhouette)
             var beamTex = BuildSoftBeamTex(64, 128);
@@ -623,8 +642,67 @@ namespace LR2.Game
         private Transform _outerRingTf;
         private Transform _coreRingTf;
 
+        // ------------------------------------------------------------------ B100 decal rings
+        private bool _decalRings;
+        private UnityEngine.Rendering.HighDefinition.DecalProjector _outerDecal, _coreDecal;
+        private Material _outerDecalBase, _coreDecalBase;
+        private readonly Dictionary<int, Material> _decalMatCache = new Dictionary<int, Material>();
+        private int _decalColorKey = int.MinValue;
+        private const float DecalDepth = 8f; // projects 4 m above and below the anchor: trench floors and raised plinths included
+
+        private static UnityEngine.Rendering.HighDefinition.DecalProjector CreateZoneDecal(string name, Transform parent, Material mat)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // project straight down
+            var dp = go.AddComponent<UnityEngine.Rendering.HighDefinition.DecalProjector>();
+            dp.material = mat;
+            dp.pivot = Vector3.zero;
+            dp.size = new Vector3(2f, 2f, DecalDepth);
+            dp.startAngleFade = 40f;  // keep it on floors; fade out on walls and steep slopes
+            dp.endAngleFade = 70f;
+            dp.drawDistance = 180f;
+            dp.fadeScale = 0.95f;
+            return dp;
+        }
+
+        /// <summary>
+        /// Decal sets cache material colours, so a colour change swaps in a cached material instance per colour (state and team
+        /// colours, quantised) instead of editing the shared one; pulses use the projector's fade factor, which is read per frame.
+        /// </summary>
+        private void UpdateDecalRings(Color col, float prog, ZoneState state, float pulse)
+        {
+            Color q = new Color(Mathf.Round(col.r * 8f) / 8f, Mathf.Round(col.g * 8f) / 8f, Mathf.Round(col.b * 8f) / 8f, 1f);
+            int key = Mathf.RoundToInt(q.r * 8f) | (Mathf.RoundToInt(q.g * 8f) << 4) | (Mathf.RoundToInt(q.b * 8f) << 8);
+            if (key != _decalColorKey)
+            {
+                _decalColorKey = key;
+                _outerDecal.material = DecalMaterial(_outerDecalBase, key, q, 0.92f, 1300f);
+                _coreDecal.material = DecalMaterial(_coreDecalBase, key + 4096, q, 0.95f, 1800f);
+            }
+            _outerDecal.fadeFactor = Mathf.Clamp01(0.85f * pulse + 0.15f);
+            _coreDecal.fadeFactor = Mathf.Clamp01((0.7f + 0.3f * Mathf.Abs(prog)) * pulse);
+        }
+
+        private Material DecalMaterial(Material baseMat, int key, Color c, float alpha, float nits)
+        {
+            if (_decalMatCache.TryGetValue(key, out var m) && m != null) return m;
+            m = new Material(baseMat) { name = baseMat.name + "_" + key, hideFlags = HideFlags.HideAndDontSave };
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", new Color(c.r, c.g, c.b, alpha));
+            if (m.HasProperty("_EmissiveColor")) m.SetColor("_EmissiveColor", c.linear * nits);
+            _decalMatCache[key] = m;
+            return m;
+        }
+
         private void UpdateRingScale()
         {
+            if (_decalRings)
+            {
+                if (_outerDecal != null) _outerDecal.size = new Vector3(_outerRadius * 2f, _outerRadius * 2f, DecalDepth);
+                if (_coreDecal != null) _coreDecal.size = new Vector3(_coreRadius * 2f, _coreRadius * 2f, DecalDepth);
+                return;
+            }
             if (_outerRingTf != null) _outerRingTf.localScale = new Vector3(_outerRadius * 2f, _outerRadius * 2f, 1f);
             if (_coreRingTf != null) _coreRingTf.localScale = new Vector3(_coreRadius * 2f, _coreRadius * 2f, 1f);
         }
@@ -648,8 +726,12 @@ namespace LR2.Game
 
             float pulse = state == ZoneState.Contested ? 0.75f + 0.25f * Mathf.Sin(Time.time * 10f) : 1f;
             if (_bannerMat != null && _bannerMat.HasProperty("_BaseColor")) _bannerMat.SetColor("_BaseColor", col);
-            if (_ringMat != null) _ringMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.34f * pulse));
-            if (_coreMat != null) _coreMat.SetColor("_Color", new Color(col.r, col.g, col.b, (0.42f + 0.32f * Mathf.Abs(prog)) * pulse));
+            if (_decalRings && _outerDecal != null && _coreDecal != null) UpdateDecalRings(col, prog, state, pulse);
+            else
+            {
+                if (_ringMat != null) _ringMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.34f * pulse));
+                if (_coreMat != null) _coreMat.SetColor("_Color", new Color(col.r, col.g, col.b, (0.42f + 0.32f * Mathf.Abs(prog)) * pulse));
+            }
             if (_beamMat != null) _beamMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.15f * pulse));
             if (_sparkMat != null) _sparkMat.SetColor("_Color", new Color(col.r, col.g, col.b, 0.78f));
             if (_zoneLight != null)

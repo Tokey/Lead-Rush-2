@@ -101,6 +101,9 @@ namespace LR2.FX
             return _quadMesh;
         }
 
+        /// <summary>B87: the scrolling distortion vector map, shared with the fire's heat-shimmer particles.</summary>
+        public static Texture2D SharedVectorMap => GetVectorMap();
+
         private static Texture2D GetVectorMap()
         {
             if (_vectorMap != null) return _vectorMap;

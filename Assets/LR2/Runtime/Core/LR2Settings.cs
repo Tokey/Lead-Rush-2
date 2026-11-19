@@ -47,6 +47,8 @@ namespace LR2.Core
         public static bool ShowFps { get => GetB("ShowFps", false); set => SetB("ShowFps", value); }
         public static bool MotionBlur { get => GetB("v2.MotionBlur", false); set => SetB("v2.MotionBlur", value); }
         public static bool FilmGrain { get => GetB("FilmGrain", true); set => SetB("FilmGrain", value); }
+        /// <summary>B96 (user 11-19 00:13): BF6-style minimap at the bottom-left above the health bar (default); off = top-left.</summary>
+        public static bool MinimapBottom { get => GetB("v5.MinimapBottom", true); set => SetB("v5.MinimapBottom", value); }
         public static bool RayTracing { get => GetB("RayTracing", false); set => SetB("RayTracing", value); }
         public static bool HitmarkerSound { get => GetB("HitmarkerSound", true); set => SetB("HitmarkerSound", value); }
         /// <summary>Weapon laser sight. Lasers are enabled for every firearm by default; L or the settings toggle can disable them.</summary>

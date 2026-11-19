@@ -294,6 +294,74 @@ namespace LR2.EditorTools
             Debug.Log("[LR2] FX built (impacts, blood, muzzle flash, tracer, casings, explosion, decals, surface library).");
         }
 
+        /// <summary>
+        /// B100: a capture-zone ring. Writes two textures: <paramref name="path"/>_A (white, alpha = ring + faint fill) for the
+        /// decal's base colour, and _E (ring only, black elsewhere) for its emission, so only the line glows. Edges are
+        /// anti-aliased over ~1.5 px; dashes (when <paramref name="dashes"/> &gt; 0) have crisp anti-aliased ends.
+        /// </summary>
+        private static (Texture2D albedo, Texture2D emission) ZoneRingTexture(string path, int size, float rIn, float rOut, int dashes, float duty, float fill)
+        {
+            var a = new Texture2D(size, size, TextureFormat.RGBA32, false, false);
+            var e = new Texture2D(size, size, TextureFormat.RGBA32, false, false);
+            var pa = new Color32[size * size];
+            var pe = new Color32[size * size];
+            float aa = 1.5f / (size * 0.5f);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float ring = Mathf.Clamp01((r - rIn) / aa + 0.5f) * Mathf.Clamp01((rOut - r) / aa + 0.5f);
+                    if (dashes > 0 && ring > 0f)
+                    {
+                        float phase = (Mathf.Atan2(dy, dx) / (2f * Mathf.PI) + 1f) * dashes;
+                        float f = phase - Mathf.Floor(phase);
+                        float w = aa * dashes / (2f * Mathf.PI * Mathf.Max(r, 0.05f));
+                        ring *= Mathf.Clamp01((duty - f) / w + 0.5f) * Mathf.Clamp01(f / w + 0.5f);
+                    }
+                    // a thin solid hairline just inside a dashed ring keeps the boundary continuous
+                    float hair = dashes > 0 ? Mathf.Clamp01((r - (rIn - 0.010f)) / aa + 0.5f) * Mathf.Clamp01(((rIn - 0.004f) - r) / aa + 0.5f) * 0.7f : 0f;
+                    float line = Mathf.Max(ring, hair);
+                    float inside = r < rIn ? fill * (0.3f + 0.7f * Mathf.Pow(r / rIn, 4f)) : 0f;
+                    float alpha = Mathf.Clamp01(line + inside * (1f - line));
+                    pa[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+                    byte le = (byte)Mathf.RoundToInt(line * 255f);
+                    pe[y * size + x] = new Color32(le, le, le, le);
+                }
+            a.SetPixels32(pa); a.Apply(false, false);
+            e.SetPixels32(pe); e.Apply(false, false);
+            var ta = SaveTexture(a, path + "_A.png", false, true, true);
+            var te = SaveTexture(e, path + "_E.png", false, true, true);
+            foreach (var t in new[] { ta, te })
+            {
+                var imp = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(t)) as TextureImporter;
+                if (imp == null) continue;
+                imp.wrapMode = TextureWrapMode.Clamp;
+                imp.maxTextureSize = size;
+                imp.textureCompression = TextureImporterCompression.CompressedHQ;
+                imp.SaveAndReimport();
+            }
+            return (AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(ta)),
+                    AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(te)));
+        }
+
+        private static Material NewZoneDecal((Texture2D albedo, Texture2D emission) tex)
+        {
+            var m = NewDecal(tex.albedo, Color.white);
+            void F(string p, float v) { if (m.HasProperty(p)) m.SetFloat(p, v); }
+            F("_AffectAlbedo", 1f);
+            F("_AffectNormal", 0f);
+            F("_AffectMetal", 0f);
+            F("_AffectSmoothness", 0f);
+            F("_AffectAO", 0f);
+            F("_AffectEmission", 1f);
+            F("_DecalBlend", 1f);
+            if (m.HasProperty("_EmissiveColorMap")) m.SetTexture("_EmissiveColorMap", tex.emission);
+            if (m.HasProperty("_EmissiveColor")) m.SetColor("_EmissiveColor", Color.white * 1500f);
+            HDMaterial.ValidateMaterial(m);
+            return m;
+        }
+
         private static Material NewDecal(Texture tex, Color color)
         {
             var shader = Shader.Find("HDRP/Decal");
@@ -1303,6 +1371,17 @@ namespace LR2.EditorTools
             lib.barrelSmoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_BarrelSmoke.mat");
             lib.barrelSmokeTiles = smokeTiles;
             lib.muzzleHeat = SaveMaterial(NewParticle(softDot, new Color(1f, 0.12f, 0.015f, 0.2f), 1f, true), res + "/M_FX_MuzzleHeat.mat");
+            lib.fireGlow = SaveMaterial(NewParticle(softDot, Color.white, 1.35f, true), res + "/M_FX_FireGlow.mat");
+            // B87 soft particles: fade near geometry so flames and smoke do not cut hard lines into barrels and walls
+            foreach (var (pm, soft) in new[] { (lib.fire, 0.18f), (lib.smoke, 0.45f), (lib.embers, 0.05f), (lib.fireGlow, 0.35f), (lib.mist, 0.8f), (lib.barrelSmoke, 0.06f) })
+                if (pm != null && pm.HasProperty("_SoftFade")) { pm.SetFloat("_SoftFade", soft); EditorUtility.SetDirty(pm); }
+
+            // B100 (user 11-19 00:13: the CTF zone effect "is HORRIBLE. use something sharp, that adheres to the ground, not just
+            // floats above holes"): crisp ring textures drawn as HDRP decals, so the marking lies on the ground it is projected on
+            lib.zoneRingOuter = SaveMaterial(NewZoneDecal(ZoneRingTexture(res + "/T_ZoneRingOuter", 2048, 0.950f, 0.985f, 60, 0.6f, 0.11f)),
+                res + "/M_FX_ZoneRingOuter.mat");
+            lib.zoneRingCore = SaveMaterial(NewZoneDecal(ZoneRingTexture(res + "/T_ZoneRingCore", 1024, 0.885f, 0.975f, 0, 1f, 0.18f)),
+                res + "/M_FX_ZoneRingCore.mat");
 
             // HDRP distortion-only template: the heat haze needs HDRP's distortion pass, so it stays on HDRP/Unlit, but as a
             // validated asset its shader variant is part of the build

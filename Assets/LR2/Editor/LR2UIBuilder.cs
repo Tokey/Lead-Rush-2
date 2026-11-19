@@ -489,7 +489,8 @@ namespace LR2.EditorTools
             s.bodycamMotion = SliderColRow(gfxTab, "BODYCAM MOTION", leftCol, y, out s.bodycamMotionValue); y -= step;
             s.bodycamLook = ToggleColRow(gfxTab, "BODYCAM LENS LOOK", leftCol, y); y -= step;
             s.motionBlur = ToggleColRow(gfxTab, "MOTION BLUR", leftCol, y); y -= step;
-            s.filmGrain = ToggleColRow(gfxTab, "FILM GRAIN", leftCol, y);
+            s.filmGrain = ToggleColRow(gfxTab, "FILM GRAIN", leftCol, y); y -= step;
+            s.minimapBottom = ToggleColRow(gfxTab, "MINIMAP ABOVE HEALTH (OFF: TOP-LEFT)", leftCol, y); // B96
 
             AddSectionHeader(gfxTab, "GfxRight", "QUALITY, UPSCALER & DISPLAY", rightCol);
             y = startY;
