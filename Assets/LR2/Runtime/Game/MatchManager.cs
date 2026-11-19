@@ -39,13 +39,13 @@ namespace LR2.Game
         [SerializeField] private float suddenDeathSeconds = 60f;
         [SerializeField] private string[] botCallsigns =
         {
-            "xX_NoScopeGrandma_Xx", "TaxEvader420", "MomPulledThePlug", "WiFi_On_A_Potato",
-            "CrouchSpammer99", "KneecapCollector", "ForgotToReload", "200PingWarrior",
+            "xX_NoScopeGrandma_Xx", "TaxFormTerror", "MomPulledThePlug", "WiFi_On_A_Potato",
+            "CrouchSpammer99", "KneeSlapperKing", "ForgotToReload", "200PingWarrior",
             "TouchGrass_Later", "AimAssist_Enjoyer", "Campfire_CEO", "ControllerDisconnected",
-            "JohnWickFromWish", "LagSwitch_Larry", "TacticalSnackBreak", "SentToLobby",
+            "BudgetActionHero", "LagSpike_Larry", "TacticalSnackBreak", "SentToLobby",
             "HipfireHero", "CheckMyKillcam", "FreeKD_Delivery", "SweatyPalms_TTV",
             "HDMI_Unplugged", "FriendlyFire_Enjoyer", "ProneInA_Bush", "OneMoreGameMom",
-            "SkillIssue_Official", "MousepadRanOut", "AltF4_ForBoost", "DoritoDustFingers",
+            "SkillIssue_Official", "MousepadRanOut", "AltTabTactician", "CheesyDustFingers",
             "LaggingOnPurpose", "MyCatWalkedOnWASD", "ReloadAfter1Bullet", "LootGoblin_77"
         };
 
@@ -264,22 +264,25 @@ namespace LR2.Game
             {
                 string[] fallback =
                 {
-                    "xX_NoScopeGrandma_Xx", "TaxEvader420", "MomPulledThePlug", "WiFi_On_A_Potato",
-                    "CrouchSpammer99", "KneecapCollector", "ForgotToReload", "200PingWarrior",
+                    "xX_NoScopeGrandma_Xx", "TaxFormTerror", "MomPulledThePlug", "WiFi_On_A_Potato",
+                    "CrouchSpammer99", "KneeSlapperKing", "ForgotToReload", "200PingWarrior",
                     "TouchGrass_Later", "AimAssist_Enjoyer", "Campfire_CEO", "ControllerDisconnected",
-                    "JohnWickFromWish", "LagSwitch_Larry", "TacticalSnackBreak", "SentToLobby",
+                    "BudgetActionHero", "LagSpike_Larry", "TacticalSnackBreak", "SentToLobby",
                     "HipfireHero", "CheckMyKillcam", "FreeKD_Delivery", "SweatyPalms_TTV",
                     "HDMI_Unplugged", "FriendlyFire_Enjoyer", "ProneInA_Bush", "OneMoreGameMom",
-                    "SkillIssue_Official", "MousepadRanOut", "AltF4_ForBoost", "DoritoDustFingers",
+                    "SkillIssue_Official", "MousepadRanOut", "AltTabTactician", "CheesyDustFingers",
                     "LaggingOnPurpose", "MyCatWalkedOnWASD", "ReloadAfter1Bullet", "LootGoblin_77"
                 };
-                bool useSerialized = botCallsigns != null && botCallsigns.Length >= 8 && !botCallsigns[0].StartsWith("BOT-");
-                string[] src = useSerialized ? botCallsigns : fallback;
+                // the code list is the one source of names (the scenes carry an older serialized copy with edgier tags)
+                string[] src = fallback;
                 // Weighted shuffle without repeats (Efraimidis-Spirakis keys u^(1/w)): featured tags come up far more often,
                 // every old tag stays in the pool, and no two bots share a name in one match.
-                var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length);
+                var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length + FriendCallsigns.Length);
                 var seen = new HashSet<string>();
                 if (!string.IsNullOrWhiteSpace(LR2Settings.PlayerName)) seen.Add(LR2Settings.PlayerName); // never a bot with your name
+                // friends first, in random order (keys above 1 beat every weighted key, which stay in 0..1)
+                foreach (string n in FriendCallsigns)
+                    if (seen.Add(n)) pool.Add((n, 1f + Random.value));
                 foreach (string n in FeaturedCallsigns)
                     if (seen.Add(n)) pool.Add((n, Mathf.Pow(Mathf.Max(1e-6f, Random.value), 1f / FeaturedWeight)));
                 foreach (string n in src)
@@ -291,10 +294,16 @@ namespace LR2.Game
             return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
 
-        // User 11-18 14:10: featured gamer tags, weighted 4x. User 11-19: four friends' tags removed for good (no replacements).
+        // User 11-19: the developer's friends play under friendly, funny tags with no real names in them, and are dealt first
+        // (in random order), so with six or more bots every one of them is in the match.
+        private static readonly string[] FriendCallsigns =
+        {
+            "EnchantedP0tato", "PixelPhoenix", "SirSnipesALot", "WaffleWarrior", "CtrlAltDefeat", "TacticalTaco"
+        };
+        // User 11-18 14:10: favourite tags, weighted 4x in the shuffle after the friends.
         private static readonly string[] FeaturedCallsigns =
         {
-            "EnchantedP0tato", "xX_Tokey_Xx", "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
+            "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
         };
         private const float FeaturedWeight = 4f;
 
