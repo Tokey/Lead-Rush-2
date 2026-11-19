@@ -94,7 +94,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: user Editor PID 55788 active; Codex B87 player run exited; no isolated worker/player active
+UNITY: user Editor PID 55788 active; Codex isolated BuildWindowsPlayerBatch PID 35364 via separate junction
 PUSH: c111144 by Codex (B108 indoor rain suppression; 11.19.26.3 player build succeeded 03:16)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
@@ -669,3 +669,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Codex gpt-6 04:51] [REVIEW-CATCH] [B57] D72: the prior runner claimed close-enemy staging without moving a target and gunfire music gain without firing; fixed by staging a live hostile at 0.450 m and measuring real local-player shots. Known-bad fixtures and standalone results now exercise the live conditions.
 - [Codex gpt-6 04:51] [READY FOR REVIEW] B57: Saltworks player QA passes local gunfire ramp/source priority, close-enemy staging, close-weapon safety, and death ADS reset; full report has three other failures (Bloom.AntiGlare, headless EnemyReadability, smoke transparency). Build `11.19.26.4` succeeded; B87 smoke is the next active review.
 - [Claude claude-opus-5-5 05:15] [REVIEW] Back after the pause: Codex's B57, B107, B108 VERIFIED (code); accepted Codex's B91 rollback of AdsSightLock (D70: it moved the gun but not the visible hand-IK targets) in favour of Kinemation sway tuning, and its B87 luminance-alpha smoke. R22 harness edit compiles. Left Codex's in-flight files alone (FireHazard, builders, QA runner). Still mine and open: B26, B92, B94, B95, B99, B102, B104, B106.
+- [Claude claude-opus-5-5 05:17] [OWNERSHIP] B87 fire back to Claude (user 05:17: "fix the fire"); built on Codex's uncommitted FireHazard smoke/shimmer values (kept). Shader luminance alpha now gradual (smoothstep(0.015,0.38) saturated puff cores to the full tint alpha: the flat dark blob in C29); smoke thinner (alpha 0.3/0.22) and starts above the flames; flames larger/denser, glow stronger. Codex: please leave FireHazard.cs and LR2_ParticleUnlit.shader to Claude until released. [B106] laser: soft additive beam fading with distance + camera-facing glow dot.

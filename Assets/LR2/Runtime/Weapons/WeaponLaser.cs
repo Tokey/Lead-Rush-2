@@ -37,24 +37,32 @@ namespace LR2.Weapons
             beamObject.transform.SetParent(transform, false);
             _beam = beamObject.AddComponent<LineRenderer>();
             _beam.positionCount = 2;
+            // B106 (user 11-19 "improve the look of the laser"): soft additive core instead of a solid opaque line; bright at the
+            // muzzle, fading with distance like a real visible laser in haze
             _beam.startWidth = BeamWidth;
-            _beam.endWidth = BeamWidth * 0.78f;
+            _beam.endWidth = BeamWidth * 0.6f;
+            _beam.textureMode = LineTextureMode.Stretch;
+            var fade = new Gradient();
+            fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                         new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.55f, 0.35f), new GradientAlphaKey(0.18f, 1f) });
+            _beam.colorGradient = fade;
             _beam.numCapVertices = 2;
             _beam.numCornerVertices = 2;
             _beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _beam.receiveShadows = false;
-            _beamMaterial = CreateMaterial(EnemyBeamColor);
+            _beamMaterial = CreateGlowMaterial(EnemyBeamColor, BeamTexture(), 1.6f) ?? CreateMaterial(EnemyBeamColor);
             _beam.sharedMaterial = _beamMaterial;
 
-            var dotObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            // B106: a camera-facing glow (hot core + soft halo) instead of an opaque 3 cm ball
+            var dotObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
             dotObject.name = "LaserDot";
             dotObject.transform.SetParent(transform, false);
-            dotObject.transform.localScale = Vector3.one * 0.03f;
+            dotObject.transform.localScale = Vector3.one * 0.07f;
             var collider = dotObject.GetComponent<Collider>();
             if (collider != null) Destroy(collider);
             _dot = dotObject.transform;
             _dotRenderer = dotObject.GetComponent<Renderer>();
-            _dotMaterial = CreateMaterial(EnemyDotColor);
+            _dotMaterial = CreateGlowMaterial(EnemyDotColor, DotTexture(), 2.6f) ?? CreateMaterial(EnemyDotColor);
             _dotRenderer.sharedMaterial = _dotMaterial;
             SetVisible(false);
         }
@@ -143,7 +151,9 @@ namespace LR2.Weapons
             if (hitFound)
             {
                 _dot.position = end - muzzle.forward * 0.006f;
-                _dot.rotation = Quaternion.LookRotation(-muzzle.forward, Vector3.up);
+                var viewer = Camera.main;
+                _dot.rotation = viewer != null ? Quaternion.LookRotation(viewer.transform.forward, viewer.transform.up)
+                                               : Quaternion.LookRotation(-muzzle.forward, Vector3.up);
             }
             SetVisible(true, hitFound);
         }
@@ -159,6 +169,60 @@ namespace LR2.Weapons
         {
             if (_beam != null) _beam.enabled = visible;
             if (_dotRenderer != null) _dotRenderer.enabled = visible && showDot;
+        }
+
+        private static Texture2D _beamTex, _dotTex;
+
+        private static Texture2D BeamTexture()
+        {
+            if (_beamTex != null) return _beamTex;
+            const int w = 4, h = 32;
+            _beamTex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                float v = (y + 0.5f) / h * 2f - 1f;
+                float a = Mathf.Exp(-v * v * 9f) * 0.75f + Mathf.Exp(-v * v * 60f) * 0.25f; // soft halo + thin hot core
+                for (int x = 0; x < w; x++) px[y * w + x] = new Color(1f, 1f, 1f, a);
+            }
+            _beamTex.SetPixels(px);
+            _beamTex.Apply(false, true);
+            return _beamTex;
+        }
+
+        private static Texture2D DotTexture()
+        {
+            if (_dotTex != null) return _dotTex;
+            const int n = 64;
+            _dotTex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+            var px = new Color[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float u = (x + 0.5f) / n * 2f - 1f, v = (y + 0.5f) / n * 2f - 1f;
+                    float r2 = u * u + v * v;
+                    float a = Mathf.Clamp01(Mathf.Exp(-r2 * 60f) + Mathf.Exp(-r2 * 8f) * 0.45f + Mathf.Exp(-r2 * 2.5f) * 0.12f);
+                    float white = Mathf.Exp(-r2 * 90f);                        // white-hot centre, coloured halo
+                    px[y * n + x] = new Color(1f, 1f, 1f, a) * new Color(1f, 1f, 1f, 1f) + new Color(white, white, white, 0f) * 0f;
+                }
+            _dotTex.SetPixels(px);
+            _dotTex.Apply(false, true);
+            return _dotTex;
+        }
+
+        /// <summary>B106: additive glow on the keyword-free LR2/ParticleUnlit shader (safe in player builds); null if it is missing.</summary>
+        private static Material CreateGlowMaterial(Color color, Texture2D tex, float intensity)
+        {
+            var shader = Shader.Find("LR2/ParticleUnlit");
+            if (shader == null) return null;
+            var m = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            m.SetTexture("_MainTex", tex);
+            m.SetColor("_Color", color);
+            m.SetFloat("_Intensity", intensity);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            m.renderQueue = 3100;
+            return m;
         }
 
         private static Material CreateMaterial(Color color)

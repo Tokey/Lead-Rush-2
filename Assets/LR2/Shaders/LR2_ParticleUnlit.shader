@@ -13,6 +13,7 @@ Shader "LR2/ParticleUnlit"
         [Toggle] _PremultiplyAlpha ("Premultiply alpha into color (for additive)", Float) = 0
         _SoftFade ("Soft particle fade distance (m, 0 = off)", Float) = 0
         [Toggle] _LuminanceToAlpha ("Use texture luminance as alpha", Float) = 0
+        _LuminanceAlphaScale ("Luminance alpha scale", Range(0, 1)) = 1
     }
 
     SubShader
@@ -50,6 +51,7 @@ Shader "LR2/ParticleUnlit"
                 float _PremultiplyAlpha;
                 float _SoftFade;
                 float _LuminanceToAlpha;
+                float _LuminanceAlphaScale;
             CBUFFER_END
 
             struct Attributes
@@ -89,7 +91,7 @@ Shader "LR2/ParticleUnlit"
                     // Particle Pack flipbooks are RGB on black. Their alpha can import as fully opaque, so shape the
                     // smoke from RGB luminance directly and preserve particle/material tint alpha.
                     float luma = dot(tex.rgb, float3(0.2126, 0.7152, 0.0722));
-                    c.a = smoothstep(0.015, 0.38, luma) * i.color.a * _Color.a;
+                    c.a = smoothstep(0.015, 0.38, luma) * i.color.a * _Color.a * _LuminanceAlphaScale;
                 }
                 c.rgb *= _Intensity;
                 if (_PremultiplyAlpha > 0.5) c.rgb *= c.a;
