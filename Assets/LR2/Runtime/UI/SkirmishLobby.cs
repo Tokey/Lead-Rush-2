@@ -72,20 +72,22 @@ namespace LR2.UI
             Stretch(root);
             Group = GetComponent<CanvasGroup>();
 
-            var shade = Img(root, "Shade", new Color(0.015f, 0.02f, 0.025f, 0.86f));
-            Anchor(shade.rectTransform, 0f, 0f, 0.715f, 1f);
-            var edge = Img(root, "ShadeEdge", new Color(0.015f, 0.02f, 0.025f, 0.45f));
-            Anchor(edge.rectTransform, 0.715f, 0f, 0.75f, 1f);
+            // centred (user 11-19 "why is the skirmish menu on the side?"); a lighter full-screen shade keeps the
+            // slow-motion background readable around the panels
+            var shade = Img(root, "Shade", new Color(0.015f, 0.02f, 0.025f, 0.62f));
+            Anchor(shade.rectTransform, 0f, 0f, 1f, 1f);
+            var band = Img(root, "ShadeBand", new Color(0.015f, 0.02f, 0.025f, 0.35f));
+            Anchor(band.rectTransform, 0.12f, 0f, 0.88f, 1f);
 
             var title = Label(root, "SKIRMISH", 66, Text, true);
             title.overflowMode = TextOverflowModes.Overflow; // ellipsis hid the whole line when the box ran shorter than the font
-            Anchor(title.rectTransform, 0.03f, 0.885f, 0.5f, 0.965f);
+            Anchor(title.rectTransform, 0.135f, 0.885f, 0.6f, 0.965f);
             var sub = Label(root, "ANY MATCH YOU WANT  ·  UP TO 20 BOTS  ·  2, 3 OR 4 TEAMS  ·  AI VS AI TEST BENCH", 19, Dim);
-            Anchor(sub.rectTransform, 0.031f, 0.852f, 0.7f, 0.89f);
+            Anchor(sub.rectTransform, 0.136f, 0.852f, 0.865f, 0.89f);
 
             // presets: icon tiles
             var presets = Rect(root, "Presets");
-            Anchor(presets.rectTransform(), 0.03f, 0.775f, 0.70f, 0.845f);
+            Anchor(presets.rectTransform(), 0.135f, 0.775f, 0.865f, 0.845f);
             var ph = presets.AddComponent<HorizontalLayoutGroup>();
             ph.spacing = 10f; ph.childForceExpandWidth = true; ph.childControlWidth = true; ph.childControlHeight = true;
             for (int i = 0; i < SkirmishSetup.Presets.Length; i++)
@@ -100,13 +102,13 @@ namespace LR2.UI
             BuildMatchColumn(root);
 
             var back = IconBtn(root, "back", "BACK", 22, () => OnBack?.Invoke(), new Color(1f, 1f, 1f, 0.08f), Text);
-            Anchor((RectTransform)back.transform, 0.03f, 0.035f, 0.14f, 0.1f);
+            Anchor((RectTransform)back.transform, 0.135f, 0.035f, 0.245f, 0.1f);
             _startButton = IconBtn(root, "play", "START", 30, Start_, new Color(Accent.r, Accent.g, Accent.b, 0.9f), new Color(0.05f, 0.05f, 0.05f));
-            Anchor((RectTransform)_startButton.transform, 0.5f, 0.03f, 0.70f, 0.11f);
+            Anchor((RectTransform)_startButton.transform, 0.665f, 0.03f, 0.865f, 0.11f);
             _startButton.GetComponentInChildren<TMP_Text>().color = new Color(0.05f, 0.05f, 0.05f);
             _summary = Label(root, "", 19, Dim);
             _summary.alignment = TextAlignmentOptions.MidlineRight;
-            Anchor(_summary.rectTransform, 0.15f, 0.035f, 0.49f, 0.1f);
+            Anchor(_summary.rectTransform, 0.255f, 0.035f, 0.655f, 0.1f);
 
             Rebuild();
         }
@@ -114,7 +116,7 @@ namespace LR2.UI
         private void BuildRoster(RectTransform root)
         {
             var panel = Img(root, "Roster", Panel);
-            Anchor(panel.rectTransform, 0.03f, 0.125f, 0.462f, 0.76f);
+            Anchor(panel.rectTransform, 0.135f, 0.125f, 0.567f, 0.76f);
             var pr = panel.rectTransform;
 
             Icon(pr, "tdm", Accent, 0.025f, 0.915f, 0.07f, 0.985f);
@@ -177,7 +179,7 @@ namespace LR2.UI
         private void BuildMatchColumn(RectTransform root)
         {
             var panel = Img(root, "Match", Panel);
-            Anchor(panel.rectTransform, 0.472f, 0.125f, 0.70f, 0.76f);
+            Anchor(panel.rectTransform, 0.577f, 0.125f, 0.865f, 0.76f);
             var pr = panel.rectTransform;
             Icon(pr, "mode", Accent, 0.04f, 0.915f, 0.12f, 0.985f);
             var t = Label(pr, "MATCH", 25, Text, true);
