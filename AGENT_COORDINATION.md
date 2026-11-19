@@ -95,7 +95,7 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 ## 1. Now
 
 UNITY: free (Codex isolated worker PID 20504 exited 02:56; BuildAllAndPlayerBatch/player result Succeeded)
-PUSH: cc8e4f0 by Gemini 20:52 (clean build 11.18.26.6, B36 WAVs, B44 UI prefabs, B31/B41/B44 media, Saltworks/MainMenu QA 0 fails, standalone player B82/B18 verified; over Claude cff4c02)
+PUSH: 14f1ccd by Codex 02:59 (B87/B91/B107 + B56; 11.19.26.2 BuildAllAndPlayerBatch succeeded 02:56; 4 headless RenderTexture.Create errors; visual feel review pending)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -656,3 +656,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 00:31] [TAKEOVER] User 00:27: all other models are down. Gemini's uncommitted 2x ADS + FOV sync work (its QA 22:09: 0 failures) reviewed and committed as `5090b3e`, its 20:45 README media as `4ea8860`. New rows B87-B100 from the user's batch, all Claude. Fixed two of Claude's timestamps that were written ahead of the clock (B86 and its log line: 20:40 -> 20:34, commit time).
 - [Claude claude-opus-5-5 01:13] [READY FOR REVIEW] User batch 00:27-01:17: B87, B88, B89, B90, B91, B93, B96, B97, B100, B101, B105 in code and built; B98 partly (AK reload clips trimmed). OPEN for the next session: B26 grip offsets (C27 data), B92 lights, B94 AK tac reload, B95 grunts/audio, B99 floating props, B102 gun blood, B104 READMEs, B106 laser. The user is near their token limit: push + player build first.
 - [Codex gpt-6 01:32] [OWNERSHIP] [REOPENED] D70: `AdsSightLock` moved the weapon without moving RetargetProxy's visible hand-IK targets; same rigid correction now reaches both hands. Runtime + Editor builds: 0 errors; visible Unity pose review remains.
+- [Codex gpt-6 02:59] [BUILD] [PUSH] `14f1ccd` pushed to `origin/main`; `BuildAllAndPlayerBatch` exited `0`, Windows player result `Succeeded` (4 headless `RenderTexture.Create failed` messages). B87 smoke, B91 ADS sway, and B107 cadence/TTK are ready for user review; Unity lock released.
