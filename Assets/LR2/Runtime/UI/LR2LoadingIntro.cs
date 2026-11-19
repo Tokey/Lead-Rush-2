@@ -82,6 +82,58 @@ namespace LR2.UI
             Instance.ShowImmediate(0.15f);
         }
 
+        /// <summary>B31: Shows or hides the starter title screen on demand for deterministic README media capture.</summary>
+        public static void SetCapturePreviewTitleScreen(bool visible)
+        {
+            if (visible)
+            {
+                if (Instance == null)
+                {
+                    var go = new GameObject("[LR2 LoadingIntro]");
+                    DontDestroyOnLoad(go);
+                    Instance = go.AddComponent<LR2LoadingIntro>();
+                }
+                if (Instance._activeRoutine != null)
+                {
+                    Instance.StopCoroutine(Instance._activeRoutine);
+                    Instance._activeRoutine = null;
+                }
+                Instance._covering = true;
+                Instance._titlePromptActive = true;
+                if (Instance._group != null)
+                {
+                    Instance._group.alpha = 1f;
+                    Instance._group.blocksRaycasts = true;
+                }
+                if (Instance._bg != null) Instance._bg.color = new Color(0.032f, 0.041f, 0.052f, 0.94f);
+                if (Instance._eyebrowText != null)
+                {
+                    Instance._eyebrowText.text = "TACTICAL COMBAT // PRE-ALPHA";
+                    Instance._eyebrowText.gameObject.SetActive(true);
+                }
+                if (Instance._titleText != null) Instance._titleText.text = "LEADRUSH II";
+                if (Instance._statusText != null) Instance._statusText.text = "DEPLOYMENT READY";
+                if (Instance._tipText != null) Instance._tipText.text = Tips[0];
+                if (Instance._barBg != null) Instance._barBg.gameObject.SetActive(true);
+                if (Instance._progressFill != null) Instance._progressFill.fillAmount = 1f;
+            }
+            else if (Instance != null)
+            {
+                if (Instance._activeRoutine != null)
+                {
+                    Instance.StopCoroutine(Instance._activeRoutine);
+                    Instance._activeRoutine = null;
+                }
+                if (Instance._group != null)
+                {
+                    Instance._group.alpha = 0f;
+                    Instance._group.blocksRaycasts = false;
+                }
+                Instance._titlePromptActive = false;
+                Instance._covering = false;
+            }
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }

@@ -1023,6 +1023,12 @@ namespace LR2.EditorTools
                         mm.SelectMap(0); // Saltworks
                         LR2Settings.LaserEnabled = true;
                         LR2Settings.BodycamMotion = 0f;
+                        // B31: Capture the starter title screen cleanly first, then dismiss it before main_menu_hero.png
+                        LR2LoadingIntro.SetCapturePreviewTitleScreen(true);
+                        yield return new WaitForSecondsRealtime(0.25f);
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "title_screen.png"));
+                        LR2LoadingIntro.SetCapturePreviewTitleScreen(false);
+
                         // Wait for the boot intro to finish fading: the 11-18 10:12 hero caught "LEADRUSH II / DEPLOYMENT READY"
                         // at half opacity over the menu (Claude 10:30). Then let auto-exposure settle.
                         float tIntro = Time.realtimeSinceStartup;
@@ -1041,12 +1047,13 @@ namespace LR2.EditorTools
                             yield return new WaitForSecondsRealtime(0.25f);
                         }
 
-                        // 1c. Settings Steppers panel
+                        // 1c. Settings Steppers panel (B44 bright amber checkbox polish + Camo-bust filename)
                         if (mm.settingsButton != null)
                         {
                             mm.settingsButton.onClick.Invoke();
                             yield return new WaitForSecondsRealtime(0.4f);
                             yield return SaveScreenPng(Path.Combine(MediaDir, "settings_graphics.png"));
+                            yield return SaveScreenPng(Path.Combine(MediaDir, "settings_graphics_v2.png"));
                             if (mm.settingsBackButton != null) mm.settingsBackButton.onClick.Invoke();
                             yield return new WaitForSecondsRealtime(0.25f);
                         }
@@ -1198,6 +1205,38 @@ namespace LR2.EditorTools
                     }
                     _cmd.fire = false;
                     _cmd.aim = false;
+
+                    // B41: Capture active CTF Flag Zone (feathered rings, capture arc, light column, sparks, operators contesting)
+                    var flagZone = FlagZoneController.Instance;
+                    if (flagZone != null)
+                    {
+                        Vector3 fPos = flagZone.ActiveFlagPosition;
+                        if (ally != null)
+                        {
+                            var ac = ally.GetComponent<SoldierController>();
+                            Vector3 ap = GroundAt(fPos + new Vector3(-1.8f, 0f, -1.2f));
+                            ac.Movement.Teleport(ap);
+                            ac.transform.LookAt(new Vector3(fPos.x + 2f, ap.y, fPos.z + 1.5f));
+                            ally.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(true);
+                        }
+                        if (enemy != null)
+                        {
+                            var ec = enemy.GetComponent<SoldierController>();
+                            Vector3 ep = GroundAt(fPos + new Vector3(2.4f, 0f, 1.6f));
+                            ec.Movement.Teleport(ep);
+                            ec.transform.LookAt(new Vector3(fPos.x - 1.5f, ep.y, fPos.z - 1f));
+                            enemy.GetComponent<SoldierVisuals>()?.ApplyMaterialsNow(false);
+                        }
+                        PlaceOnClearVantage(
+                            soldier,
+                            fPos + Vector3.up * 1.15f,
+                            new[] { 10.5f, 13.5f, 8.2f, 16.0f },
+                            new[] { 30f, -30f, 145f, -145f, 85f, -85f, 0f, 180f },
+                            fPos + new Vector3(-9f, 2f, -9f),
+                            fPos + Vector3.up * 1.15f);
+                        yield return new WaitForSecondsRealtime(0.75f);
+                        yield return SaveScreenPng(Path.Combine(MediaDir, "ctf_flag_zone.png"));
+                    }
 
                     // Additional Saltworks atmospheric shots (fog + fire barrel lighting)
                     yield return CaptureMapAtmosphericShots(

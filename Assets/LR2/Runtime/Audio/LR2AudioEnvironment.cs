@@ -38,6 +38,11 @@ namespace LR2.Audio
 
         private void Start()
         {
+            // B36: Ensure every combat map gets the spatialized war-torn horizon ambience layer (far-off artillery / metal wind)
+            string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (!string.IsNullOrEmpty(sceneName) && !sceneName.Contains("MainMenu") && FindAnyObjectByType<AmbientOneShots>() == null)
+                gameObject.AddComponent<AmbientOneShots>();
+
             var loops = ambienceLoops;
             if ((loops == null || loops.Length == 0) && LR2CommonSounds.Instance != null) loops = LR2CommonSounds.Instance.ambienceLoops;
             if (loops == null) return;

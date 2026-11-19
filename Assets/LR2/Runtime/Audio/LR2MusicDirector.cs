@@ -29,14 +29,16 @@ namespace LR2.Audio
         private AudioSource _tensionSrc;
         private AudioSource _combatSrc;
         private AudioSource _drumrollSrc;
+        private AudioSource _brassSurgeSrc;
         private AudioLowPassFilter _calmLpf, _tensionLpf, _combatLpf;
 
-        private AudioClip _menuClip, _calmClip, _tensionClip, _combatClip, _drumrollClip;
+        private AudioClip _menuClip, _calmClip, _tensionClip, _combatClip, _drumrollClip, _brassSurgeClip;
         private bool _isMenuScene;
         private float _intensity;
         private float _targetIntensity;
         private float _combatHoldUntil;
         private float _nextDrumrollAt;
+        private float _nextBrassSurgeAt;
         private float _nextProximityScan;
         private float _proximityFloor;
         private Combatant _player;
@@ -51,18 +53,21 @@ namespace LR2.Audio
         public float TensionVolume => _tensionSrc != null ? _tensionSrc.volume : 0f;
         public float CombatVolume => _combatSrc != null ? _combatSrc.volume : 0f;
         public float LastDrumrollTime { get; private set; } = -10f;
+        public float LastBrassSurgeTime { get; private set; } = -10f;
+        public bool HasWarTornBrassCue => _brassSurgeClip != null && _brassSurgeSrc != null;
         public float MenuVolume => _menuSrc != null ? _menuSrc.volume : 0f;
         public float EffectiveTotalGain => _isMenuScene ? MenuVolume : (CalmVolume + TensionVolume * 0.75f + CombatVolume * 0.85f);
         public AudioSource[] MusicSources
         {
             get
             {
-                var list = new System.Collections.Generic.List<AudioSource>(5);
+                var list = new System.Collections.Generic.List<AudioSource>(6);
                 if (_menuSrc != null) list.Add(_menuSrc);
                 if (_calmSrc != null) list.Add(_calmSrc);
                 if (_tensionSrc != null) list.Add(_tensionSrc);
                 if (_combatSrc != null) list.Add(_combatSrc);
                 if (_drumrollSrc != null) list.Add(_drumrollSrc);
+                if (_brassSurgeSrc != null) list.Add(_brassSurgeSrc);
                 return list.ToArray();
             }
         }
@@ -174,6 +179,42 @@ namespace LR2.Audio
             if (drumLpf != null) { drumLpf.enabled = true; drumLpf.cutoffFrequency = 4600f; }
             _drumrollClip = BuildFirefightDrumrollClip();
             _drumrollSrc.clip = _drumrollClip;
+
+            _brassSurgeSrc = CreateMusicSource("Music_WarBrassSurge", out var brassLpf);
+            _brassSurgeSrc.loop = false;
+            _brassSurgeSrc.priority = 10;
+            if (brassLpf != null) { brassLpf.enabled = true; brassLpf.cutoffFrequency = 950f; }
+            _brassSurgeClip = BuildWarBrassSurgeClip();
+            _brassSurgeSrc.clip = _brassSurgeClip;
+        }
+
+        private static AudioClip BuildWarBrassSurgeClip()
+        {
+            const int sr = 44100;
+            const float dur = 1.25f;
+            int n = Mathf.RoundToInt(sr * dur);
+            float[] data = new float[n];
+            float lp = 0f;
+            float lpAlpha = Mathf.Clamp01(2f * Mathf.PI * 820f / sr);
+            // D2 (73.42 Hz) + A2 (110 Hz) + Phrygian b2 Eb3 (155.56 Hz) gritty bowed brass power swell + sub boom
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)sr;
+                float swell = Mathf.Clamp01(t / 0.14f) * Mathf.Exp(-Mathf.Max(0f, t - 0.14f) * 2.1f);
+                float subF = Mathf.Lerp(76f, 36.71f, Mathf.Clamp01(t * 4.5f));
+                float sub = Mathf.Sin(2f * Mathf.PI * subF * t) * Mathf.Exp(-t * 4.2f) * 0.55f;
+                float sawD = 2f * ((73.42f * t) - Mathf.Floor(73.42f * t)) - 1f;
+                float sawA = 2f * ((110.0f * t) - Mathf.Floor(110.0f * t)) - 1f;
+                float sawEb = 2f * ((155.56f * t) - Mathf.Floor(155.56f * t)) - 1f;
+                float brass = (float)System.Math.Tanh((sawD * 0.55f + sawA * 0.42f + sawEb * 0.24f * Mathf.Clamp01(t * 2f)) * 1.85f) * swell * 0.62f;
+                float raw = sub + brass;
+                lp += lpAlpha * (raw - lp);
+                float tail = Mathf.Clamp01((dur - t) / 0.14f);
+                data[i] = Mathf.Clamp(lp * 0.72f * tail, -0.78f, 0.78f);
+            }
+            var clip = AudioClip.Create("LR2_WarBrassSurge", n, 1, sr, false);
+            clip.SetData(data, 0);
+            return clip;
         }
 
         private static AudioClip BuildFirefightDrumrollClip()
@@ -278,6 +319,14 @@ namespace LR2.Audio
                 LastDrumrollTime = Time.unscaledTime;
                 _drumrollSrc.volume = combatCeiling * LR2Settings.MusicVolume * 0.72f;
                 _drumrollSrc.PlayOneShot(_drumrollClip);
+            }
+            if (_brassSurgeSrc != null && _brassSurgeClip != null && Time.unscaledTime >= _nextBrassSurgeAt &&
+                ((_targetIntensity >= 0.72f && prevTarget < 0.65f) || impulse >= 0.48f))
+            {
+                _nextBrassSurgeAt = Time.unscaledTime + 10.0f;
+                LastBrassSurgeTime = Time.unscaledTime;
+                _brassSurgeSrc.volume = combatCeiling * LR2Settings.MusicVolume * 0.62f;
+                _brassSurgeSrc.PlayOneShot(_brassSurgeClip);
             }
         }
 

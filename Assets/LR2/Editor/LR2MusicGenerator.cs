@@ -122,8 +122,9 @@ namespace LR2.EditorTools
         {
             float[] L = new float[TotalSamples];
             float[] R = new float[TotalSamples];
-            float lpL = 0f, lpR = 0f, padLpL = 0f, padLpR = 0f;
+            float lpL = 0f, lpR = 0f, padLpL = 0f, padLpR = 0f, radioLp = 0f, radioHp = 0f, radioPrev = 0f;
             float[] voicePhases = new float[8];
+            var radioRng = new System.Random(1939);
 
             for (int i = 0; i < TotalSamples; i++)
             {
@@ -150,9 +151,23 @@ namespace LR2.EditorTools
                 float pL = SoftLowpass(ref padLpL, padSumL * 0.14f * chordEnv, sweep);
                 float pR = SoftLowpass(ref padLpR, padSumR * 0.14f * chordEnv, sweep);
 
-                // Warm deep sub-bass
+                // Warm deep sub-bass + solemn war-drum heartbeat on bar downbeats (B36)
                 float subF = LoopLockedPhaseHz(MidiToHz(BassMidi[bar]));
                 float sub = Mathf.Sin(2f * Mathf.PI * subF * t) * 0.22f * Mathf.Clamp01(barT / 0.08f);
+                float warDrum = 0f;
+                if (barT < 0.36f)
+                {
+                    float df = Mathf.Lerp(96f, 41f, Mathf.Clamp01(barT * 9f));
+                    warDrum = Mathf.Sin(2f * Mathf.PI * df * barT) * Mathf.Exp(-barT * 10.5f) * Mathf.Clamp01(barT / 0.004f) * 0.24f;
+                }
+
+                // Dusty analog field-radio / tape grit bed band-limited 300-1800 Hz (B36)
+                float white = (float)(radioRng.NextDouble() * 2.0 - 1.0);
+                float crackle = (radioRng.NextDouble() < 0.00055) ? white * 0.35f : 0f;
+                float radioRaw = white * 0.022f + crackle;
+                radioHp = 0.96f * (radioHp + radioRaw - radioPrev);
+                radioPrev = radioRaw;
+                float radioDust = SoftLowpass(ref radioLp, radioHp, 1650f);
 
                 // Bowed war-cello / Phrygian minor 2nd tension motif (subtle analog grit)
                 int step = Mathf.Clamp((int)(barT / 0.25f), 0, 7);
@@ -164,13 +179,13 @@ namespace LR2.EditorTools
                 float bowed = (float)Math.Tanh((Saw(noteHz * stepT) * 0.55f + Tri(noteHz * 2f * stepT) * 0.28f) * 1.4f) * arpEnv * 0.18f;
                 float pan = (step % 2 == 0) ? 0.65f : 0.35f;
 
-                float dryL = pL + sub + bowed * pan;
-                float dryR = pR + sub + bowed * (1f - pan);
+                float dryL = pL + sub + warDrum + radioDust + bowed * pan;
+                float dryR = pR + sub + warDrum + radioDust * 0.85f + bowed * (1f - pan);
                 L[i] = SoftLowpass(ref lpL, dryL, 5200f);
                 R[i] = SoftLowpass(ref lpR, dryR, 5200f);
             }
 
-            AddWarTornOrchestralBed(L, R, brassWeight: 0.22f, gritDrive: 1.35f, withArtillery: true);
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.30f, gritDrive: 1.55f, withArtillery: true);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.375f * SampleRate), 0.34f);
             FinalizeStem(L, R, targetRms: 0.145f, maxPeak: 0.78f);
             WriteWav(path, L, R);
@@ -354,11 +369,24 @@ namespace LR2.EditorTools
                     }
                 }
 
-                L[i] = kick + snare + hat + bassDrive + rollL + SoftLowpass(ref leadLpL, ostL, fCut);
-                R[i] = kick + snare + hat + bassDrive + rollR + SoftLowpass(ref leadLpR, ostR, fCut);
+                // B36: Heavy industrial metallic anvil / tank-chassis clangs on downbeat accents (band-limited < 2.6 kHz so footsteps stay crisp)
+                float anvil = 0f;
+                if (barT < 0.24f || (bar % 2 == 1 && barT >= 1.0f && barT < 1.22f))
+                {
+                    float adt = barT < 0.24f ? barT : (barT - 1.0f);
+                    float aEnv = Mathf.Clamp01(adt / 0.002f) * Mathf.Exp(-adt * 15.5f);
+                    float modes = Mathf.Sin(2f * Mathf.PI * 310f * adt) * 0.42f
+                                + Mathf.Sin(2f * Mathf.PI * 478f * adt) * 0.30f
+                                + Mathf.Sin(2f * Mathf.PI * 712f * adt) * 0.18f
+                                + Mathf.Sin(2f * Mathf.PI * 1090f * adt) * 0.10f;
+                    anvil = (float)Math.Tanh(modes * 1.55f) * aEnv * (barT < 0.24f ? 0.22f : 0.15f);
+                }
+
+                L[i] = kick + snare + hat + bassDrive + rollL + anvil * 0.92f + SoftLowpass(ref leadLpL, ostL, fCut);
+                R[i] = kick + snare + hat + bassDrive + rollR + anvil * 1.04f + SoftLowpass(ref leadLpR, ostR, fCut);
             }
 
-            AddWarTornOrchestralBed(L, R, brassWeight: 0.42f, gritDrive: 2.35f, withArtillery: true);
+            AddWarTornOrchestralBed(L, R, brassWeight: 0.46f, gritDrive: 2.45f, withArtillery: true);
             MixProgressiveGuitar(L, R, GuitarIntensity.HeavyCombat);
             AddCircularStereoEcho(L, R, Mathf.RoundToInt(0.1875f * SampleRate), 0.16f);
             FinalizeStem(L, R, targetRms: 0.225f, maxPeak: 0.86f);

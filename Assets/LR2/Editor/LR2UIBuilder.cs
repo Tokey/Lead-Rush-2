@@ -342,9 +342,27 @@ namespace LR2.EditorTools
             rt.pivot = new Vector2(0f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             var bg = go.transform.Find("Background")?.GetComponent<Image>();
-            if (bg != null) bg.color = new Color(0.06f, 0.075f, 0.095f, 0.96f);
+            if (bg != null)
+            {
+                bg.sprite = _white;
+                bg.color = new Color(0.14f, 0.17f, 0.22f, 0.98f);
+                var bgRt = (RectTransform)bg.transform;
+                bgRt.sizeDelta = new Vector2(22f, 22f);
+                var ol = bg.gameObject.AddComponent<Outline>();
+                ol.effectColor = new Color(0.84f, 0.88f, 0.94f, 0.50f);
+                ol.effectDistance = new Vector2(1.5f, -1.5f);
+            }
             var chk = go.transform.Find("Background/Checkmark")?.GetComponent<Image>();
-            if (chk != null) chk.color = _theme != null ? _theme.accent : new Color(1f, 0.71f, 0.28f, 1f);
+            if (chk != null)
+            {
+                chk.sprite = _white;
+                chk.color = _theme != null ? new Color(Mathf.Min(1f, _theme.accent.r * 1.08f), Mathf.Min(1f, _theme.accent.g * 1.12f), Mathf.Min(1f, _theme.accent.b * 1.15f), 1f) : new Color(1f, 0.74f, 0.22f, 1f);
+                var chkRt = (RectTransform)chk.transform;
+                chkRt.anchorMin = Vector2.zero;
+                chkRt.anchorMax = Vector2.one;
+                chkRt.offsetMin = new Vector2(4f, 4f);
+                chkRt.offsetMax = new Vector2(-4f, -4f);
+            }
             var label2 = go.GetComponentInChildren<Text>();
             if (label2 != null) label2.text = "";
             return go.GetComponent<Toggle>();

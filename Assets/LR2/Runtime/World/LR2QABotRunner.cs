@@ -112,6 +112,14 @@ namespace LR2.World
             if (Application.isBatchMode) AudioListener.volume = 0f;
             Application.logMessageReceived += OnLog;
             string outDir = OutDir();
+            string reqScene = GetArgValue("-lr2Scene");
+            if (!string.IsNullOrEmpty(reqScene) && !string.Equals(SceneManager.GetActiveScene().name, reqScene, StringComparison.OrdinalIgnoreCase)
+                && Application.CanStreamedLevelBeLoaded(reqScene))
+            {
+                var loadOp = SceneManager.LoadSceneAsync(reqScene);
+                while (loadOp != null && !loadOp.isDone) yield return null;
+                yield return null;
+            }
             string sceneName = SceneManager.GetActiveScene().name;
             string upArg = GetArgValue("-lr2Upscaler");
             if (!string.IsNullOrEmpty(upArg))
@@ -171,6 +179,7 @@ namespace LR2.World
 
             yield return AuditVolumeAndVisibility(player, outDir, sceneName);
             AuditMapFlowB46(sceneName);
+            yield return AuditFireHazardTransparencyB82(outDir, sceneName);
 
             if (sceneName.Contains("Saltworks"))
             {
@@ -917,6 +926,55 @@ namespace LR2.World
                 $"atmosphere={(afx != null)} fireHazard={(fh != null)}");
         }
 
+        private IEnumerator AuditFireHazardTransparencyB82(string outDir, string sceneName)
+        {
+            var fh = FindAnyObjectByType<FireHazard>();
+            if (fh == null) yield break;
+
+            yield return new WaitForSeconds(0.45f);
+            int totalPs = 0, validShaders = 0;
+            foreach (var r in fh.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            {
+                if (r == null) continue;
+                totalPs++;
+                var mat = r.sharedMaterial;
+                if (mat != null && mat.shader != null && mat.shader.name == "LR2/ParticleUnlit")
+                    validShaders++;
+            }
+            Check(totalPs >= 2 && validShaders == totalPs, "FX.FireSmokeTransparentShaderB82",
+                $"renderers={totalPs} lr2ParticleUnlit={validShaders}");
+
+            // Capture close-up frame of the live FireHazard flames & smoke flipbooks for visual B82 proof (editor or standalone player)
+            Vector3 target = fh.transform.position + Vector3.up * 0.65f;
+            Vector3 camPos = target + new Vector3(0f, 0.55f, -3.6f);
+            foreach (float ang in new[] { 0f, 60f, -60f, 120f, -120f, 180f })
+            {
+                Vector3 probe = target + Quaternion.Euler(0f, ang, 0f) * Vector3.back * 3.6f + Vector3.up * 0.55f;
+                if (!Physics.Linecast(probe, target, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                {
+                    camPos = probe;
+                    break;
+                }
+            }
+            var camGo = new GameObject("[QA_B82_FireCam]");
+            camGo.transform.position = camPos;
+            camGo.transform.LookAt(target, Vector3.up);
+            var cam = camGo.AddComponent<Camera>();
+            cam.fieldOfView = 55f;
+            cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 250f;
+            var hd = camGo.AddComponent<HDAdditionalCameraData>();
+            hd.clearColorMode = HDAdditionalCameraData.ClearColorMode.Sky;
+            hd.volumeLayerMask = ~0;
+            Texture2D shot = CaptureCamera(cam, 960, 540);
+            if (shot != null)
+            {
+                File.WriteAllBytes(Path.Combine(outDir, $"{sceneName}_b82_fire_smoke.png"), shot.EncodeToPNG());
+                Destroy(shot);
+            }
+            Destroy(camGo);
+        }
+
         private void AuditMapFlowB46(string sceneName)
         {
             var spawns = FindObjectsByType<SpawnPoint>();
@@ -1020,9 +1078,20 @@ namespace LR2.World
 
         private IEnumerator AuditDeathAdsCloseWeaponAndB57B65(SoldierController player)
         {
-            // B65 / R17: Verify tail reservation rolls back immediately on voice allocation failure.
+            // B65 / R17 / A26: Verify tail reservation rolls back immediately on voice allocation failure.
             bool tailRollbackOk = LR2Audio.VerifyTailReservationRollback(out int resBefore, out int resAfter);
             Check(tailRollbackOk, "Audio.TailReservationRollback", $"reserved={resBefore} afterCancel={resAfter}");
+
+            // B36 / P1: Verify indoor vs outdoor tail contrast (3-6 dB), overlap cap <= 4, war-torn brass cue, and horizon ambience clips.
+            bool tailContrastOk = LR2Audio.VerifyIndoorOutdoorTailContrast(out float inG, out float outG, out float sepDb, out int maxTails);
+            Check(tailContrastOk, "Audio.IndoorOutdoorTailContrast",
+                $"indoor={inG:0.00} outdoor={outG:0.00} sep={sepDb:0.00}dB maxConcurrent={maxTails}");
+            var musicDir = LR2MusicDirector.Instance;
+            Check(musicDir != null && musicDir.HasWarTornBrassCue, "Music.WarTornBrassCue",
+                $"hasBrass={(musicDir != null && musicDir.HasWarTornBrassCue)}");
+            AmbientOneShots.EnsureWarzoneClips();
+            Check(AmbientOneShots.HasWarzoneHorizonClips, "Audio.WarzoneHorizonAmbience",
+                $"horizonClips={AmbientOneShots.HasWarzoneHorizonClips}");
 
             // B74b: Verify bot resupply goal is strictly suppressed mid-fight and enabled when disengaged.
             var bbMidFight = new LR2.AI.BotBlackboard { time = 10f, targetVisible = true, targetLastSeenTime = 10f };
@@ -1197,6 +1266,9 @@ namespace LR2.World
                 UnityEditor.EditorApplication.update += ExitWhenStopped;
                 UnityEditor.EditorApplication.isPlaying = false;
             }
+#else
+            if (Application.isBatchMode || Requested)
+                Application.Quit(_failures.Count > 0 ? 1 : 0);
 #endif
         }
     }

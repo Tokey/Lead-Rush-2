@@ -25,7 +25,8 @@ namespace LR2.Audio
         private static readonly List<AudioSource> Voices = new List<AudioSource>(MaxVoices);
         private static readonly Dictionary<AudioSource, AudioLowPassFilter> Filters = new Dictionary<AudioSource, AudioLowPassFilter>(MaxVoices);
         private static readonly Dictionary<AudioSource, float> StartTimes = new Dictionary<AudioSource, float>(MaxVoices);
-        private static readonly List<float> ActiveTailEndTimes = new List<float>(8);
+        private static readonly Dictionary<AudioSource, float> ActiveTailVoices = new Dictionary<AudioSource, float>(8);
+        private static readonly List<AudioSource> ExpiredTailsScratch = new List<AudioSource>(8);
         private static WeaponSoundTailRouter _tailRouter;
         private static Transform _root;
         private static AnimationCurve _rolloff;
@@ -34,7 +35,7 @@ namespace LR2.Audio
 
         /// <summary>0..1 duck amount currently applied to ambience/footsteps/sfx.</summary>
         public static float DuckFactor { get; private set; }
-        public static int ActiveTailCount => ActiveTailEndTimes.Count;
+        public static int ActiveTailCount => ActiveTailVoices.Count;
 
         public static float CategoryVolume(AudioCategory category)
         {
@@ -61,17 +62,24 @@ namespace LR2.Audio
         internal static void TickDuck(float dt)
         {
             DuckFactor = Mathf.MoveTowards(DuckFactor, 0f, DuckRecovery * dt);
-            if (_tailRouter != null && ActiveTailEndTimes.Count > 0)
+            if (_tailRouter != null && ActiveTailVoices.Count > 0)
             {
                 float now = Time.unscaledTime;
-                for (int i = ActiveTailEndTimes.Count - 1; i >= 0; i--)
+                ExpiredTailsScratch.Clear();
+                foreach (var kv in ActiveTailVoices)
                 {
-                    if (now >= ActiveTailEndTimes[i])
-                    {
-                        ActiveTailEndTimes.RemoveAt(i);
-                        _tailRouter.NotifyTailEnded();
-                    }
+                    var src = kv.Key;
+                    float endTime = kv.Value;
+                    bool finishedPlaying = src == null || (!src.isPlaying && now >= StartTime(src) + 0.05f);
+                    if (now >= endTime || finishedPlaying)
+                        ExpiredTailsScratch.Add(src);
                 }
+                for (int i = 0; i < ExpiredTailsScratch.Count; i++)
+                {
+                    if (ActiveTailVoices.Remove(ExpiredTailsScratch[i]))
+                        _tailRouter.NotifyTailEnded();
+                }
+                ExpiredTailsScratch.Clear();
             }
         }
 
@@ -147,7 +155,11 @@ namespace LR2.Audio
                 if (tailReserved && _tailRouter != null) _tailRouter.CancelReservation();
                 return null;
             }
-            if (tailReserved) ActiveTailEndTimes.Add(tailEndTime);
+            if (tailReserved)
+            {
+                if (ActiveTailVoices.ContainsKey(src) && _tailRouter != null) _tailRouter.NotifyTailEnded();
+                ActiveTailVoices[src] = tailEndTime;
+            }
 
             var t = src.transform;
             t.SetParent(parent != null ? parent : _root, false);
@@ -220,13 +232,24 @@ namespace LR2.Audio
             }
         }
 
-        /// <summary>True if there is a roof above the position (used to pick interior gun tails / reverb).</summary>
+        /// <summary>
+        /// True when enclosed under a roof/canopy (P1/B36/A21): direction-independent 5-ray hemisphere probe
+        /// (straight up + 4 compass diagonals tilted 30 deg from vertical, 22 m) so rooms, doorways and courtyards
+        /// classify consistently regardless of facing.
+        /// </summary>
         public static bool IsIndoors(Vector3 position)
         {
             Vector3 p = position + Vector3.up * 0.5f;
             int mask = LR2Layers.EnvironmentMask;
-            return Physics.Raycast(p, Vector3.up, 25f, mask, QueryTriggerInteraction.Ignore)
-                   && Physics.Raycast(p, (Vector3.up + Vector3.forward * 0.6f).normalized, 25f, mask, QueryTriggerInteraction.Ignore);
+            if (!Physics.Raycast(p, Vector3.up, 22f, mask, QueryTriggerInteraction.Ignore))
+                return false;
+            int hits = 0;
+            const float tilt = 0.58f; // ~30 deg off vertical
+            if (Physics.Raycast(p, (Vector3.up + Vector3.forward * tilt).normalized, 22f, mask, QueryTriggerInteraction.Ignore)) hits++;
+            if (Physics.Raycast(p, (Vector3.up - Vector3.forward * tilt).normalized, 22f, mask, QueryTriggerInteraction.Ignore)) hits++;
+            if (Physics.Raycast(p, (Vector3.up + Vector3.right * tilt).normalized, 22f, mask, QueryTriggerInteraction.Ignore)) hits++;
+            if (Physics.Raycast(p, (Vector3.up - Vector3.right * tilt).normalized, 22f, mask, QueryTriggerInteraction.Ignore)) hits++;
+            return hits >= 2;
         }
 
         /// <summary>World position of the active AudioListener (the local player's camera in game).</summary>
@@ -270,7 +293,7 @@ namespace LR2.Audio
             Voices.Clear();
             Filters.Clear();
             StartTimes.Clear();
-            ActiveTailEndTimes.Clear();
+            ActiveTailVoices.Clear();
         }
 
         private static AudioSource GetVoice(int priority)
@@ -317,7 +340,13 @@ namespace LR2.Audio
                     victim = v;
                 }
             }
-            if (victim != null) victim.Stop();
+            if (victim != null)
+            {
+                victim.Stop();
+                // B61 A26: Immediately release tail slot if the stolen voice was playing a weapon tail.
+                if (ActiveTailVoices.Remove(victim) && _tailRouter != null)
+                    _tailRouter.NotifyTailEnded();
+            }
             return victim;
         }
 
@@ -335,6 +364,26 @@ namespace LR2.Audio
             return reserved && activeAfterReserve == before + 1 && activeAfterRollback == before;
         }
 
+        /// <summary>Verifies P1/B36 indoor vs outdoor tail gain separation (3-6 dB) and concurrent tail overlap cap (&lt;= 4).</summary>
+        public static bool VerifyIndoorOutdoorTailContrast(out float indoorGain, out float outdoorGain, out float separationDb, out int maxAccepted)
+        {
+            var tempGo = new GameObject("[TailContrastCheck]");
+            var router = tempGo.AddComponent<WeaponSoundTailRouter>();
+            indoorGain = router.Gain(true);
+            outdoorGain = router.Gain(false);
+            separationDb = 20f * Mathf.Log10(Mathf.Max(1e-4f, indoorGain) / Mathf.Max(1e-4f, outdoorGain));
+            maxAccepted = 0;
+            float t = Time.unscaledTime + 100f;
+            for (int i = 0; i < 8; i++)
+            {
+                if (router.CanPlay(t + i * 0.1f)) maxAccepted++;
+            }
+            for (int i = 0; i < maxAccepted; i++) router.NotifyTailEnded();
+            int afterDrain = router.ActiveTailCount;
+            Object.DestroyImmediate(tempGo);
+            return separationDb >= 3.0f && separationDb <= 6.0f && maxAccepted >= 3 && maxAccepted <= 4 && afterDrain == 0;
+        }
+
         private static float StartTime(AudioSource v) => StartTimes.TryGetValue(v, out float t) ? t : 0f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -343,7 +392,8 @@ namespace LR2.Audio
             Voices.Clear();
             Filters.Clear();
             StartTimes.Clear();
-            ActiveTailEndTimes.Clear();
+            ActiveTailVoices.Clear();
+            ExpiredTailsScratch.Clear();
             _tailRouter = null;
             _root = null;
             _listener = null;
