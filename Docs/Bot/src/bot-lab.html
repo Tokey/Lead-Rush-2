@@ -363,7 +363,7 @@ body.gifmode .wrap { display: none; }
 </section>
 <section id="see" class="bb" aria-labelledby="h-see">
       <div class="head"><span class="num">04 · SEE</span><h2 id="h-see">Sightlines and the close arc</h2><span class="src">BotPerception.cs · 10 Hz</span>
-        <p>The bot looks every 0.1 s with two raycasts (<code>HeadPosition</code> OR <code>ChestPosition</code>). You are visible when inside its main vision cone, within 70 m, and unoccluded. Within 6 m, anything within <b>±100° half-angle (200° total arc)</b> around its gaze counts as peripheral threat awareness. <b>Drag the orange dot</b> to test sightlines and shot alerts.</p></div>
+        <p>The bot looks every 0.1 s with two raycasts (<code>HeadPosition</code> OR <code>ChestPosition</code>). You are visible when inside its main vision cone, within 70 m, and unoccluded. Within 6 m, anything within <b>±100° half-angle (200° total arc)</b> around its gaze counts as peripheral threat awareness. <b>Drag the orange dot</b> to test sightlines. <b>Fire a shot</b>: the bot hears it even behind cover (meter to at least 0.65, it turns to look where it heard you, off by up to 8 % of the distance); if it can also see you, the meter fills 2.2&times; faster for a second.</p></div>
       <div class="instrument">
         <canvas id="cv-see" aria-label="Top-down view of the bot's vision cone and the player"></canvas>
         <div class="controls">
@@ -372,7 +372,7 @@ body.gifmode .wrap { display: none; }
           <div class="ctl"><label for="see-spd">Detection speed <output id="o-spd"></output></label><input id="see-spd" type="range" min="80" max="138" value="100"></div>
           <div class="ctl"><label for="see-react">Base reaction <output id="o-react"></output></label><input id="see-react" type="range" min="16" max="76" value="40"></div>
           <div class="checks"><label><input id="see-crouch" type="checkbox"> Crouched (×0.7)</label><label><input id="see-sprint" type="checkbox"> Moving &gt;2 m/s (×1.35)</label></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="see-fire" type="button">Fire a shot (×2.2)</button><button id="see-reset" type="button" class="ghost">Reset meter</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="see-fire" type="button">Fire a shot</button><button id="see-reset" type="button" class="ghost">Reset meter</button></div>
           <div class="readout">
             <div class="stat"><div class="k">State</div><div class="v" id="r-state">-</div></div>
             <div class="stat"><div class="k">Distance</div><div class="v" id="r-dist">-</div></div>
@@ -2193,7 +2193,7 @@ requestAnimationFrame(frame);
   const W = 32, H = 18, bot = { x: 5, y: 9 };
   const walls = [{ x: 12, y: 1.5, w: 1.2, h: 6.5 }, { x: 18.5, y: 10.5, w: 7, h: 1.2 }, { x: 12, y: 12.5, w: 1.2, h: 4 }];
   const pl = { x: 22, y: 5 };
-  let meter = 0, lastShot = -99, spotted = false, reactAt = null, simTime = 0;
+  let meter = 0, lastShot = -99, spotted = false, reactAt = null, simTime = 0, heard = null; // heard: {t, x, y, fuzz, turnTo}
   const segRect = (ax, ay, bx, by, r) => {
     let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
     const clip = (p, q) => { if (p === 0) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
@@ -2214,7 +2214,14 @@ requestAnimationFrame(frame);
     return { dist, ang, inCone, blocked, visible, rate, gaze, halfFov };
   }
   function stepSee(dt) {
-    simTime += dt; const s = seeState();
+    simTime += dt;
+    if (heard && simTime - heard.t > 0.25 && simTime - heard.t < 1.2) {
+      // the bot turns toward the sound after a quarter second, at up to 360 deg/s
+      const g = $('see-gaze'), cur = +g.value, d = ((heard.turnTo - cur + 540) % 360) - 180;
+      const nv = cur + Math.sign(d) * Math.min(Math.abs(d), 360 * dt);
+      g.value = nv; const o = $('o-gaze'); if (o) o.textContent = Math.round(nv) + '°';
+    }
+    const s = seeState();
     if (s.visible) meter = Math.min(1.25, meter + s.rate * dt); else meter = Math.max(0, meter - 0.5 * dt);
     if (!spotted && meter >= 1) { spotted = true; const ecc = lerp(0.76, 1.58, clamp(s.ang / 115, 0, 1)); reactAt = (+$('see-react').value / 100) * ecc; }
     if (spotted && meter <= 0.05) { spotted = false; reactAt = null; }
@@ -2243,14 +2250,36 @@ requestAnimationFrame(frame);
     ctx.strokeStyle = ink; ctx.beginPath(); ctx.moveTo(bx + bw / 1.25, by - 3); ctx.lineTo(bx + bw / 1.25, by + bh + 3); ctx.stroke();
     ctx.fillStyle = ink; ctx.font = '13.5px ' + css('--mono'); ctx.fillText('detection ' + meter.toFixed(2) + '  (spotted at 1.00)', bx, by - 6);
     ctx.fillStyle = ink2; ctx.fillText('6 m (±100°)', bot.x * k + 6 * k * 0.7, bot.y * k - 6 * k * 0.7);
-    $('r-state').innerHTML = spotted ? '<span class="off">Spotted</span>' : (s.visible ? '<span class="warn">Seeing</span>' : (s.blocked ? 'Behind cover' : 'Out of view'));
+    const heardNow = heard && simTime - heard.t < 4;
+    if (heardNow) {
+      const fade = 1 - (simTime - heard.t) / 4, wc = css('--warn');
+      ctx.save(); ctx.globalAlpha = 0.25 + 0.75 * fade; ctx.strokeStyle = wc; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.arc(heard.x * k, heard.y * k, Math.max(10, heard.fuzz * k), 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = wc; ctx.font = '600 13px ' + css('--mono'); ctx.lineWidth = 4; ctx.strokeStyle = css('--panel');
+      const label = 'heard here (±' + heard.fuzz.toFixed(1) + ' m)';
+      ctx.strokeText(label, heard.x * k - 60, heard.y * k + Math.max(10, heard.fuzz * k) + 16); ctx.fillText(label, heard.x * k - 60, heard.y * k + Math.max(10, heard.fuzz * k) + 16);
+      ctx.restore();
+    }
+    $('r-state').innerHTML = spotted ? '<span class="off">Spotted</span>' : (s.visible ? '<span class="warn">Seeing</span>' : (heardNow ? '<span class="warn">Heard a shot: looking</span>' : (s.blocked ? 'Behind cover' : 'Out of view')));
     $('r-dist').textContent = s.dist.toFixed(1) + ' m'; $('r-ang').textContent = s.ang.toFixed(0) + '°';
     $('r-rate').textContent = s.visible ? s.rate.toFixed(2) + '/s' : '-0.50/s'; $('r-meter').textContent = meter.toFixed(2);
     $('r-react').textContent = reactAt != null ? reactAt.toFixed(2) + ' s' : '-';
   }
   ['see-gaze', 'see-fov', 'see-spd', 'see-react'].forEach(id => $(id).addEventListener('input', () => { $('o-gaze').textContent = $('see-gaze').value + '°'; $('o-fov').textContent = $('see-fov').value + '°'; $('o-spd').textContent = (+$('see-spd').value / 100).toFixed(2) + '×'; $('o-react').textContent = (+$('see-react').value / 100).toFixed(2) + ' s'; drawSee(); }));
   $('see-gaze').dispatchEvent(new Event('input'));
-  $('see-fire').onclick = () => { lastShot = simTime; };
+  $('see-fire').onclick = () => {
+    // B119 (user 11-19 "fire a shot isnt doing a thing"): a shot is HEARD even behind cover, as in BotPerception: detection
+    // jumps to at least 0.65 and the bot turns to look where it heard it (position fuzz min(6 m, 8 % of the distance));
+    // only if it can also SEE you does the meter fill 2.2x faster for the next second
+    lastShot = simTime;
+    const dist = Math.hypot(pl.x - bot.x, pl.y - bot.y);
+    if (dist <= 60) {
+      const fuzz = Math.min(6, dist * 0.08), a = Math.random() * Math.PI * 2, r = Math.random() * fuzz;
+      const hx = pl.x + Math.cos(a) * r, hy = pl.y + Math.sin(a) * r;
+      heard = { t: simTime, x: hx, y: hy, fuzz, turnTo: Math.atan2(hy - bot.y, hx - bot.x) * 180 / Math.PI };
+      meter = Math.max(meter, 0.65);
+    }
+  };
   $('see-reset').onclick = () => { meter = 0; spotted = false; reactAt = null; drawSee(); };
   const cvSee = $('cv-see');
   const movePl = e => { const r = cvSee.getBoundingClientRect(), k = r.width / W; pl.x = clamp((e.clientX - r.left) / k, 0.3, W - 0.3); pl.y = clamp((e.clientY - r.top) / k, 0.3, H - 0.3); drawSee(); };
