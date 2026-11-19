@@ -416,12 +416,12 @@ function fit(cv) {
 }
 const $ = id => document.getElementById(id);
 
-// Skill presets: Assets/LR2/Data/AI/BotDifficulty_*.asset
+// Skill presets: Assets/LR2/Data/AI/BotDifficulty_*.asset (D61, 2026-11-18: per-preset detection speed and composure)
 const PRESETS = {
-  Recruit:  { react: [0.55, 0.80], aimSpeed: 4.2,  initErr: 7.0, settleErr: 1.6,  head: 0.05, aggression: 0.35, flank: 0.08 },
-  Regular:  { react: [0.34, 0.52], aimSpeed: 6.0,  initErr: 4.8, settleErr: 0.9,  head: 0.13, aggression: 0.55, flank: 0.22 },
-  Hardened: { react: [0.24, 0.38], aimSpeed: 7.8,  initErr: 3.4, settleErr: 0.55, head: 0.22, aggression: 0.70, flank: 0.35 },
-  Veteran:  { react: [0.17, 0.27], aimSpeed: 10.0, initErr: 2.4, settleErr: 0.32, head: 0.32, aggression: 0.82, flank: 0.50 }
+  Recruit:  { react: [0.55, 0.80], aimSpeed: 4.2,  initErr: 7.0, settleErr: 1.6,  head: 0.05, aggression: 0.35, flank: 0.08, detect: 0.85, composure: 0.00 },
+  Regular:  { react: [0.32, 0.50], aimSpeed: 6.2,  initErr: 4.6, settleErr: 0.85, head: 0.14, aggression: 0.58, flank: 0.24, detect: 1.15, composure: 0.25 },
+  Hardened: { react: [0.22, 0.34], aimSpeed: 8.2,  initErr: 3.2, settleErr: 0.48, head: 0.24, aggression: 0.74, flank: 0.38, detect: 1.55, composure: 0.50 },
+  Veteran:  { react: [0.15, 0.23], aimSpeed: 10.5, initErr: 2.1, settleErr: 0.26, head: 0.34, aggression: 0.88, flank: 0.55, detect: 2.20, composure: 0.72 }
 };
 const PRESET_NAMES = Object.keys(PRESETS);
 
@@ -814,7 +814,7 @@ function perceive(S, dt) {
   const dx = p.x - b.x, dy = p.y - b.y, dist = Math.hypot(dx, dy);
   const ang = Math.abs(wrap(Math.atan2(dy, dx) * R2D - b.aim));
   const los = p.alive && p.present && clearPath(b.x, b.y, p.x, p.y, 0);
-  const r = detectRate({ dist, angle: ang, moving: Math.hypot(p.vx, p.vy) > 2, firing: S.t - p.lastShot < 1, crouched: p.crouch });
+  const r = detectRate({ dist, angle: ang, moving: Math.hypot(p.vx, p.vy) > 2, firing: S.t - p.lastShot < 1, crouched: p.crouch, speedMul: b.preset && b.preset.detect });
   const wasVisible = b.visible;
   b.visible = los && r.inCone;
   const before = b.det;
@@ -961,7 +961,7 @@ function botAim(S, dt) {
       const delta = wrap(leadYaw - b.aim);
       if (Math.abs(delta) > 10.5) {
         const ft = AIM.flickTime(Math.abs(delta), dist, false, P.aimSpeed);
-        const e = AIM.endpoint(Math.abs(delta), b.stress, P.aimSpeed, S.rng);
+        const e = AIM.endpoint(Math.abs(delta), b.stress * (1 - (P.composure || 0)), P.aimSpeed, S.rng);
         b.flick = { from: b.aim, to: b.aim + delta + Math.sign(delta) * e.along, t0: t, T: ft.T };
         log(S, `Flick ${Math.abs(delta).toFixed(0)}° in ${(ft.T * 1000).toFixed(0)} ms (Fitts ID ${ft.id.toFixed(1)}), lands ${Math.abs(e.along).toFixed(1)}° ${e.along < 0 ? 'short' : 'long'}.`, 'bot');
       }
@@ -972,7 +972,8 @@ function botAim(S, dt) {
       if (u >= 1) { b.flick = null; b.nextFlickAt = t + lerp(0.11, 0.165, S.rng()); }
       return;
     }
-    b.aimErr = lerp(b.aimErr, P.settleErr + b.heat * 1.35 + (Math.hypot(b.pv[0], b.pv[1]) > 1 ? 0.45 : 0), 1 - Math.exp(-2 * dt));
+    const calm = P.composure || 0; // D61: composure damps the stress and target-movement terms
+    b.aimErr = lerp(b.aimErr, P.settleErr + b.heat * 1.35 + (Math.hypot(b.pv[0], b.pv[1]) > 1 ? 0.45 * (1 - 0.6 * calm) : 0) + b.stress * 1.15 * (1 - calm), 1 - Math.exp(-2 * dt));
     const noise = (Math.sin(t * 1.9 + b.seed) * 0.6 + Math.sin(t * 3.4 + b.seed * 2.3) * 0.4) * b.aimErr * 1.15;
     b.aim += wrap(leadYaw + noise - b.aim) * (1 - Math.exp(-P.aimSpeed * 1.4 * dt));
   } else {

@@ -181,6 +181,7 @@ namespace LR2.EditorTools
             var dHole = SaveMaterial(NewDecal(hole, Color.white), matDir + "/M_Decal_BulletHole.mat");
             var dHoleMetal = SaveMaterial(NewDecal(hole, new Color(0.55f, 0.55f, 0.6f)), matDir + "/M_Decal_BulletHole_Metal.mat");
             var dBlood = SaveMaterial(NewDecal(blood, new Color(0.6f, 0.05f, 0.04f)), matDir + "/M_Decal_Blood.mat");
+            BuildRuntimeFxLibrary(sparkTex, softDot, puff);
 
             // Impacts per surface
             GameObject Impact(string name, Color dust, float dustSize, bool sparks, Color chunks, float chunkGravity)
@@ -860,6 +861,7 @@ namespace LR2.EditorTools
                 var humProfile = AssetDatabase.LoadAssetAtPath<FPSAnimatorProfile>(profPath);
                 if (humProfile != null && (entity.animatorProfile == null || !entity.animatorProfile.name.Contains("Humanoid")))
                     entity.animatorProfile = humProfile;
+                TuneHumanoidCollision(humProfile, spec.cls == WeaponClass.Pistol);
                 if (spec.id == "Mk18")
                 {
                     var ironAp = go.transform.Find("AimPoint_Iron");
@@ -869,6 +871,23 @@ namespace LR2.EditorTools
                         ironAp.SetParent(go.transform, false);
                     }
                     ironAp.localPosition = new Vector3(0f, 0.068f, -0.175f);
+                    ironAp.localRotation = Quaternion.identity;
+                    entity.defaultAimPoint = ironAp;
+                }
+                else if (spec.id == "AK74N")
+                {
+                    // D58: B49 hid the 1P29 scope but left the entity aiming through the hidden scope's eye point, 3.1 cm above
+                    // and 1.4 cm left of the irons (user 11-18: "AK74N ADS is totally off, not looking through the iron sights").
+                    // Kinemation's DefaultAimPoint marks the iron line (y 0.052); keep it, with MK18-like eye relief.
+                    var ironAp = go.transform.Find("AimPoint_Iron");
+                    if (ironAp == null)
+                    {
+                        ironAp = new GameObject("AimPoint_Iron").transform;
+                        ironAp.SetParent(go.transform, false);
+                    }
+                    var kinemationIron = go.transform.Find("DefaultAimPoint");
+                    Vector3 iron = kinemationIron != null ? kinemationIron.localPosition : new Vector3(0f, 0.052f, -0.048f);
+                    ironAp.localPosition = new Vector3(iron.x, iron.y, -0.20f);
                     ironAp.localRotation = Quaternion.identity;
                     entity.defaultAimPoint = ironAp;
                 }
@@ -1249,6 +1268,93 @@ namespace LR2.EditorTools
             });
             EditorUtility.SetDirty(animAsset);
             return animAsset;
+        }
+
+        /// <summary>
+        /// D59: wall/obstacle tuck for the humanoid Kinemation profiles LR2 links (the SWAT-profile tuning in
+        /// ConfigureSwatAnimationRigAndReload is unused with the Kinemation driver). The demo rifle pose raises the muzzle
+        /// 85 degrees, which swung the rifle across the view at every wall once D57 stopped walking from masking the layer
+        /// (C21: 73 degrees "pressed into the wall"); the demo pistol raycast layer 6, which LR2 never uses, so it ignored walls.
+        /// A COD-like tuck instead: muzzle up and slightly in, pulled back a few centimetres.
+        /// </summary>
+        /// <summary>
+        /// D60: materials for effects that are built at runtime (fire hazards, atmosphere mist, barrel smoke, muzzle heat and
+        /// heat haze), saved under Resources so player builds keep them. See LR2FxLibrary for why runtime-made HDRP/Unlit
+        /// transparent materials turned into opaque boxes in builds. Uses the Unity Particle Pack flipbooks when installed.
+        /// </summary>
+        private static void BuildRuntimeFxLibrary(Texture2D sparkTex, Texture2D softDot, Texture2D puff)
+        {
+            const string res = "Assets/LR2/Resources/LR2/FX";
+            const string pack = "Assets/UnityTechnologies/ParticlePack/EffectExamples";
+            var flameSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Fire & Explosion Effects/Textures/Explosion.tif");
+            var steamSheet = AssetDatabase.LoadAssetAtPath<Texture2D>(pack + "/Smoke & Steam Effects/Textures/smokeysteam.tif");
+            Texture2D smokeTex = steamSheet != null ? steamSheet : puff;
+            Vector2Int smokeTiles = steamSheet != null ? new Vector2Int(8, 8) : Vector2Int.one;
+
+            var lib = LoadOrCreate<LR2FxLibrary>("Assets/LR2/Resources/LR2/FXLibrary.asset");
+            lib.fire = SaveMaterial(NewParticle(flameSheet != null ? flameSheet : sparkTex, new Color(1f, 0.7f, 0.42f),
+                flameSheet != null ? 1.7f : 2.6f, true), res + "/M_FX_Fire.mat");
+            lib.fireTiles = flameSheet != null ? new Vector2Int(6, 6) : Vector2Int.one;
+            lib.smoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_Smoke.mat");
+            lib.smokeTiles = smokeTiles;
+            lib.embers = SaveMaterial(NewParticle(sparkTex, new Color(1f, 0.72f, 0.38f), 3.2f, true), res + "/M_FX_Spark.mat");
+            lib.mist = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_Mist.mat");
+            lib.mistTiles = smokeTiles;
+            lib.barrelSmoke = SaveMaterial(NewParticle(smokeTex, Color.white, 1f, false), res + "/M_FX_BarrelSmoke.mat");
+            lib.barrelSmokeTiles = smokeTiles;
+            lib.muzzleHeat = SaveMaterial(NewParticle(softDot, new Color(1f, 0.12f, 0.015f, 0.2f), 1f, true), res + "/M_FX_MuzzleHeat.mat");
+
+            // HDRP distortion-only template: the heat haze needs HDRP's distortion pass, so it stays on HDRP/Unlit, but as a
+            // validated asset its shader variant is part of the build
+            var hdUnlit = Shader.Find("HDRP/Unlit");
+            if (hdUnlit != null)
+            {
+                var haze = new Material(hdUnlit);
+                void F(string p, float v) { if (haze.HasProperty(p)) haze.SetFloat(p, v); }
+                F("_SurfaceType", 1f);
+                F("_BlendMode", 0f);
+                F("_DistortionEnable", 1f);
+                F("_DistortionOnly", 1f);
+                F("_DistortionDepthTest", 1f);
+                F("_DistortionVectorScale", 2f);
+                F("_DistortionVectorBias", -1f);
+                F("_DoubleSidedEnable", 1f);
+                HDMaterial.ValidateMaterial(haze);
+                lib.heatHaze = SaveMaterial(haze, res + "/M_FX_HeatHaze.mat");
+            }
+            EditorUtility.SetDirty(lib);
+            Debug.Log($"[LR2] Runtime FX library: fire={(flameSheet != null ? "ParticlePack flipbook 6x6" : "spark texture")} " +
+                      $"smoke={(steamSheet != null ? "ParticlePack steam flipbook 8x8" : "LR2 puff")}");
+        }
+
+        private static void TuneHumanoidCollision(FPSAnimatorProfile profile, bool pistol)
+        {
+            if (profile == null) return;
+            foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(profile)))
+            {
+                if (!(sub is CollisionLayerSettings col)) continue;
+                col.layerMask = LR2Layers.EnvironmentMask;
+                col.useSecondaryPose = false;
+                col.targetSpace = ESpaceType.BoneSpace;
+                col.smoothingSpeed = 10f;
+                if (pistol)
+                {
+                    col.rayStartOffset = 0.05f;
+                    col.barrelLength = 0.32f;
+                    col.primaryPose = new KTransform(new Vector3(0f, 0.03f, -0.07f), Quaternion.Euler(-20f, -6f, 0f));
+                }
+                else
+                {
+                    col.rayStartOffset = 0.12f;
+                    col.barrelLength = 0.5f;
+                    col.primaryPose = new KTransform(new Vector3(0.02f, 0.035f, -0.06f), Quaternion.Euler(-25f, -12f, 8f));
+                }
+                // Kinemation's CollisionLayerJob ignores useSecondaryPose and takes the secondary pose whenever the mouse pitch
+                // input is above zero; the demo rifle's secondary is a 90-degree yaw (C23: the rifle lay sideways across the
+                // view at 74 degrees against a wall) and the pistol's drops it 20 cm. One tuck for both.
+                col.secondaryPose = col.primaryPose;
+                EditorUtility.SetDirty(col);
+            }
         }
 
         private static void CalibrateRightHandPistolGrip(ref Vector3 shiftLocal, ref Quaternion rotOffset)
@@ -2201,7 +2307,7 @@ namespace LR2.EditorTools
         public static void BuildData()
         {
             void Diff(string name, Vector2 reaction, float aimSpeed, float err, float settle, float decay, float head, float tol,
-                float aggr, float strafe, float slide, float flank, float crouch, Vector2Int burst)
+                float aggr, float strafe, float slide, float flank, float crouch, Vector2Int burst, float detect = 1f, float composure = 0.25f)
             {
                 var d = LoadOrCreate<BotDifficulty>($"{DataDir}/AI/BotDifficulty_{name}.asset");
                 d.displayName = name;
@@ -2219,12 +2325,17 @@ namespace LR2.EditorTools
                 d.crouchPeekChance = crouch;
                 d.burstSize = burst;
                 d.visionRange = 75f;
+                d.detectionSpeed = detect;
+                d.composure = composure;
                 EditorUtility.SetDirty(d);
             }
-            Diff("Recruit", new Vector2(0.55f, 0.8f), 4.2f, 7f, 1.6f, 1.3f, 0.05f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4));
-            Diff("Regular", new Vector2(0.34f, 0.52f), 6f, 4.8f, 0.9f, 1.9f, 0.13f, 3.5f, 0.55f, 0.4f, 0.06f, 0.22f, 0.12f, new Vector2Int(3, 6));
-            Diff("Hardened", new Vector2(0.24f, 0.38f), 7.8f, 3.4f, 0.55f, 2.6f, 0.22f, 3f, 0.7f, 0.62f, 0.15f, 0.35f, 0.2f, new Vector2Int(4, 7));
-            Diff("Veteran", new Vector2(0.17f, 0.27f), 10f, 2.4f, 0.32f, 3.4f, 0.32f, 2.4f, 0.82f, 0.85f, 0.3f, 0.5f, 0.28f, new Vector2Int(5, 9));
+            // D61 (user 11-18 "even the veteran bot seems too easy ... it rarely wins"): the detection meter needed ~0.75 s at
+            // 20 m before a Veteran even reacted, and stress/strafe/movement stacked ~5 deg of error in a real fight. Per-preset
+            // detection speed and composure; Veteran also reacts a little faster and settles tighter.
+            Diff("Recruit", new Vector2(0.55f, 0.8f), 4.2f, 7f, 1.6f, 1.3f, 0.05f, 4.5f, 0.35f, 0.12f, 0f, 0.08f, 0.05f, new Vector2Int(2, 4), 0.85f, 0f);
+            Diff("Regular", new Vector2(0.32f, 0.5f), 6.2f, 4.6f, 0.85f, 2f, 0.14f, 3.4f, 0.58f, 0.42f, 0.06f, 0.24f, 0.12f, new Vector2Int(3, 6), 1.15f, 0.25f);
+            Diff("Hardened", new Vector2(0.22f, 0.34f), 8.2f, 3.2f, 0.48f, 2.8f, 0.24f, 2.8f, 0.74f, 0.66f, 0.16f, 0.38f, 0.2f, new Vector2Int(4, 7), 1.55f, 0.5f);
+            Diff("Veteran", new Vector2(0.15f, 0.23f), 10.5f, 2.1f, 0.26f, 3.8f, 0.34f, 2.2f, 0.88f, 0.88f, 0.3f, 0.55f, 0.28f, new Vector2Int(5, 9), 2.2f, 0.72f);
 
             void Match(string file, string display, string desc, GameModeType mode, int limit, float time, int friendly, int enemy)
             {

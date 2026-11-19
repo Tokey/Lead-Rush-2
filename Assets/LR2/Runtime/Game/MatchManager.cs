@@ -239,16 +239,28 @@ namespace LR2.Game
                 };
                 bool useSerialized = botCallsigns != null && botCallsigns.Length >= 8 && !botCallsigns[0].StartsWith("BOT-");
                 string[] src = useSerialized ? botCallsigns : fallback;
-                _shuffledCallsigns = new string[src.Length];
-                System.Array.Copy(src, _shuffledCallsigns, src.Length);
-                for (int i = _shuffledCallsigns.Length - 1; i > 0; i--)
-                {
-                    int j = Random.Range(0, i + 1);
-                    (_shuffledCallsigns[i], _shuffledCallsigns[j]) = (_shuffledCallsigns[j], _shuffledCallsigns[i]);
-                }
+                // Weighted shuffle without repeats (Efraimidis-Spirakis keys u^(1/w)): featured tags come up far more often,
+                // every old tag stays in the pool, and no two bots share a name in one match.
+                var pool = new List<(string name, float key)>(src.Length + FeaturedCallsigns.Length);
+                var seen = new HashSet<string>();
+                foreach (string n in FeaturedCallsigns)
+                    if (seen.Add(n)) pool.Add((n, Mathf.Pow(Mathf.Max(1e-6f, Random.value), 1f / FeaturedWeight)));
+                foreach (string n in src)
+                    if (!string.IsNullOrWhiteSpace(n) && seen.Add(n)) pool.Add((n, Mathf.Max(1e-6f, Random.value)));
+                pool.Sort((a, b) => b.key.CompareTo(a.key));
+                _shuffledCallsigns = new string[pool.Count];
+                for (int i = 0; i < pool.Count; i++) _shuffledCallsigns[i] = pool[i].name;
             }
             return _shuffledCallsigns[_nameIndex++ % _shuffledCallsigns.Length];
         }
+
+        // User 11-18 14:10: featured gamer tags (the developer's friends, EnchantedP0tato and two favourites), weighted 4x.
+        private static readonly string[] FeaturedCallsigns =
+        {
+            "EnchantedP0tato", "JackOfAllFrags", "Ashl3sha_OneTap", "ClaypoolCampz", "xX_Tokey_Xx", "XiaokunNoScope",
+            "xX_NoScopeGrandma_Xx", "MyCatWalkedOnWASD"
+        };
+        private const float FeaturedWeight = 4f;
 
         private Combatant Spawn(GameObject prefab, TeamId team, string displayName, bool local)
         {

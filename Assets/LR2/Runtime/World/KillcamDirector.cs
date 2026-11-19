@@ -692,6 +692,8 @@ namespace LR2.World
             foreach (var c in p.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
             foreach (var an in p.GetComponentsInChildren<Animator>(true)) DestroyImmediate(an);
             foreach (var au in p.GetComponentsInChildren<AudioSource>(true)) DestroyImmediate(au);
+            // scope cameras on the copied gun (MK18 has four) must not render a second picture-in-picture
+            foreach (var cam in p.GetComponentsInChildren<Camera>(true)) { cam.enabled = false; cam.targetTexture = null; }
             if (!keepMuzzleFlash)
             {
                 foreach (var l in p.GetComponentsInChildren<Light>(true)) l.enabled = false;

@@ -10,8 +10,9 @@ namespace LR2.FX
         [SerializeField] private float length = 11f;
         [SerializeField] private float width = 0.055f;
 
-        public static readonly Color FriendlyTracerStart = new Color(0.45f, 1.00f, 0.58f, 1f);
-        public static readonly Color FriendlyTracerEnd = new Color(0.08f, 0.92f, 0.28f, 0.42f);
+        // user 11-18: "make my tracers orange/yellow and keep their red. green looks unnatural"
+        public static readonly Color FriendlyTracerStart = new Color(1.00f, 0.86f, 0.46f, 1f);
+        public static readonly Color FriendlyTracerEnd = new Color(1.00f, 0.55f, 0.12f, 0.42f);
         public static readonly Color EnemyTracerStart = new Color(1.00f, 0.36f, 0.20f, 1f);
         public static readonly Color EnemyTracerEnd = new Color(0.95f, 0.06f, 0.05f, 0.42f);
 

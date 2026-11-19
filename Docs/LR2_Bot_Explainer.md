@@ -58,7 +58,8 @@ not. Regenerate with `python Tools/make_bot_lab_gifs.py` (headless Edge renders 
 
 `BotPerception` samples vision every `0.1 s` against `HeadPosition` OR `ChestPosition` using `LR2Layers.VisionMask`. Within `6 m`, targets inside **±100° half-angle** (`200°` total peripheral awareness arc) register even outside the main cone:
 
-`fillRate = detectionSpeed * (0.9 + 9.0 / max(distance, 1.5))`
+`fillRate = detectionSpeed * (0.9 + 9.0 / max(distance, 1.5))` (detection speed per preset since D61: Recruit 0.85,
+Regular 1.15, Hardened 1.55, Veteran 2.2; see section 4b)
 
 Multiplied by `1.35` if moving `> 2 m/s`, `2.2` for `1 s` after firing a shot, `1.4` inside `±12°` foveal center, and `0.7` if crouched. When occluded, the meter drains at `0.5 / s`, and memory forgets after `12 s`. Initial reaction latency scales from `0.76×` (pre-aimed foveal contact) to `1.58×` (`115°` peripheral ambush).
 
@@ -129,6 +130,47 @@ Grounded in **ESTA** (Xenopoulos & Silva 2022), **CSKnow** (Durst et al. 2022/20
 ![Recoil pull-down](Media/bot/recoil-pulldown.gif)
 
 Pull-down starts after `65–135 ms`, fatigues with `sprayHeat` (`0.19/shot` hip, `0.13/shot` ADS), and adds bimanual horizontal oscillation when `sprayHeat > 0.25`. Trigger tolerance scales with target solid angle: `max(fireTolerance, atan2(0.45, dist))` — full-auto `< 13 m`, bursts `≥ 13 m`.
+
+---
+
+## 4b. Harder, more aggressive bots (D61, 2026-11-18)
+
+The developer's report: "even the veteran bot seems too easy ... it rarely wins against me", and "sometimes looks up instead
+of searching me". Three measured causes, three changes.
+
+**1. Detection took about a second.** Every preset used `detectionSpeed = 1`, so at 20 m the meter needed
+`1 / (0.9 + 9/20) = 0.74 s` before the bot even started its reaction time. A good player fires in 0.3 to 0.5 s. Detection
+speed is now part of each preset:
+
+| Preset | Detection speed | Meter at 20 m | Reaction (s) | Initial / settled error | Composure | Aggression |
+|---|---|---|---|---|---|---|
+| Recruit | 0.85 | 0.87 s | 0.55 to 0.80 | 7.0° / 1.6° | 0.00 | 0.35 |
+| Regular | 1.15 | 0.64 s | 0.32 to 0.50 | 4.6° / 0.85° | 0.25 | 0.58 |
+| Hardened | 1.55 | 0.48 s | 0.22 to 0.34 | 3.2° / 0.48° | 0.50 | 0.74 |
+| Veteran | 2.20 | 0.34 s | 0.15 to 0.23 | 2.1° / 0.26° | 0.72 | 0.88 |
+
+(Before: Veteran detection 1.0, reaction 0.17 to 0.27 s, errors 2.4° / 0.32°, aggression 0.82.)
+
+**2. Aim error piled up in a real fight.** On top of the settled error, a bot under fire added `1.15°` (stress), up to `2°`
+for a strafing target and `0.45°` while moving itself: about 5° of extra error, 1.7 m at 20 m, exactly when the player was
+shooting back. The new **composure** value (0 to 1) scales those terms down:
+`stress × 1.15 × (1 − composure)`, `lateral × 0.25 × (1 − 0.6 composure)`, `0.45 × (1 − 0.5 composure)`, and the flick
+endpoint scatter uses `stress × (1 − composure)`. A Veteran (0.72) keeps most of its accuracy under pressure; a Recruit
+(0) still panics.
+
+**3. Pressing an advantage.** Bots with aggression of 0.68 or more (Hardened, Veteran) now push the target instead of
+trading from range when the target is **reloading**, **below 45 % health**, or clearly weaker than the bot (bot health
+more than 35 points above the target's). They sprint to the target's last known position when it is out of sight and
+more than 9 m away (`TacticalBotBrain.TargetIsVulnerable`).
+
+**Searching looked at the sky.** Gunshot noises are reported at the muzzle (about 1.45 m) and bullet impacts wherever
+they hit a wall; the brain then looks 1.4 m above that point, so a bot hunting a gunshot looked at a point about 2.9 m
+high and, once it reached the spot, straight up. Noise positions are now snapped to the floor below them
+(`BotPerception.GroundPoint`), and a search look point within 3 m of the bot becomes a horizon scan that sweeps ±75°
+around the spot every 1.1 to 2.1 s. Further away, search gaze is limited to about 10° up and 22° down
+(`BotController.UpdateAim`).
+
+The [Bot Lab](Bot/bot-lab.html) simulation uses the same presets, detection speeds and composure terms.
 
 ---
 

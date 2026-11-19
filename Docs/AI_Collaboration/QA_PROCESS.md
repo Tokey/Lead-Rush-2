@@ -29,6 +29,7 @@ tables in [`figures/qa_summary.md`](figures/qa_summary.md).
 | Build everything | `-executeMethod LR2.EditorTools.LR2BuildPipeline.BuildAllBatch` | Regenerates prefabs, materials, maps and UI from the builder scripts (the source of truth) | `Logs/build_all_*.log`, ends with `BUILD EVERYTHING: SUCCESS` |
 | **Pose check** | `-executeMethod LR2.EditorTools.LR2SmokeTest.RunBatch -lr2PoseCheck [-lr2Weapon mk18]` | Takes over the player's input, freezes the other soldiers and plays a fixed script: idle, look up and down, aim down sights, an A/B reload comparison, tactical and empty reloads, pistol swap, walking and sprinting with foot-slide probes, reloads while walking and sprinting, crouch, prone, jump, an enemy close-up, then a bot kills the player and the killcam replay is measured | `report.txt` (lines such as `GAIT`, `RELOAD-ANGLES`, `RELOAD-END-JUMP`, `FINGERS`, `KILLCAM`), `motion_baseline.csv`, about 40 screenshots: `fp_*` first person, `tp_*` from fixed third-person cameras with a red marker on the eye, `kc_*` killcam frames |
 | **Bot aim test** | the same with `-lr2AimTest` | One hostile bot runs its full AI 15 m away; the player stands still 12 s, then strafes 12 s; every bot shot is intersected with the plane through the player and matched to the real hit | `bot_aim_shots.csv`, `AIM-TEST` lines, two screenshots |
+| **Death and wall test** | the pose check with `-lr2DeathTest [-lr2DeathCases prone,sprinting]` | Kills the player in six states (standing, ADS, crouched, sprinting, reloading, prone) and logs the gun pose before death, 0.1 to 3 s after the respawn, in ADS after the respawn and after one shot; then walks and sprints into the nearest wall and backs off. Every line carries the driver Animator state and the curves Kinemation reads (`fb`, `fbEff`, `prw`, `prEff`) | `POSE` and `ADS-ALIGN` lines (gun angle and roll against the camera, gun position in camera cm, hand IK error), `death_*` and `wall_*` frames |
 | Playtest robot | `-executeMethod LR2.EditorTools.LR2SmokeTest.RunBatch -lr2Robot -lr2Scene <map> -lr2Duration N` | The game plays itself: moves, aims, shoots and reloads for N seconds | screenshots every 4 s plus reload frames, a report with match state, kills, shots and runtime errors |
 | **QA bot** | `-executeMethod LR2.EditorTools.LR2QABot.RunBatch` | Per map, a list of PASS/FAIL checks: visibility floor, enemy readability, ammo stations placed, fog and fire present, glass materials, aim reset on death, weapon safety at close range, music gain under gunfire, the bot resupply rule, audio tail rollback, reload invariants, runtime errors; plus *known-bad fixtures* that prove a check can fail | `Logs/LR2_QABot/qa_<map>.txt` and a `*_vis.png` per map |
 | README media runner | `-executeMethod LR2.EditorTools.LR2ReadmeMediaRunner.CaptureReadmeMediaBatch` | Plays scripted shots (menu, deploy, aiming, lasers, fog and fire per map) and saves them | `Docs/Media/*.png` |
@@ -51,6 +52,14 @@ tables in [`figures/qa_summary.md`](figures/qa_summary.md).
    true sight picture, the victim's real ragdoll on the floor at the end.
 7. **Record it.** Five defects (D45 to D48 plus D49 found in C10) go into `data/bugs.csv` with who caused them, the board rows move
    to READY FOR REVIEW with the evidence, and another agent reviews them.
+
+The same loop handled the developer's 14:10 report ("weapon going sideways after dying, losing its IK", "MK18 sideways in
+ADS", "hitting walls when the gun gets back, everything starts to break"). The death test (C16 to C24) showed a prone death
+leaving the gun 30 degrees off at the hip and 60 degrees in ADS for the whole next life, a sprint death keeping the sprint
+look weights, and walking or pushing into a wall handing the rifle to the leg animation (`fb=0.88`). The `fbEff`/`prEff`
+columns then showed the gated values at 0 while the raw curves stayed stale, which is the proof the fix works for the right
+reason. Against the wall the fix first had no effect (74 degrees, C23); the unchanged number pointed at a different cause, a
+secondary pose Kinemation applies regardless of its `useSecondaryPose` flag (fixed in C24: a 23 degree tuck).
 
 The same loop measured the developer's "the gun jumps at the end of the reload": a new `RELOAD-END-JUMP` line reports the largest
 change of the gun's position relative to the camera from one frame to the next around the end of a reload. It read 17.2 degrees in

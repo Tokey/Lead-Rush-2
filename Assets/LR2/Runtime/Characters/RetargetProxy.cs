@@ -245,6 +245,16 @@ namespace LR2.Characters
         /// <summary>Reload bridge of this soldier (QA reads its angles).</summary>
         public ReloadMotionBridge Bridge => _bridge;
 
+        /// <summary>D56: forget per-life smoothing at a respawn: the inertial hand offsets and the previous-frame hand
+        /// targets (at the death spot) and any held reload pose, so the new life does not blend in from the old one.</summary>
+        public void ResetTransientState()
+        {
+            _hasPrevHands = false;
+            _lInertialOffset = _rInertialOffset = Vector3.zero;
+            _hasLeftPlant = _hasRightPlant = false;
+            _bridge?.ResetHold();
+        }
+
         public void SyncPoseNow()
         {
             if (_driverHandler == null || !enabled) return;
@@ -372,7 +382,9 @@ namespace LR2.Characters
         /// <summary>Kinemation's prone pose arches the rifle high and across the camera; rotate/tuck the gun+hands rigidly together.</summary>
         private void ApplyProneWeaponPose(Transform item, ref Vector3 lPos, ref Quaternion lRot, ref Vector3 rPos, ref Quaternion rRot)
         {
-            float w = driver != null ? Mathf.Clamp01(driver.GetFloat(ProneWeightHash)) : (_soldier != null && _soldier.IsProning ? 1f : 0f);
+            // D57: the gated weight; the raw curve stays at its last value when a respawn leaves the prone clips (C18: the
+            // full tuck, 30 deg and 11-14 cm, stayed on the standing gun for the whole next life)
+            float w = _soldier != null ? _soldier.ProneWeightEffective : 0f;
             if (w <= 0.001f || _soldier == null || item == null) return;
 
             Vector3 aimFwd = _soldier.ViewCamera != null && _soldier.ViewCamera.isActiveAndEnabled

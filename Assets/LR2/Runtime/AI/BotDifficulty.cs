@@ -43,6 +43,11 @@ namespace LR2.AI
         [Range(0f, 1f)] public float retreatHealth = 0.38f;
         [Range(0f, 1f)] public float useCoverChance = 0.6f;
 
+        [Header("Composure (D61)")]
+        [Tooltip("0..1: how little being shot at, a strafing target and the bot's own movement widen its aim (1 = unaffected). " +
+                 "Before D61 every bot stacked about 5 deg of extra error in a real fight, so even Veterans rarely won.")]
+        [Range(0f, 1f)] public float composure = 0.25f;
+
         public float RandomReaction() => Random.Range(reactionTime.x, reactionTime.y);
     }
 }

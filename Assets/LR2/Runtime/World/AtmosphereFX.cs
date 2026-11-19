@@ -82,7 +82,14 @@ namespace LR2.World
             noise.enabled = true;
             noise.strength = 0.25f;
             var renderer = go.GetComponent<ParticleSystemRenderer>();
-            if (renderer != null)
+            var fxLib = LR2.FX.LR2FxLibrary.Instance;
+            if (renderer != null && fxLib != null && fxLib.mist != null)
+            {
+                // D60: the library mist material (alpha-blended, built into the player); the particle colour carries the tint
+                renderer.sharedMaterial = fxLib.mist;
+                LR2.FX.LR2FxLibrary.ApplyFlipbook(ps, fxLib.mistTiles);
+            }
+            else if (renderer != null)
             {
                 Shader shader = Shader.Find("HDRP/Unlit") ?? Shader.Find("Unlit/Color");
                 if (shader != null)

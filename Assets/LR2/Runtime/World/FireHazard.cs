@@ -171,7 +171,13 @@ namespace LR2.World
             if (renderer != null)
             {
                 bool isFlame = !name.Contains("Smoke");
-                Material assetMat = UnityEngine.Resources.Load<Material>(isFlame ? "LR2/FX/M_FX_Spark" : "LR2/FX/M_FX_Smoke");
+                // D60: library materials (built into the player); the old Resources path never existed, so every fire
+                // fell through to a runtime HDRP/Unlit material, which a player build renders as an opaque box
+                var lib = LR2.FX.LR2FxLibrary.Instance;
+                Material libMat = lib != null ? (isFlame ? lib.fire : lib.smoke) : null;
+                if (libMat != null) LR2.FX.LR2FxLibrary.ApplyFlipbook(particles, isFlame ? lib.fireTiles : lib.smokeTiles);
+                Material assetMat = libMat != null ? libMat
+                    : UnityEngine.Resources.Load<Material>(isFlame ? "LR2/FX/M_FX_Spark" : "LR2/FX/M_FX_Smoke");
                 Shader shader = Shader.Find("LR2/ParticleSoft") ?? Shader.Find("HDRP/Unlit") ?? Shader.Find("Unlit/Color");
                 if (assetMat != null)
                 {

@@ -102,6 +102,14 @@ namespace LR2.Characters
         private readonly List<LR2Item> _items = new List<LR2Item>();
         private CharacterController _controller;
         private SoldierRagdoll _ragdoll;
+        private RetargetProxy _proxy;
+        private LR2PlayablesController _lr2Playables;
+        private float _fullBodyGate, _proneGate;
+
+        /// <summary>FullBodyWeight as LR2 applies it (D57): the Animator curve, but only while sprinting, prone or sliding.</summary>
+        public float FullBodyWeightEffective { get; private set; }
+        /// <summary>ProneWeight as LR2 applies it (D57): the Animator curve, but only while prone or in a prone transition.</summary>
+        public float ProneWeightEffective { get; private set; }
         private Transform _weaponBone;
         private SoldierInput _input = SoldierInput.Empty;
         private int _activeIndex;
@@ -132,7 +140,18 @@ namespace LR2.Characters
         public GameObject DroppedWeapon => _droppedWeapon;
 
         private static readonly int FullBodyWeightHash = Animator.StringToHash("FullBodyWeight");
+        // default state of each driver Animator layer (FPSAnimator_Humanoid: Base Layer, TurnInPlace, IK)
+        private static readonly int[] DefaultStateHashes =
+        {
+            Animator.StringToHash("Base Layer.Standing"), Animator.StringToHash("TurnInPlace.Empty"), Animator.StringToHash("IK.Standing")
+        };
         private static readonly int SlideHash = Animator.StringToHash("Sliding");
+        private static readonly int ProneWeightHash = Animator.StringToHash("ProneWeight");
+        private static readonly int ProneTreeHash = Animator.StringToHash("Base Layer.ProneTree");
+        private static readonly int CrouchToProneHash = Animator.StringToHash("Base Layer.C_CrouchToProne_Humanoid");
+        private static readonly int ProneToCrouchHash = Animator.StringToHash("Base Layer.C_ProneToCrouch_Humanoid");
+        /// <summary>Seconds for the FullBodyWeight / ProneWeight gates to open or close (D57).</summary>
+        private const float CurveGateSeconds = 0.25f;
 
         // ------------------------------------------------------------------ lifecycle
         private void Awake()
@@ -143,11 +162,13 @@ namespace LR2.Characters
             FPSAnimator = GetComponent<FPSAnimator>();
             Animator = GetComponent<Animator>();
             UserInput = GetComponent<UserInputController>();
+            EnsureLR2Playables();
             Playables = GetComponent<IPlayablesController>();
             RecoilAnimation = GetComponent<RecoilAnimation>();
             RecoilPattern = GetComponent<RecoilPattern>();
             _controller = GetComponent<CharacterController>();
             _ragdoll = GetComponent<SoldierRagdoll>();
+            _proxy = GetComponent<RetargetProxy>();
             ViewCamera = GetComponentInChildren<Camera>(true);
             if (InputSource == null) InputSource = GetComponent<ISoldierInputSource>();
 
@@ -358,7 +379,8 @@ namespace LR2.Characters
             UpdateWeaponSwitch();
             if (ActiveItem != null) ActiveItem.Tick(Time.deltaTime);
 
-            float fullBody = Animator != null ? Animator.GetFloat(FullBodyWeightHash) : 0f;
+            UpdateBodyCurveGates();
+            float fullBody = FullBodyWeightEffective;
             float playablesWeight = IsSprinting ? Mathf.Max(0.78f, 1f - fullBody * 0.22f) : (1f - fullBody);
             if (UserInput != null) UserInput.SetValue(FPSANames.PlayablesWeight, playablesWeight);
 
@@ -625,6 +647,77 @@ namespace LR2.Characters
             }
         }
 
+        /// <summary>D57: put <see cref="LR2PlayablesController"/> (gated FullBodyWeight/ProneWeight) in place of Kinemation's
+        /// stock controller before Kinemation initialises in Start. The stock one has no Awake and holds only a mask and
+        /// editor-preview fields, which are copied over.</summary>
+        private void EnsureLR2Playables()
+        {
+            _lr2Playables = GetComponent<LR2PlayablesController>();
+            if (_lr2Playables != null) return;
+            var stock = GetComponent<FPSPlayablesController>();
+            if (stock == null) return;
+            string fields = JsonUtility.ToJson(stock);
+            DestroyImmediate(stock);
+            _lr2Playables = gameObject.AddComponent<LR2PlayablesController>();
+            JsonUtility.FromJsonOverwrite(fields, _lr2Playables);
+        }
+
+        private bool DriverInProneMotion()
+        {
+            if (Animator == null || !Animator.isActiveAndEnabled) return false;
+            int cur = Animator.GetCurrentAnimatorStateInfo(0).fullPathHash;
+            if (cur == ProneTreeHash || cur == CrouchToProneHash || cur == ProneToCrouchHash) return true;
+            if (!Animator.IsInTransition(0)) return false;
+            int next = Animator.GetNextAnimatorStateInfo(0).fullPathHash;
+            return next == ProneTreeHash || next == CrouchToProneHash || next == ProneToCrouchHash;
+        }
+
+        /// <summary>D57: decide when the arms follow the body animation and hand Kinemation the gated curve values.</summary>
+        private void UpdateBodyCurveGates()
+        {
+            float rawFullBody = Animator != null ? Animator.GetFloat(FullBodyWeightHash) : 0f;
+            float rawProne = Animator != null ? Animator.GetFloat(ProneWeightHash) : 0f;
+            bool proneMotion = IsProning || DriverInProneMotion();
+            bool armsFollowBody = IsSprinting || proneMotion || (Movement != null && Movement.State == SoldierMoveState.Sliding);
+            float step = Time.deltaTime / CurveGateSeconds;
+            _fullBodyGate = Mathf.MoveTowards(_fullBodyGate, armsFollowBody ? 1f : 0f, step);
+            _proneGate = Mathf.MoveTowards(_proneGate, proneMotion ? 1f : 0f, step);
+            FullBodyWeightEffective = Mathf.Clamp01(rawFullBody) * _fullBodyGate;
+            ProneWeightEffective = Mathf.Clamp01(rawProne) * _proneGate;
+            if (_lr2Playables != null)
+            {
+                _lr2Playables.FullBodyOverride = FullBodyWeightEffective;
+                _lr2Playables.ProneOverride = ProneWeightEffective;
+            }
+        }
+
+        /// <summary>
+        /// D56: start a life from a clean animation state. Death disables the driver Animator in whatever state it was in
+        /// (sprint blend, prone, crouch transition) and the Kinemation inputs keep their last values; re-enabling it at the
+        /// spawn resumed all of that: dying prone replayed the prone-to-crouch-to-stand get-up for 3 s with the gun rolled
+        /// 22 degrees, dying mid-sprint kept the sprint look/stabilisation weights for the whole next life (C17).
+        /// </summary>
+        private void ResetAnimationState()
+        {
+            if (UserInput != null)
+            {
+                UserInput.SetValue(FPSANames.StabilizationWeight, 1f);
+                UserInput.SetValue("LookLayerWeight", 1f);
+                UserInput.SetValue(FPSANames.PlayablesWeight, 1f);
+            }
+            if (Movement != null) Movement.ResetAnimatorParams();
+            if (Animator != null && Animator.isActiveAndEnabled && Animator.runtimeAnimatorController != null)
+            {
+                for (int layer = 0; layer < Animator.layerCount && layer < DefaultStateHashes.Length; layer++)
+                    if (Animator.HasState(layer, DefaultStateHashes[layer])) Animator.Play(DefaultStateHashes[layer], layer, 0f);
+            }
+            if (_proxy != null) _proxy.ResetTransientState();
+            // the body-curve gates start closed: a stale prone/sprint curve must not reach the new life's first frame
+            _fullBodyGate = _proneGate = 0f;
+            FullBodyWeightEffective = ProneWeightEffective = 0f;
+            if (_lr2Playables != null) _lr2Playables.FullBodyOverride = _lr2Playables.ProneOverride = 0f;
+        }
+
         private void OnDied(DamageInfo info)
         {
             _killer = info.attacker;
@@ -662,21 +755,41 @@ namespace LR2.Characters
             if (item == null) return;
             // B59b: Spawn slightly forward/right of chest & drop forward/downward so close-range attacker fire
             // never drives the dropped weapon backwards through the victim's torso.
-            Vector3 dropPos = transform.position + Vector3.up * 1.12f + transform.forward * 0.28f + transform.right * 0.16f;
+            // D56: start from where the gun really is. A fixed standing chest height (1.12 m) made the gun jump up 0.4 m
+            // when a crouched soldier died and 0.8 m when a prone one did ("dead while crouching puts the gun up").
+            Vector3 fwd = transform.forward;
+            Vector3 dropPos = item.transform.position;
+            float ahead = Vector3.Dot(dropPos - transform.position, fwd);
+            if (ahead < 0.28f) dropPos += fwd * (0.28f - ahead);
+            float height = dropPos.y - transform.position.y;
+            dropPos.y = transform.position.y + Mathf.Clamp(height, 0.25f, 1.45f);
             _droppedWeapon = Instantiate(item.gameObject, dropPos, item.transform.rotation);
             foreach (var b in _droppedWeapon.GetComponentsInChildren<MonoBehaviour>(true)) Destroy(b);
             foreach (var a in _droppedWeapon.GetComponentsInChildren<Animator>(true)) Destroy(a);
             foreach (var l in _droppedWeapon.GetComponentsInChildren<Light>(true)) Destroy(l);
             foreach (var p in _droppedWeapon.GetComponentsInChildren<ParticleSystem>(true)) Destroy(p.gameObject);
+            // the MK18 carries four scope cameras (Camera is not a MonoBehaviour, so the strip above kept them): a dropped
+            // copy must not render anything
+            foreach (var cam in _droppedWeapon.GetComponentsInChildren<Camera>(true)) { cam.enabled = false; cam.targetTexture = null; }
+            // the laser beam and dot are plain renderers (the WeaponLaser script itself is stripped above), so a dead soldier's
+            // dropped gun kept a frozen beam (user 11-18: "turn off enemies laser once they die")
+            foreach (var lr in _droppedWeapon.GetComponentsInChildren<LineRenderer>(true)) Destroy(lr);
+            foreach (var t in _droppedWeapon.GetComponentsInChildren<Transform>(true))
+                if (t != null && (t.name == "LaserDot" || t.name == "LaserBeam")) Destroy(t.gameObject);
             SetLayerRecursive(_droppedWeapon.transform, LR2Layers.Debris);
             var bounds = new Bounds(_droppedWeapon.transform.position, Vector3.zero);
-            foreach (var r in _droppedWeapon.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(r.bounds);
+            foreach (var r in _droppedWeapon.GetComponentsInChildren<Renderer>())
+            {
+                // the laser beam (up to 100 m long) and its dot at the hit point would drag the collider centre far away
+                if (r is LineRenderer || r is TrailRenderer || r is ParticleSystemRenderer || r.name == "LaserDot") continue;
+                bounds.Encapsulate(r.bounds);
+            }
             var box = _droppedWeapon.AddComponent<BoxCollider>();
             box.center = _droppedWeapon.transform.InverseTransformPoint(bounds.center);
             box.size = new Vector3(0.08f, 0.2f, 0.8f);
             var rb = _droppedWeapon.AddComponent<Rigidbody>();
             rb.mass = 3.5f;
-            rb.linearVelocity = transform.forward * 0.9f + transform.right * 0.55f + Vector3.up * 0.85f;
+            rb.linearVelocity = transform.forward * 0.9f + transform.right * 0.45f + Vector3.up * 0.25f;
             rb.angularVelocity = UnityEngine.Random.insideUnitSphere * 3.5f;
             Destroy(_droppedWeapon, droppedWeaponLifetime);
             item.gameObject.SetActive(false);
@@ -763,6 +876,7 @@ namespace LR2.Characters
             RefillAmmo();
             EquipImmediate(0);
             ForceResetAimState();
+            ResetAnimationState();
             if (Combatant != null) Combatant.SpawnTime = Time.time;
             ConfigureRole();
             Respawned?.Invoke(this);

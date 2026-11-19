@@ -641,7 +641,18 @@ namespace LR2.Weapons
             noise.frequency = 0.8f;
             noise.scrollSpeed = 0.15f;
             var pr = smokeGo.GetComponent<ParticleSystemRenderer>();
-            if (pr != null)
+            var fxLib = LR2.FX.LR2FxLibrary.Instance;
+            if (pr != null && fxLib != null && fxLib.barrelSmoke != null)
+            {
+                // D60: library material (built into the player): the runtime HDRP/Unlit smoke was an opaque box in builds
+                pr.sharedMaterial = fxLib.barrelSmoke;
+                LR2.FX.LR2FxLibrary.ApplyFlipbook(_barrelSmoke, fxLib.barrelSmokeTiles);
+                pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                pr.receiveShadows = false;
+                pr.renderMode = ParticleSystemRenderMode.Billboard;
+                pr.alignment = ParticleSystemRenderSpace.View;
+            }
+            else if (pr != null)
             {
                 Shader sh = Shader.Find("HDRP/Unlit");
                 if (sh != null)
@@ -673,7 +684,16 @@ namespace LR2.Weapons
             glowGo.transform.localPosition = Vector3.back * 0.018f;
             glowGo.transform.localScale = new Vector3(0.075f, 0.075f, 1f);
             _barrelGlowRenderer = glowGo.GetComponent<Renderer>();
-            if (_barrelGlowRenderer != null)
+            if (_barrelGlowRenderer != null && fxLib != null && fxLib.muzzleHeat != null)
+            {
+                // D60: per-gun copy of the library material (its colour follows the barrel heat)
+                _barrelGlowMat = new Material(fxLib.muzzleHeat) { hideFlags = HideFlags.HideAndDontSave, name = "LR2 Diffuse Muzzle Heat" };
+                _barrelGlowRenderer.sharedMaterial = _barrelGlowMat;
+                _barrelGlowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _barrelGlowRenderer.receiveShadows = false;
+                _barrelGlowRenderer.enabled = false;
+            }
+            else if (_barrelGlowRenderer != null)
             {
                 Shader sh = Shader.Find("HDRP/Unlit");
                 if (sh != null)
@@ -712,8 +732,7 @@ namespace LR2.Weapons
                 if (glowActive && _barrelGlowMat != null)
                 {
                     float intensity = Mathf.Lerp(0.04f, 0.22f, glowT);
-                    if (_barrelGlowMat.HasProperty("_UnlitColor"))
-                        _barrelGlowMat.SetColor("_UnlitColor", new Color(1f, 0.12f, 0.015f, intensity));
+                    LR2.FX.LR2FxLibrary.SetTint(_barrelGlowMat, new Color(1f, 0.12f, 0.015f, intensity));
                     if (_barrelGlowMat.HasProperty("_EmissiveColor"))
                         _barrelGlowMat.SetColor("_EmissiveColor", new Color(0.8f, 0.07f, 0.008f, 1f) * (glowT * 0.35f));
                 }

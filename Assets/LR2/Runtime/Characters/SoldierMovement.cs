@@ -260,6 +260,10 @@ namespace LR2.Characters
 
         public void ResetState()
         {
+            // D56: a death/teleport/respawn ends a sprint without a state change, so OnMovementStateChanged never fired the
+            // sprint-end hooks: the next life kept Kinemation's sprint look/stabilisation weights (C17: look 0.80, stab 0.78
+            // for the whole next life after dying mid-sprint) and the Animator kept the sprint blend.
+            bool wasSprinting = _cachedState == SoldierMoveState.Sprinting || State == SoldierMoveState.Sprinting;
             _velocity = Vector3.zero;
             MoveVector = Vector3.zero;
             _inputDirection = Vector2.zero;
@@ -273,6 +277,30 @@ namespace LR2.Characters
             }
             _cachedState = State = SoldierMoveState.Idle;
             _desiredGait = _cachedGait = Gait(GaitKind.Idle);
+            ResetAnimatorParams();
+            if (wasSprinting) onSprintEnded?.Invoke();
+        }
+
+        /// <summary>D56: zero the locomotion parameters the Animator would otherwise carry through a death or teleport
+        /// (sprint blend, move vector, playback speed), so the next frame starts from the standing idle.</summary>
+        public void ResetAnimatorParams()
+        {
+            AnimatorVelocity = Vector2.zero;
+            _locoSpeed = 1f;
+            if (_inputController != null) _inputController.SetValue(FPSANames.MoveInput, Vector4.zero);
+            if (_animator == null || !_animator.isActiveAndEnabled || _animator.runtimeAnimatorController == null) return;
+            _animator.SetFloat(MoveXHash, 0f);
+            _animator.SetFloat(MoveYHash, 0f);
+            _animator.SetFloat(VelocityHash, 0f);
+            _animator.SetFloat(SprintingHash, 0f);
+            _animator.SetFloat(LocoSpeedHash, 1f);
+            _animator.SetBool(MovingHash, false);
+            _animator.SetBool(InAirHash, false);
+            if (Stance == SoldierStance.Standing)
+            {
+                _animator.SetBool(CrouchingHash, false);
+                _animator.SetBool(ProningHash, false);
+            }
         }
 
         // ------------------------------------------------------------------ internals
@@ -596,6 +624,7 @@ namespace LR2.Characters
                     ? Mathf.Clamp01((planar - 1.8f) / 1.7f) * walkSprintBlendMax
                     : 0f);
             sprintWeight = Mathf.Lerp(sprintWeight, targetSprint, t);
+            if (targetSprint <= 0f && sprintWeight < 0.004f) sprintWeight = 0f;
             _animator.SetFloat(SprintingHash, sprintWeight);
 
             float reference = Stance == SoldierStance.Prone ? proneAnimReferenceSpeed

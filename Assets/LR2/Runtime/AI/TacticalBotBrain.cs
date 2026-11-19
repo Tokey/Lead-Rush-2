@@ -309,6 +309,14 @@ namespace LR2.AI
                     intent.hasDestination = true;
                     intent.destination = AwayFrom(bb.position, bb.targetLastKnown, 4f);
                 }
+                else if (dist > 4.5f && bb.target != null && bb.difficulty != null && bb.difficulty.aggression >= 0.68f && TargetIsVulnerable(bb))
+                {
+                    // D61: aggressive bots press an advantage instead of trading from range: the target is reloading, hurt,
+                    // or clearly weaker (user 11-18: "engage more aggressively", "it rarely wins against me")
+                    intent.hasDestination = true;
+                    intent.destination = bb.targetLastKnown;
+                    intent.allowSprint = !bb.targetVisible && dist > 9f;
+                }
 
                 // Objective discipline: if fighting inside an active flag zone, stay anchored inside the zone instead of chasing out
                 var flag = LR2.Game.FlagZoneController.Instance;
@@ -327,6 +335,16 @@ namespace LR2.AI
             }
             intent.crouch = _cover != null && _cover.crouchCover && Vector3.Distance(bb.position, _cover.transform.position) < 1.2f;
             return intent;
+        }
+
+        private static bool TargetIsVulnerable(BotBlackboard bb)
+        {
+            var target = bb.target;
+            if (target == null) return false;
+            float hp = target.Health != null ? target.Health.Normalized : 1f;
+            var soldier = target.GetComponent<LR2.Characters.SoldierController>();
+            bool reloading = soldier != null && soldier.IsReloading;
+            return reloading || hp < 0.45f || bb.health01 > hp + 0.35f;
         }
 
         private BotIntent Flank(BotBlackboard bb, BotIntent intent, float now)

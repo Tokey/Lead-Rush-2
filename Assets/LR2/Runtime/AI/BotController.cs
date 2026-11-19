@@ -459,7 +459,34 @@ namespace LR2.AI
                 aimPoint += _perceivedTargetVel * 0.055f; // human lagged velocity lead (trailing-edge misses on counter-strafe)
                 lookPoint = aimPoint;
             }
-            else if (_intent.hasLookPoint) lookPoint = _intent.lookPoint;
+            else if (_intent.hasLookPoint)
+            {
+                lookPoint = _intent.lookPoint;
+                // D61: search gaze stays near the horizon. A look point a few metres away (or one the bot has reached) is only
+                // a direction to scan; aiming at its height made a bot standing on the spot look straight up or down
+                // ("sometimes looks up instead of searching me", user 11-18).
+                Vector3 flat = lookPoint - eye;
+                flat.y = 0f;
+                float horiz = flat.magnitude;
+                if (!engaging && horiz < 3f)
+                {
+                    if (now >= _nextGlanceAt)
+                    {
+                        _nextGlanceAt = now + Random.Range(1.1f, 2.1f);
+                        _glanceOffsetYaw = Random.Range(-75f, 75f); // clear the angles around the spot
+                    }
+                    Vector3 dir = horiz > 0.3f ? flat / horiz : transform.forward;
+                    dir = Quaternion.AngleAxis(_glanceOffsetYaw, Vector3.up) * dir;
+                    lookPoint = eye + dir * 8f;
+                    lookPoint.y = eye.y - 0.12f;
+                }
+                else if (!engaging)
+                {
+                    float rise = Mathf.Min(horiz * 0.18f, 1.0f);  // about 10 deg up at most
+                    float drop = Mathf.Min(horiz * 0.40f, 2.5f);  // about 22 deg down
+                    lookPoint.y = Mathf.Clamp(lookPoint.y, eye.y - drop, eye.y + rise);
+                }
+            }
             else if (Agent != null && Agent.hasPath && Agent.path != null && Agent.path.corners != null && Agent.path.corners.Length >= 2)
             {
                 // Slice corners & periodically scan open flanks instead of staring blindly at feet
@@ -502,10 +529,11 @@ namespace LR2.AI
                 if (target != null)
                 {
                     Vector3 lateral = Vector3.ProjectOnPlane(_perceivedTargetVel, (lookPoint - eye).normalized);
-                    settle += Mathf.Clamp(lateral.magnitude * 0.25f, 0f, 2f);
+                    settle += Mathf.Clamp(lateral.magnitude * 0.25f, 0f, 2f) * (1f - 0.6f * d.composure);
                 }
-                settle += _combatStress * 1.15f;
-                if (Soldier.Movement != null && Soldier.Movement.Speed > 2f) settle += 0.45f;
+                // D61: composure damps the stress and self-movement terms (Veteran 0.7)
+                settle += _combatStress * 1.15f * (1f - d.composure);
+                if (Soldier.Movement != null && Soldier.Movement.Speed > 2f) settle += 0.45f * (1f - 0.5f * d.composure);
                 if (Soldier.IsCrouching || Soldier.IsAiming) settle *= 0.80f;
                 _aimError = Mathf.MoveTowards(_aimError, settle, d.errorDecay * dt);
 
@@ -553,7 +581,8 @@ namespace LR2.AI
                 float uy = rawPitchErr * invDist;
                 float nx = -uy;
                 float ny = ux;
-                float sdnSigma = Mathf.Clamp(angularDist * (0.045f + 0.045f * _combatStress) * skillScale, 0.35f, 6.5f);
+                float composure = d != null ? d.composure : 0.25f;
+                float sdnSigma = Mathf.Clamp(angularDist * (0.045f + 0.045f * _combatStress * (1f - composure)) * skillScale, 0.35f, 6.5f);
                 float muAlong = Mathf.Lerp(-0.075f, 0.035f, _combatStress) * angularDist;
                 float epsAlong = muAlong + ((Random.value + Random.value) - 1f) * sdnSigma;
                 float epsPerp = ((Random.value + Random.value) - 1f) * (0.44f * sdnSigma);

@@ -13,24 +13,25 @@ MonoBehaviour:
   m_Name: BotDifficulty_Regular
   m_EditorClassIdentifier: LR2.Runtime::LR2.AI.BotDifficulty
   displayName: Regular
-  reactionTime: {x: 0.34, y: 0.52}
+  reactionTime: {x: 0.32, y: 0.5}
   fieldOfView: 110
   visionRange: 75
-  detectionSpeed: 1
+  detectionSpeed: 1.15
   hearingMultiplier: 1
-  aimSpeed: 6
-  initialAimError: 4.8
-  settledAimError: 0.9
-  errorDecay: 1.9
-  headshotChance: 0.13
-  fireTolerance: 3.5
-  aggression: 0.55
-  strafeChance: 0.4
+  aimSpeed: 6.2
+  initialAimError: 4.6
+  settledAimError: 0.85
+  errorDecay: 2
+  headshotChance: 0.14
+  fireTolerance: 3.4
+  aggression: 0.58
+  strafeChance: 0.42
   strafeInterval: {x: 0.45, y: 1.2}
   crouchPeekChance: 0.12
   slideChance: 0.06
-  flankChance: 0.22
+  flankChance: 0.24
   burstSize: {x: 3, y: 6}
   burstPause: {x: 0.18, y: 0.4}
   retreatHealth: 0.38
   useCoverChance: 0.6
+  composure: 0.25

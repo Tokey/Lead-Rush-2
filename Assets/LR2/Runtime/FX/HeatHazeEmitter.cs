@@ -24,18 +24,19 @@ namespace LR2.FX
             _renderer = GetComponent<MeshRenderer>();
             if (_renderer == null) _renderer = gameObject.AddComponent<MeshRenderer>();
             filter.sharedMesh = GetQuadMesh();
+            // D60: copy of the library's validated distortion template, so a player build has its shader variant (a runtime
+            // HDRP/Unlit material lost it and drew the vector map as an opaque square at the muzzle)
+            var fxLib = LR2FxLibrary.Instance;
             Shader shader = Shader.Find("HDRP/Unlit");
-            if (shader == null)
+            if (shader == null && (fxLib == null || fxLib.heatHaze == null))
             {
                 _renderer.enabled = false;
                 return;
             }
 
-            _material = new Material(shader)
-            {
-                name = "LR2 Heat Distortion Only",
-                hideFlags = HideFlags.HideAndDontSave
-            };
+            _material = fxLib != null && fxLib.heatHaze != null
+                ? new Material(fxLib.heatHaze) { name = "LR2 Heat Distortion Only", hideFlags = HideFlags.HideAndDontSave }
+                : new Material(shader) { name = "LR2 Heat Distortion Only", hideFlags = HideFlags.HideAndDontSave };
             Texture2D vectorMap = GetVectorMap();
             if (_material.HasProperty("_UnlitColorMap")) _material.SetTexture("_UnlitColorMap", vectorMap);
             if (_material.HasProperty("_DistortionVectorMap")) _material.SetTexture("_DistortionVectorMap", vectorMap);

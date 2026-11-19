@@ -13,24 +13,25 @@ MonoBehaviour:
   m_Name: BotDifficulty_Hardened
   m_EditorClassIdentifier: LR2.Runtime::LR2.AI.BotDifficulty
   displayName: Hardened
-  reactionTime: {x: 0.24, y: 0.38}
+  reactionTime: {x: 0.22, y: 0.34}
   fieldOfView: 110
   visionRange: 75
-  detectionSpeed: 1
+  detectionSpeed: 1.55
   hearingMultiplier: 1
-  aimSpeed: 7.8
-  initialAimError: 3.4
-  settledAimError: 0.55
-  errorDecay: 2.6
-  headshotChance: 0.22
-  fireTolerance: 3
-  aggression: 0.7
-  strafeChance: 0.62
+  aimSpeed: 8.2
+  initialAimError: 3.2
+  settledAimError: 0.48
+  errorDecay: 2.8
+  headshotChance: 0.24
+  fireTolerance: 2.8
+  aggression: 0.74
+  strafeChance: 0.66
   strafeInterval: {x: 0.45, y: 1.2}
   crouchPeekChance: 0.2
-  slideChance: 0.15
-  flankChance: 0.35
+  slideChance: 0.16
+  flankChance: 0.38
   burstSize: {x: 4, y: 7}
   burstPause: {x: 0.18, y: 0.4}
   retreatHealth: 0.38
   useCoverChance: 0.6
+  composure: 0.5

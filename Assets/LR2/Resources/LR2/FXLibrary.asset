@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b54f6b506637344282c4ac2d24ff76f, type: 3}
+  m_Name: FXLibrary
+  m_EditorClassIdentifier: LR2.Runtime::LR2.FX.LR2FxLibrary
+  fire: {fileID: 2100000, guid: 734340efece570a4d8cd9fb41a7c82dd, type: 2}
+  fireTiles: {x: 6, y: 6}
+  smoke: {fileID: 2100000, guid: 44610787724f6ec46b8ac27a9aed1a24, type: 2}
+  smokeTiles: {x: 8, y: 8}
+  embers: {fileID: 2100000, guid: ae8f9e46e1232ec4c82c25ba57fdc96d, type: 2}
+  mist: {fileID: 2100000, guid: ec58b1a552022a5438312225bff0a451, type: 2}
+  mistTiles: {x: 8, y: 8}
+  barrelSmoke: {fileID: 2100000, guid: 2b5c0d01f00aeb048837cf1c68dc617d, type: 2}
+  barrelSmokeTiles: {x: 8, y: 8}
+  muzzleHeat: {fileID: 2100000, guid: 874cc2a1f7d727242b7117c0899f0cec, type: 2}
+  heatHaze: {fileID: 2100000, guid: 274e3f3996fe4f54aa61ae391e173ebd, type: 2}

@@ -141,6 +141,15 @@ namespace LR2.Characters
         /// Call every LateUpdate after the weapon is placed. Moves <paramref name="item"/> by the clip's gun motion and
         /// outputs world-space hand targets in the driver-hand convention. Returns false when no reload motion applies.
         /// </summary>
+        /// <summary>D56: drop any reload pose still easing out (a death mid-reload must not replay it after the respawn).</summary>
+        public void ResetHold()
+        {
+            _gunWeight = 0f;
+            HandWeight = 0f;
+            _hasHeld = false;
+            _calibrated = false;
+        }
+
         public bool Apply(LR2Firearm gun, Transform item, Transform driverHandL, Transform driverHandR,
                           ref Vector3 leftPos, ref Quaternion leftRot, ref Vector3 rightPos, ref Quaternion rightRot)
         {

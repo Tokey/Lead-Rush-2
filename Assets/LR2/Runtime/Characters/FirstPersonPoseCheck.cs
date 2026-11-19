@@ -140,6 +140,8 @@ namespace LR2.Characters
 
             // -lr2AimTest: only measure where the real bot AI's shots land (stationary vs strafing target), then quit.
             bool aimRun = Array.IndexOf(args, "-lr2AimTest") >= 0, gifRun = Array.IndexOf(args, "-lr2GifRun") >= 0;
+            // -lr2DeathTest: ADS sight alignment + death/respawn pose integrity in six states (user 11-18 14:10), then quit.
+            if (Array.IndexOf(args, "-lr2DeathTest") >= 0) { yield return DeathTest(); Finish(); yield break; }
             if (aimRun) yield return BotAimTest();
             // -lr2GifRun: record real gameplay clips (HUD included) for the README GIFs, then quit.
             if (gifRun) yield return GifRun();
@@ -755,6 +757,194 @@ namespace LR2.Characters
             brain.enabled = false; bot.ControlsEnabled = false;
         }
 
+        // ------------------------------------------------------------------ ADS alignment + death/respawn pose integrity
+        /// <summary>Where the weapon's ADS aim point sits in camera space (on the axis = looking through the sights) and the gun's roll.</summary>
+        private string AdsLine(string label)
+        {
+            var fa = _soldier.ActiveFirearm;
+            var cam = _soldier.ViewCamera;
+            var entity = fa != null ? fa.GetComponent<KINEMATION.FPSAnimationFramework.Runtime.Core.FPSAnimatorEntity>() : null;
+            Transform ap = entity != null ? entity.defaultAimPoint : null;
+            if (fa == null || cam == null || ap == null) return $"ADS-ALIGN [{label}] no aim point (entity={(entity != null)})";
+            Vector3 local = cam.transform.InverseTransformPoint(ap.position);
+            float roll = Vector3.SignedAngle(cam.transform.up, Vector3.ProjectOnPlane(fa.transform.up, cam.transform.forward), cam.transform.forward);
+            float pointing = Vector3.Angle(fa.transform.forward, cam.transform.forward);
+            float apAxis = Vector3.Angle(ap.forward, cam.transform.forward);
+            return $"ADS-ALIGN [{label}] gun={fa.DisplayName} aimPoint='{ap.name}' in camera x={local.x * 100f:0.0} cm y={local.y * 100f:0.0} cm z={local.z * 100f:0.0} cm, " +
+                   $"gunRoll={roll:0.0} deg, gunFwdVsCam={pointing:0.0} deg, aimPointFwdVsCam={apAxis:0.0} deg, aimBlend={_soldier.AimBlend:0.00}";
+        }
+
+        private float UserFloat(string name)
+        {
+            var ui = _soldier.UserInput;
+            if (ui == null) return -1f;
+            int idx = ui.GetPropertyIndex(name);
+            return idx >= 0 ? ui.GetValue<float>(idx) : -1f;
+        }
+
+        private static readonly string[] BaseStateNames =
+            { "Standing", "Crouching", "C_StandingToCrouch_Humanoid", "C_CrouchToProne_Humanoid", "C_ProneToCrouch_Humanoid", "C_CrouchToStanding_Humanoid", "ProneTree", "Sliding" };
+
+        /// <summary>The hidden driver's Animator: base-layer state (and transition), the locomotion parameters, the graph.</summary>
+        private string DriverAnim()
+        {
+            var a = _soldier.Animator;
+            if (a == null) return "anim=none";
+            if (!a.isActiveAndEnabled) return "anim=disabled";
+            string Name(int h)
+            {
+                foreach (var n in BaseStateNames) if (Animator.StringToHash("Base Layer." + n) == h) return n.Replace("_Humanoid", "").Replace("C_", "");
+                return h.ToString("x8");
+            }
+            var st = a.GetCurrentAnimatorStateInfo(0);
+            string tr = a.IsInTransition(0) ? ">" + Name(a.GetNextAnimatorStateInfo(0).fullPathHash) : "";
+            var g = a.playableGraph;
+            string graph = g.IsValid() ? (g.IsPlaying() ? "play" : "stop") : "invalid";
+            return $"anim={Name(st.fullPathHash)}{tr}@{st.normalizedTime:0.00} spr={a.GetFloat("Sprinting"):G3} fb={a.GetFloat("FullBodyWeight"):G3} " +
+                   $"fbEff={_soldier.FullBodyWeightEffective:G3} prw={a.GetFloat("ProneWeight"):G3} prEff={_soldier.ProneWeightEffective:G3} " +
+                   $"vel={a.GetFloat("Velocity"):0.00} mv={(a.GetBool("Moving") ? 1 : 0)} crc={(a.GetBool("Crouching") ? 1 : 0)} prn={(a.GetBool("Proning") ? 1 : 0)} graph={graph}";
+        }
+
+        /// <summary>Gun pose relative to the camera, hand IK residuals, stance and the Kinemation inputs that sprint/ADS change.</summary>
+        private string PoseLine(string label)
+        {
+            var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+            var cam = _soldier.ViewCamera;
+            if (item == null || cam == null) return $"POSE [{label}] item={(item != null)} cam={(cam != null)} dead={_soldier.IsDead}";
+            Vector3 lp = cam.transform.InverseTransformPoint(item.position);
+            float roll = Vector3.SignedAngle(cam.transform.up, Vector3.ProjectOnPlane(item.up, cam.transform.forward), cam.transform.forward);
+            float fwd = Vector3.Angle(item.forward, cam.transform.forward);
+            string hands = _proxy != null ? $"handErr L={_proxy.HandErrorLeft * 100f:0.0} R={_proxy.HandErrorRight * 100f:0.0} cm" : "no proxy";
+            string grip = "";
+            var vis = _proxy != null ? _proxy.Visual : null;
+            if (vis != null && vis.isHuman)
+            {
+                var rh = vis.GetBoneTransform(HumanBodyBones.RightHand);
+                if (rh != null) grip = $" rHand-to-gun={Vector3.Distance(rh.position, item.position) * 100f:0.0} cm";
+            }
+            return $"POSE [{label}] gunFwdVsCam={fwd:0.0} deg gunRoll={roll:0.0} deg gunInCam=({lp.x * 100f:0.0},{lp.y * 100f:0.0},{lp.z * 100f:0.0}) cm {hands}{grip} " +
+                   $"stance={_soldier.Movement?.Stance} state={_soldier.Movement?.State} aimBlend={_soldier.AimBlend:0.00} reloading={_soldier.IsReloading} " +
+                   $"look={UserFloat("LookLayerWeight"):0.00} stab={UserFloat(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.StabilizationWeight):0.00} " +
+                   $"playables={UserFloat(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.PlayablesWeight):0.00} dead={_soldier.IsDead} {DriverAnim()}";
+        }
+
+        private IEnumerator DeathTest()
+        {
+            float yaw = OpenYaw();
+            // ADS sight alignment of this run's gun (MK18 "sideways in ADS", AK-74N "not looking through the irons")
+            _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+            yield return Wait(0.8f);
+            Note(AdsLine("hip"));
+            _cmd.aim = true;
+            yield return Wait(1.3f);
+            Note(AdsLine("ads"));
+            Note(PoseLine("ads reference"));
+            yield return Capture("ads_00_reference", "ADS reference");
+            _cmd.aim = false;
+            yield return Wait(0.6f);
+            Note(PoseLine("hip reference"));
+
+            string[] cases = { "standing", "ads", "crouched", "sprinting", "reloading", "prone" };
+            string only = null;
+            var argv = Environment.GetCommandLineArgs();
+            for (int i = 0; i < argv.Length - 1; i++) if (argv[i] == "-lr2DeathCases") only = "," + argv[i + 1].ToLowerInvariant() + ",";
+            foreach (var c in cases)
+            {
+                if (only != null && !only.Contains("," + c + ",")) continue;
+                if (_soldier.IsDead) { float w = Time.time + 12f; while (_soldier.IsDead && Time.time < w) yield return null; }
+                _soldier.Teleport(new Vector3(24f, 0.05f, 0f), yaw);
+                _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+                yield return Wait(1.0f);
+                switch (c)
+                {
+                    case "ads": _cmd.aim = true; break;
+                    case "crouched": _cmd.crouch = true; yield return null; _cmd.crouch = false; break;
+                    case "sprinting": _cmd.move = new Vector2(0f, 1f); _cmd.sprint = true; break;
+                    case "reloading": _cmd.fire = true; yield return Wait(0.3f); _cmd.fire = false; yield return Wait(0.2f); _cmd.reload = true; break;
+                    case "prone": _cmd.prone = true; yield return null; _cmd.prone = false; break;
+                }
+                yield return Wait(c == "prone" ? 1.9f : c == "reloading" ? 0.6f : 1.0f);
+                Note(PoseLine($"{c} before death"));
+                yield return Capture($"death_{c}_0_before", $"{c}, before death");
+                _soldier.Health.Kill();
+                _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+                yield return Wait(0.6f);
+                yield return Capture($"death_{c}_1_dead", $"{c}, 0.6 s after death");
+                float until = Time.time + 14f;
+                while (_soldier.IsDead && Time.time < until) yield return null;
+                if (_soldier.IsDead) { Note($"DEATH [{c}] not respawned within 14 s"); continue; }
+                _cmd.aimYaw = _soldier.Yaw;
+                if (_pistolRun) { _cmd.weaponSlot = 1; yield return Wait(0.9f); }
+                float[] marks = { 0.1f, 0.5f, 1.5f, 3.0f };
+                float t0 = Time.time;
+                foreach (float m in marks)
+                {
+                    while (Time.time - t0 < m) yield return null;
+                    Note(PoseLine($"{c} after respawn +{m:0.0}s"));
+                    if (m == 0.5f) yield return Capture($"death_{c}_2_respawned", $"{c}, 0.5 s after respawn");
+                }
+                // ADS after the respawn (user: "MK18 goes sideways in ADS", "AK-74N not looking through the irons")
+                _cmd.aim = true; yield return Wait(1.2f);
+                Note(AdsLine($"{c} ADS after respawn"));
+                _cmd.aim = false; yield return Wait(0.5f);
+                _cmd.fire = true; yield return Wait(0.12f); _cmd.fire = false; yield return Wait(0.7f);
+                Note(PoseLine($"{c} after respawn + one shot"));
+                yield return Capture($"death_{c}_3_after_shot", $"{c}, after one shot");
+            }
+
+            // Wall contact (user 14:20: "hitting walls when the gun gets back, that's when everything starts to break")
+            yield return WallCase("walk", false);
+            yield return WallCase("sprint", true);
+        }
+
+        private bool _pistolRun => Array.Exists(Environment.GetCommandLineArgs(), a => a.Trim().ToLowerInvariant().Contains("mk23"));
+
+        /// <summary>Walk or sprint into the nearest wall, hold contact, back off: does the gun/hand pose return to the reference?</summary>
+        private IEnumerator WallCase(string label, bool sprint)
+        {
+            if (_soldier.IsDead) { float w = Time.time + 12f; while (_soldier.IsDead && Time.time < w) yield return null; }
+            Vector3 start = new Vector3(24f, 0.05f, 0f);
+            // nearest wall from the start point (8 directions), at least 2.5 m away so the walk-up is a real approach
+            float bestYaw = 0f, bestD = float.MaxValue;
+            for (int i = 0; i < 16; i++)
+            {
+                float y = i * 22.5f;
+                Vector3 dir = Quaternion.Euler(0f, y, 0f) * Vector3.forward;
+                if (Physics.Raycast(start + Vector3.up * 1.3f, dir, out var hit, 30f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore) && hit.distance > 2.5f && hit.distance < bestD)
+                { bestD = hit.distance; bestYaw = y; }
+            }
+            if (bestD == float.MaxValue) { Note($"WALL [{label}] no wall within 30 m"); yield break; }
+            _soldier.Teleport(start, bestYaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = bestYaw;
+            if (_pistolRun) { _cmd.weaponSlot = 1; yield return Wait(0.9f); }
+            yield return Wait(0.8f);
+            Note(PoseLine($"wall-{label} reference ({bestD:0.0} m from the wall)"));
+            _cmd.move = new Vector2(0f, 1f);
+            _cmd.sprint = sprint;
+            float speed = sprint ? 6.1f : 3.5f;
+            yield return Wait(bestD / speed * 0.55f);
+            Note(PoseLine($"wall-{label} open ground, mid-approach"));
+            yield return Wait(bestD / speed * 0.45f + 0.9f);   // arrive and keep pushing into the wall
+            Note(PoseLine($"wall-{label} pressed into the wall"));
+            yield return Capture($"wall_{label}_1_contact", $"{label} into the wall");
+            yield return Wait(0.8f);
+            _cmd.sprint = false;
+            _cmd.move = new Vector2(0f, -1f);
+            yield return Wait(0.9f);
+            _cmd.move = Vector2.zero;
+            float t0 = Time.time;
+            foreach (float m in new[] { 0.2f, 1.0f, 2.5f })
+            {
+                while (Time.time - t0 < m) yield return null;
+                Note(PoseLine($"wall-{label} backed off +{m:0.0}s"));
+            }
+            yield return Capture($"wall_{label}_2_after", $"{label}: 2.5 s after backing off the wall");
+            _cmd.aim = true; yield return Wait(1.2f);
+            Note(AdsLine($"wall-{label} ADS after the wall"));
+            _cmd.aim = false; yield return Wait(0.5f);
+        }
+
         /// <summary>Scripted bot input: absolute aim at the target's chest, ADS held, trigger on demand.</summary>
         private sealed class ScriptedShooter : ISoldierInputSource
         {
@@ -1080,6 +1270,15 @@ namespace LR2.Characters
         private void LateUpdate()
         {
             while (_pending.Count > 0) Render(_pending.Dequeue());
+            // C16 froze for 3 min at game time 19.3 s with the editor still ticking: the in-game pause menu (Esc reaching
+            // the visible test window) sets timeScale 0. The test owns the game: resume and say so.
+            if (!_done && Time.timeScale == 0f)
+            {
+                var menu = FindAnyObjectByType<LR2.UI.GameMenuController>();
+                if (menu != null && menu.IsPaused) menu.Resume();
+                else Time.timeScale = 1f;
+                Note("NOTE: the game was paused from outside the test (Esc in the visible window?); resumed");
+            }
         }
 
         private void FreezeOthers()

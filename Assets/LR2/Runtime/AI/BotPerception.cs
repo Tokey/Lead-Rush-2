@@ -231,6 +231,15 @@ namespace LR2.AI
             _pending.Add(new PendingShare { enemy = enemy, position = position, applyAt = Time.time + ShareDelay });
         }
 
+        /// <summary>D61: noises come from muzzles (about 1.45 m up) and bullet impacts (anywhere on a wall); the brain looks
+        /// 1.4 m above a known position, so ungrounded noise points made searching bots stare at the sky. Snap to the floor.</summary>
+        internal static Vector3 GroundPoint(Vector3 p)
+        {
+            if (Physics.Raycast(p + Vector3.up * 0.3f, Vector3.down, out var hit, 4f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore))
+                return hit.point;
+            return p;
+        }
+
         private void OnNoise(NoiseEvent e)
         {
             if (e.source == _self) return;
@@ -243,12 +252,13 @@ namespace LR2.AI
             float now = Time.time;
             Vector3 fuzz = UnityEngine.Random.insideUnitSphere * Mathf.Min(6f, dist * 0.08f);
             fuzz.y = 0f;
+            Vector3 heardAt = GroundPoint(e.position);
             if (e.source != null)
             {
                 var rec = Get(e.source);
                 if (!rec.visible)
                 {
-                    rec.lastKnownPosition = e.position + fuzz;
+                    rec.lastKnownPosition = heardAt + fuzz;
                     rec.lastHeardTime = now;
                 }
                 rec.aware = true;
@@ -257,7 +267,7 @@ namespace LR2.AI
             if (e.type == NoiseType.Gunshot || e.type == NoiseType.Explosion || e.source == null || dist < 12f)
             {
                 HasNoise = true;
-                NoisePosition = e.position + fuzz;
+                NoisePosition = heardAt + fuzz;
                 NoiseTime = now;
             }
         }
