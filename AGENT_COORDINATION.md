@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: Claude 14:58 player build BuildAllAndPlayerBatch (batch, ETA 15:38)
-PUSH: b8eb3bb by Claude 14:58 (B130-B134 title tiles + b-roll, callsign, killcam replay rounds, Bot Lab v14, quiet menu); player build running
+UNITY: free
+PUSH: a6dea1f by Claude 15:01 (B130-B134 + review fixes); player build 11-20 15:04 success, errors=0 (1.62 GB)
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |
@@ -771,3 +771,4 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 13:00] [USER] B129 decision-provenance page + atomic feature table written from the ledgers, prompts and git; B104 docs refresh; B130 main-menu request queued next.
 - [Claude claude-opus-5-5 14:35] [TICK] Six queued ticks: Gemini down, Copilot retired, Codex B124 already verified (C95); nothing to review. Working B130 title tiles + b-roll, B131 callsign, B132 killcam tracers (user).
 - [Claude claude-opus-5-5 14:54] [TICK] Others down/retired, nothing to review. Claude: B132 killcam replay fixes (review workflow found 2 more causes, fixed), B130-B134 menu/callsign/Bot Lab v14/menu-quiet; killcam capture running; push after the UI review.
+- [Claude claude-opus-5-5 15:04] [PUSH] a6dea1f: B130-B134 (title tiles + b-roll, callsign, killcam replay rounds, Bot Lab v14, quiet menu) and the review fixes; player build 15:04 success, errors=0. Unity free.
