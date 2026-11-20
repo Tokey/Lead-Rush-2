@@ -67,3 +67,36 @@ suggestion, +1 per pending suggestion, +1 per verified task, +0.5 per task ready
 Only the finder (or the reviewer) writes a defect's `found_by`, `stage` and attribution. The agent that caused it may add context in its log entry but must not change those fields; disagreements go to the reviewer or the developer. (Added 2026-11-18 after an agent re-filed a defect the developer had seen as its own pre-push catch.)
 
 If the source task or cause is not established, leave its cause fields blank and explain the uncertainty in `description`. `analysis.py` skips the unknown-cause penalty instead of inventing a blank-agent score row; a named finder can still receive review credit when the review stage is known.
+
+## features.csv (decision provenance)
+
+One row per atomic feature or fix (270 rows), coded for [`../DECISION_PROVENANCE.md`](../DECISION_PROVENANCE.md) and rendered as
+[`../FEATURES_TABLE.md`](../FEATURES_TABLE.md) by [`../analysis/provenance.py`](../analysis/provenance.py).
+
+| Column | Meaning |
+|---|---|
+| `fid` | Feature id (`F001`...) |
+| `date` | Day it shipped (US Eastern) |
+| `area` | gunplay, animation, bots, audio, vfx, maps, ui, camera, modes, qa, docs, process |
+| `feature` | What the player or tester gets |
+| `origin` | `dir` direct from prompt, `ai` AI-designed from the developer's goal, `init` AI-initiated, `dbug` developer bug report, `qa` AI QA finding (codebook in the script header) |
+| `agent`, `model` | Who built it, with the exact model |
+| `board`, `task`, `bug`, `prompt` | Ids in `AGENT_COORDINATION.md`, `tasks.csv` (or a commit), `bugs.csv` and `prompts.csv` |
+| `confidence` | The coder's confidence in the origin label: high, medium, low |
+| `asked` | The developer's words, verbatim (empty when nobody asked) |
+| `ai_decided` | What the AI decided beyond the words |
+| `outcome` | kept, changed, reverted, open (as of 2026-11-20) |
+
+## prompts.csv
+
+Every developer prompt parsed from [`../PROMPTS.md`](../PROMPTS.md): `pid` (order in the file), `date`, `time_et`, `to`, `source`
+(`verbatim`, `summary` quote, `board` paraphrase or `agent` prompt; the last two are excluded from the analysis), `words`, `pattern`
+(D directive, F feedback loop, I task iteration, V validation, L learning, P process; after the Anthropic Economic Index), `spec`
+(E exact, G goal, O open mandate) and `text`.
+
+## autonomy_ticks.csv, provenance_validation.csv, provenance_stats.json
+
+- `autonomy_ticks.csv`: Claude Code's self-prompting coordinator ticks per hour (from its session log).
+- `provenance_validation.csv`: a blind, stratified sample of 40 features for the developer to label (`developer_label`); the script then reports Cohen's kappa against the coder.
+- `provenance_stats.json`: every number on the provenance page, machine-readable.
+

@@ -68,4 +68,17 @@ Run commands from the Unity project root unless a command explicitly names a pro
 - `Docs/AI_Collaboration/data/tasks.csv`: delivered work by agent/model.
 - `Docs/AI_Collaboration/data/bugs.csv`: escaped, reviewed and pre-push defects.
 - `Docs/AI_Collaboration/analysis/analyze.py`: computes model/task quality summaries.
+- `Docs/AI_Collaboration/analysis/provenance.py`: decision provenance (who decided what), the atomic feature table page, figures and the animated chart.
 - `Docs/AI_Collaboration/RESEARCH_LOG.md`: narrative research and protocol evidence.
+
+## Weapon-stability and LLM switches (B125, B127)
+
+| Switch | What it does |
+|---|---|
+| `-lr2AimBench` | AI vs AI bench with the weapon-flip detector: per-frame muzzle vs aim, a 40-frame black box per event, spike counters, `teams.csv` |
+| `-lr2AblateLayers Sway,Ads,...` | Sets those Kinemation layer types to weight 0 during the bench, to find which layer turns the weapon |
+| `-lr2AdsWallCheck` | First-person check: aiming into a wall head-on, at 45 degrees, into a soldier and dying against a wall (`adswall.csv`) |
+| `-lr2FlipGuard` | Turns on the after-animation flip clamp (off by default since the root causes were fixed) |
+| `-lr2SharedIkMotions`, `-lr2NoItemReset` | Restore the old behaviour (shared motion assets, no gun-pose reset) for A/B tests |
+| `-lr2LlmTeams Alpha,Bravo`, `-lr2LlmModel <name>`, `-lr2LlmInterval <s>`, `-lr2GroqKeyFile <path>` | LLM squad commander for those teams; the key can also come from `GROQ_API_KEY` or `groq_api_key.txt` in the persistent data folder |
+

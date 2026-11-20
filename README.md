@@ -7,24 +7,25 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 ![LeadRush 2 — Main Menu & Tactical Recon](Docs/Media/main_menu_hero.png)
 
 > **Built by 4 AI agents.** One developer directs; **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`gemini-4-hydrogen` / `argon`), **GitHub Copilot** (`gpt-5.6-luna`), and **OpenAI Codex** (`gpt-6`) write the code, verify metrics, and cross-review through a shared board. The full story — with prompts, agent messages, 4-agent token/usage telemetry (`B56`), and model quality charts:
-> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
+> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[Who decided what: the developer's and the AI's decisions, feature by feature](Docs/AI_Collaboration/DECISION_PROVENANCE.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
 > Project documentation: [Project history](Docs/PROJECT_HISTORY.md), [Tooling](Docs/TOOLING.md), and [P3 + HDRP 17.5 Upscaler Benchmark Report](Docs/AI_Collaboration/specs/P3_Report.md).
 
 ### By the numbers
 
-As of 2026-11-19 13:27 (build `11.19.26.7`). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
+As of 2026-11-20 13:00 (after the 11-20 player build). Prompts are counted from [PROMPTS.md](Docs/AI_Collaboration/PROMPTS.md), tasks and defects
 from the [ledgers](Docs/AI_Collaboration/data), board items from [AGENT_COORDINATION.md](AGENT_COORDINATION.md).
 
 | Developer prompts | Tasks delivered | Defects logged | Board items | Commits | C# code |
 |---:|---:|---:|---:|---:|---:|
-| **252** | **198** | **79** | **139** | **132** | **41,372** lines in 132 files |
+| **268** | **208** | **87** | **151** | **153** | **42,810** lines in 134 files |
 
-- **Prompts by agent:** Claude Code 149, Antigravity ("Gemini") 102, GitHub Copilot 1. The list is built from the Claude Code
+- **Prompts by agent:** Claude Code 165, Antigravity ("Gemini") 91, GitHub Copilot 1, plus 11 quoted from summaries of prompts sent to several agents. The list is built from the Claude Code
   session logs and the Antigravity conversation database, so prompts given to Codex and Copilot inside their own apps are not in it.
-- **Tasks by agent:** Claude 94, Gemini 53, Copilot 35, Codex 16. **Defects:** 79 logged; the developer reported 31, the agents caught 48 (reviews and self-checks: Claude 24, Gemini 6, Copilot 6, Codex 2; automated runtime and QA-bot checks 9; a push check 1).
-- **Scope:** 4 days of development (2026-11-16 to 11-19), 4 AI agents, 4 combat maps, up to 20 bots per match in 2 to 4 teams.
+- **Tasks by agent:** Claude 104, Gemini 52, Copilot 35, Codex 17. **Defects:** 87 logged; the developer reported 39, the agents caught 48 (reviews and self-checks: Claude 24, Gemini 6, Copilot 6, Codex 2; automated runtime and QA-bot checks 9; a push check 1).
+- **Scope:** 5 days of development (2026-11-16 to 11-20), 4 AI agents, 4 combat maps, up to 20 bots per match in 2 to 4 teams.
 
-What changed most recently, with screenshots: [What's new on 2026-11-19](Docs/Updates/2026-11-19.md).
+What changed most recently: [What's new on 2026-11-20](Docs/Updates/2026-11-20.md) (weapon flips fixed at the root, drone blast sound,
+LLM squad commander, the who-decided-what study) · earlier: [2026-11-19](Docs/Updates/2026-11-19.md).
 
 ### Who built what
 
@@ -36,6 +37,21 @@ What changed most recently, with screenshots: [What's new on 2026-11-19](Docs/Up
 Contribution score per agent and model, from the task and defect ledgers in `Docs/AI_Collaboration/data` (tasks delivered and
 verified, bugs found in other agents' work, adopted suggestions, minus defects that reached the developer). Method, all charts
 and the protocol experiments: [How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md#quality-which-model-produced-what-quality-of-work).
+
+### Who decided what
+
+<p align="center"><img src="Docs/AI_Collaboration/figures/prov_growth.gif" alt="Animated chart: 270 features appear in the order they shipped, in five rows by origin" width="820"></p>
+
+Every one of the 270 features and fixes is traced back to its origin, in five kinds: the developer's exact words, an AI's design for
+the developer's goal, an AI's own idea, the developer's bug report, or an AI test that found a defect.
+
+- **31 %** came straight from a prompt, **30 %** were AI-designed from the developer's goal, **13 %** were AI-initiated,
+  **21 %** started as the developer's bug report and **5 %** as an AI QA finding.
+- The developer set the goal for **82 %** of the features; an AI chose the design for **69 %**.
+- **78 %** of finished features were kept as built. All four reverts were AI design decisions.
+
+The full study, with case studies and an evaluation using published research methods: **[Who decided what](Docs/AI_Collaboration/DECISION_PROVENANCE.md)**.
+Every feature in one table, with the developer's words and the AI's decisions: **[Atomic feature table](Docs/AI_Collaboration/FEATURES_TABLE.md)**.
 
 ---
 
@@ -126,6 +142,7 @@ was built (agent ledgers, protocol results, research specs). All eight scenarios
 - **Four-Map Optimization & Automated Telemetry (`Assets/LR2/Runtime/World/PerformanceFrameTelemetry.cs`, `specs/P3_Report.md`):** Quality-aware shadow tiers, camera-distance light culling (`fadeDistance`/`shadowFadeDistance`), single-light burning barrels, time-sliced arena reflection probes, throttled `WeatherSystem` & `FoliageSway`, and spawn-to-spawn cover safety across all four maps bring steady 1080p frame times to `6.8–9.6 ms` avg (`15.7–19.1 ms` p99, `0` QA failures across all 5 scenes).
 - **War-Torn Procedural Arenas (`Assets/LR2/Editor/LR2MapBuilder*.cs`, `Assets/LR2/Meshes/Procedural/`):** Leartes/ScansFactory pack props preserving tactical cover heights (`B75`), tileable `_DetailMap` wear, HDRP `SSAO` + `ContactShadows`, per-map `ShadowsMidtonesHighlights` colour grading, ground-level `AtmosphereFX` fog, `FireHazard` burning barrels (`heat haze`), destructible thin-refraction `M_LR2_Glass_*` panes (`B30`), and tuned HDRP lighting across all four combat maps (`B1`/`B72`).
 - **Skirmish Lobby & AI vs AI (`Assets/LR2/Runtime/UI/SkirmishLobby.cs`, `Game/SkirmishSetup.cs`, `Game/SpectatorCamera.cs`):** The main menu is a single **PLAY**. It opens a Command & Conquer style lobby: up to 20 bots in a scrolling roster, each with its own difficulty (Recruit to Veteran, or Adaptive) and team (free for all, Alpha, Bravo, Charlie, Delta) for 2, 3 and 4-way games, plus presets, mode, map, limits and weapon. **AI vs AI** leaves you out of the match: a spectator camera (chase, eye view, free fly, auto director) follows the bots while an AI test bench tallies kills, deaths and K/D per difficulty. The menu background cuts to a matching slow-motion shot for each screen (`World/MenuCinematic.cs`).
+- **LLM Squad Commander (experimental, `Assets/LR2/Runtime/AI/LLM/`):** An optional commander for a bot team asks a Groq-hosted model (free tier) for squad orders every 12 s. It sees only what its own team knows (last-known enemy positions), its orders become directives for the existing bots, and its plan is posted to the squad chat; the AI vs AI bench logs per-team K/D against rule-based bots. Off by default: launch with `-lr2LlmTeams Alpha` (or `Alpha,Bravo`) and put the key in `GROQ_API_KEY`, `-lr2GroqKeyFile <path>` or `groq_api_key.txt` in the game's persistent data folder. The key is never logged or committed.
 - **Tactical Bot AI (`Assets/LR2/Runtime/AI/`):** Staggered line-of-sight & noise perception (`BotPerception.cs`), 4 Hz utility brain with cover retreat, disengaged-only `AmmoCrate` ammo/armour resupply (`B74b`), stealth/flank goals, hunting & squad following (`TacticalBotBrain.cs`), NavMesh locomotion with unstuck mantling, Fitts/ESTA/CSKnow/Aim Lab biomechanical aiming (`BotController.cs`), per-preset detection speed and composure with Hardened/Veteran bots pressing a reloading or hurt target ([explainer 4b](Docs/LR2_Bot_Explainer.md)), Adaptive difficulty (`AdaptiveDifficultyTracker.cs`), and external LLM/commander hooks (`IBotDirectiveProvider`). Explore the **[LR2 Bot Lab](Docs/Bot/bot-lab.html)** (eight live scenarios, also a [Claude artifact](https://claude.ai/artifact/Mj3oVBaf6NpdgRJSsxicPo)), the **[Bot explainer with animated GIFs](Docs/LR2_Bot_Explainer.md)**, or the [3-tab manual](Docs/Bot/bot-brain.html).
 
 ---

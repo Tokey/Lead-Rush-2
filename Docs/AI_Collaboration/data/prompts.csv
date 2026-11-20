@@ -1,0 +1,459 @@
+pid,date,time_et,to,source,words,pattern,spec,text
+P001,2026-11-16,11:19,Claude,verbatim,206,D,O,"Fix all the games issues, i downloaeded new fps animation package. New stuff. I want this game to feel like cod. Also add a new humanoid enemy, that uses fps animation, and can simply attack the player. This will be changed to LLM powered AI bot later, but for now, I need complete game overhauld, completely new level design that looks like COD or BF with proper feedback, animation effects and all. Make those changes show up in the inspector too. U can keep the current blob enemy active, but i need a humanoid enemy with health and all. with feelback. And get the best gun that resembles cod gunplay, give it to both player and enemy. for now u can keep the enemy simple, but our goal is to make the enemy behave like human players, adapt to situations, or Do TDM by supporting the human player.
+But i need looks gunplay gameplay overhaul first.
+Lets make the best FPS game ever.
+
+Get sounds from the internet if needed. Give it your best. I want the most modern FPS infrustructure. and ofc fix all bugs.
+
+Give me a list of changes that u did afterwards.
+Give it a full ui overhaul too. lighting PE everything."
+P002,2026-11-16,15:27,Claude,verbatim,1,P,-,continue?
+P003,2026-11-16,15:40,Claude,verbatim,35,P,-,"please continue. i ran out of tokens. Make sure to give me details of the changes u made, and the bot behavior details. also should i close unity? or keeping it open would be easier?"
+P004,2026-11-16,21:55,Claude,verbatim,1,P,-,continue....
+P005,2026-11-16,22:38,Claude,verbatim,13,F,E,game is not playable. camera doesnt load i think. can you use cinemation?
+P006,2026-11-16,22:45,Claude,verbatim,70,F,G,"enemy has previous audio. remove that, players reload, walking anims way too rapid and not realistic. Also guns movement feels laggy and heavy, it should be responsive more. also the visuals are very flat. I want more of a war torn feel. so more grunge, rust, dirt, etc. more effects. like BF6... make it look grand.
+
+Also need more echoy... i also dont see the body cam movement at all."
+P007,2026-11-16,23:34,Claude,verbatim,86,F,G,"unity closed. a lot of bugs. map clipping, enemy clipping, and all. also what is talon. check for these bugs by iterative building. so u play, get bugs, check bugs, fix. fix visual bugs, and the other ones. also add camera effect. and this still doesnt feel full body cam ish, and the reload anim is non existant. maybe use one of the fps animation weapons if you can fix this. because this cant stay, fix this first. im at 97% token done so be efficient."
+P008,2026-11-16,23:43,Claude,verbatim,5,I,E,remove the rec text too
+P009,2026-11-16,23:43,Claude,verbatim,11,F,G,the whole map has flickers and issues. those must be fixed
+P010,2026-11-16,23:44,Gemini,verbatim,329,D,O,"Fix all the games issues, i downloaeded new fps animation package. New stuff. I want this game to feel like cod. Also add a new humanoid enemy, that uses fps animation, and can simply attack the player. This will be changed to LLM powered AI bot later, but for now, I need complete game overhauld, completely new level design that looks like COD or BF with proper feedback, animation effects and all. Make those changes show up in the inspector too. U can keep the current blob enemy active, but i need a humanoid enemy with health and all. with feelback. And get the best gun that resembles cod gunplay, give it to both player and enemy. for now u can keep the enemy simple, but our goal is to make the enemy behave like human players, adapt to situations, or Do TDM by supporting the human player. But i need looks gunplay gameplay overhaul first. Lets make the best FPS game ever. Get sounds from the internet if needed. Give it your best. I want the most modern FPS infrustructure. and ofc fix all bugs. Give me a list of changes that u did afterwards. Give it a full ui overhaul too. lighting PE everything.
+Show more
+11:19 AM
+I'll start by scouting the project to understand what exists before orchestrating the overhaul.
+11:19 AM
+The LeadRush 2 directory looks like the actual target — it has a freshly-modified Kinemation folder (FPS animation framework) and blob/orb enemies. Let me explore it.
+11:20 AM
+Unity is currently open on LeadRush 2. Let me read its project log for compile errors and the package update log.
+game objects are currently pink because i switched unity version, fix that too, maybe wont be needed if you fully change the map. have some cool verticality to the map too. make the map feel full. complete, but keep it small, as it will be kinda 1v1...
+should i close [... rest omitted ...]"
+P011,2026-11-16,23:45,Gemini,verbatim,15,P,-,also keep a file for claude once does so it can start working from there
+P012,2026-11-16,23:51,Gemini,verbatim,13,I,G,the gun needs more texture. add. make the entire game feel lived in
+P013,2026-11-16,23:51,Gemini,verbatim,23,F,G,"the camera gun etc clips everywhere, that should be fixed. objects in the scene also clipping a lot amongths each other
+
+
+## 2026-11-17"
+P014,2026-11-17,00:03,Gemini,verbatim,29,D,G,"maybe remove all foliage and design a new map maybe a city, or maybe abandonesd city or something... dark, gungy, war torn, damaged. also im closing unity for you"
+P015,2026-11-17,00:07,Gemini,verbatim,12,F,G,player is now the default strange rig. can that be fixed ?
+P016,2026-11-17,00:07,Gemini,verbatim,7,L,-,also how do i check your usage?
+P017,2026-11-17,00:07,Gemini,verbatim,54,I,E,"also, keep on improving upon the game, until you run out of token. it needs to be extremely polished. currently mouse sensitivity seems weird. also bodycam thing is not working, revert to default fps anim camra stuff, that was musch more snappy. while ads the fov should decrease so its zoomed in a bit."
+P018,2026-11-17,00:14,Gemini,verbatim,54,D,E,"instead of changing the whole map again, maybe make a few new maps, with completely new layout? make 2 more maps so we have 3. make one super simple too, for testing. so 4 maps. 2 more with similar complexity of completety different level, and one super simple. when argon ends switch to hydrogen"
+P019,2026-11-17,00:15,Gemini,verbatim,11,D,G,add a loading anim somewhere so the game doesnt feel stuck.
+P020,2026-11-17,00:19,Gemini,verbatim,15,F,E,"also on all the maps, run some math so clipping between objects are fully eliminated."
+P021,2026-11-17,00:21,Gemini,verbatim,12,D,G,can you make all the objects in the game destructible? if possible?
+P022,2026-11-17,00:22,Gemini,verbatim,5,P,-,bugs first then new features.
+P023,2026-11-17,00:23,Gemini,verbatim,7,F,G,also i noticed main menu is gone?
+P024,2026-11-17,00:25,Gemini,verbatim,36,I,G,"the simple map is mainly for testing bot behavior. this bot will be changed with an LLM bot. so i need that map. the map still needs to look good, just neeeds to be super simple."
+P025,2026-11-17,00:26,Gemini,verbatim,10,P,-,also can i keep unity open or is closed better?
+P026,2026-11-17,00:29,Gemini,verbatim,19,I,E,"change the current strange names to Bot, AI ... etc bot ish names so i know its a bot"
+P027,2026-11-17,00:30,Gemini,verbatim,26,D,O,i closed unity and am going to sleep. keep on making fixes and improvements until u run out of token. keep notes of change for claude.
+P028,2026-11-17,07:04,Claude,verbatim,16,D,O,antigravity did a alot o f fixes. continue bug fixes and feature addition and animation fixes
+P029,2026-11-17,10:19,Gemini,verbatim,26,D,O,"antigravity did a alot o f fixes. continue bug fixes and feature addition and animation fixes
+[... 255 more lines of pasted agent output omitted ...]"
+P030,2026-11-17,10:21,Gemini,verbatim,3,P,-,unity is closed.
+P031,2026-11-17,11:29,Gemini,verbatim,16,I,E,insread of a black facemask can we have ghosts facemask or somethinbg similar with a skull?
+P032,2026-11-17,11:30,Gemini,verbatim,12,I,G,also this is very weird. have different textures for different items please
+P033,2026-11-17,11:31,Gemini,verbatim,17,F,G,why the fuck is he holding his gun like that? also what the fuck happend to ADS?
+P034,2026-11-17,11:33,Gemini,verbatim,26,F,G,"also the killcam should show the kill. the reload is even more messed up now.
+
+Can you please run, play the game, before stopping to work?"
+P035,2026-11-17,11:34,Gemini,verbatim,22,P,-,keep these prompts as notes for claude. i dont think u can do these reliably. i'll use claude to get them done
+P036,2026-11-17,11:38,Gemini,verbatim,53,D,G,"you should try to fix them until you run out of token please.
+
+also, i need strong hit SFX. not sure when they are being hit. Also need tracer rounds so bullets are easier to follow. also need blood mist when bots are being hit.
+
+Ragdol maybe too? flinching too? add those ^"
+P037,2026-11-17,12:30,Claude,verbatim,100,D,G,"antigravity did a few things. change the UI to atleast have the map be viewed like a screenshot so i know what im selecting.
+Also give me settings to modify each game mode.
+
+Fix the bugs with animations, and skins and all.
+Read the gemini repoort to know what changes were made ...
+
+The gun is still not held correctly.
+
+after you fix this gun, maybe add a few more guns. guns should already be there.
+Also blooddrops, make them appear on the gun after being shot.
+
+Make quality of life changes like these, and polish the game to oblivion."
+P038,2026-11-17,12:31,Gemini,verbatim,14,P,-,i have claude running. follow its instructions and work as a subagent of claude.
+P039,2026-11-17,12:32,Gemini,verbatim,5,P,-,check agent coordination md file
+P040,2026-11-17,12:43,Claude,verbatim,17,F,G,compile errors ... also i'm closing unity. you should do it headless or after building or something.
+P041,2026-11-17,12:57,Claude,verbatim,10,L,-,how will u know if gemini has finished or not?
+P042,2026-11-17,13:00,Claude,verbatim,11,L,-,"in the mean time, can you explain how the bot works?"
+P043,2026-11-17,13:02,Claude,verbatim,36,D,G,"okay, after you are done with all the fixes and stuff. can you build me an artifact to explain how the current bot works?
+
+Do this after all the bug fixes and feature changes are implemented."
+P044,2026-11-17,13:11,Claude,verbatim,57,F,G,"can you start working again?
+
+H:\Unity Projects\GitHub Repos\InvasionFramerate
+
+i think the old logs are here in this session. ask me questions. you were working with gemini hydrogen, maythe that guy is lost even more. help him start. I'll point him to agent coordination .md. animations are messed up i just played. shoulder inside the cam and stuff."
+P045,2026-11-17,13:12,Gemini,verbatim,25,P,-,can you continue working on the project? look at the agent coordination stuff to get started. I'll switch to hydrogen once opus runs out here.
+P046,2026-11-17,13:27,Gemini,verbatim,2,P,-,sorry continue
+P047,2026-11-17,13:30,Gemini,verbatim,4,P,-,"go hydrogen, take over."
+P048,2026-11-17,14:29,Gemini,verbatim,4,F,G,why the enemy headless?
+P049,2026-11-17,14:36,Gemini,verbatim,24,P,-,"If you saw a headless enemy in a different screenshot or scene rather than shot_third_reload.png
+
+i saw it in the screenshot. continue working pls"
+P050,2026-11-17,14:38,Gemini,verbatim,17,D,G,"also, crouch, prone. are all of those disabled? Add that to the game? jumping to if not."
+P051,2026-11-17,14:56,Gemini,verbatim,13,L,-,are u generating these or downloading these from somewhere and modifyijng? the costumes
+P052,2026-11-17,15:03,Claude,verbatim,13,P,-,can you start working on the game again? and finish all your tokens?
+P053,2026-11-17,15:07,Gemini,verbatim,23,P,-,"claude ran out of tokens, you're on your own. keep that in mind and update board accordingly. keep working until it comes online."
+P054,2026-11-17,15:17,Gemini,verbatim,13,L,-,what are the shadow thin boards in the test scene? are they needed?
+P055,2026-11-17,15:23,Gemini,verbatim,19,D,E,"can you edit the github readme and push? readme says hdrp stuff. Do it now, then resume fixing. https://github.com/Tokey/Lead-Rush-2"
+P056,2026-11-17,15:24,Gemini,verbatim,8,D,G,add screenshots from the game to the readme.
+P057,2026-11-17,15:29,Gemini,verbatim,37,I,E,"map select dropdown looks horrible. remove that. Also make the bot difficulty changable like the current map selectiion roster, left right button, dropdowns are not needed so remove them.. and keep on fixing issues. keep on polishing"
+P058,2026-11-17,15:29,Gemini,verbatim,4,D,G,update readme once done
+P059,2026-11-17,15:31,Gemini,verbatim,30,I,G,"the walls, the containers, they are too geometrically perfect. make thep warped a bit, and walso the walls, make them look broken, war torn, uneven. you get the theme right?"
+P060,2026-11-17,15:32,Gemini,verbatim,13,P,-,"aslo leave instructions for claude, once it comes back it will need all"
+P061,2026-11-17,18:00,Claude,verbatim,197,F,G,"reload walking, reload itself has issues. pickup the work from where it was left. The walk anim sound doesnt really match up with the animation. also decrease recoil a bit, after ADS, and, decrese the muzzle flash glow intensity. work with gemini to fix these.
+
+also the gunplay needs work, ak 12 is much harder to control than the pistol and much harder to kill people with. fix the recoil.  prone can be a bit faster. and footstep sounds and the menu sounds are too extreme. 3d blood droplets that are supposed to be on the gun are flying on the screen.
+
+Write a better QA bot so that these things can be detected without me. Bug fixes should totally be managed by you.
+
+Also the games lighting needs work. In some places its too dark.
+
+its fine to have darkness, but, make sure everything is visible even then.
+
+also, the killcam needs work. Show me drying at the end,m show hitmarkers.
+
+Also headshots killshots and hits should have more pronounced, rugged sound. now its too casual. can the grunts be more realistic too? also more agony but they are trying to hide it.. just more realism."
+P062,2026-11-17,18:00,Gemini,verbatim,7,P,-,claude is back up. start coordinating again.
+P063,2026-11-17,18:02,Gemini,verbatim,4,P,-,are u running still?
+P064,2026-11-17,18:04,Gemini,verbatim,5,P,-,tasks are ready. start asap.
+P065,2026-11-17,18:06,Claude,verbatim,24,I,E,"and make the hitmarkers different color, more animation, also show where they got hit too, also add a toggleable thin laser to all guns."
+P066,2026-11-17,18:07,Claude,verbatim,52,P,-,"you should also check geminis work after its done, and it should check yours, when u guys get more bugs, share among each other. i want you both to continiously work. also u have a closer limit, so you work less, gemini more. but you check its work so quality is assured."
+P067,2026-11-17,18:09,Claude,verbatim,21,P,-,"when you are close to end, give all your tasks to gemini, but make sure to finish all your credits too."
+P068,2026-11-17,18:13,Gemini,verbatim,8,P,-,"claude is down again, all tasks are yours"
+P069,2026-11-17,18:19,Gemini,verbatim,50,D,G,"add some progressive music/tuning during gameplay, and menu too... can you generate such music? ai generated yes.
+
+also, i want it to ramp up organicly during fights, so more extreme then, calm rest of the times.
+
+also not so loud that i cant hear footsteps, check it thoroughly after implementing"
+P070,2026-11-17,18:26,Gemini,verbatim,19,F,G,the mag doesnt get out and the reload handle doest move during reload. fix that. hands also clipping slighjtly
+P071,2026-11-17,18:27,Gemini,verbatim,14,P,-,"after fixing anything, check it literally twice with two different subagents, two different methodds"
+P072,2026-11-17,20:32,Gemini,verbatim,6,F,G,i think the game has crashed
+P073,2026-11-17,20:32,Gemini,verbatim,5,P,-,close and re run pls
+P074,2026-11-17,20:36,Gemini,verbatim,26,F,E,"when the game runs, it loads a different model then changes to new texture, pls load it first befoire showing ... add a loading intro scrn."
+P075,2026-11-17,20:37,Gemini,verbatim,5,D,G,add bullet flyby sfx too
+P076,2026-11-17,20:44,Gemini,verbatim,9,F,G,music goes dim during gunfight then comes back late
+P077,2026-11-17,20:44,Gemini,verbatim,32,F,G,"also guns holding finger pos too loose. fix that. and the reload anim still has issues, hands clipping the mag and all, but much better than before. make the hand more snug"
+P078,2026-11-17,20:53,Gemini,verbatim,4,D,E,add drumrolls during firefights
+P079,2026-11-17,21:03,Gemini,verbatim,10,D,E,add cool intense slowly progressive guitar riff to the music
+P080,2026-11-17,21:06,Gemini,verbatim,20,D,E,"when there is thunder, make it rain, make the raindrop seem real and make everything look wet after a while"
+P081,2026-11-17,21:15,Claude,verbatim,2,L,-,reset when
+P082,2026-11-17,21:35,Gemini,verbatim,7,P,-,WAIT I'LL LET U KNOW IM TESTING
+P083,2026-11-17,21:46,Gemini,verbatim,11,F,G,game is crashing fix please .. build is crashing. please fix.
+P084,2026-11-17,21:47,Gemini,verbatim,19,P,-,"closed. finish what you were doing first, then start fixing the crash bug, keep it in the board too."
+P085,2026-11-17,21:57,Gemini,verbatim,5,V,-,did it pass or crash?
+P086,2026-11-17,22:09,Gemini,verbatim,15,F,G,"https://youtu.be/L2CwgJmReIo?si=GsOItsCgX2JH5xWl
+
+analyze this video to get the bugs.. there are so many animation bugs still."
+P087,2026-11-17,22:21,Gemini,verbatim,110,D,E,"have the current game mode be 1v1 deathmatch, and make a mode for capture the flag deathmatch with a rotating flag placed stratgicly on the map. have a radius to capture. and make the campute mechanics like BF6, closer faster, far harder. if needed redesign all maps to support capture the flag properly. also add some realistic particle effects all through the game. add hdri sky and make it go dark with lightning and stuff  when rain. make the rain look more realistic with splashes. overall try to make the game look more photorealistic. if you cant leave it for claude, but keep trying for 40 mins.
+
+chromr debug installed"
+P088,2026-11-17,22:22,Gemini,verbatim,69,I,G,"make sure the bot is able to play more humanly. add more human qualities to the bot. but dont make the difficulty different. just make it behave more human.
+
+also keep clear notes of the change. claude needs to be able to make an artifact with that. if you are dont with all the prev changes, start working on this. if not keep it on the board for claude."
+P089,2026-11-17,22:26,Gemini,verbatim,166,D,E,"in the replay, the view should be exact as the player. the bot should just be like a human, controlling the bot avatar. so it will send inputs like human to the bot avatar and the bot should behave exactly as it behaves on the player end. make this change cirital, because when i connect LLM to it, it needs to be able to do these things, sollm sends input and moves the avatar or something like that. or keep the llm stuff as is for future but make the bot feel more humanb and make the replay look exactly animated as the player view, with recoil and stuff. dont artifically control recoil for the bot have it be like a real humans mouse pulling down to contol recoil. and the intensity andd accuracy shoulkd change with changing accuracy.
+
+Also make another difficulty called adaptive. where the bot will learn and adapt to the paleyers playstyle and try to match its difficultyu dynamically throughout the game."
+P090,2026-11-17,22:27,Gemini,verbatim,33,I,E,"also the war torn wears, make them look more physical. so apply actual physics math to have them be distorted in a realistic way. if not possible by you leave this for claude."
+P091,2026-11-17,22:28,Gemini,verbatim,24,P,-,"turned on opus, select some of the difficult tasks and finish them early. also make sure atleast the editor loads so i can play."
+P092,2026-11-17,22:29,Gemini,verbatim,35,D,E,"also when selected a mode, let me select which weapon and some of the game settings from there, like bot difficulty and map so the menu gets some layers. make it animate nicely between layers."
+P093,2026-11-17,22:31,Gemini,verbatim,36,D,G,"look at research papers, blogs, articles and whatnot to make the bot behave more human. this change is critical and also document this carefully because claude needs to be able to do an artifact from that."
+P094,2026-11-17,22:33,Gemini,verbatim,21,F,G,"also its currently bypassing the mainmenu and getting to the game, fix that too. maybe it was changed for the bot"
+P095,2026-11-17,22:36,Gemini,verbatim,18,I,G,"also, can i turn on raytracing? lighting needs work. if not raytracing, revamp the lioghting and the skybox"
+P096,2026-11-17,22:38,Gemini,verbatim,42,D,G,"also can you make a compelling chat room where the bot will chat and maybe diss you if you die, in TDM maybe suggest plans? if too ambitious just make them shittalk against each other just as it would do to player."
+P097,2026-11-17,22:48,Gemini,verbatim,29,P,-,"H:\Unity Projects\Builds\Lead Rush 2
+
+you should build in this folder. this where where i build. and you should also test builds, because it did not run from my end."
+P098,2026-11-17,22:49,Gemini,verbatim,6,P,-,why did u switch from opus
+P099,2026-11-17,22:50,Gemini,verbatim,6,P,-,ok . keep doing with opus.
+P100,2026-11-17,22:50,Gemini,verbatim,2,P,-,save now?
+P101,2026-11-17,22:51,Gemini,verbatim,4,P,-,continue with argon please.
+P102,2026-11-17,22:56,Gemini,verbatim,22,P,-,while running run visible pls  i wanna see when it runs and how it looks. runs a shorter screen on the side
+P103,2026-11-17,22:59,Gemini,verbatim,16,P,-,"claude will wake up soon. dedicated critical large tasks to it, animation bug stuff too maybe."
+P104,2026-11-17,22:59,Gemini,verbatim,20,F,G,i still hear sound in the background. keep this in the board. while testing run a visible screen not headless.
+P105,2026-11-17,23:01,Claude,verbatim,10,P,-,continue working .. check board for your tasks take over.
+P106,2026-11-17,23:01,Gemini,verbatim,17,D,E,also add an icon to the build stuff. add todays date LR2.11.17.26 as version or something shorter
+P107,2026-11-17,23:01,Gemini,verbatim,4,P,-,claude ready. turned on.
+P108,2026-11-17,23:03,Claude,verbatim,32,D,G,format the board in a better more efficient way for both u and human. keep this documented. might write a peper on it. how to make two AIs work together or something.
+P109,2026-11-17,23:04,Claude,verbatim,49,D,G,"you also should push. make a more human readable version of the coordinator log, and talk about how ai was used to make this game on that page. show how ai communicated steps by step, promts too if possible. format the page nicely and push in a stable time."
+P110,2026-11-17,23:07,Claude,verbatim,44,I,E,"the first screenshot of push looks odd, thats not our enemy soldier. do the masked one SS. also add all lighting and visual updates if not added and update the screenshots in the readme too. push periodically always pput this in the board too."
+P111,2026-11-17,23:09,Claude,verbatim,69,D,E,"also check geminis work once you have done the main tasks. and in the board, document which model was used for which task. And quality of the task too, track that by tracking how many bugs that task caused, and do a chart in the read me page or somewhere. overall i want this whole project, my process and the process of the ai documented and available on github."
+P112,2026-11-17,23:11,Claude,verbatim,20,V,-,check the ai behavior code. apparantly a lot of changes were made or plans were made to make those changes.
+P113,2026-11-17,23:12,Claude,verbatim,23,P,-,i am starting copilot too. so give it some task too. with instructions. i'll prompt it to read the board and start working.
+P114,2026-11-17,23:13,Gemini,verbatim,3,P,-,did u stop?
+P115,2026-11-17,23:17,Claude,verbatim,3,P,-,limit reset continue
+P116,2026-11-17,23:19,Claude,verbatim,3,P,-,did u push?
+P117,2026-11-17,23:24,Claude,verbatim,107,F,E,"make the fov scale properly with aspect ratio. currently super weird on my screen. and also, the gun hold fingers are still off by a lot. and make the reload 1.5x faster. also have tactical reload to and make it du that when bullet in chamber. make the reload more aggressive.
+
+alkso add camera shake , and change the glass how they are lookign in thte game. give it a more realistic visual overhhaul. also did u add the new game mode stuff?
+
+Add lead rush 2 Starter screen. also add new cooler wartorn classy font. do a thorough research on whats appealing befoer making this choice."
+P118,2026-11-17,23:26,Claude,verbatim,32,D,E,push asap also push a .zip version of this to github as an pre alpha release. build before pushing when most of the changes are done. put this in the board too.
+P119,2026-11-17,23:37,Claude,verbatim,23,P,-,give copilot more tasks. its keeps stopping. keep everyone busy. make the game as beautiful and as polished and as researched as possible.
+P120,2026-11-17,23:38,Claude,verbatim,29,I,G,can you make the ai generated music and overall game audio more realistic and grand? i want this to be gritty wartorn game with butterry smooth motion and tactility.
+P121,2026-11-17,23:39,Claude,verbatim,14,P,-,push if you havent. specially the new readme. or as copilot to do it.
+P122,2026-11-17,23:12,Copilot,verbatim,14,P,-,You are Copilot on AGENT_COORDINATION.md. Read section 7 (START HERE - Copilot) and start.
+P123,2026-11-17,23:44,Claude+Gemini,board,18,,,"maps still too dark; wants fires, smoke and lights (fire hurts) and 2 strategic ammo stations per map."
+P124,2026-11-17,23:46,Copilot,agent,22,,,"Prompted Copilot with its queue: B34 QA checks, B38 FireHazard, B30 glass, B32 font research, P1-P5 polish backlog, and R8 push job."
+P125,2026-11-17,23:47,Claude,board,5,,,weapon hold still messed up
+P126,2026-11-17,23:51,Claude,board,25,,,README hero = main menu with the real enemy; redo menu shot; atmospheric gallery shots; ground fog + particles on all maps; nicer flag zones.
+P127,2026-11-17,23:57,All,board,33,,,"edges look sharp/aliased (""enable TAA?""); comprehensive GRAPHICS and CONTROLS menus (everything adjustable from menu); report exact model name in the board and log completed items + bugs in the research CSVs + chart."
+P128,2026-11-18,00:05,All,board,54,,,"""discuss with all the AI ... apply those changes ... I want to see the result"" (Protocol v3); research-first spec rule; document the whole project (mother project LeadRush HD + tooling); full-auto prompting mode (`agy --mode auto --dangerously-skip-permissions`, VS Code `chat.tools.global.autoApprove`); all animation/weapon handling to Claude; player builds go to `H:\Unity Projects\Builds\Lead Rush 2`."
+P129,2026-11-18,00:18,Copilot,agent,21,,,"Re-prompted Copilot with B13, B47 recoil research, B46 map design research, B40, B44 backend, B48 upscaler/perf research, and R8 push job."
+P130,2026-11-18,00:44,Claude,board,29,,,"every other gun (Mk23, AK-74N, Mk18, FAL) messed up; walking weapon motion far too strong (BF6/COD feel); Free-for-all Capture the Flag mode; mirror LR2 Bot Brain artifact on GitHub."
+P131,2026-11-18,00:45,Copilot,agent,13,,,"Prompted Copilot with B52 (bot explainer GIFs + page mirror), reviews, and pushes."
+P132,2026-11-18,00:48,Gemini,verbatim,177,F,G,"i still hear sound in the background. keep this in the board. while testing run a visible screen not headless.
+also add an icon to the build stuff. add todays date LR2.11.17.26 as version or something shorter
+claude ready. turned on. / did u stop?
+add how the aiming works too. aiming needs to follow human in game miss pattern. check actual human player databases to understand how human aim. u have the lead now, claud is down
+https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo can you access this? The things need to be added here. have instructions for claude if you cant add here. but you add in the github, claude checks verifies and then also updates artifact later, keep this in the board.
+also add how both pathfinding works. and how each of the brian component works with artifact.
+https://claude.ai/artifact/NrTa76HJCAAFzydVUuD2Zo this is the artifact. update this with what i said. do it now. also if possible put this in github too, and ofc put this in the proj. *(attached `LR2_Bot_Brain.html`)*
+also check the artifact for correctness.
+give some task to copilot"
+P133,2026-11-18,01:00,Gemini,verbatim,56,D,G,"and maybe add another tab for understanding how ai build this project and the reserach in the html too.
+and ofc github too. with animations and stuff if possible.
+the flag stuff the game mode stuff the chats where are they?
+the gamepolay gifs look nothing like the artifact. please do a thorough check on it."
+P134,2026-11-18,01:24,Copilot,agent,20,,,"Prompted Copilot (`gpt-5.6-luna`) with Request `R14`: cross-review `B53/B52/B51/B49/B50/B26/R12`, update `PROJECT_HISTORY.md`/`TOOLING.md`, and keep `R8` push gate without launching competing Unity processes."
+P135,2026-11-18,01:33,Gemini,verbatim,117,P,-,"""why not do the hold fix?"": the fix was diagnosed from clip data offline while another agent held Unity for 27 min; Unity time is the scarcest shared resource — can you run a seperate build?
+also do a push
+i think the hold but can be solved by just placing the index finger on the right side of the gun and bringing the thumb closer. fx that immidietly now and let me know once done.
+also report all your prompts in the board so github can be updated with those too. also copilots prompts. update github once again
+do an asset search on the internet and on the unity repo to find better assets if available."
+P136,2026-11-18,01:47,mixed,summary,35,F,G,"the music is severely muted during gunplay / when you die while aiming down sights, after respawn it stays in ADS, and if an enemy kills you close up the gun goes through your body"
+P137,2026-11-18,01:49,mixed,summary,20,I,E,"check LeadRushHDRP for default gun (FAL wasn't default, it was MK18 Mod or something) — make it default, keep AK-12"
+P138,2026-11-18,01:50,mixed,summary,10,D,G,add token usage / usage-limit info for all agents honestly
+P139,2026-11-18,01:54,mixed,summary,7,P,-,onboard Codex ASAP & give it tasks
+P140,2026-11-18,02:06,mixed,summary,35,D,G,"do a thorough research on hypermotion to see if any of those principles can be applied to our animation system or not? create tasks in the board, with many subtasks. also giving this to copilot."
+P141,2026-11-18,02:16,mixed,summary,14,D,E,have the source of each task also be shown on github task logs etc
+P142,2026-11-18,02:18,mixed,summary,43,I,E,"the two CTF modes, combine them and in the settings add something to make the bots be free for all, or same team, or player team etc. also the bot should play the flag too, design smarts in it and document it too."
+P143,2026-11-18,02:21,mixed,summary,24,F,G,killcam still not showing recoil. the look should exactly be like player. also change the bot names to real gamertags randomized. make it funny.
+P144,2026-11-18,02:24,mixed,summary,9,P,-,swtiching to hydrogen because out of argon. keep working!!!!
+P145,2026-11-18,02:32,mixed,summary,8,P,-,are u running hydrogen now? run hydrogen pls
+P146,2026-11-18,02:40,mixed,summary,6,P,-,copilots monthly limit reached. so sad.
+P147,2026-11-17,23:42,Claude,verbatim,43,D,E,"game looks too dark ish, add some artificial light source or fire smoke etc. fill up the environment. have the plaeyr take damage when in fire and stuff. also have ammo station in the map somewhere maybe two , but place them strategically."
+P148,2026-11-17,23:43,Claude,verbatim,12,P,-,copilot is out of task again. can you directly prompt it somehow?
+P149,2026-11-17,23:46,Claude,verbatim,9,F,G,just played the build weapon hold still messed up.
+P150,2026-11-17,23:50,Claude,verbatim,71,I,E,"replace the readme main screenshot with main menu actual enemy loaded and fix the main menu screenshot too. add screenshots of more detailed ares, that has nice lighting fog and stuff. add more particles and fog maybe on all the maps. like reactive fog on the gorund but not too foggy that it ruins visibility, flag highlight areas are looking aweful. fix with nicer ones. use more nice effect for it."
+P151,2026-11-17,23:54,Claude,verbatim,12,D,G,"do a research on what environments look more realistic, and add those."
+P152,2026-11-17,23:54,Claude,verbatim,10,F,E,enable TAA? or some sort of aliasing? edges are sharp.
+P153,2026-11-17,23:55,Claude,verbatim,5,P,-,copilot stopped. more work pls.
+P154,2026-11-17,23:56,Claude,verbatim,15,D,G,add more comprehensive graphics and controls menu. so everything can be controlled from the menu.
+P155,2026-11-17,23:58,Claude,verbatim,58,D,G,"ask all ai to report whcih  model if they are not already. also make sure to include the research graphs after generating them in the github page somewhere. also keep iot in the proj ofc, including the python to analyze if python needed. the reeeasrch is on which model is creating what quality of work, as we discussed."
+P156,2026-11-18,00:03,Claude,verbatim,111,D,G,"discuss with all the ai on how this coordination can be improved based on the research, and then apply those changes dynamically. i want to see result of the changes too. also, if unpromted, try to find tasks among each other, and also auto prompt each other from now onwards, if one runds out of token, other should prompt it when out of token. change gemini to hydrogen once its out of everything. that lasts the longest and can promt the other agents. i wanna promt just once and this need to keep on improving.
+
+specially the bugs and the graphics needs to be top tier. with settings, menu, ui improvements."
+P157,2026-11-18,00:05,Claude,verbatim,33,D,G,"and keep everything documented on this project. the qa bot and other stuff. what was there to begin with and all.
+
+H:\Unity Projects\Builds\Lead Rush HDRP
+
+https://github.com/Tokey/LeadRushHD
+
+these are the mother project of this."
+P158,2026-11-18,00:06,Claude,verbatim,14,I,E,"tools that finds new bugs suggests new meaningful features, should be scored the best."
+P159,2026-11-18,00:07,Claude,verbatim,36,D,G,also try to plan for when you run out of token. and plan on how that can be fixed or improved. i want this running all the time atleast by one agent and preferably by all.
+P160,2026-11-18,00:08,Claude,verbatim,52,D,G,"every game action feature looks map design stuff needs to be researched. so change map design for optimal gameplay too after doing a thorough research. do a research on reacoil too. realism is the goal. with balance and fairness in mind.
+
+claude is my preferred tool. but this research could prove otherwise."
+P161,2026-11-18,00:09,Claude,verbatim,11,P,-,"when calling other tools, do autopilot, auto allow all mode always."
+P162,2026-11-18,00:09,Claude,verbatim,19,P,-,the model name should be with each task remember that. thats critical for this research and game dev too.
+P163,2026-11-18,00:10,Claude,verbatim,7,F,G,project trying to start has compile errors.
+P164,2026-11-18,00:12,Claude,verbatim,39,D,E,"after a lot of the bugs are fixed, start working on optimization and performance improvement alongside visual improvements. include dlss if needed in settings and in the game later. also include other amd and nvidia techs in the game."
+P165,2026-11-18,00:12,Claude,verbatim,9,P,-,"H:\Unity Projects\Builds\Lead Rush 2
+
+if building anyways build here."
+P166,2026-11-18,00:16,Claude,verbatim,17,P,-,maybe take the weapon hold and other animation stuff from gemini and let it do other tasks?
+P167,2026-11-18,00:17,Claude,verbatim,5,P,-,start copilot ity died again
+P168,2026-11-18,00:19,Claude,verbatim,4,P,-,why did u stop?
+P169,2026-11-18,00:19,Claude,verbatim,6,P,-,why not do the hokld fix?
+P170,2026-11-18,00:38,Claude,verbatim,38,D,G,"do dynamic interactive artifact on how the bot behavior works with examples, and also try to put the animations u make as gifs to be put in github, try to github as close to your artifact as possible"
+P171,2026-11-18,00:41,Claude,verbatim,10,D,G,make a free for all capture the flag mode please.
+P172,2026-11-18,00:42,Claude,verbatim,36,F,G,"also , all the other guns animation and ik is completely messed up. go through each gun after fixing finger. and significantly reduce walking weapon anim. its too much,. make it feel like BF6 or COD"
+P173,2026-11-18,00:42,Claude,verbatim,23,P,-,you are running out of token and will run out soon. make this fixes asap and build and delegate work to the rest
+P174,2026-11-18,00:46,Claude,verbatim,21,D,G,"you should create animations of the bot moving. in the artifact, maybe with the graphing stuff if possible. also push afterwards"
+P175,2026-11-18,00:51,Claude,verbatim,25,D,G,add how the aiming works too. aiming needs to follow human in game miss pattern. check actual human player databases to understand how human aim.
+P176,2026-11-18,04:11,Claude,verbatim,67,P,-,"please start and take the most difficult tasks .. a lot of changes were made and new codex came to help. coordinate. killcam issue and relaoad and other animation bugs are my main priority. also make the laser more strong and make overall game graphics look far better than what it is now.
+
+do as push after, update research and all. i want to see new plots."
+P177,2026-11-18,04:12,Claude,verbatim,3,P,-,unity is closed.
+P178,2026-11-18,04:17,Claude,verbatim,34,I,E,"make the overall health 1.5x (or bullet damage less), make the hit marker vibrate like cod. animations should be smooth, bettry and seamless. which its is not now at all. that is top priority."
+P179,2026-11-18,04:19,Claude,verbatim,43,I,E,dont show health as 150. maybe 50 armor and 100 health .  have armour breaking sound too. and maybe have armor in the ammo stations too? were the ammo stations implemented? overall the game assets and props can be helped by an overhaul
+P180,2026-11-18,09:41,Claude,verbatim,42,D,G,"do a push asap with a new more comprehensive artifact on understanding bot behavior and aiming stuff, with more animated edxamples, more scenarios. on both GH and artifact. and update readme with new SS and update the ai research stuff on GH."
+P181,2026-11-18,10:06,Claude,verbatim,42,D,E,"doa a push again with a plot of contribution and new in game screenshots that i dont see on github.
+
+also show another plot of the ai shooting, in real game, of where it is hitting for both moving and stationary target"
+P182,2026-11-18,10:09,Claude,verbatim,26,D,E,aslo talk about the 20m timer hitter that prompts u to wake up and other automatically... and share all my prompts to the promt page too.
+P183,2026-11-18,10:27,Claude,verbatim,45,D,G,"change the main menu screenshot and the main screen shot, thats too old, and also talk about the QA process, in details, like how you guys run and pl,ay game camputure screenshot and logs and analyze. document everything do comparative analysis on them and push."
+P184,2026-11-18,10:33,Claude,verbatim,34,I,E,"the loading text is in the main menu SS, remove that, wait for it to fully load and take a much nicer SS.
+
+also show, more gifs of gunfights, and other animations and visuals."
+P185,2026-11-18,12:57,Claude,verbatim,28,I,E,"add a gamer tag there ""EnchantedP0tato""
+
+Also have these names tweked to turn to gamer tags: ""Jack, Ashlesha, Claypool, Tokey, Xiaokun""
+
+- 2 more best ones from current."
+P186,2026-11-18,13:12,Claude,verbatim,64,F,G,"a lot of animation bugs happening, weapon going sideways after dying, losing its ik losing its place. do a thorough review of all animation code and implement fix. this is top priority. the gunplay needs to be top notch.
+
+H:\Unity Projects\GitHub Repos\LeadRushHDRP
+
+gunplay in this project did not face many issues. maybe the sprinting and other animations are makign it break. investigate and fix."
+P187,2026-11-18,13:12,Claude,verbatim,22,I,E,"as for the new gamer tag stuff, keep all the old ones too, add the new naems just make them more frequent."
+P188,2026-11-18,14:10,Claude,verbatim,211,F,G,"a lot of animation bugs happening, weapon going sideways after dying, losing its ik losing its place. do a thorough review of all animation code and implement fix. this is top priority. the gunplay needs to be top notch.  AK74n ADS is totally off, its not looking through the iron sights.
+
+H:\Unity Projects\GitHub Repos\LeadRushHDRP
+
+gunplay in this project did not face many issues. maybe the sprinting and other animations are makign it break. investigate and fix.
+
+
+the sideways bug did not happen with other weapons, maybe because mk18 went sideways while ads and that is still there... also dead while crouching also puts the gun up. i thing the animations need to be refreshed more frequently and need to be corrected. go through that code to figure that out.
+
+
+Also, the bot, sometimes looks up instead of searching me . even the veteran bot seems too easy. Work on the bot behavior to make it play more smartly. and engage more aggressively maybe. it rarely wins against me. after you change the bot behavior, add those changes to the docs.
+
+then push and build.
+
+The animation bugs are the main issues that must be fixed. start with that first. gunplay needs to be seemless. thats what differs between AAA vs ours."
+P189,2026-11-18,14:11,Claude,verbatim,20,F,G,"also the flames and the smokes and the visual effects are boxy, literal not see through boxes. MUST FIX THOSE."
+P190,2026-11-18,14:13,Claude,verbatim,12,P,-,"no first fix are the animations, then boxy flames, then the bot."
+P191,2026-11-18,14:13,Claude,verbatim,21,I,E,"use the unity built in particle effects, those look nice and realistic. maybe swap with those once you fix the animations"
+P192,2026-11-18,14:16,Claude,verbatim,24,I,E,"also turn off enemies laser once they die.
+
+and make my tracers orange/yellow and keep their red. green looks unnatural. do this fix later."
+P193,2026-11-18,14:17,Claude,verbatim,27,F,G,"sprinting, hitting walls also mess up the animation. mainly hitting walls when the gun gets back, thats when everything starts to break, so look into that too."
+P194,2026-11-18,14:18,Claude,verbatim,9,F,G,also the pistol is totally messed up ik wise.
+P195,2026-11-18,19:46,Claude,verbatim,19,P,-,"every other ai is down except gemini. take the harder tasks yourself, and let it finish the ez ones."
+P196,2026-11-18,19:56,Claude,verbatim,26,F,G,fix some of the spawning. sometimes player get inside objects. and some objects like pipes are suuuuper thin. fix those. try to fix the clipping issues.
+P197,2026-11-18,20:05,Claude,verbatim,22,I,E,merge bot brain and bot lab. bot brain might be outdataed update it and i like the updates stuff bot brain has
+P198,2026-11-19,00:27,Claude,verbatim,395,I,E,"please fix the fire, use unitys fire particle effects instead. the heat effect should also be particles or something. the unity one has the heat effect already use that.
+Also fix the ui for showing score system, in conquest, tdm, free for all, its shows now 1st and 2nd which is very confusing.
+
+also human players can sometimes overshoot, and some pros start pre shooting even, add those.
+
+make the anim to start sprinting faster, proning should be 5x faster and smoother, maybe have a differnt anim for that. crouching also can be more faster and seamless. use x to hold crouch, and is adding sliding possible? on xx.
+i want the movement to be snappy, now it kinda feels sluggish.
+
+also when ADSing, the reticle should never move fully away, it can sway a little bit, but throghu the hole most of the time the iron sight in front needs to be seen. try to make it like COD or BF^ iron sights.. not its much harder to shoot through that.
+
+Also can you add more articial lights and more ambiance?
+
+And the rain is not visible at all. make it cinematic, visible, realism focused.
+
+Fix the weapon hold finger position stuff for all the weapons. Some tactical reload show  animation too long, it tilts the gun to clock and then stops, fix that, specially AKs. also no grunt is heard, add some war grunt like BF1, and add some intensity to sound. the indoor and outdoor sound sounds very different but not realistic at all. work on that.
+show map on the bottom like bf6, here maybe above the healht bar, make it look good. maybe in the menu give me both options, but default is this.
+add more particles, like footstep dust, or splash while raining, more audio improvements some reload clip sounds are severly delayed, maybe those clips need to be cropped. check and fix those, and add more SFX. if possible use some external audio engine to play these sounds or do some research on how game audio can be more realistic, currently it can be improved a lot.
+
+in some maps objects are floating and stuff, fix their position. and capture the flas area effect is HORRILE. use something sharp, htat adhears to the groud, not just floats above holes.
+all other models are down so its on you."
+P199,2026-11-19,00:28,Claude,verbatim,12,P,-,push and build when done. push and build when reaching limit too.
+P200,2026-11-19,00:34,Claude,verbatim,11,D,G,ADD CAMERA post processing effects to make the scenes more realistic.
+P201,2026-11-19,00:43,Claude,verbatim,3,P,-,unity closed now.
+P202,2026-11-19,00:52,Claude,verbatim,29,F,G,"also blood spashes on the gun looks weird when the gun is moving too fast, maybe its not on the surface and floating, not sure, check at the end."
+P203,2026-11-19,00:56,Claude,verbatim,16,D,G,"add a page for all the new feature list, with maybe screenshots and visuals, when pushing."
+P204,2026-11-19,00:57,Claude,verbatim,13,F,G,"ui flicking, first to 15 thing.
+
+also ads is specially bad while moving."
+P205,2026-11-19,00:57,Claude,verbatim,3,F,G,not while steady
+P206,2026-11-19,00:58,Claude,verbatim,5,D,G,update my prompt list too.
+P207,2026-11-19,00:58,Claude,verbatim,6,D,G,update whole github readmes (all) properly
+P208,2026-11-19,00:58,Claude,verbatim,2,P,-,when done
+P209,2026-11-19,01:04,Claude,verbatim,13,I,E,improve the diss dialogue library. make it realistic with censored slangs if used.
+P210,2026-11-19,01:05,Claude,verbatim,18,I,E,"not always slangs, sometimes normal. gg at the end of the match. and not as frequent as now."
+P211,2026-11-19,01:09,Claude,verbatim,10,F,G,"flame smokes or something still boxy, also not seering rain."
+P212,2026-11-19,01:11,Claude,verbatim,6,I,G,improve the look of the laser.
+P213,2026-11-19,01:11,Claude,verbatim,8,P,-,"also make changes asap, running out of tokens"
+P214,2026-11-19,05:15,Claude,verbatim,3,F,G,fix the fire
+P215,2026-11-19,05:17,Claude,verbatim,2,P,-,closing unity
+P216,2026-11-19,05:17,Claude,verbatim,5,F,G,fix the tactical reload bug
+P217,2026-11-19,06:07,Claude,verbatim,97,I,E,"change the menu, just have play, then in that have all the settings, also some settings can be unified, some can be broken. like give me max flexibily, 3 way, 4 way, so i can select how many bots and which team they can be in, maybe if all too much it can be in a sub mentu. one main thing i want, have a AI vs AI mode where i can test various difficulties of AI. like command and conquer skirmish menu. make it scrllable as i can want a lot of bots. maybe max 20."
+P218,2026-11-19,06:09,Claude,verbatim,49,D,E,"make the animations super nice. while changing menu, change camera of bg too. maybe for TDM show two soldiers, for 1v1 show current, free for all show soldiers fighting or something in slomo. infact add slomo to the menu and add motion to the enemies. 3p view, sometimes 1p."
+P219,2026-11-19,06:13,Claude,verbatim,31,D,E,"on killcams for headshots show a quick pan of the bullet hitting the hit in slomo, but dont make it too long, so it takes up time. just for headshot kills."
+P220,2026-11-19,06:16,Claude,verbatim,61,D,E,"use more of the unity particle effects throuout the entire map and maybe for expliosions too, they look really good. try to use all of them and lots of places, but dont spam them, let them be tasteful choices and serve purpose. also add GI to the laser, laser should light up area too when hitting a surface like real laser."
+P221,2026-11-19,06:16,Claude,verbatim,22,D,G,push at the end. also did you write the new features page? That needs to be detailed with SS gifs and all
+P222,2026-11-19,06:19,Claude,verbatim,23,D,G,"have the tickrate brain etc stuff in the artifact also add more visuals so that its even more easily understandable, the bot behavior."
+P223,2026-11-19,06:22,Claude,verbatim,14,D,E,add total prompts as a stats in the main github page. among other stats.
+P224,2026-11-19,12:18,Claude,verbatim,18,I,G,"make the colors consistent through the game. red and blue in menu, but different inside gameplay is weird."
+P225,2026-11-19,12:20,Claude,verbatim,17,I,E,also play settings stuff should be larger with more icon and stuff. where are the slomo stuff?
+P226,2026-11-19,12:21,Claude,verbatim,20,F,G,sorry they exist my bad. animations look a bit janky during strafing on menu maybe work on that a bit
+P227,2026-11-19,12:24,Claude,verbatim,47,I,E,"the slomo pan can have my dynamism, currently its not as visible. also, make it slomo a bit more. on the last shot, if its too slow, take it from the respawn time if needed. but make it look nice and cinematic like in the sniper movies."
+P228,2026-11-19,12:26,Claude,verbatim,32,F,G,"also did u fix finger positions for all guns? if not do so, for all anims too, reload, sprint strafe.
+
+also can the turn in place animation be faster and more seemless?"
+P229,2026-11-19,12:29,Claude,verbatim,86,I,E,"during ai v ai, when they are scoping around, turning etc, they turn very roboticly. humans dont do that. look at human mouse moving data, fit a cruve through it and then try to mimic that realistic human like movement. so it feels like watching a human.
+
+also in the artifact, check all the plots and figs, some of the plots m aybe the firing range the icon is too tiny and cofusing. look at those graphs and make it more easily understandable. then push all"
+P230,2026-11-19,12:32,Claude,verbatim,18,D,E,make the main menu have some handheld perlin noise camera motion so it feels nice. very slight tho.
+P231,2026-11-19,12:32,Claude,verbatim,3,P,-,unity is closed
+P232,2026-11-19,12:38,Claude,verbatim,17,V,-,also make sure the accuracy K/D does not drop or alter a lot after making these changes
+P233,2026-11-19,12:39,Claude,verbatim,12,I,G,change the test range map name to something cooler like the others
+P234,2026-11-19,12:42,Claude,verbatim,10,D,G,make the skybox clouds move like real life a bit
+P235,2026-11-19,12:42,Claude,verbatim,3,I,G,specially during storms.
+P236,2026-11-19,12:49,Claude,verbatim,15,I,E,Add a ticker dot beside the text. like it was done in the first artifact
+P237,2026-11-19,12:51,Claude,verbatim,18,L,-,"Orders · every 1.5 s
+squad or LLM directive
+
+when  no llm who gives orders? specify and clarify"
+P238,2026-11-19,12:54,Claude,verbatim,26,L,-,"Orders · 1.5 s, with a commander
+no LLM: none (you order by chat)
+
+how can i order by chat? does it work? now? without LLM?"
+P239,2026-11-19,12:56,Claude,verbatim,7,F,G,fire a shot isnt dfoing a thing
+P240,2026-11-19,12:57,Claude,verbatim,10,I,E,remove ashlesha xiokun claypool and jack from the bot names
+P241,2026-11-19,12:59,Claude,verbatim,28,I,E,"remove ashlesha xiokun claypool and jack from the bot names
+
+Or maybe have them all be present when multiple bots are playing. generate new gamer tags for them."
+P242,2026-11-19,13:00,Claude,verbatim,5,I,G,less offensive. cool and funny
+P243,2026-11-19,13:00,Claude,verbatim,3,I,E,no more names.
+P244,2026-11-19,13:00,Claude,verbatim,5,I,E,tokey too. regen that too
+P245,2026-11-19,13:02,Claude,verbatim,14,F,G,fix text overlaps like these in the Bot lab artifact. update github accordingly too.
+P246,2026-11-19,13:05,Claude,verbatim,6,F,G,this table needs work fix alighment
+P247,2026-11-19,13:07,Claude,verbatim,25,I,G,vet is vastly more superior from the rest. can that be tweaked a bit? like let the skill gap between each setting be somewhat similar?
+P248,2026-11-19,13:13,Claude,verbatim,12,V,-,was the gamer tag thing done? i dont see anyones name anymore
+P249,2026-11-19,13:16,Claude,verbatim,18,I,E,"play under tags that hide their names, like Pix
+
+noooo dont hide their names. keep their names too"
+P250,2026-11-19,13:16,Claude,verbatim,3,F,G,text overlap here
+P251,2026-11-19,13:18,Claude,verbatim,2,F,G,mess fix.
+P252,2026-11-19,13:20,Claude,verbatim,30,F,E,"while spectating, i see someones whole arm rotating. pls fix that? were those added after finder pos change? if so, try to remove anything forced that is breaking critical animations"
+P253,2026-11-19,13:21,Claude,verbatim,3,F,G,fix text overlap
+P254,2026-11-18,03:09,Gemini,summary,28,I,E,main menu img in the github is using an very old versions image fix that. also in the version after the date add 1/2/3/4... incremental after each fix/push.
+P255,2026-11-18,03:29,Gemini,summary,37,P,-,add a note for claude when it wakes up it should check all visual effects fix it and bug fixes and check your work and then create new tasks if all other tasks are done. eta 4.10
+P256,2026-11-18,09:29,Gemini,summary,2,P,-,join claude
+P257,2026-11-19,13:27,Claude,verbatim,12,I,E,"change the main menu screenshot?
+Add the match setup screenshot somewhere too"
+P258,2026-11-19,13:30,Claude,verbatim,26,I,E,"during 1v1 dont show friends name as much, when multiuple and when u can put them all (enemy or team doesnt matter) then show their names"
+P259,2026-11-19,13:31,Claude,verbatim,8,F,G,why is the skirmish menu on the side?
+P260,2026-11-19,13:32,Claude,verbatim,24,I,E,"it should be in the middle maybe make the buttons lil seethrough but still perfectly visible, and let the slomo stuff play on bg"
+P261,2026-11-19,13:35,Claude,verbatim,20,I,E,"make the play settings etc tiles, larger. and why is the bot difficult stuff still on the main menu? fix"
+P262,2026-11-19,14:03,Claude,verbatim,18,F,G,the whole ai vs ai has severe animation bugs through and through. fix all when u wake up
+P263,2026-11-19,14:27,Claude,verbatim,37,F,E,the weapon keeps on going up then roating fully. that is a primary fix. happens to all the weapons. mainly after the latest finger changes u did maybe... fix them revert them back  when u wake up
+P264,2026-11-19,14:36,Claude,verbatim,19,F,G,it mainly happens probably duing collision with other stuffs...... or idk how or why. figure it out and fix.
+P265,2026-11-19,15:29,Claude,verbatim,5,F,G,"*(two screenshots pasted, no text)*"
+P266,2026-11-19,18:34,Claude,verbatim,30,V,-,"copilot is dead forever. You take control, fix and push. also go through the artifact thoroughly to look for any bugs, and add stuffs to improve out understanding of it."
+P267,2026-11-19,18:38,Claude,verbatim,14,D,G,"do a damage model figurien too like headshot torso legs etc, and gun specs."
+P268,2026-11-19,18:41,Claude,verbatim,9,P,-,add all artifact stuff to gemini too. use ultracode.
+P269,2026-11-19,18:44,Claude,verbatim,29,F,G,also wes the gun rotation bug fixed? its not i just checked. its still causing issues. adsing going wild. please fix that bug before anything else. be extremely thorough.
+P270,2026-11-19,18:47,Claude,verbatim,26,F,G,"i dont need to go crouch or prone, its happenning during ads, when i hit other obstacles and maybe death has something to do with it"
+P271,2026-11-19,19:26,Claude,verbatim,35,D,E,can you implement a system to control the commander thing. with LLM? i'll input groq api. using free tier only. build it first then we'd test how it is performing against out non llm bots.
+P272,2026-11-19,20:39,Claude,verbatim,23,F,G,unity closed. the gun issues did not exist yesterday. some IK stuff was changed that might be causing this. please check for that?
+P273,2026-11-19,20:40,Claude,verbatim,7,D,G,add explosion sfx when the drones explode
+P274,2026-11-19,21:43,Claude,verbatim,37,F,G,"bugs frequency has increased. maybe somethings getting super multiplied in the ik of idle in some cases. check the whole IK code thoroghly, and build a report on how it works and then how this can happen."
+P275,2026-11-20,09:36,Claude,verbatim,5,V,-,run the gun fix tests.
+P276,2026-11-20,12:19,Claude,verbatim,153,D,G,"Groq key will come later.
+
+I need a page on github showing with plots and gifs and animations and details on what decisions were made by me and what were done by ai.
+
+for example, when i asked to use audio from my folder, but didnt specify what audio to use where, claude decided thta, so thats an improvement over my request.
+So i need detailed breakdown of features, that are from me, or from claude, or came from a debug. i need details that i can publish research on. So write me a whole page with as much detail as possible, but make it very clean, clear and easy to understand. and have a lot of helpful illustration if possible, but dont force everything to a gif.
+Do analysis, draw plots etc based on what u have first and then publish that page.
+
+Push after. i'll test the game for bugs now."
+P277,2026-11-20,12:21,Claude,verbatim,49,D,G,"look at some research papers that do these kinds of things, like what decisions were made by ai and what were made by human for a project look at how they evaluate, and have a section doing similar kinds of evaluation for us too.
+
+also update the whole github."
+P278,2026-11-20,12:27,Claude,verbatim,31,I,E,maybe also do a atomic list of featurre table somewhere and put who did what was that an improvement what came directly from prompt what came from QA debug etc etc....

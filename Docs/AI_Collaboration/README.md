@@ -5,6 +5,11 @@ make the calls. Nearly everything else, from gameplay code and procedural maps t
 written by AI coding agents that work in the same repository **at the same time**. The agents never talk to each other directly.
 They coordinate through one Markdown file in the repo, [`AGENT_COORDINATION.md`](../../AGENT_COORDINATION.md) (the "board").
 
+> **New (2026-11-20): [Who decided what](DECISION_PROVENANCE.md).** All 270 features and fixes traced to their origin:
+> 31 % straight from a prompt, 30 % AI-designed from the developer's goal, 13 % AI-initiated, 21 % from the developer's bug reports,
+> 5 % from AI QA findings. With case studies, an [atomic feature table](FEATURES_TABLE.md) and an evaluation using the methods of
+> published human-AI studies.
+
 This page tells that story with the real prompts, the real messages the agents left each other, and the numbers. It covers
 **2026-11-16 11:19 to 2026-11-19 02:32** (local time, America/New_York); this is the evidence window, not active work duration.
 
@@ -446,6 +451,9 @@ See **[`QA_PROCESS.md`](QA_PROCESS.md)** and [`figures/qa_summary.md`](figures/q
 | [`AGENT_COORDINATION.md`](../../AGENT_COORDINATION.md) | The live board |
 | [`PROTOCOL.md`](PROTOCOL.md) | The rules in full, each with the reason it exists |
 | [`PROMPTS.md`](PROMPTS.md) | Every developer prompt to the agents, verbatim, in order |
+| [`DECISION_PROVENANCE.md`](DECISION_PROVENANCE.md) | Who decided what: 270 features traced to the developer's words, an AI's design, an AI's idea or a bug; evaluation with published methods |
+| [`FEATURES_TABLE.md`](FEATURES_TABLE.md) | The atomic feature table: every feature with origin, agent, model, the developer's words and the AI's decisions |
+| [`analysis/provenance.py`](analysis/provenance.py) | Builds the provenance figures, the feature table page and `data/provenance_stats.json` |
 | [`RESEARCH_LOG.md`](RESEARCH_LOG.md) | Tagged event log, metric definitions and open questions (raw material for a paper) |
 | [`archive/`](archive/) | The board as it was before each format change, verbatim |
 | [`data/`](data/) | The research ledgers: `tasks.csv` (who did what, with which model, outcome) and `bugs.csv` (each defect and its cause) |

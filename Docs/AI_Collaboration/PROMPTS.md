@@ -1224,3 +1224,110 @@ FX, atmospheric map shots). The first attempt at 09:45 failed: Windows PowerShel
 - `03:29` (Wake-Up Note for Claude ETA `04:10`): *"add a note for claude when it wakes up it should check all visual effects fix it and bug fixes and check your work and then create new tasks if all other tasks are done. eta 4.10"*
 - `09:29` (`gemini-4-hydrogen-high` resuming alongside Claude): *"join claude"* -> `B75` props overhaul, `B72` HDRP graphics pass, `B74b` disengaged bot resupply, `0`-failure 5-scene visible QA sweep, `11.18.26.3` open-courtyard README media + `gameplay_combat.gif` & push.
 
+## 2026-11-19 13:27 to 2026-11-20 12:27 (Claude Code session log, verbatim)
+
+Extracted from the same session log as the section above, including the messages typed while Claude was working
+(they reach the agent mid-turn and are stored as queued commands). The 15:29 message was two screenshots with no text.
+
+### 2026-11-19
+
+**13:27 · to Claude Code**
+
+> change the main menu screenshot?
+> Add the match setup screenshot somewhere too
+
+**13:30 · to Claude Code**
+
+> during 1v1 dont show friends name as much, when multiuple and when u can put them all (enemy or team doesnt matter) then show their names
+
+**13:31 · to Claude Code**
+
+> why is the skirmish menu on the side?
+
+**13:32 · to Claude Code**
+
+> it should be in the middle maybe make the buttons lil seethrough but still perfectly visible, and let the slomo stuff play on bg
+
+**13:35 · to Claude Code**
+
+> make the play settings etc tiles, larger. and why is the bot difficult stuff still on the main menu? fix
+
+**14:03 · to Claude Code**
+
+> the whole ai vs ai has severe animation bugs through and through. fix all when u wake up
+
+**14:27 · to Claude Code**
+
+> the weapon keeps on going up then roating fully. that is a primary fix. happens to all the weapons. mainly after the latest finger changes u did maybe... fix them revert them back  when u wake up
+
+**14:36 · to Claude Code**
+
+> it mainly happens probably duing collision with other stuffs...... or idk how or why. figure it out and fix.
+
+**15:29 · to Claude Code**
+
+> *(two screenshots pasted, no text)*
+
+**18:34 · to Claude Code**
+
+> copilot is dead forever. You take control, fix and push. also go through the artifact thoroughly to look for any bugs, and add stuffs to improve out understanding of it.
+
+**18:38 · to Claude Code**
+
+> do a damage model figurien too like headshot torso legs etc, and gun specs.
+
+**18:41 · to Claude Code**
+
+> add all artifact stuff to gemini too. use ultracode.
+
+**18:44 · to Claude Code**
+
+> also wes the gun rotation bug fixed? its not i just checked. its still causing issues. adsing going wild. please fix that bug before anything else. be extremely thorough.
+
+**18:47 · to Claude Code**
+
+> i dont need to go crouch or prone, its happenning during ads, when i hit other obstacles and maybe death has something to do with it
+
+**19:26 · to Claude Code**
+
+> can you implement a system to control the commander thing. with LLM? i'll input groq api. using free tier only. build it first then we'd test how it is performing against out non llm bots.
+
+**20:39 · to Claude Code**
+
+> unity closed. the gun issues did not exist yesterday. some IK stuff was changed that might be causing this. please check for that?
+
+**20:40 · to Claude Code**
+
+> add explosion sfx when the drones explode
+
+**21:43 · to Claude Code**
+
+> bugs frequency has increased. maybe somethings getting super multiplied in the ik of idle in some cases. check the whole IK code thoroghly, and build a report on how it works and then how this can happen.
+
+### 2026-11-20
+
+**09:36 · to Claude Code**
+
+> run the gun fix tests.
+
+**12:19 · to Claude Code**
+
+> Groq key will come later. 
+>
+> I need a page on github showing with plots and gifs and animations and details on what decisions were made by me and what were done by ai. 
+>
+> for example, when i asked to use audio from my folder, but didnt specify what audio to use where, claude decided thta, so thats an improvement over my request. 
+> So i need detailed breakdown of features, that are from me, or from claude, or came from a debug. i need details that i can publish research on. So write me a whole page with as much detail as possible, but make it very clean, clear and easy to understand. and have a lot of helpful illustration if possible, but dont force everything to a gif. 
+> Do analysis, draw plots etc based on what u have first and then publish that page. 
+>
+> Push after. i'll test the game for bugs now.
+
+**12:21 · to Claude Code**
+
+> look at some research papers that do these kinds of things, like what decisions were made by ai and what were made by human for a project look at how they evaluate, and have a section doing similar kinds of evaluation for us too. 
+>
+> also update the whole github.
+
+**12:27 · to Claude Code**
+
+> maybe also do a atomic list of featurre table somewhere and put who did what was that an improvement what came directly from prompt what came from QA debug etc etc....
