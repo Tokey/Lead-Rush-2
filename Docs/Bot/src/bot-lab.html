@@ -222,6 +222,27 @@ body.gifmode .wrap { display: none; }
 .viz-legend i.bar { width: 3px; height: 14px; border-radius: 0; background: var(--ink); }
 .viz-legend i.whisk { width: 18px; height: 2px; border-radius: 0; background: var(--ink); }
 @media (max-width: 700px) { .viz-legend { margin-left: 0; } }
+/* 10.1 hold pipeline, 11.1 damage, 12.1 bench */
+.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; counter-reset: pipe; }
+.pipe .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+.pipe .step::before { counter-increment: pipe; content: counter(pipe); font: 700 13px/1 var(--display); color: var(--accent); display: block; margin-bottom: 4px; }
+.pipe .step b { font: 600 14px/1.3 var(--body); display: block; }
+.pipe .step ul { margin: 6px 0 0; padding-left: 16px; font-size: 12.5px; color: var(--muted); }
+.pipe .step ul li.new { color: var(--ink); font-weight: 600; }
+.pipe .step.hot { border-color: var(--accent); }
+.hold-wrap, .bench-wrap, .dmg-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; overflow-x: auto; }
+.hold-svg, .bench-svg, .dmg-svg, .fall-svg { width: 100%; height: auto; display: block; }
+.hold-svg { min-width: 560px; } .bench-svg { min-width: 520px; } .fall-svg { min-width: 520px; }
+.hold-svg text, .bench-svg text, .dmg-svg text, .fall-svg text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
+.hold-svg .dim, .bench-svg .dim, .dmg-svg .dim, .fall-svg .dim { fill: var(--muted); }
+.dmg-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .dmg-grid { grid-template-columns: minmax(0, 1fr); } }
+.dmg-svg .zone { cursor: pointer; stroke: var(--panel); stroke-width: 2; }
+.dmg-svg .zone:hover, .dmg-svg .zone:focus-visible { stroke: var(--ink); outline: none; }
+.dmg-svg .zone.sel { stroke: var(--accent); stroke-width: 3; }
+.ramp { display: flex; align-items: center; gap: 8px; font: 12px/1.3 var(--mono); color: var(--muted); margin-top: 6px; }
+.ramp i { flex: 1; height: 10px; border-radius: 3px; }
+tr.sel-gun td { background: var(--panel-2); }
 </style>
 
 <div class="wrap">
@@ -235,8 +256,8 @@ body.gifmode .wrap { display: none; }
     <span class="chip">soldiers <b>100 HP + 50 armour</b></span>
   </div>
   <nav class="toc" aria-label="Sections">
-    <div class="toc-part"><b>New</b><a href="#news">What changed on 11-18</a></div>
-    <div class="toc-part"><b>1 · The bot</b><a href="#theater">01 Scenarios</a><a href="#components">02 Six parts</a><a href="#senses">03 Detection</a><a href="#see">04 Sightlines</a><a href="#decide">05 Priorities</a><a href="#nav">06 Pathfinding</a><a href="#flick">07 Reaction and flick</a><a href="#strafe">08 Tracking a strafer</a><a href="#miss">09 Miss patterns</a><a href="#recoil">10 Recoil</a><a href="#armour">11 Armour and resupply</a><a href="#skill">12 Presets</a><a href="#adapt">13 Adaptive</a><a href="#llm">14 LLM hook</a></div>
+    <div class="toc-part"><b>New</b><a href="#news">What changed on 11-19</a></div>
+    <div class="toc-part"><b>1 · The bot</b><a href="#theater">01 Scenarios</a><a href="#components">02 Six parts</a><a href="#clock">02.1 Clock</a><a href="#react">02.2 React</a><a href="#senses">03 Detection</a><a href="#see">04 Sightlines</a><a href="#decide">05 Priorities</a><a href="#nav">06 Pathfinding</a><a href="#flick">07 Reaction and flick</a><a href="#strafe">08 Tracking a strafer</a><a href="#miss">09 Miss patterns</a><a href="#recoil">10 Recoil</a><a href="#hold">10.1 Holding the gun</a><a href="#armour">11 Armour and resupply</a><a href="#damage">11.1 Damage and guns</a><a href="#skill">12 Presets</a><a href="#bench">12.1 Measured</a><a href="#adapt">13 Adaptive</a><a href="#llm">14 LLM hook</a></div>
     <div class="toc-part"><b>2 · Game modes</b><a href="#modes">15 Modes</a><a href="#ctf">16 Capture the flag</a><a href="#chat">17 Chat</a></div>
     <div class="toc-part"><b>3 · How it was built</b><a href="#ai-story">18 Agents</a><a href="#ai-quality">19 Quality</a><a href="#ai-research">20 Research</a><a href="#sources">21 Sources</a></div>
   </nav>
@@ -245,14 +266,15 @@ body.gifmode .wrap { display: none; }
 <aside class="panel news" id="news" aria-labelledby="h-news">
   <div class="head"><span class="num">WHAT CHANGED · 2026-11-19</span><h2 id="h-news">Latest bot and combat updates</h2></div>
   <ul class="news-list">
+    <li><code>B125</code><div><b>The gun stays in the hands.</b> In AI vs AI a bot's rifle could snap up and spin for a frame. A flip detector timed it (0.6 to 7 % of frames, up to 13,000°/s), ruled out the finger edits, the wall tuck and the hand bone, and a guard now turns the gun back after the animation runs. See <a href="#hold">10.1</a>.</div></li>
     <li><code>B123</code><div><b>Evenly spaced presets.</b> Veteran was far ahead of Hardened in a fight. One skill dial now runs from Recruit (a little less helpless) to Veteran (trimmed a little: detection 1.9&times;, 28 % headshots), and Regular and Hardened sit where every step wins about the same share of duels (~91 % in a model of these formulas, was 96 / 94 / 92 %). <a href="#skill">Presets in 12</a>.</div></li>
-    <li><code>B118</code><div><b>Looks around like a person.</b> Casual looks now follow 4,636 real mouse movements: speed peaks a third of the way, the path bows, the first move stops about 8 % short and corrects after a short pause, and glances come at uneven, human gaps. An enemy in sight ends a glance at once, so reactions are unchanged.</div></li>
+    <li><code>B118</code><div><b>Looks around like a person.</b> Casual looks now follow 4,636 real mouse movements: speed peaks a third of the way, the path bows (at most 2°, mostly sideways: a bigger upward bow swung the gun up), the first move stops about 8 % short and corrects after a short pause, and glances come at uneven, human gaps. An enemy in sight ends a glance at once, so reactions are unchanged.</div></li>
     <li><code>B109</code><div><b>AI vs AI test bench.</b> The new skirmish lobby gives every bot its own difficulty and team: up to 20 bots, two to four teams, or free for all. In AI vs AI you watch from a spectator camera while a panel counts kills, deaths and K/D per difficulty. Adaptive can be set per bot.</div></li>
     <li><code>B114</code><div><b>See the clock.</b> <a href="#clock">02.1</a> shows every bot loop ticking at its real rate; <a href="#react">02.2</a> times the path from in view to the first shot for each preset.</div></li>
     <li><code>D61</code><div><b>Hardened and Veteran bots press a weak target.</b> With aggression 0.68 or more they push a target that is reloading, under 45 % health or 35 points weaker, and sprint when it is out of sight beyond 9 m. <a href="#decide">Try it in 05</a>.</div></li>
     <li><code>D65</code><div><b>The press is checked first.</b> Gemini's review found the sprint could never fire behind the range test. Hunting a weak target now skips the slow corner slice.</div></li>
     <li><code>D61</code><div><b>Searching at eye level.</b> Noise and last-known positions snap to the floor, and a search glances ±75° along the horizon every 1.1 to 2.1 s instead of looking up.</div></li>
-    <li><code>D61</code><div><b>Faster eyes, steadier hands at the top.</b> Detection 0.85× (Recruit) to 2.2× (Veteran: 0.34 s to notice you at 20 m, was 0.74 s); composure 0 to 0.72 damps stress and movement error; Veteran reacts in 0.15 to 0.23 s. <a href="#skill">Presets in 12</a>.</div></li>
+    <li><code>D61</code><div><b>Faster eyes, steadier hands at the top.</b> Detection 0.85× (Recruit) to 2.2× (Veteran) at the time, since respaced by B123 to 0.90× to 1.90×; composure 0 to 0.72 damps stress and movement error; Veteran reacts in 0.15 to 0.23 s. <a href="#skill">Presets in 12</a>.</div></li>
     <li><code>B47</code><div><b>A spray you can learn.</b> Each rifle climbs the middle of its range and weaves along one fixed S curve, with at most 10 % drift from shot 4; the climb holds 0.10 s after the last shot, then recovers.</div></li>
     <li><code>D66</code><div><b>No spawning inside props.</b> Every spawn and respawn tests the soldier capsule (0.38 × 1.8 m) and moves to the nearest clear NavMesh point on the same floor.</div></li>
     <li><code>B84</code><div><b>Tracer colours.</b> Yours and your team's are yellow-orange, enemies' stay red, and a dead soldier's laser goes out with the dropped gun.</div></li>
@@ -378,7 +400,8 @@ body.gifmode .wrap { display: none; }
         <div class="controls">
           <div class="ctl"><label for="see-gaze">Bot gaze <output id="o-gaze"></output></label><input id="see-gaze" type="range" min="-180" max="180" value="0"></div>
           <div class="ctl"><label for="see-fov">Field of view <output id="o-fov"></output></label><input id="see-fov" type="range" min="95" max="132" value="110"></div>
-          <div class="ctl"><label for="see-spd">Detection speed <output id="o-spd"></output></label><input id="see-spd" type="range" min="80" max="138" value="100"></div>
+          <div class="ctl"><label for="see-spd">Detection speed <output id="o-spd"></output></label><input id="see-spd" type="range" min="80" max="190" value="100"></div>
+          <p class="note" style="margin:-4px 0 4px">Adaptive mode spans 0.80× to 1.38×; the presets run 0.90× (Recruit) to 1.90× (Veteran).</p>
           <div class="ctl"><label for="see-react">Base reaction <output id="o-react"></output></label><input id="see-react" type="range" min="16" max="76" value="40"></div>
           <div class="checks"><label><input id="see-crouch" type="checkbox"> Crouched (×0.7)</label><label><input id="see-sprint" type="checkbox"> Moving &gt;2 m/s (×1.35)</label></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="see-fire" type="button">Fire a shot</button><button id="see-reset" type="button" class="ghost">Reset meter</button></div>
@@ -406,7 +429,7 @@ body.gifmode .wrap { display: none; }
           <div class="ctl"><label for="b-anchor">Target camping duration <output id="o-anchor"></output></label><input id="b-anchor" type="range" min="0" max="12" step="0.5" value="2"></div>
           <div class="ctl"><label for="b-flankwin">Anti-camp window (Adaptive 4.0–7.2 s) <output id="o-flankwin"></output></label><input id="b-flankwin" type="range" min="4.0" max="7.2" step="0.2" value="6.0"></div>
           <div class="ctl"><label for="b-preset">Bot preset (aggression)</label>
-            <select id="b-preset"><option value="0.35">Recruit (0.35)</option><option value="0.58">Regular (0.58)</option><option value="0.74">Hardened (0.74)</option><option value="0.88" selected>Veteran (0.88)</option></select></div>
+            <select id="b-preset"><option value="0.35">Recruit (0.35)</option><option value="0.51">Regular (0.51)</option><option value="0.69">Hardened (0.69)</option><option value="0.88" selected>Veteran (0.88)</option></select></div>
           <div class="checks">
             <label><input id="b-target" type="checkbox" checked> Has a target</label>
             <label><input id="b-visible" type="checkbox" checked> Target visible</label>
@@ -523,6 +546,49 @@ body.gifmode .wrap { display: none; }
     <div class="controls"><button type="button" id="btnSpray">Spray again</button><span class="note" id="rcNote"></span></div>
   </div>
 </section>
+<section id="hold" class="bb" aria-labelledby="h-hold">
+  <div class="head"><span class="num">10.1 &middot; HOLD</span><h2 id="h-hold">How the body holds the gun</h2><span class="src">SoldierController.cs &middot; Kinemation FPS Animation Framework &middot; RetargetProxy.cs</span>
+    <p>A bot never moves its visible arms itself. Its aim and stance go to a hidden Kinemation rig (the <i>driver</i>), which poses a humanoid with the gun on a weapon bone attached to its head. Every frame the visible soldier copies that pose, then a short list of LR2 fixes runs in this order before two-bone IK puts the gloves on the gun.</p></div>
+  <div class="pipe" role="list">
+    <div class="step" role="listitem"><b>Bot brain</b><ul><li>aim yaw and pitch (720°/s cap)</li><li>aim down sights, sprint, crouch, lean</li><li>fire, reload, switch</li></ul></div>
+    <div class="step" role="listitem"><b>Soldier inputs</b><ul><li>MouseInput, MouseDeltaInput</li><li>IsAiming, gait, stance</li><li>FullBody and Prone weights gated by state (D57)</li></ul></div>
+    <div class="step" role="listitem"><b>Hidden driver rig</b><ul><li>locomotion clips (Animator)</li><li>13 Kinemation layers: turn, look, view, pose sampler, IK, IK motion, blending, sway, aim, additive, wall tuck and more</li><li>gun on <code>IK WeaponBone</code>, a child of the head</li></ul></div>
+    <div class="step hot" role="listitem"><b>RetargetProxy, after Kinemation</b><ul><li>muscle-space body copy, hips aligned</li><li>reload bridge (gun follows the clip, clamped)</li><li>prone tuck, glove clearance, grip offsets</li><li class="new">flip guard (B125)</li><li>eye-plane guard (B60d), inertial offsets (B60a)</li><li>two-bone IK: hands onto the gun</li></ul></div>
+    <div class="step" role="listitem"><b>Visible soldier</b><ul><li>SWAT body, hitboxes and gun line up</li><li>first person: camera at its own eyes</li></ul></div>
+  </div>
+  <div class="hold-wrap">
+    <div class="viz-ctl">
+      <label>Kinemation output: gun pitch off the aim <input type="range" id="hold-pitch" min="0" max="180" value="72"><b id="hold-pitch-v">72&deg;</b></label>
+      <label>gun roll <input type="range" id="hold-roll" min="0" max="180" value="20"><b id="hold-roll-v">20&deg;</b></label>
+      <label><input type="checkbox" id="hold-special"> sprinting, reloading, switching or prone</label>
+      <div class="seg" role="group" aria-label="Guard"><button type="button" id="hold-guard" aria-pressed="true">Guard on</button><button type="button" id="hold-spin">Replay a flip</button></div>
+    </div>
+    <svg class="hold-svg" id="hold-svg" viewBox="0 0 860 300" role="img" aria-label="Side view of the gun against the aim line, and an end-on view of its roll, with the guard limits"></svg>
+    <div class="viz-sum" id="hold-sum" aria-live="polite"></div>
+  </div>
+  <div class="drill">
+    <div class="table-wrap panel">
+      <table>
+        <thead><tr><th>Flip bench, Saltworks AI vs AI (8 bots, 120 s)</th><th class="num">Frames &gt; 60&deg;</th><th class="num">Largest</th><th class="num">Logged &ge; 90&deg;</th></tr></thead>
+        <tbody>
+          <tr><td>Guard off (<code>-lr2NoFlipGuard</code>)</td><td class="num">258 of 49,264</td><td class="num">167&deg;</td><td class="num">6</td></tr>
+          <tr><td>Guard on</td><td class="num">209 of 50,568</td><td class="num">85&deg;</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:8px">With the guard on, what stays above 60&deg; is the detector reading the gun one frame after the aim moved (a bot turns up to about 15&deg; a frame) on top of the 70&deg; sprint carry. Accuracy and K/D stayed inside the match-to-match spread (<a href="#bench">12.1</a>).</p>
+    </div>
+    <div class="panel">
+      <div class="eyebrow" style="margin-bottom:8px">How the cause was narrowed</div>
+      <ul class="note" style="margin:0;padding-left:18px;display:grid;gap:4px">
+        <li>Finger and grip edits: already reverted, flips stayed.</li>
+        <li>Wall tuck: capped at 26&deg; in both profiles; walls and nearby soldiers were in under 10 % of flips.</li>
+        <li>Sway spring: simulated at 5 to 144 fps, under 5&deg;.</li>
+        <li>Hand weapon bone: forcing the animated bone gave 0.70 % against 0.64 %, no change.</li>
+        <li>Layer ablation: only switching off the IK-motion and blending group removed every flip over 90&deg;.</li>
+      </ul>
+    </div>
+  </div>
+</section>
 <section id="armour" aria-labelledby="h-armour">
   <div class="head"><span class="num">11 · SURVIVE</span><h2 id="h-armour">Armour and the ammo stations</h2>
     <p>Every soldier, bot or player, has 100 health and 50 armour. Armour takes damage first and does not grow back; health does, after 4 s without damage. Breaking someone's armour makes a ceramic crack for both of you. Each map has two ammo stations that give back 120 rounds and 50 armour, then go dark for 20 s for everyone.</p></div>
@@ -555,6 +621,40 @@ body.gifmode .wrap { display: none; }
     </div>
   </div>
 </section>
+<section id="damage" class="bb" aria-labelledby="h-damage">
+  <div class="head"><span class="num">11.1 &middot; HIT</span><h2 id="h-damage">Where a bullet lands, and what each gun does</h2><span class="src">WeaponDefinition.cs &middot; Ballistics.cs &middot; Health.cs &middot; Data/Weapons/WD_*.asset</span>
+    <p>Damage per hit = the gun's damage for that range tier &times; the multiplier of the body part it hit. Armour soaks it first, then health: 50 + 100 = 150 points to kill a fresh soldier. Pick a gun and a distance, then click a body part.</p></div>
+  <div class="dmg-wrap">
+    <div class="viz-ctl">
+      <div class="seg" role="group" aria-label="Gun" id="dmg-guns"></div>
+      <label>Distance <input type="range" id="dmg-dist" min="1" max="80" value="15"><b id="dmg-dist-v">15 m</b></label>
+      <label><input type="checkbox" id="dmg-armour" checked> target has full armour</label>
+    </div>
+    <div class="dmg-grid">
+      <div>
+        <svg class="dmg-svg" id="dmg-svg" viewBox="0 0 300 470" role="img" aria-label="Soldier silhouette coloured by damage multiplier; click a part"></svg>
+        <div class="ramp"><span>0.9&times;</span><i id="dmg-ramp"></i><span id="dmg-ramp-hi">1.5&times;</span></div>
+      </div>
+      <div style="display:grid;gap:12px;min-width:0">
+        <div class="readout" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+          <div class="stat"><div class="k">Body part</div><div class="v" id="dmg-zone">-</div></div>
+          <div class="stat"><div class="k">Per hit</div><div class="v" id="dmg-hit">-</div></div>
+          <div class="stat"><div class="k">Hits to kill</div><div class="v" id="dmg-stk">-</div></div>
+          <div class="stat"><div class="k">Time to kill</div><div class="v" id="dmg-ttk">-</div></div>
+        </div>
+        <div class="viz-sum" id="dmg-sum" aria-live="polite" style="margin-top:0"></div>
+        <svg class="fall-svg" id="fall-svg" viewBox="0 0 620 230" role="img" aria-label="Body-shot damage against distance for every gun, with the chosen distance marked"></svg>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap panel">
+    <table>
+      <thead><tr><th>Gun</th><th class="num">Fire rate</th><th class="num">Damage by range</th><th class="num">Head</th><th class="num">Magazine</th><th class="num">Reload (tactical / empty)</th><th class="num">Aim in</th><th class="num">Sprint to fire</th><th class="num">Bots fight at</th><th class="num">Torso TTK, 10 m, armoured</th></tr></thead>
+      <tbody id="gun-rows"></tbody>
+    </table>
+  </div>
+  <p class="note">Every gun: neck 1.2&times;, upper torso 1.1&times;, lower torso 1.0&times;, arms and legs 0.9&times;; rounds pass up to 0.25 m of wood, glass or thin metal at 65 % damage. Fire and falls skip armour. Time to kill counts the gaps between shots (60 / fire rate per shot after the first), assuming every round hits; real fights add the reaction and flick of <a href="#react">02.2</a> and the misses of <a href="#miss">09</a>.</p>
+</section>
 <section id="skill" aria-labelledby="h-skill">
   <div class="head"><span class="num">12 · ADAPT</span><h2 id="h-skill">Skill presets and the adaptive mode</h2>
     <p>Four presets change the human limits, never the rules. The adaptive mode moves one skill value between them during the match, from how you play: your hit rate, how often you rush to close range, how often you crouch.</p></div>
@@ -571,6 +671,21 @@ body.gifmode .wrap { display: none; }
     </div>
     <p class="note">Values interpolate linearly between the two ends shown, as in <code>AdaptiveDifficultyTracker</code>. Ends: reaction 0.52 to 0.76 s down to 0.16 to 0.26 s, view 95° to 132°, detection 0.80× to 1.38×, hearing 0.85× to 1.35×, aim speed 4.4 to 10.2.</p>
   </div>
+</section>
+<section id="bench" class="bb" aria-labelledby="h-bench">
+  <div class="head"><span class="num">12.1 &middot; MEASURED</span><h2 id="h-bench">What the presets do in a real match</h2><span class="src">MediaDirector -lr2AimBench &middot; Logs/LR2_*/bench.csv</span>
+    <p>The presets were spaced with a model of the game's formulas (B123: each preset should win about 91 % of duels against the one below). The game is the real test: ten AI vs AI matches on 11-19, Saltworks and Foundry, 90 to 150 s each, one bot of every preset on each team.</p></div>
+  <div class="bench-wrap">
+    <svg class="bench-svg" id="bench-svg" viewBox="0 0 760 300" role="img" aria-label="Kills per death by preset: pooled value as a bar, each of ten matches as a dot"></svg>
+    <div class="viz-legend" style="margin-left:56px"><span><i style="background:var(--bot)"></i>all ten matches pooled</span><span><i style="background:var(--muted);border-radius:50%"></i>one match</span><span><i class="whisk" style="background:var(--muted)"></i>K/D 1.0</span></div>
+  </div>
+  <div class="table-wrap panel">
+    <table>
+      <thead><tr><th>Preset</th><th class="num">K/D pooled</th><th class="num">K/D per match</th><th class="num">Accuracy</th><th class="num">Accuracy per match</th><th class="num">Kills / deaths</th><th class="num">Shots</th></tr></thead>
+      <tbody><tr><td>Recruit</td><td class="num">0.69</td><td class="num">0.38 to 1.00</td><td class="num">17.8 %</td><td class="num">11 to 25 %</td><td class="num">102 / 147</td><td class="num">2,748</td></tr><tr><td>Regular</td><td class="num">0.90</td><td class="num">0.63 to 1.46</td><td class="num">16.8 %</td><td class="num">11 to 24 %</td><td class="num">137 / 152</td><td class="num">3,720</td></tr><tr><td>Hardened</td><td class="num">1.07</td><td class="num">0.71 to 1.36</td><td class="num">18.5 %</td><td class="num">15 to 23 %</td><td class="num">165 / 154</td><td class="num">4,124</td></tr><tr><td>Veteran</td><td class="num">1.34</td><td class="num">0.93 to 1.75</td><td class="num">21.0 %</td><td class="num">16 to 26 %</td><td class="num">192 / 143</td><td class="num">4,315</td></tr></tbody>
+    </table>
+  </div>
+  <p class="note">The pooled K/D climbs in even steps of about 0.2 (0.69, 0.90, 1.07, 1.34), which is what B123 asked for, while one 2-minute match can swing a preset's K/D by &plusmn;0.4. Accuracy barely moves (17 to 21 %): better bots win by noticing and shooting first (<a href="#react">02.2</a>), not by landing a much larger share of their bullets. Judge a change against this spread, not against one match.</p>
 </section>
 <section id="adapt" class="bb" aria-labelledby="h-adapt">
       <div class="head"><span class="num">13 · LEARN</span><h2 id="h-adapt">Learning your style</h2><span class="src">AdaptiveDifficultyTracker.cs · 0.75 s refresh</span>
@@ -2142,7 +2257,7 @@ requestAnimationFrame(frame);
         'Close-range peripheral exception: within 6 m, any target within ±100° half-angle (200° arc) counts.',
         'Accumulates visibility detection meter (`0..1.25`, spotted at `1.0`), decays `-0.5/s` out of view, forgets after `12 s`.',
         'Receives gunfire/footstep noise events (8 s memory) & team callout propagation.',
-        'D61: detection speed per preset (Recruit `0.85×`, Regular `1.15×`, Hardened `1.55×`, Veteran `2.2×`); noise and last-known positions snap to the floor, so a search looks at head height.'
+        'D61, respaced by B123: detection speed per preset (Recruit `0.90×`, Regular `1.13×`, Hardened `1.45×`, Veteran `1.90×`); noise and last-known positions snap to the floor, so a search looks at head height.'
       ]
     },
     {
@@ -3300,6 +3415,211 @@ requestAnimationFrame(frame);
     };
     ['re-dist', 're-ang', 're-move', 're-fired', 're-crouch'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', render); });
     render();
+  }
+})();
+</script>
+
+<script>
+/* 10.1 flip guard demo, 11.1 damage model and gun specs, 12.1 bench chart */
+(function () {
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // ---------------- 10.1 flip guard (RetargetProxy.ApplyFlipGuard limits) ----------------
+  const svg = $('hold-svg');
+  if (svg) {
+    let guard = true;
+    const limits = sp => sp ? { cone: 70, roll: 75 } : { cone: 45, roll: 50 };
+    const wedge = (cx, cy, r, a0, a1) => {
+      const p = a => [cx + r * Math.cos(-a * Math.PI / 180), cy + r * Math.sin(-a * Math.PI / 180)];
+      const [x0, y0] = p(a0), [x1, y1] = p(a1);
+      return `M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} 0 ${x1},${y1} Z`;
+    };
+    const gun = (cx, cy, ang, col, ghost) => {
+      const r = ang * Math.PI / 180, L = 150, x = cx + L * Math.cos(-r), y = cy + L * Math.sin(-r);
+      el('line', { x1: cx, y1: cy, x2: x, y2: y, stroke: col, 'stroke-width': 9, 'stroke-linecap': 'round', 'stroke-dasharray': ghost ? '7 6' : '', opacity: ghost ? 0.55 : 1 }, svg);
+      el('circle', { cx: x, cy: y, r: 4, fill: col }, svg);
+    };
+    const text = (x, y, t, cls, fill) => { const e = el('text', { x, y }, svg); if (cls) e.setAttribute('class', cls); if (fill) e.setAttribute('fill', fill); e.textContent = t; return e; };
+    function draw(pitchIn, rollIn) {
+      const sp = $('hold-special').checked, lim = limits(sp);
+      const pitch = guard ? Math.min(pitchIn, lim.cone) : pitchIn, roll = guard ? Math.min(rollIn, lim.roll) : rollIn;
+      svg.textContent = '';
+      const cx = 150, cy = 170;
+      text(20, 26, 'SIDE VIEW: muzzle against the aim', 'dim');
+      el('path', { d: wedge(cx, cy, 190, -lim.cone, lim.cone), fill: 'var(--good)', opacity: 0.12 }, svg);
+      el('line', { x1: cx, y1: cy, x2: cx + 230, y2: cy, stroke: 'var(--bot)', 'stroke-width': 2, 'stroke-dasharray': '6 5' }, svg);
+      text(cx + 236, cy + 4, 'aim', null, 'var(--bot)');
+      const la = lim.cone * Math.PI / 180;
+      text(cx + 196 * Math.cos(la) + 6, cy - 196 * Math.sin(la), `limit ${lim.cone}°`, 'dim');
+      if (guard && pitchIn > pitch) gun(cx, cy, pitchIn, 'var(--bad)', true);
+      gun(cx, cy, pitch, !guard && pitchIn > lim.cone ? 'var(--bad)' : 'var(--ink)');
+      el('circle', { cx, cy, r: 6, fill: 'var(--accent)' }, svg);
+      const ex = 640, ey = 160, R = 90;
+      text(520, 26, 'END-ON: roll around the barrel', 'dim');
+      el('circle', { cx: ex, cy: ey, r: R, fill: 'none', stroke: 'var(--line)', 'stroke-width': 1.5 }, svg);
+      el('path', { d: wedge(ex, ey, R, 90 - lim.roll, 90 + lim.roll), fill: 'var(--good)', opacity: 0.12 }, svg);
+      el('line', { x1: ex, y1: ey + R + 8, x2: ex, y2: ey - R - 8, stroke: 'var(--bot)', 'stroke-width': 2, 'stroke-dasharray': '6 5' }, svg);
+      text(ex + 6, ey - R - 12, 'world up', null, 'var(--bot)');
+      const up = a => [ex + (R - 10) * Math.sin(a * Math.PI / 180), ey - (R - 10) * Math.cos(a * Math.PI / 180)];
+      if (guard && rollIn > roll) { const [x, y] = up(rollIn); el('line', { x1: ex, y1: ey, x2: x, y2: y, stroke: 'var(--bad)', 'stroke-width': 6, 'stroke-linecap': 'round', 'stroke-dasharray': '7 6', opacity: 0.55 }, svg); }
+      const [ux, uy] = up(roll);
+      el('line', { x1: ex, y1: ey, x2: ux, y2: uy, stroke: !guard && rollIn > lim.roll ? 'var(--bad)' : 'var(--ink)', 'stroke-width': 6, 'stroke-linecap': 'round' }, svg);
+      el('circle', { cx: ex, cy: ey, r: 7, fill: 'var(--accent)' }, svg);
+      text(ex - R, ey + R + 30, `top of the gun; limit ±${lim.roll}°`, 'dim');
+      $('hold-pitch-v').textContent = Math.round(pitchIn) + '°';
+      $('hold-roll-v').textContent = Math.round(rollIn) + '°';
+      const turned = Math.max(pitchIn - pitch, rollIn - roll), kind = sp ? 'wider sprint and reload' : 'normal';
+      $('hold-sum').innerHTML = !guard
+        ? (pitchIn > lim.cone || rollIn > lim.roll
+            ? `Guard off: the visible gun shows Kinemation's output as it is, <b>${Math.round(pitchIn)}°</b> off the aim and rolled <b>${Math.round(rollIn)}°</b>. This is the flip players saw.`
+            : 'Guard off, and the gun is inside both limits anyway: nothing to see.')
+        : (turned > 0.5
+            ? `The guard turns the gun and both hand targets back together by <b>${Math.round(turned)}°</b>, to the edge of the ${kind} limits (${lim.cone}° cone, ±${lim.roll}° roll), so the hands stay on the gun.`
+            : `Inside the ${kind} limits (${lim.cone}° cone, ±${lim.roll}° roll): the guard does nothing. The wall tuck (26°), aiming, equip and reload tilt all live here.`);
+    }
+    const cur = () => draw(+$('hold-pitch').value, +$('hold-roll').value);
+    $('hold-pitch').addEventListener('input', cur);
+    $('hold-roll').addEventListener('input', cur);
+    $('hold-special').addEventListener('change', cur);
+    $('hold-guard').addEventListener('click', () => { guard = !guard; $('hold-guard').setAttribute('aria-pressed', String(guard)); $('hold-guard').textContent = guard ? 'Guard on' : 'Guard off'; cur(); });
+    $('hold-spin').addEventListener('click', () => {
+      if (reduce) { draw(158, 120); return; }
+      const t0 = performance.now();
+      const step = now => {
+        const t = (now - t0) / 900; if (t > 1) { cur(); return; }
+        const k = Math.sin(Math.PI * t);
+        draw(10 + 150 * k, 5 + 170 * Math.max(0, k - 0.3) / 0.7);
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+    cur();
+  }
+
+  // ---------------- 11.1 damage model (WeaponDefinition.BaseDamage x ZoneMultiplier, Health armour first) ----------------
+  const GUNS = [{"name": "MK18", "cls": "Rifle", "rpm": 700.0, "auto": true, "mag": 30, "reserve": 120, "head": 1.5, "neck": 1.2, "upper": 1.1, "lower": 1.0, "limb": 0.9, "eff": 28.0, "ads": 0.18, "s2f": 0.2, "reload": 2.2, "empty": 2.7, "pen": 0.25, "steps": [[17.36, 37.5], [35.0, 33.4], [999.0, 21.5]]}, {"name": "AK-12", "cls": "Rifle", "rpm": 600.0, "auto": true, "mag": 30, "reserve": 120, "head": 1.5, "neck": 1.2, "upper": 1.1, "lower": 1.0, "limb": 0.9, "eff": 32.0, "ads": 0.21, "s2f": 0.24, "reload": 2.2, "empty": 2.7, "pen": 0.25, "steps": [[19.84, 37.5], [40.0, 30.0], [999.0, 25.0]]}, {"name": "AK-74N", "cls": "Rifle", "rpm": 550.0, "auto": true, "mag": 30, "reserve": 120, "head": 1.5, "neck": 1.2, "upper": 1.1, "lower": 1.0, "limb": 0.9, "eff": 32.0, "ads": 0.22, "s2f": 0.24, "reload": 2.2, "empty": 2.7, "pen": 0.25, "steps": [[19.84, 37.5], [40.0, 30.0], [999.0, 25.0]]}, {"name": "FAL", "cls": "Rifle", "rpm": 500.0, "auto": true, "mag": 20, "reserve": 80, "head": 1.5, "neck": 1.2, "upper": 1.1, "lower": 1.0, "limb": 0.9, "eff": 45.0, "ads": 0.27, "s2f": 0.3, "reload": 2.2, "empty": 2.7, "pen": 0.25, "steps": [[27.9, 48.0], [56.25, 42.0], [999.0, 37.5]]}, {"name": "MK23", "cls": "Pistol", "rpm": 300.0, "auto": false, "mag": 12, "reserve": 48, "head": 1.8, "neck": 1.2, "upper": 1.1, "lower": 1.0, "limb": 0.9, "eff": 18.0, "ads": 0.14, "s2f": 0.12, "reload": 2.2, "empty": 2.7, "pen": 0.25, "steps": [[11.16, 37.5], [22.5, 33.4], [999.0, 21.5]]}];
+  const dsvg = $('dmg-svg');
+  if (dsvg) {
+    let gi = 0, zone = 'upper';
+    const ZONES = [
+      { id: 'head', name: 'Head', key: 'head' }, { id: 'neck', name: 'Neck', key: 'neck' },
+      { id: 'upper', name: 'Upper torso', key: 'upper' }, { id: 'lower', name: 'Lower torso', key: 'lower' },
+      { id: 'arm', name: 'Arm', key: 'limb' }, { id: 'leg', name: 'Leg', key: 'limb' }];
+    // silhouette parts (front view, 300 x 470)
+    const SHAPES = [
+      ['head', 'ellipse', { cx: 150, cy: 48, rx: 30, ry: 36 }],
+      ['neck', 'rect', { x: 136, y: 82, width: 28, height: 20, rx: 6 }],
+      ['upper', 'path', { d: 'M96,104 L204,104 Q214,106 214,120 L208,196 L92,196 L86,120 Q86,106 96,104 Z' }],
+      ['lower', 'path', { d: 'M92,200 L208,200 L204,262 L96,262 Z' }],
+      ['arm', 'path', { d: 'M82,110 Q66,112 62,132 L44,240 Q42,252 54,254 L64,254 Q72,252 74,240 L90,140 Z' }],
+      ['arm', 'path', { d: 'M218,110 Q234,112 238,132 L256,240 Q258,252 246,254 L236,254 Q228,252 226,240 L210,140 Z' }],
+      ['leg', 'path', { d: 'M98,266 L146,266 L140,450 Q140,460 128,460 L112,460 Q102,460 102,450 Z' }],
+      ['leg', 'path', { d: 'M154,266 L202,266 L198,450 Q198,460 188,460 L172,460 Q160,460 160,450 Z' }]];
+    // sequential ramp: one hue, light (low multiplier) to dark (high)
+    const css = getComputedStyle(document.documentElement);
+    const dark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.getAttribute('data-theme') !== 'light' || document.documentElement.getAttribute('data-theme') === 'dark';
+    const shade = t => { // t 0..1
+      const L = dark() ? 32 + 40 * t : 86 - 52 * t, C = 0.04 + 0.12 * t;
+      return `oklch(${L}% ${C.toFixed(3)} 40)`;
+    };
+    const base = (g, d) => { for (const [mx, dmg] of g.steps) if (d <= mx) return dmg; return g.steps[g.steps.length - 1][1]; };
+    const mult = (g, key) => g[key];
+    function hitsToKill(per, armour) { return Math.ceil((armour ? 150 : 100) / per - 1e-9); }
+    const ttk = (g, n) => (n - 1) * 60 / g.rpm;
+    function drawBody() {
+      const g = GUNS[gi], lo = Math.min(g.limb, g.lower), hi = g.head;
+      dsvg.textContent = '';
+      SHAPES.forEach(([zid, tag, attrs]) => {
+        const z = ZONES.find(q => q.id === zid), m = mult(g, z.key), t = (m - lo) / Math.max(1e-6, hi - lo);
+        const e = el(tag, Object.assign({ class: 'zone' + (zid === zone ? ' sel' : ''), fill: shade(t), tabindex: 0, role: 'button', 'aria-label': `${z.name}, ${m.toFixed(1)} times damage` }, attrs), dsvg);
+        el('title', {}, e).textContent = `${z.name}: ${m.toFixed(1)}×`;
+        const pick = () => { zone = zid; render(); };
+        e.addEventListener('click', pick);
+        e.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } });
+      });
+      const lab = (x, y, t, anchor) => { const e = el('text', { x, y, 'text-anchor': anchor || 'middle', 'pointer-events': 'none' }, dsvg); e.textContent = t; e.setAttribute('style', 'paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round'); };
+      lab(150, 53, mult(g, 'head').toFixed(1) + '×'); lab(150, 154, mult(g, 'upper').toFixed(1) + '×'); lab(150, 236, mult(g, 'lower').toFixed(1) + '×');
+      lab(30, 190, mult(g, 'limb').toFixed(1) + '×', 'start'); lab(150, 360, mult(g, 'limb').toFixed(1) + '×');
+      $('dmg-ramp').style.background = `linear-gradient(90deg, ${shade(0)}, ${shade(1)})`;
+      $('dmg-ramp-hi').textContent = hi.toFixed(1) + '×';
+    }
+    function drawFalloff(d) {
+      const fs = $('fall-svg'); fs.textContent = '';
+      const x0 = 48, x1 = 600, y0 = 196, y1 = 14, dmax = 80, vmax = 50;
+      const X = v => x0 + (v / dmax) * (x1 - x0), Y = v => y0 - (v / vmax) * (y0 - y1);
+      for (let v = 0; v <= vmax; v += 10) { el('line', { x1: x0, x2: x1, y1: Y(v), y2: Y(v), stroke: 'var(--grid)' }, fs); const t = el('text', { x: x0 - 6, y: Y(v) + 4, 'text-anchor': 'end', class: 'dim' }, fs); t.textContent = v; }
+      for (let v = 0; v <= dmax; v += 20) { const t = el('text', { x: X(v), y: y0 + 18, 'text-anchor': 'middle', class: 'dim' }, fs); t.textContent = v + ' m'; }
+      GUNS.forEach((g, i) => {
+        let pts = [], prev = 0;
+        for (const [mx, dmg] of g.steps) { const e = Math.min(mx, dmax); pts.push([X(prev), Y(dmg)], [X(e), Y(dmg)]); prev = e; if (mx >= dmax) break; }
+        const on = i === gi;
+        el('polyline', { points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: on ? 'var(--accent)' : 'var(--muted)', 'stroke-width': on ? 3 : 1.5, opacity: on ? 1 : 0.55 }, fs);
+        if (on) { const t = el('text', { x: x1, y: Y(g.steps[g.steps.length - 1][1]) - 6, 'text-anchor': 'end' }, fs); t.textContent = g.name + ' body shot'; t.setAttribute('fill', 'var(--accent)'); }
+      });
+      el('line', { x1: X(d), x2: X(d), y1: y1, y2: y0, stroke: 'var(--bot)', 'stroke-dasharray': '4 4', 'stroke-width': 1.5 }, fs);
+      const yl = el('text', { x: x0, y: 10, class: 'dim' }, fs); yl.textContent = 'damage per hit, before body part (grey: the other guns)';
+    }
+    function render() {
+      const g = GUNS[gi], d = +$('dmg-dist').value, armour = $('dmg-armour').checked;
+      const z = ZONES.find(q => q.id === zone), per = base(g, d) * mult(g, z.key);
+      const n = hitsToKill(per, armour), t = ttk(g, n);
+      $('dmg-dist-v').textContent = d + ' m';
+      $('dmg-zone').textContent = z.name + ' ' + mult(g, z.key).toFixed(1) + '×';
+      $('dmg-hit').textContent = per.toFixed(1);
+      $('dmg-stk').textContent = n;
+      $('dmg-ttk').textContent = (t * 1000).toFixed(0) + ' ms';
+      const nh = hitsToKill(base(g, d) * g.head, armour), nb = hitsToKill(base(g, d) * g.upper, armour);
+      $('dmg-sum').innerHTML = `${g.name} at <b>${d} m</b> deals <b>${base(g, d).toFixed(1)}</b> before the body part. ` +
+        `${armour ? 'Through 50 armour and 100 health' : 'Against 100 health, armour gone'}: <b>${nb}</b> upper-torso hits or <b>${nh}</b> headshots. ` +
+        (g.auto ? `At ${g.rpm} rounds a minute that is ${(ttk(g, nb) * 1000).toFixed(0)} ms or ${(ttk(g, nh) * 1000).toFixed(0)} ms if every round lands.` : `Semi-automatic: ${(60 / g.rpm).toFixed(2)} s between shots at best.`);
+      [...document.querySelectorAll('#dmg-guns button')].forEach((b, i) => b.setAttribute('aria-pressed', String(i === gi)));
+      [...document.querySelectorAll('#gun-rows tr')].forEach((r, i) => r.classList.toggle('sel-gun', i === gi));
+      drawBody(); drawFalloff(d);
+    }
+    $('dmg-guns').innerHTML = GUNS.map((g, i) => `<button type="button" data-i="${i}">${g.name}</button>`).join('');
+    $('dmg-guns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { gi = +b.dataset.i; render(); } });
+    $('dmg-dist').addEventListener('input', render);
+    $('dmg-armour').addEventListener('change', render);
+    const tier = g => g.steps.map(([mx, dmg], i) => `${dmg}` + (i < g.steps.length - 1 ? ` to ${Math.round(mx)} m` : ' beyond')).join(', ');
+    $('gun-rows').innerHTML = GUNS.map(g => {
+      const n10 = hitsToKill(base(g, 10) * g.upper, true);
+      return `<tr><td>${g.name} <span class="note">${g.cls}${g.auto ? ', auto' : ', semi'}</span></td><td class="num">${g.rpm} rpm</td><td class="num">${tier(g)}</td><td class="num">${g.head.toFixed(1)}×</td>` +
+        `<td class="num">${g.mag} + ${g.reserve}</td><td class="num">${g.reload.toFixed(1)} / ${g.empty.toFixed(1)} s</td><td class="num">${Math.round(g.ads * 1000)} ms</td><td class="num">${Math.round(g.s2f * 1000)} ms</td>` +
+        `<td class="num">${Math.round(g.eff)} m</td><td class="num">${n10} hits, ${Math.round(ttk(g, n10) * 1000)} ms</td></tr>`;
+    }).join('');
+    if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+    render();
+  }
+
+  // ---------------- 12.1 bench chart ----------------
+  const bs = $('bench-svg');
+  if (bs) {
+    const RUNS = {"REC": [0.56, 1.0, 1.0, 0.5, 0.71, 0.53, 0.38, 0.61, 0.9, 0.8], "REG": [0.87, 1.46, 0.77, 1.07, 0.63, 0.71, 1.42, 0.89, 0.75, 0.67], "HRD": [1.27, 0.71, 1.0, 1.36, 1.23, 1.19, 1.0, 0.94, 1.0, 1.22], "VET": [1.33, 0.93, 1.2, 1.13, 1.54, 1.75, 1.23, 1.67, 1.33, 1.43]}, POOLED = {"REC": 0.69, "REG": 0.9, "HRD": 1.07, "VET": 1.34};
+    const NAMES = { REC: 'Recruit', REG: 'Regular', HRD: 'Hardened', VET: 'Veteran' };
+    const x0 = 56, x1 = 740, y0 = 260, y1 = 20, ymax = 2;
+    const Y = v => y0 - (v / ymax) * (y0 - y1);
+    for (let v = 0; v <= 2.001; v += 0.5) {
+      el('line', { x1: x0, x2: x1, y1: Y(v), y2: Y(v), stroke: 'var(--grid)', 'stroke-width': 1 }, bs);
+      const t = el('text', { x: x0 - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 'dim' }, bs); t.textContent = v.toFixed(1);
+    }
+    el('line', { x1: x0, x2: x1, y1: Y(1), y2: Y(1), stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, bs);
+    const keys = Object.keys(RUNS), slot = (x1 - x0) / keys.length;
+    keys.forEach((k, i) => {
+      const cx = x0 + slot * (i + 0.5), w = Math.min(70, slot * 0.42);
+      const bar = el('rect', { x: cx - w / 2, y: Y(POOLED[k]), width: w, height: y0 - Y(POOLED[k]), rx: 4, fill: 'var(--bot)', opacity: 0.85 }, bs);
+      el('title', {}, bar).textContent = `${NAMES[k]}: pooled K/D ${POOLED[k].toFixed(2)}`;
+      const lt = el('text', { x: cx, y: Y(POOLED[k]) - 8, 'text-anchor': 'middle' }, bs); lt.textContent = POOLED[k].toFixed(2);
+      RUNS[k].forEach((v, j) => {
+        const dx = (j - (RUNS[k].length - 1) / 2) * 5;
+        const d = el('circle', { cx: cx + w / 2 + 26 + dx, cy: Y(v), r: 4.5, fill: 'var(--muted)', stroke: 'var(--panel)', 'stroke-width': 2 }, bs);
+        el('title', {}, d).textContent = `${NAMES[k]}, match ${j + 1}: K/D ${v.toFixed(2)}`;
+      });
+      const nt = el('text', { x: cx, y: y0 + 22, 'text-anchor': 'middle' }, bs); nt.textContent = NAMES[k];
+    });
+    const yl = el('text', { x: 14, y: 140, transform: 'rotate(-90 14 140)', 'text-anchor': 'middle', class: 'dim' }, bs); yl.textContent = 'kills per death';
   }
 })();
 </script>
