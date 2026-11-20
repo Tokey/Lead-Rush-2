@@ -223,6 +223,8 @@ namespace LR2.World
             _shot = (_shot + 1) % _shots.Count;
             _blendStart = _shotStart = Time.unscaledTime;
             _blendDur = _shots[_shot].cut ? 0f : _shots[_shot].firstPerson ? 0.7f : 1.5f;
+            // a hard cut: drop HDRP's history (TAA, SSAO, exposure) so the last shot does not smear into the new one
+            if (_shots[_shot].cut && _cam != null) UnityEngine.Rendering.HighDefinition.HDCamera.GetOrCreate(_cam).Reset();
             _shotEnds = Time.unscaledTime + _shots[_shot].seconds;
         }
 

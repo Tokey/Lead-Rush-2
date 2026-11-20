@@ -94,8 +94,8 @@ Active now: **Claude** (back) and **Codex**. Gemini and Copilot are out. New spl
 
 ## 1. Now
 
-UNITY: Claude 14:54 B132 killcam capture (visible, ETA 15:02)
-PUSH: b53e8cf by Claude 13:04 (B129 who-decided-what page + atomic feature table, B104 GitHub refresh); player build 11-20 10:13, errors=0
+UNITY: Claude 14:58 player build BuildAllAndPlayerBatch (batch, ETA 15:38)
+PUSH: b8eb3bb by Claude 14:58 (B130-B134 title tiles + b-roll, callsign, killcam replay rounds, Bot Lab v14, quiet menu); player build running
 BUDGET: Claude OK (back 04:13) · Gemini OK (09:23) · Copilot ? · Codex OK (02:50)   <- each agent edits its own part: OK / LOW / OUT until HH:MM. At LOW, hand off first (Docs/AI_Collaboration/CONTINUITY.md).
 
 | Agent | State | Doing now | Next | Updated |

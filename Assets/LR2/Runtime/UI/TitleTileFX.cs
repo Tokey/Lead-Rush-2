@@ -23,7 +23,8 @@ namespace LR2.UI
 
         public void OnPointerEnter(PointerEventData e) => _hover = true;
         public void OnPointerExit(PointerEventData e) => _hover = false;
-        public void OnSelect(BaseEventData e) => _selected = true;
+        // keyboard or gamepad focus lights the tile; a mouse click's selection does not (it would stick after ESC)
+        public void OnSelect(BaseEventData e) => _selected = !(e is PointerEventData);
         public void OnDeselect(BaseEventData e) => _selected = false;
 
         private void OnDisable()

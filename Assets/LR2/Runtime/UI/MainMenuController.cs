@@ -344,8 +344,11 @@ namespace LR2.UI
             input.caretWidth = 3;
             input.selectionColor = new Color(accent.r, accent.g, accent.b, 0.35f);
             input.onValidateInput = (text, index, ch) =>
-                char.IsLetterOrDigit(ch) || ch == ' ' || ch == '_' || ch == '-' || ch == '.' ? ch : '\0';
+                ch < 128 && (char.IsLetterOrDigit(ch) || ch == ' ' || ch == '_' || ch == '-' || ch == '.') ? ch : '\0';
             input.SetTextWithoutNotify(LR2Settings.PlayerName);
+            // re-run OnEnable now that the text component is set: it builds the caret and the selection highlight
+            input.enabled = false;
+            input.enabled = true;
             input.onEndEdit.AddListener(v =>
             {
                 string clean = CleanCallsign(v);
@@ -381,7 +384,7 @@ namespace LR2.UI
             cb.normalColor = Color.white;
             cb.highlightedColor = new Color(1.7f, 1.6f, 1.4f, 1.25f);
             cb.pressedColor = new Color(2.1f, 1.9f, 1.6f, 1.3f);
-            cb.selectedColor = new Color(1.4f, 1.35f, 1.25f, 1.15f);
+            cb.selectedColor = cb.normalColor; // a click selects the button; only hover lights the tile
             cb.fadeDuration = 0.08f;
             b.colors = cb;
 
