@@ -4,8 +4,11 @@ using UnityEngine;
 namespace LR2.Characters
 {
     /// <summary>
-    /// Procedural flinch for third-person soldiers: a damped spring rotates spine/head away from the hit, applied
-    /// after the Kinemation pose so it layers on top of any animation (the animator overwrites it next frame).
+    /// Procedural flinch for third-person soldiers: a damped spring rotates spine/head away from the hit.
+    /// B125: the spring runs in Update and <see cref="RetargetProxy"/> applies it to the VISIBLE chest and head before it solves
+    /// the arms onto the gun. Before, this bent the hidden driver's chest and head in LateUpdate (order 500) after the visible
+    /// body had been copied: the body never flinched, but the gun (parented under the driver's head) swung up to ~70 deg off
+    /// the hands every time a bot was hit. Without a RetargetProxy it still bends the bones itself.
     /// </summary>
     [DefaultExecutionOrder(500)]
     public class HitReactions : MonoBehaviour
@@ -23,6 +26,12 @@ namespace LR2.Characters
         private Vector3 _angle;      // axis * degrees
         private Vector3 _velocity;
         private float _headBias;
+        private RetargetProxy _proxy;
+
+        /// <summary>Current flinch of the chest (world rotation to pre-multiply); identity when calm.</summary>
+        public Quaternion SpineFlinch { get; private set; } = Quaternion.identity;
+        /// <summary>Current flinch of the head (world rotation to pre-multiply); identity when calm.</summary>
+        public Quaternion HeadFlinch { get; private set; } = Quaternion.identity;
 
         public void Configure(Transform spineBone, Transform headBone)
         {
@@ -34,6 +43,7 @@ namespace LR2.Characters
         {
             _health = GetComponent<Health>();
             _combatant = GetComponent<Combatant>();
+            _proxy = GetComponent<RetargetProxy>();
             var animator = GetComponent<Animator>();
             if (animator != null && animator.isHuman)
             {
@@ -64,9 +74,10 @@ namespace LR2.Characters
             _headBias = info.zone == HitZone.Head ? 1.6f : 0.6f;
         }
 
-        private void LateUpdate()
+        private void Update()
         {
-            if (_health != null && !_health.IsAlive) return;
+            SpineFlinch = HeadFlinch = Quaternion.identity;
+            if (_health != null && !_health.IsAlive) { _angle = _velocity = Vector3.zero; return; }
             float dt = Time.deltaTime;
             Vector3 accel = -_angle * stiffness - _velocity * damping;
             _velocity += accel * dt;
@@ -74,9 +85,16 @@ namespace LR2.Characters
             if (_angle.magnitude > maxAngle) _angle = _angle.normalized * maxAngle;
             float mag = _angle.magnitude;
             if (mag < 0.01f) return;
-            Quaternion q = Quaternion.AngleAxis(mag, _angle / mag);
-            if (spine != null) spine.rotation = q * spine.rotation;
-            if (head != null) head.rotation = Quaternion.AngleAxis(mag * _headBias, _angle / mag) * head.rotation;
+            SpineFlinch = Quaternion.AngleAxis(mag, _angle / mag);
+            HeadFlinch = Quaternion.AngleAxis(mag * _headBias, _angle / mag);
+        }
+
+        private void LateUpdate()
+        {
+            if (_proxy != null && _proxy.isActiveAndEnabled) return; // the proxy bends the visible body (B125)
+            if (_health != null && !_health.IsAlive) return;
+            if (spine != null) spine.rotation = SpineFlinch * spine.rotation;
+            if (head != null) head.rotation = HeadFlinch * head.rotation;
         }
     }
 }

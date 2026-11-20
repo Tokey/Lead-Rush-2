@@ -197,6 +197,8 @@ namespace LR2.Characters
             LR2Settings.Changed -= OnSettingsChanged;
             if (_droppedWeapon != null) Destroy(_droppedWeapon);
             if (_runtimeAimingMotion != null) Destroy(_runtimeAimingMotion);
+            foreach (var m in _ownMotions.Values) if (m != null) Destroy(m);
+            _ownMotions.Clear();
         }
 
         private void OnSettingsChanged()
@@ -656,7 +658,36 @@ namespace LR2.Characters
         private void PlayTransitionMotion(FPSAnimatorLayerSettings layerSettings)
         {
             if (layerSettings == null || FPSAnimator == null) return;
-            FPSAnimator.LinkAnimatorLayer(layerSettings);
+            FPSAnimator.LinkAnimatorLayer(layerSettings is IkMotionLayerSettings ik ? OwnMotion(ik) : layerSettings);
+        }
+
+        /// <summary>
+        /// B125 A/B switch: <c>-lr2SharedIkMotions</c> links the shared motion assets as before (the known-bad case).
+        /// </summary>
+        public static readonly bool PerSoldierIkMotions = Array.IndexOf(Environment.GetCommandLineArgs(), "-lr2SharedIkMotions") < 0;
+        private readonly Dictionary<IkMotionLayerSettings, IkMotionLayerSettings> _ownMotions = new Dictionary<IkMotionLayerSettings, IkMotionLayerSettings>();
+
+        /// <summary>
+        /// B125 root cause. Kinemation's IkMotionLayerJob evaluates the motion's AnimationCurves inside the animation job
+        /// (IkMotionLayerJob.ProcessAnimation -> VectorCurve.GetValue -> AnimationCurve.Evaluate), and Unity evaluates different
+        /// soldiers' animation jobs in parallel on worker threads. The stop, crouch, lean, jump, equip and unequip motions were
+        /// shared assets, so two soldiers playing the same motion in the same frame evaluated the same curve on two threads at
+        /// once. AnimationCurve caches the last segment it used and is not safe for that (Unity issue tracker: "you may evaluate a
+        /// curve in a thread, but not the same curve in multiple threads"): now and then one of them read another segment's
+        /// cubic and got a garbage angle, and the gun's IK WeaponBone turned 60-180 deg for that single frame. The black-box
+        /// bench showed exactly that: the gun's rotation relative to the head jumping for one frame and back, mostly in combat.
+        /// Each soldier now plays its own copy of every motion (own curve objects), so a curve is only ever read by one job.
+        /// </summary>
+        public IkMotionLayerSettings OwnMotion(IkMotionLayerSettings shared)
+        {
+            if (shared == null || !PerSoldierIkMotions) return shared;
+            if (_ownMotions.TryGetValue(shared, out var own) && own != null) return own;
+            if (shared.hideFlags == HideFlags.HideAndDontSave) return shared; // already a runtime copy (the ADS-rate aiming motion)
+            own = Instantiate(shared);
+            own.name = shared.name + "_" + name;
+            own.hideFlags = HideFlags.HideAndDontSave;
+            _ownMotions[shared] = own;
+            return own;
         }
 
         private void OnSprintStarted()

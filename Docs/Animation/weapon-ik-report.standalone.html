@@ -91,14 +91,16 @@ td .mono { white-space: nowrap; }
 </header>
 
 <section aria-labelledby="h-now">
-  <div class="head"><span class="num">WHAT WE KNOW</span><h2 id="h-now">Three separate problems</h2></div>
+  <div class="head"><span class="num">WHAT WE KNOW · 11-20 10:10</span><h2 id="h-now">Four causes, all fixed and measured</h2></div>
   <div class="findings">
-    <div class="panel finding"><span class="tag ok">Reproduced · fix in</span><h3>ADS into a wall swings the rifle</h3>
-      <p>Kinemation's wall tuck (25° up, 12° in, 8° roll, 6 cm back) ran at full strength in ADS. The tuck pivots on the weapon bone, which sits at the eye in ADS, so the rifle crossed the sight line: 22.8° off the camera in every test variant, top rail in view. Now gated by the ADS weight: 12 % of the tuck remains at full ADS.</p></div>
-    <div class="panel finding"><span class="tag ok">Measured · fix in</span><h3>LR2's edits fed back into Kinemation</h3>
-      <p>Kinemation's ADS layer reads the gun's aim point from the transforms before LR2's per-frame edits are cleared, so each edit came back one frame later. For bots the eye-plane push reached 8.2 m in one bench. The gun is now reset to Kinemation's own pose before Kinemation reads it.</p></div>
-    <div class="panel finding"><span class="tag open">Open · being measured</span><h3>Bots' weapon bone flips inside Kinemation</h3>
-      <p>In AI vs AI, Kinemation's own weapon bone turns 60 to 180° in 0.6 to 7 % of frames, about a third of them standing still. It happens with or without LR2's edits. Suspects are narrowed but not proven; a recorder for the exact frames before each flip is ready.</p></div>
+    <div class="panel finding"><span class="tag ok">Root cause · fixed · verified</span><h3>Bots' gun snapped 60 to 180° for one frame</h3>
+      <p>Kinemation's IK-motion layer evaluates the motion's AnimationCurves inside the animation job, and Unity runs different soldiers' jobs on parallel worker threads. The stop, crouch, lean, jump, equip and unequip motions were shared assets, and an AnimationCurve is not safe to evaluate on two threads at once: now and then a soldier read a garbage value and its gun turned for that frame. Each soldier now plays its own copy. Without any clamp: one-frame spikes 7 and 23 → 0 and 0, largest deviation 179° and 177° → 64° and 67°.</p></div>
+    <div class="panel finding"><span class="tag ok">Bug · fixed · verified</span><h3>Getting shot swung the gun off the hands</h3>
+      <p>The hit flinch bent the hidden driver's chest and head after the visible body had been copied, so the body never flinched but the gun, hanging from the driver's head, swung up to about 70°. It now bends the visible chest and head before the arms are solved onto the gun. Frames over 60° on Saltworks: 286 → 28 from this fix alone.</p></div>
+    <div class="panel finding"><span class="tag ok">Reproduced · fixed · verified</span><h3>ADS into a wall swung the rifle</h3>
+      <p>Kinemation's wall tuck (25° up, 12° in, 8° roll, 6 cm back) ran at full strength in ADS, where its pivot sits at the eye. Now gated by the ADS weight (12 % left at full ADS): pressed into a wall 22.8° → 3.4° off the sight line, before death 22.9° → 3.6°.</p></div>
+    <div class="panel finding"><span class="tag ok">Measured · fixed</span><h3>LR2's edits fed back into Kinemation</h3>
+      <p>Kinemation's ADS layer read the gun's aim point while it still carried last frame's LR2 edits; for bots the eye-plane push reached 8.2 m. The gun is now reset to Kinemation's own pose before Kinemation reads it. The B125 flip guard is off by default (<code>-lr2FlipGuard</code> to diagnose): with the causes fixed it would only hide a regression.</p></div>
   </div>
 </section>
 
@@ -189,7 +191,15 @@ td .mono { white-space: nowrap; }
 frame n+1: ADS reads the aim point p further forward → moves the weapon bone back by p
            → the gun is closer to the eyes → the push grows to p + Δ → …</div>
       <p>The same loop carried the flip guard's rotation, the reload bridge and the prone tuck, and earlier AdsSightLock (11-19 00:42 to 03:03). Bots' eye-plane push reached 8.2 m in one bench. It does not explain the bots' raw flips: with the reset the raw weapon bone still flipped (854 and 367 frames over 60° in two runs, against 358 without).</p></div>
-    <div class="panel"><h3>C. Bots' weapon bone flips inside Kinemation <span class="tag open">open</span></h3>
+    <div class="panel"><h3>C0. Shared motion curves on parallel animation threads <span class="tag ok">root cause · fixed</span></h3>
+      <div class="loop">frame n, worker thread 1: bot A's IkMotion job evaluates IKMotion_MoveStop.x at t = 0.31
+frame n, worker thread 2: bot B's IkMotion job evaluates the same curve at t = 0.74
+→ the curve's segment cache is shared → one of them evaluates the wrong segment's cubic
+→ a garbage angle → IK WeaponBone turns 60 to 180° relative to the head for that frame → next frame normal</div>
+      <p><code>IkMotionLayerJob.ProcessAnimation</code> calls <code>VectorCurve.GetValue</code> → <code>AnimationCurve.Evaluate</code> on the animation thread. Unity's issue tracker: "you may evaluate a curve in a thread, but not the same curve in multiple threads". The black box caught it directly: the gun's rotation relative to the head going (289,234,153) → (59,41,21) → (289,234,153) on consecutive frames, with no change in aim, clip, speed, walls or frame time. Fix: <code>SoldierController.OwnMotion</code> gives each soldier its own copy of every motion (own curve objects); <code>-lr2SharedIkMotions</code> restores the old sharing for A/B.</p></div>
+    <div class="panel"><h3>C1. Hit flinch on the hidden driver <span class="tag ok">fixed</span></h3>
+      <p><code>HitReactions</code> (LateUpdate 500) took its bones from the soldier's Animator, which is the hidden driver, and bent its chest and head after <code>RetargetProxy</code> (250) had copied the pose. The visible body never flinched; the gun, a child of the driver's head, swung up to 28° + 1.6 × 28° on a headshot. The spring now runs in Update and RetargetProxy bends the visible chest and head before solving the arms.</p></div>
+    <div class="panel"><h3>C. Bots' weapon bone flips inside Kinemation <span class="tag ok">explained by C0 and C1</span></h3>
       <p>Facts: 0.6 to 7 % of bot frames, single-frame snaps up to 13,000°/s and some held states; mostly in combat ADS, about a third standing still; walls and soldiers within 1.2 m in under 10 %. The driver's animated <code>WeaponBone</code> stays on the soldier's facing while <code>IK WeaponBone</code> turns 150 to 170°, so the error enters between the PoseSampler and the end of the chain. Forcing the gun to follow <code>WeaponBone</code> (WeaponBoneWeight 1) did not help (0.70 % against 0.64 %).</p>
       <p>Re-link calibration (table above) can only explain part of it: bots never switch weapons, so a bot re-links about twice per life, both at spawn (Kinemation's default profile, then the weapon's copy). A bad calibration there would leave the gun wrong for a whole life, which fits the bots that flip again and again, but not the single-frame snaps. A bench now logs every re-link per soldier, the calibration's drift and, through a black-box recorder, the 40 frames before each flip with frame time, ADS toggles, turn offset and the barrel ray, so the next run shows which kind dominates.</p></div>
     <div class="panel"><h3>D. Arm spins on the visible body <span class="tag open">candidate</span></h3>
@@ -233,15 +243,25 @@ frame n+1: ADS reads the aim point p further forward → moves the weapon bone b
       <tr><td>Reset and guard</td><td class="n">382</td><td class="n">367</td><td class="n">116°</td><td class="n">192</td><td class="n">1.4 m</td></tr>
     </tbody></table>
     <p class="note" style="margin-top:8px">About 48,000 bot samples per run. "Raw" is Kinemation's weapon bone before any LR2 edit. Single runs vary a lot (0.6 to 7 % between identical runs), so one run per condition separates mechanisms, not small effects.</p></div>
+  <div class="table-wrap panel"><table>
+    <thead><tr><th>Root-cause A/B, 11-20, no flip guard, HitReactions fixed</th><th class="n">One-frame spikes</th><th class="n">Frames &gt; 60°</th><th class="n">Largest</th><th class="n">ADS jumps &gt; 10°/frame</th><th class="n">Largest ADS jump</th></tr></thead>
+    <tbody>
+      <tr><td>Saltworks, shared motions (old)</td><td class="n">7</td><td class="n">28</td><td class="n">179°</td><td class="n">64</td><td class="n">172°</td></tr>
+      <tr><td>Saltworks, own motions (fix)</td><td class="n">0</td><td class="n">17</td><td class="n">64°</td><td class="n">1</td><td class="n">37°</td></tr>
+      <tr><td>Foundry, shared motions (old)</td><td class="n">23</td><td class="n">134</td><td class="n">177°</td><td class="n">66</td><td class="n">173°</td></tr>
+      <tr><td>Foundry, own motions (fix)</td><td class="n">0</td><td class="n">35</td><td class="n">67°</td><td class="n">0</td><td class="n">7°</td></tr>
+    </tbody></table>
+    <p class="note" style="margin-top:8px">What remains above 60° is the sprint carry (up to about 67°). The player's ADS-into-wall check after the ADS gate: head-on 3.4°, at 45° 1.9°, into a soldier 1.8°, before death 3.6°, after respawn 2.8° (all PASS).</p></div>
 </section>
 
 <section aria-labelledby="h-next">
-  <div class="head"><span class="num">NEXT</span><h2 id="h-next">To close it</h2></div>
+  <div class="head"><span class="num">DONE · 11-20</span><h2 id="h-next">How it was closed</h2></div>
   <div class="panel"><ol style="margin:0;padding-left:20px;display:grid;gap:4px">
-    <li>With the editor closed: rebuild, re-run the ADS wall test (head-on and death should drop under 5°).</li>
-    <li>Instrumented AI vs AI benches on two maps: re-links per soldier, calibration drift, and the black box of the frames before each flip.</li>
-    <li>Fix the mechanism the black box shows, then repeat the benches with a known-bad switch to prove it.</li>
-    <li>Remove the flip guard if the root fix holds: it hides flips instead of preventing them.</li>
+    <li>ADS wall test after the ADS gate: every case under 4° (was 23°).</li>
+    <li>Instrumented benches: no re-links and 0.0° calibration drift, which ruled the calibration theory out; the black box caught the one-frame spikes relative to the head.</li>
+    <li>Shared vs own motion curves A/B on two maps without any clamp: spikes 7 and 23 → 0 and 0.</li>
+    <li>Flip guard off by default; the root fixes hold without it.</li>
+    <li>Still open, small: a soldier who dies while aiming respawns with the ADS weight still high and blends out over 0.2 s; the equip motion swings the gun up for about 0.8 s at each spawn (designed, from Kinemation's equip curve).</li>
   </ol></div>
 </section>
 </div>

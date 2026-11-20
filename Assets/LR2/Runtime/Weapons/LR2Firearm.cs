@@ -276,7 +276,8 @@ namespace LR2.Weapons
 
             if (_recoilAnimation != null) _recoilAnimation.Init(recoilData, Rpm, _fireMode);
             if (_recoilPattern != null) _recoilPattern.Init(RuntimePattern());
-            if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(equipMotion);
+            // B125: the owner's own copy of the motion (its curves are evaluated on animation worker threads)
+            if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(Owner != null ? Owner.OwnMotion(equipMotion) : equipMotion);
 
             _equipReadyAt = Time.time + (definition != null ? definition.equipTime : 0.5f);
             _triggerHeld = false;
@@ -288,7 +289,7 @@ namespace LR2.Weapons
         {
             CancelActions();
             ClearBarrelHeat();
-            if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(unEquipMotion);
+            if (_fpsAnimator != null) _fpsAnimator.LinkAnimatorLayer(Owner != null ? Owner.OwnMotion(unEquipMotion) : unEquipMotion);
         }
 
         private void InitializeAttachments()

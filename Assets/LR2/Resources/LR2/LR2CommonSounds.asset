@@ -369,6 +369,21 @@ MonoBehaviour:
     maxDistance: 50
     category: 0
     priority: 128
+  droneExplode:
+    clips:
+    - {fileID: 8300000, guid: 11c6992680f19304ea49c69a16b70689, type: 3}
+    - {fileID: 8300000, guid: 8715ea671dd64f64d9df3a48f5f66d80, type: 3}
+    - {fileID: 8300000, guid: fba692fa21b849346b472b39701c5600, type: 3}
+    - {fileID: 8300000, guid: 89f26049a934ef545ae1586d9548a3fe, type: 3}
+    - {fileID: 8300000, guid: bd9934feca053894e88c471c7c863d0d, type: 3}
+    - {fileID: 8300000, guid: 70ef3adca74c86641a379605b87959d0, type: 3}
+    volume: 1
+    pitch: {x: 0.94, y: 1.06}
+    spatialBlend: 1
+    minDistance: 4
+    maxDistance: 90
+    category: 0
+    priority: 64
   orbAlert:
     clips:
     - {fileID: 8300000, guid: 9fc65e6c653ab2e4183b532a972b24cf, type: 3}

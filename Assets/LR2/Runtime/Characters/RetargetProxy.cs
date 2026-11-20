@@ -52,6 +52,8 @@ namespace LR2.Characters
         private SoldierController _soldier;
         private Transform _dL, _dR, _dHead, _dHips;
         private Transform _vHips, _vHead, _vHeadTop;
+        private Transform _vChest;
+        private HitReactions _hitReactions;
         private Vector3 _eyeUpLocal = Vector3.up, _eyeFwdLocal = Vector3.forward;
         private bool _eyeAxesReady;
         private Transform _lUpper, _lLower, _lHand, _rUpper, _rLower, _rHand;
@@ -155,6 +157,8 @@ namespace LR2.Characters
             _dHips = driver.GetBoneTransform(HumanBodyBones.Hips);
             _vHips = visual.GetBoneTransform(HumanBodyBones.Hips);
             _vHead = visual.GetBoneTransform(HumanBodyBones.Head);
+            _vChest = visual.GetBoneTransform(HumanBodyBones.Chest) ?? visual.GetBoneTransform(HumanBodyBones.Spine);
+            _hitReactions = GetComponentInParent<HitReactions>();
             _vHeadTop = _vHead != null && _vHead.childCount > 0 ? FindHeadTop(_vHead) : null;
             _lUpper = visual.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             _lLower = visual.GetBoneTransform(HumanBodyBones.LeftLowerArm);
@@ -285,6 +289,14 @@ namespace LR2.Characters
 
             AlignBody();
 
+            // B125: hit flinch on the VISIBLE chest and head, before the arms are solved onto the gun (it used to bend the hidden
+            // driver after this copy, which swung the gun off the hands and never showed on the body)
+            if (_hitReactions != null && !FirstPersonActive)
+            {
+                if (_vChest != null) _vChest.rotation = _hitReactions.SpineFlinch * _vChest.rotation;
+                if (_vHead != null) _vHead.rotation = _hitReactions.HeadFlinch * _vHead.rotation;
+            }
+
             if (handIK && handIKWeight > 0f && _dL != null && _dR != null)
             {
                 Vector3 lPos = _dL.position, rPos = _dR.position;
@@ -389,9 +401,14 @@ namespace LR2.Characters
         public float FlipGuardAngle { get; private set; }
         /// <summary>B125: frames on which the guard turned the gun back since this soldier spawned.</summary>
         public int FlipGuardFrames { get; private set; }
-        /// <summary>B125 A/B switch: -lr2NoFlipGuard turns the guard off (the bench then reproduces the flips).</summary>
+        /// <summary>
+        /// B125: off by default since 11-20. The flips had two root causes, both fixed (shared IK-motion curves evaluated on
+        /// parallel animation threads: SoldierController.OwnMotion; HitReactions bending the hidden driver: now the visible body),
+        /// and the A/B benches without this guard topped out at 64-67 deg (sprint carry) with zero one-frame spikes. A clamp
+        /// would only hide a future regression, so it stays opt-in for diagnosis: -lr2FlipGuard.
+        /// </summary>
         public static readonly bool FlipGuardEnabled =
-            System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2NoFlipGuard") < 0;
+            System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-lr2FlipGuard") >= 0;
         /// <summary>
         /// B125 (user 11-19: "the weapon keeps on going up then rotating fully ... happens to all the weapons"). Kinemation's
         /// "IK WeaponBone" (a child of the driver head that carries the gun) turned 60-180 deg for single frames in AI vs AI while

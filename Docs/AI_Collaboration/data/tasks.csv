@@ -202,3 +202,7 @@ C95,2026-11-19 15:33,Claude,claude-opus-5-5,"Review of B124 (Codex): lobby text 
 C96,2026-11-19 16:17,Claude,claude-opus-5-5,"Weapon flip: per-frame flip detector, layer ablation, post-Kinemation flip guard, held-gun collider strip",bug,B125,delivered,"user prompts 13:4x; Logs/LR2_Guard3_On vs LR2_Guard_Off",unrated,,
 C97,2026-11-19 18:35,Claude,claude-opus-5-5,"Review of B60a (Gemini): inertialization offsets",review,B60a,verified,RetargetProxy.cs inertial block,unrated,,
 C98,2026-11-19 18:35,Claude,claude-opus-5-5,"Review of B60d (Gemini): eye-plane weapon guard",review,B60d,verified,"qa_LR2_Saltworks.txt known-bad/good",unrated,,
+C99,2026-11-20 10:11,Claude,claude-opus-5-5,"B125 weapon flips: black-box bench, root causes (shared IK-motion curves on parallel threads, HitReactions on the driver, ADS wall tuck, LR2 feedback) and measured fixes",bug,B125,delivered,"Logs/LR2_Bench_B5..B8, LR2_AdsWall_P5; artifact A9w3NHWzNKcb5VJghzQhrg",unrated,,
+C100,2026-11-20 10:11,Claude,claude-opus-5-5,"Drone explosion sound (droneExplode set, C4 blast bodies)",feature,B126,delivered,user prompt 11-20,unrated,,
+C101,2026-11-20 10:11,Claude,claude-opus-5-5,Groq LLM squad commander + bench teams.csv (untested: needs the developer key),feature,B127,in-progress,user prompt 11-20,unrated,,
+C102,2026-11-20 10:11,Claude,claude-opus-5-5,"Bot Lab v13 (hold, damage model, gun specs, measured presets, fixes) + artifact brief for Gemini",docs,B128,delivered,"user prompts 11-19 18:5x, 19:3x",unrated,,

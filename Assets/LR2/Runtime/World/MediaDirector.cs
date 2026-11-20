@@ -178,10 +178,13 @@ namespace LR2.World
         {
             public readonly System.Collections.Generic.Queue<string> ring = new System.Collections.Generic.Queue<string>();
             public float prevRaw = -1f; public int after = -1; public bool prevAim;
+            public float spikeFrom = -1f;
         }
         private readonly System.Collections.Generic.Dictionary<Combatant, BBTrack> _bb = new System.Collections.Generic.Dictionary<Combatant, BBTrack>();
         private readonly System.Text.StringBuilder _bbOut = new System.Text.StringBuilder();
         private int _bbEvents;
+        /// <summary>B125: one-frame weapon-bone spikes (a jump of 60+ deg that comes back next frame) and jumps that stay.</summary>
+        private int _bbSpikes, _bbSustained;
 
         private void BlackBox(Combatant c, LR2.Characters.SoldierController sc, Transform item, Quaternion aimRot, float devRaw, float calib, float t0)
         {
@@ -210,6 +213,12 @@ namespace LR2.World
                 $"{Time.time - t0:0.000} raw={devRaw:0} ikLocalRot=({le.x:0},{le.y:0},{le.z:0}) ikLocalPos=({lp.x:0},{lp.y:0},{lp.z:0})cm handVsAim={handDev:0} calib={calib:0.0} ") + FormattableString.Invariant(
                 $"ads={ads:0.00}{(aimToggle ? (sc.IsAiming ? " AIM-IN" : " AIM-OUT") : "")} turn={turn:0} dLook=({dl.x:0.0},{dl.y:0.0}) speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} ") + FormattableString.Invariant(
                 $"wallRay={wallRay} sprint={sc.IsSprinting} reload={sc.IsReloading} switch={sc.IsSwitchingWeapon} clip={clip} dt={Time.deltaTime * 1000f:0}ms");
+            if (b.spikeFrom >= 0f)
+            {
+                if (devRaw < b.spikeFrom + 25f) _bbSpikes++; else _bbSustained++;
+                b.spikeFrom = -1f;
+            }
+            if (b.prevRaw >= 0f && devRaw - b.prevRaw > 60f) b.spikeFrom = b.prevRaw;
             b.ring.Enqueue(line);
             while (b.ring.Count > 40) b.ring.Dequeue();
             if (b.after >= 0)
@@ -432,7 +441,7 @@ namespace LR2.World
             foreach (var px in FindObjectsByType<LR2.Characters.RetargetProxy>(FindObjectsSortMode.None)) guardFrames += px.FlipGuardFrames;
             File.WriteAllText(Path.Combine(_out, "blackbox.txt"), _bbOut.ToString());
             File.WriteAllText(Path.Combine(_out, "flips.txt"), FormattableString.Invariant(
-                $"relinks={relinks} maxCalibDrift={maxCalib:0.0}deg itemReset={LR2.Characters.SoldierController.ItemFeedbackReset} guard={LR2.Characters.RetargetProxy.FlipGuardEnabled} guardFrames={guardFrames} ablate={ablate} samples={samples} flips(dev>60)={flips} max={maxDev:0} rawFlips={rawFlips} maxRaw={maxRaw:0} adsFrames={adsFrames} adsJitter(>10deg/frame)={adsJitter} maxAdsJump={maxAdsJump:0} pushFramesInAds={pushFrames} maxPush={maxPush * 100f:0.0}cm maxFeedback={maxFeedback * 100f:0.0}cm/{maxFeedbackDeg:0}deg nearWall={flipsNearWall} nearSoldier(<1.2m)={flipsNearSoldier} sprint={flipsSprint} reload={flipsReload} switch={flipsSwitch} bursts={bursts}") + "\n" + relinkLog + flipLog);
+                $"spikes1f={_bbSpikes} sustainedJumps={_bbSustained} sharedMotions={!LR2.Characters.SoldierController.PerSoldierIkMotions} relinks={relinks} maxCalibDrift={maxCalib:0.0}deg itemReset={LR2.Characters.SoldierController.ItemFeedbackReset} guard={LR2.Characters.RetargetProxy.FlipGuardEnabled} guardFrames={guardFrames} ablate={ablate} samples={samples} flips(dev>60)={flips} max={maxDev:0} rawFlips={rawFlips} maxRaw={maxRaw:0} adsFrames={adsFrames} adsJitter(>10deg/frame)={adsJitter} maxAdsJump={maxAdsJump:0} pushFramesInAds={pushFrames} maxPush={maxPush * 100f:0.0}cm maxFeedback={maxFeedback * 100f:0.0}cm/{maxFeedbackDeg:0}deg nearWall={flipsNearWall} nearSoldier(<1.2m)={flipsNearSoldier} sprint={flipsSprint} reload={flipsReload} switch={flipsSwitch} bursts={bursts}") + "\n" + relinkLog + flipLog);
             Note($"weapon flips: {flips} of {samples} (max {maxDev:0}, wall {flipsNearWall}, soldier {flipsNearSoldier}, sprint {flipsSprint}, reload {flipsReload}, switch {flipsSwitch})");
             var rows = new System.Collections.Generic.SortedDictionary<string, int[]>();
             foreach (var c in Combatant.All)
