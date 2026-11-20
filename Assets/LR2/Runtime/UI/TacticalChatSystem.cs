@@ -181,8 +181,15 @@ namespace LR2.UI
             return chat;
         }
 
+        /// <summary>The live chat feed in this scene (B127: the LLM commanders post their plans here).</summary>
+        public static TacticalChatSystem Instance { get; private set; }
+
+        /// <summary>B127: a commander's line in the feed, shown at once.</summary>
+        public void PostCommander(string sender, Color color, string body) => Enqueue(0f, sender, color, body);
+
         private void OnEnable()
         {
+            Instance = this;
             GameEvents.Killed += OnKilled;
             GameEvents.MatchStateChanged += OnMatchStateChanged;
             if (Keyboard.current != null) Keyboard.current.onTextInput += OnTextInputChar;
@@ -190,6 +197,7 @@ namespace LR2.UI
 
         private void OnDisable()
         {
+            if (Instance == this) Instance = null;
             GameEvents.Killed -= OnKilled;
             GameEvents.MatchStateChanged -= OnMatchStateChanged;
             if (Keyboard.current != null) Keyboard.current.onTextInput -= OnTextInputChar;

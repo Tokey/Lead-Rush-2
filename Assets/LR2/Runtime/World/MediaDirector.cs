@@ -453,6 +453,26 @@ namespace LR2.World
             }
             File.WriteAllText(Path.Combine(_out, "bench.csv"), sb.ToString());
             Note("bench written:\n" + sb);
+
+            // B127: per-team result and each LLM commander's record (run with -lr2LlmTeams Alpha to compare LLM vs rule bots)
+            var teams = new System.Text.StringBuilder("team,commander,kills,deaths,kd,score\n");
+            var mmEnd = MatchManager.Instance;
+            foreach (TeamId t in new[] { TeamId.Alpha, TeamId.Bravo, TeamId.Charlie, TeamId.Delta })
+            {
+                int k = 0, d = 0, n = 0;
+                foreach (var c in Combatant.All) if (c != null && c.Team == t) { k += c.stats.kills; d += c.stats.deaths; n++; }
+                if (n == 0) continue;
+                LR2.AI.LLM.LLMCommander cmd = null;
+                foreach (var lc in LR2.AI.LLM.LLMCommander.All) if (lc != null && lc.Team == t) cmd = lc;
+                teams.AppendLine(FormattableString.Invariant($"{t},{(cmd != null ? "LLM " + cmd.Model : "rules")},{k},{d},{(d > 0 ? (float)k / d : k):0.00},{(mmEnd != null ? mmEnd.GetTeamScore(t) : 0)}"));
+            }
+            foreach (var lc in LR2.AI.LLM.LLMCommander.All)
+                if (lc != null)
+                    teams.AppendLine(FormattableString.Invariant(
+                        $"# {lc.Team} LLM: decisions={lc.Decisions} failures={lc.Failures} orders={lc.OrdersIssued} rejected={lc.OrdersRejected} avgLatency={(lc.Decisions - lc.Failures > 0 ? lc.TotalLatency / (lc.Decisions - lc.Failures) : 0f):0.00}s tokens={lc.PromptTokens}+{lc.CompletionTokens} lastPlan='{lc.LastPlan}' lastError='{lc.LastError}'"));
+            teams.AppendLine(FormattableString.Invariant($"# Groq requests={LR2.AI.LLM.GroqClient.Requests} failures={LR2.AI.LLM.GroqClient.Failures} rateLimited={LR2.AI.LLM.GroqClient.RateLimited} key={LR2.AI.LLM.GroqClient.KeySource}"));
+            File.WriteAllText(Path.Combine(_out, "teams.csv"), teams.ToString());
+            Note("teams written:\n" + teams);
         }
 
         // ------------------------------------------------------------------ headshot bullet cam
