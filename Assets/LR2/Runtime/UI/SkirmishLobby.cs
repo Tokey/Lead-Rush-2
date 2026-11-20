@@ -279,6 +279,12 @@ namespace LR2.UI
             Anchor((RectTransform)rules.transform, 0.51f, 0.012f, 0.955f, 0.088f);
         }
 
+        /// <summary>Redraws the roster, e.g. after the player's callsign changed on the title screen (B131).</summary>
+        public void RefreshRoster()
+        {
+            if (_content != null) Rebuild();
+        }
+
         // ------------------------------------------------------------------ roster
         private void Rebuild()
         {
@@ -519,9 +525,11 @@ namespace LR2.UI
         {
             var box = Img(parent, "Stepper", Chip);
             Anchor(box.rectTransform, x0, y0, x1, y1);
-            var prev = IconBtn(box.rectTransform, null, "<", 27, () => step(-1), new Color(1f, 1f, 1f, 0.06f), Text);
+            // chevron icons, not "<" / ">" text: the heading font has no glyphs for them (user 11-20: "some icons missing
+            // from left right buttons")
+            var prev = IconBtn(box.rectTransform, "chev-left", "", 27, () => step(-1), new Color(1f, 1f, 1f, 0.06f), Text);
             Anchor((RectTransform)prev.transform, 0f, 0f, 0.15f, 1f);
-            var next = IconBtn(box.rectTransform, null, ">", 27, () => step(1), new Color(1f, 1f, 1f, 0.06f), Text);
+            var next = IconBtn(box.rectTransform, "chev-right", "", 27, () => step(1), new Color(1f, 1f, 1f, 0.06f), Text);
             Anchor((RectTransform)next.transform, 0.85f, 0f, 1f, 1f);
             Color vc = valueColor ?? Text;
             Image ic = null;

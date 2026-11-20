@@ -9,6 +9,7 @@
   --bg: #eef0e9; --panel: #fbfcf8; --raised: #d6dbd1; --line: #b9c2b5; --grid: #e2e6dd;
   --ink: #141b17; --muted: #56625a; --accent: #c4501b; --bot: #2a6cab; --good: #2c8540;
   --bad: #c2352b; --warn: #946805; --zone: #74499f;
+  --r1: #86b6ef; --r2: #5598e7; --r3: #2a78d6; --r4: #184f95;
   --purple: #74499f; --ink-2: #56625a; --panel-2: #eff1ea; --label: var(--display);
   --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -20,6 +21,7 @@
     --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
     --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
     --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff;
+    --r1: #256abf; --r2: #3987e5; --r3: #6da7ec; --r4: #b7d3f6;
     --purple: #b388ff; --ink-2: #95a39a; --panel-2: #1d2521; color-scheme: dark;
   }
 }
@@ -27,6 +29,7 @@
   --bg: #0f1311; --panel: #161c19; --raised: #2b3530; --line: #36443c; --grid: #1c2420;
   --ink: #e3e9e2; --muted: #95a39a; --accent: #ff7d3b; --bot: #6eaee6; --good: #5cc46a;
   --bad: #ff6b60; --warn: #e2b54a; --zone: #b388ff;
+  --r1: #256abf; --r2: #3987e5; --r3: #6da7ec; --r4: #b7d3f6;
     --purple: #b388ff; --ink-2: #95a39a; --panel-2: #1d2521; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -107,6 +110,9 @@ ol.log li.bot span { color: var(--bot); }
 .note { font-size: 13px; color: var(--muted); }
 .legend { font-size: 13.5px;  display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
 .legend i { width: 13px; height: 13px;  display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.legend i.dash { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--muted); vertical-align: 3px; }
+.cv-pull { aspect-ratio: 16 / 7; }
+@media (max-width: 640px) { .cv-pull { aspect-ratio: 4 / 5; } }
 .big { font: 700 34px/1 var(--display); font-variant-numeric: tabular-nums; }
 .verdict { padding: 12px; border-radius: var(--radius); border: 1px solid var(--bot); background: color-mix(in srgb, var(--bot) 10%, transparent); }
 .verdict .big { color: var(--bot); }
@@ -540,10 +546,15 @@ tr.sel-gun td { background: var(--panel-2); }
     </section>
 <section id="recoil" aria-labelledby="h-recoil">
   <div class="head"><span class="num">10 · CONTROL</span><h2 id="h-recoil">Recoil and the pull-down</h2>
-    <p>Bots do not get recoil-free guns. Every shot kicks the view up, the bot starts pulling down 65 to 135 ms later, and how well it compensates depends on its skill and tires as the spray goes on. Late in a long spray a sideways weave appears. Four bots, same rifle, 24 rounds at a target 15 m away:</p></div>
+    <p>Bots do not get recoil-free guns. Every shot kicks the view up, the bot starts pulling down 65 to 135 ms later, and how well it compensates depends on its skill and tires as the spray goes on. Late in a long spray a sideways weave appears. Four bots, same rifle, 24 rounds at a target 15 m away. Each one aims at the centre of the chest (the crosshair, shown first), then holds the trigger:</p></div>
   <div class="stage">
-    <canvas id="cvRecoil" class="cv-wide" aria-label="Spray patterns of four bot skill levels"></canvas>
+    <canvas id="cvRecoil" class="cv-wide" aria-label="Spray patterns of four bot skill levels, with the aim point on the chest"></canvas>
     <div class="controls"><button type="button" id="btnSpray">Spray again</button><span class="note" id="rcNote"></span></div>
+  </div>
+  <div class="stage">
+    <canvas id="cvPull" class="cv-pull" aria-label="Pull-down plots: the height of each round above the aim point, and the pull back after one kick"></canvas>
+    <div class="legend"><span><i style="background:var(--r1)"></i>Recruit</span><span><i style="background:var(--r2)"></i>Regular</span><span><i style="background:var(--r3)"></i>Hardened</span><span><i style="background:var(--r4)"></i>Veteran</span><span><i class="dash"></i>no pull-down (the climb with nobody pulling)</span></div>
+    <div class="controls"><span class="note" id="pullNote">Hover the left plot to read every bot's round.</span></div>
   </div>
 </section>
 <section id="hold" class="bb" aria-labelledby="h-hold">
@@ -998,7 +1009,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const T = {};
 function readTokens() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ['bg', 'panel', 'raised', 'line', 'grid', 'ink', 'muted', 'accent', 'bot', 'good', 'bad', 'warn', 'zone'])
+  for (const k of ['bg', 'panel', 'raised', 'line', 'grid', 'ink', 'muted', 'accent', 'bot', 'good', 'bad', 'warn', 'zone', 'r1', 'r2', 'r3', 'r4'])
     T[k] = cs.getPropertyValue('--' + k).trim();
 }
 readTokens();
@@ -2108,8 +2119,8 @@ redraws.push(() => drawStrafe(+$('sDistS').value));
 // ---------------------------------------------------------------- 6. recoil pull-down
 const rc = { cv: $('cvRecoil'), t: 0, runs: [], rng: mulberry(9) };
 function startSpray() {
-  rc.t = 0;
-  rc.runs = PRESET_NAMES.map((n, i) => ({ name: n, P: PRESETS[n], pitch: 0, yaw: 0, heat: 0, shots: [], next: 0, n: 0, latency: lerp(0.065, 0.135, rc.rng()), phase: i * 1.7, climbNoComp: 0 }));
+  rc.t = -0.9; // B133 (user 11-20: "where is the bot trying to aim? show that first"): the crosshair alone, then the spray
+  rc.runs = PRESET_NAMES.map((n, i) => ({ name: n, P: PRESETS[n], pitch: 0, yaw: 0, heat: 0, shots: [], next: 0, n: 0, latency: lerp(0.065, 0.135, rc.rng()), phase: i * 1.7, climbNoComp: 0, noComp: [] }));
 }
 function stepRecoil(dt) {
   if (!rc.runs.length) startSpray();
@@ -2122,10 +2133,12 @@ function stepRecoil(dt) {
       if (rc.t >= r.next) {
         r.next = rc.t + 0.075; r.n++;
         const kv = 0.55 + rc.rng() * 0.15, kh = gauss(rc.rng) * 0.12;
+        const sp = 0.25 + r.heat * 0.35;
+        // B133: the round leaves before its own kick, so the first one lands on the aim point
+        r.shots.push([r.yaw + gauss(rc.rng) * sp * 0.5, r.pitch + gauss(rc.rng) * sp * 0.5]);
+        r.noComp.push(r.climbNoComp);
         r.pitch += kv; r.yaw += kh; r.climbNoComp += kv;
         r.heat = Math.min(1, r.heat + 0.06);
-        const sp = 0.25 + r.heat * 0.35;
-        r.shots.push([r.yaw + gauss(rc.rng) * sp * 0.5, r.pitch + gauss(rc.rng) * sp * 0.5]);
       }
     }
     if (rc.t > r.latency) r.pitch -= r.pitch * (1 - Math.exp(-eff * 9 * Math.min(dt, 1 / 30)));
@@ -2134,6 +2147,7 @@ function stepRecoil(dt) {
   }
   if (!busy && rc.t > 3.4) startSpray();
   drawRecoil();
+  drawPull();
 }
 function drawRecoil() {
   const { g, w, h } = fit(rc.cv);
@@ -2147,6 +2161,19 @@ function drawRecoil() {
     const s = ppd * mpd; // px per metre (B119: was ppd / mpd, which drew the target ~14x too small)
     g.fillStyle = rgba(T.ink, 0.13); g.fillRect(cx - 0.34 * s, cy - 1.25 * s, 0.68 * s, 0.7 * s); g.fillRect(cx - 0.25 * s, cy - 0.55 * s, 0.5 * s, 0.8 * s);
     g.beginPath(); g.arc(cx, cy - 1.42 * s, 0.13 * s, 0, Math.PI * 2); g.fill();
+    // B133: where the bot aims (centre of the chest), drawn first and kept under the rounds
+    const ax = cx, ay = cy - 0.9 * s, pre = rc.t < 0;
+    const ring = pre ? 9 + 3 * Math.sin((rc.t + 0.9) * 10) : 9;
+    g.strokeStyle = T.accent; g.lineWidth = pre ? 2 : 1.4;
+    g.beginPath(); g.arc(ax, ay, ring, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(ax - 17, ay); g.lineTo(ax - 5, ay); g.moveTo(ax + 5, ay); g.lineTo(ax + 17, ay);
+    g.moveTo(ax, ay - 17); g.lineTo(ax, ay - 5); g.moveTo(ax, ay + 5); g.lineTo(ax, ay + 17); g.stroke();
+    if (pre || r.shots.length < 2) {
+      g.fillStyle = T.ink; g.font = `600 12px ${font}`; g.textAlign = 'right';
+      g.fillText('aim point', ax - 21, ay - 8);
+      g.fillStyle = T.muted; g.font = `11.5px ${font}`; g.fillText('chest centre', ax - 21, ay + 7);
+      g.textAlign = 'center';
+    }
     // B119: the spray as a path from the first round to the last, rounds big enough to see
     g.strokeStyle = rgba(T.bot, 0.45); g.lineWidth = 1.5; g.beginPath();
     r.shots.forEach((sh, q) => { const x = cx + sh[0] * ppd, y = cy - 0.9 * s - sh[1] * ppd; if (!q) g.moveTo(x, y); else g.lineTo(x, y); });
@@ -2168,10 +2195,121 @@ function drawRecoil() {
     g.fillText(`pull-down ${Math.round(eff * 100)} %, ${Math.round(r.latency * 1000)} ms late`, cx, 34);
     if (i > 0) { g.strokeStyle = T.line; g.beginPath(); g.moveTo(cw * i, 8); g.lineTo(cw * i, h - 8); g.stroke(); }
   });
-  $('rcNote').textContent = 'Without pull-down the last round would land about 15° above the first.';
+  $('rcNote').textContent = rc.t < 0 ? 'Aiming: the crosshair is where every bot aims, the centre of the chest.'
+    : `Without pull-down the last round would land about ${Math.round(rc.runs.length && rc.runs[0].noComp.length ? rc.runs[0].noComp[rc.runs[0].noComp.length - 1] : 14)}° above the first.`;
 }
 $('btnSpray').addEventListener('click', startSpray);
 redraws.push(drawRecoil);
+
+// B133 (user 11-20: "also show some plots for pulldowns"): left, the height of every round above the aim point, with the
+// climb nobody pulls against; right, one kick and how each skill level pulls back (the delay, then the speed)
+const pull = { hover: -1 };
+function pullLabels(g, items, top, bottom, font) {
+  items.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < items.length; i++) if (items[i].y - items[i - 1].y < 14) items[i].y = items[i - 1].y + 14;
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].y > bottom) items[i].y = bottom;
+    if (i < items.length - 1 && items[i + 1].y - items[i].y < 14) items[i].y = items[i + 1].y - 14;
+    items[i].y = Math.max(top, items[i].y);
+  }
+  for (const it of items) {
+    g.fillStyle = it.col; g.beginPath(); g.arc(it.x + 4, it.y - 4, 3.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = T.ink; g.font = `12px ${font}`; g.textAlign = 'left'; g.fillText(it.text, it.x + 11, it.y);
+  }
+}
+function pullAxes(g, L, R, Tp, B, xt, X, xf, yt, Y, yf, font) {
+  g.strokeStyle = T.grid; g.lineWidth = 1; g.font = `11.5px ${font}`; g.fillStyle = T.muted;
+  g.textAlign = 'right';
+  for (const v of yt) { const y = Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(R, y); g.stroke(); g.fillText(yf(v), L - 6, y + 4); }
+  g.textAlign = 'center';
+  for (const v of xt) { const x = X(v); g.fillText(xf(v), x, B + 15); }
+  g.strokeStyle = T.line; g.beginPath(); g.moveTo(L, B); g.lineTo(R, B); g.stroke();
+}
+function drawPull() {
+  const cv = $('cvPull');
+  if (!cv) return;
+  const { g, w, h } = fit(cv);
+  g.fillStyle = T.panel; g.fillRect(0, 0, w, h);
+  const font = getComputedStyle(document.body).fontFamily;
+  const stack = w < 640;
+  const P = stack ? [[0, 0, w, h / 2], [0, h / 2, w, h / 2]] : [[0, 0, w / 2, h], [w / 2, 0, w / 2, h]];
+  const runs = rc.runs, col = i => T['r' + (i + 1)] || T.bot;
+  // left: rounds
+  {
+    const [x0, y0, pw, ph] = P[0];
+    const L = x0 + 46, R = x0 + pw - 92, Tp = y0 + 46, B = y0 + ph - 30;
+    const X = n => L + (n - 1) / 23 * (R - L), Y = d => B - clamp(d, -1, 16) / 16 * (B - Tp);
+    g.fillStyle = T.ink; g.font = `600 13px ${font}`; g.textAlign = 'left';
+    g.fillText('Height of each round above the aim point', x0 + 12, y0 + 18);
+    g.fillStyle = T.muted; g.font = `11.5px ${font}`; g.fillText('degrees, by round (1 to 24)', x0 + 12, y0 + 33);
+    pullAxes(g, L, R, Tp, B, [1, 6, 12, 18, 24], X, v => v, [0, 4, 8, 12, 16], Y, v => `${v}°`, font);
+    const labels = [];
+    const ref = runs.length ? runs[0].noComp : [];
+    if (ref.length) {
+      g.setLineDash([5, 4]); g.strokeStyle = T.muted; g.lineWidth = 1.6; g.beginPath();
+      ref.forEach((v, q) => { const x = X(q + 1), y = Y(v); q ? g.lineTo(x, y) : g.moveTo(x, y); });
+      g.stroke(); g.setLineDash([]);
+      labels.push({ x: X(ref.length) + 4, y: Y(ref[ref.length - 1]) + 4, text: 'no pull-down', col: T.muted });
+    }
+    runs.forEach((r, i) => {
+      if (!r.shots.length) return;
+      g.strokeStyle = col(i); g.lineWidth = 2.2; g.beginPath();
+      r.shots.forEach((sh, q) => { const x = X(q + 1), y = Y(sh[1]); q ? g.lineTo(x, y) : g.moveTo(x, y); });
+      g.stroke();
+      const last = r.shots[r.shots.length - 1];
+      labels.push({ x: X(r.shots.length) + 4, y: Y(last[1]) + 4, text: r.name, col: col(i) });
+    });
+    if (pull.hover >= 1) {
+      const x = X(pull.hover);
+      g.strokeStyle = T.ink; g.globalAlpha = 0.35; g.beginPath(); g.moveTo(x, Tp); g.lineTo(x, B); g.stroke(); g.globalAlpha = 1;
+      runs.forEach((r, i) => { const sh = r.shots[pull.hover - 1]; if (!sh) return; g.fillStyle = col(i); g.strokeStyle = T.panel; g.lineWidth = 2; g.beginPath(); g.arc(x, Y(sh[1]), 4.5, 0, Math.PI * 2); g.fill(); g.stroke(); });
+    }
+    pullLabels(g, labels, Tp, B, font);
+    pull.L = L; pull.R = R; pull.Tp = y0; pull.B = y0 + ph;
+  }
+  // right: one kick, then the pull back
+  {
+    const [x0, y0, pw, ph] = P[1];
+    const L = x0 + 46, R = x0 + pw - 124, Tp = y0 + 46, B = y0 + ph - 30;
+    const tMax = 0.6, kick = 0.62, X = t => L + t / tMax * (R - L), Y = d => B - d / 0.7 * (B - Tp);
+    g.fillStyle = T.ink; g.font = `600 13px ${font}`; g.textAlign = 'left';
+    g.fillText('One kick, then the pull back', x0 + 12, y0 + 18);
+    g.fillStyle = T.muted; g.font = `11.5px ${font}`; g.fillText('degrees above the aim point after a single shot', x0 + 12, y0 + 33);
+    pullAxes(g, L, R, Tp, B, [0, 0.2, 0.4, 0.6], X, v => `${Math.round(v * 1000)} ms`, [0, 0.2, 0.4, 0.6], Y, v => `${v.toFixed(1)}°`, font);
+    const labels = [];
+    runs.forEach((r, i) => {
+      const eff = clamp(r.P.aimSpeed / 10.5, 0.55, 0.92);
+      g.strokeStyle = col(i); g.lineWidth = 2.2; g.beginPath();
+      for (let k = 0; k <= 150; k++) {
+        const t = k / 150 * tMax, d = t < r.latency ? kick : kick * Math.exp(-eff * 9 * (t - r.latency));
+        const x = X(t), y = Y(d); k ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.stroke();
+      g.fillStyle = col(i); g.strokeStyle = T.panel; g.lineWidth = 2;
+      g.beginPath(); g.arc(X(r.latency), Y(kick), 4, 0, Math.PI * 2); g.fill(); g.stroke();
+      labels.push({ x: R + 4, y: Y(kick * Math.exp(-eff * 9 * (tMax - r.latency))) + 4, text: `${r.name} ${Math.round(r.latency * 1000)} ms`, col: col(i) });
+    });
+    g.fillStyle = T.muted; g.font = `11.5px ${font}`; g.textAlign = 'right';
+    g.fillText('dot = when it starts pulling down', R, Tp + 14);
+    pullLabels(g, labels, Tp, B, font);
+  }
+}
+$('cvPull').addEventListener('pointermove', e => {
+  const r = $('cvPull').getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let n = -1;
+  if (pull.R && x >= pull.L - 8 && x <= pull.R + 8 && y >= pull.Tp && y <= pull.B) n = clamp(Math.round((x - pull.L) / (pull.R - pull.L) * 23) + 1, 1, 24);
+  if (n === pull.hover) return;
+  pull.hover = n;
+  if (n < 1) { $('pullNote').textContent = "Hover the left plot to read every bot's round."; }
+  else {
+    const parts = rc.runs.map(rr => rr.shots[n - 1] ? `${rr.name} ${rr.shots[n - 1][1].toFixed(1)}°` : null).filter(Boolean);
+    const ref = rc.runs.length && rc.runs[0].noComp[n - 1] != null ? `, no pull-down ${rc.runs[0].noComp[n - 1].toFixed(1)}°` : '';
+    $('pullNote').textContent = parts.length ? `Round ${n}: ${parts.join(', ')}${ref}` : `Round ${n}: not fired yet`;
+  }
+  drawPull();
+});
+$('cvPull').addEventListener('pointerleave', () => { pull.hover = -1; $('pullNote').textContent = "Hover the left plot to read every bot's round."; drawPull(); });
+redraws.push(drawPull);
 
 // ---------------------------------------------------------------- 7. armour
 const ar = { hp: 100, armour: 50, crateReady: true };
@@ -2217,7 +2355,7 @@ drawAdapt();
 
 // Reduced motion: render a meaningful still state for the continuous drills (they stay interactive).
 if (reduceMotion) {
-  for (let k = 0; k < 140; k++) { stepStrafe(1 / 30); stepRecoil(1 / 30); }
+  for (let k = 0; k < 140; k++) { stepStrafe(1 / 30); if (!rc.runs.length || rc.t < 2.9) stepRecoil(1 / 30); }
   stepSensesMeter(0.4);
 }
 requestAnimationFrame(frame);

@@ -16,6 +16,12 @@ namespace LR2.Audio
 
         // Environment tuning (overridden by LR2AudioEnvironment in the scene)
         public static float OcclusionVolume = 0.45f;
+
+        /// <summary>
+        /// B134 (user 11-20: "in the main menu dont play shooting and walking sounds"): set by the menu cinematic while it
+        /// runs. Gunfire, impacts and footsteps play at zero volume; music, ambience, voices and UI clicks stay.
+        /// </summary>
+        public static bool MenuQuiet;
         public static float OcclusionCutoff = 1100f;
         public static float PartialOcclusionCutoff = 3200f;
         public static float AbsorptionDistance = 160f;
@@ -39,6 +45,8 @@ namespace LR2.Audio
 
         public static float CategoryVolume(AudioCategory category)
         {
+            if (MenuQuiet && (category == AudioCategory.Weapons || category == AudioCategory.Footsteps || category == AudioCategory.Sfx))
+                return 0f;
             switch (category)
             {
                 case AudioCategory.UI: return LR2Settings.UiVolume;
@@ -389,6 +397,7 @@ namespace LR2.Audio
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
+            MenuQuiet = false;
             Voices.Clear();
             Filters.Clear();
             StartTimes.Clear();

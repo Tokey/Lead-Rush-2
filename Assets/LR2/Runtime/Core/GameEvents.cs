@@ -41,6 +41,9 @@ namespace LR2.Core
         public Combatant shooter;
         public Vector3 origin;
         public Vector3 direction;
+        /// <summary>B132: where the first round ended (hit point or range limit), after spread; the killcam draws to it.</summary>
+        public Vector3 endPoint;
+        public bool hasEndPoint;
         public float audibleRadius;
         public bool suppressed;
         public string weaponName;

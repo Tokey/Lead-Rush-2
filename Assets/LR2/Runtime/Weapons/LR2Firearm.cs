@@ -627,10 +627,13 @@ namespace LR2.Weapons
                 : botTracerEvery;
             bool tracer = tracerEvery > 0 && _shotCounter % tracerEvery == 0;
 
+            Vector3 firstEnd = Vector3.zero;
+            bool haveEnd = false;
             for (int i = 0; i < pellets; i++)
             {
                 Vector3 dir = LR2Math.RandomInCone(aimDir, spread);
-                Ballistics.Fire(combatant, definition, origin, dir, Muzzle.position, tracer && i == 0, gameObject);
+                var shot = Ballistics.Fire(combatant, definition, origin, dir, Muzzle.position, tracer && i == 0, gameObject);
+                if (i == 0) { firstEnd = shot.endPoint; haveEnd = true; }
             }
 
             if (definition != null) _bloom = Mathf.Min(definition.maxBloom, _bloom + definition.bloomPerShot);
@@ -684,6 +687,8 @@ namespace LR2.Weapons
                 shooter = combatant,
                 origin = origin,
                 direction = aimDir,
+                endPoint = firstEnd,
+                hasEndPoint = haveEnd,
                 audibleRadius = radius,
                 suppressed = suppressed,
                 weaponName = definition != null ? definition.shortName : DisplayName

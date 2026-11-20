@@ -58,7 +58,7 @@ namespace LR2.Weapons
                     if (hitbox.Owner == null || !hitbox.Owner.IsAlive)
                     {
                         // Corpse: blood + push the ragdoll.
-                        ImpactSystem.SpawnBlood(hit.point, hit.normal, direction, false);
+                        if (!LR2.World.KillcamDirector.IsPlaying) ImpactSystem.SpawnBlood(hit.point, hit.normal, direction, false);
                         var rb = col.attachedRigidbody;
                         if (rb != null && !rb.isKinematic) rb.AddForceAtPosition(direction * 45f, hit.point, ForceMode.Impulse);
                         result.endPoint = hit.point;
@@ -81,7 +81,7 @@ namespace LR2.Weapons
                     };
                     float applied = hitbox.ApplyDamage(ref info);
                     bool head = hitbox.Zone == HitZone.Head;
-                    ImpactSystem.SpawnBlood(hit.point, hit.normal, direction, head);
+                    if (!LR2.World.KillcamDirector.IsPlaying) ImpactSystem.SpawnBlood(hit.point, hit.normal, direction, head);
                     result.hitCombatant |= applied > 0f;
                     result.damage += applied;
                     result.headshot |= head && applied > 0f;
@@ -125,7 +125,7 @@ namespace LR2.Weapons
                             if (shooter != null && applied > 0f) shooter.stats.shotsHit++;
                         }
                     }
-                    ImpactSystem.SpawnBulletImpact(hit.point, hit.normal, direction, hitSurface, false);
+                    if (!LR2.World.KillcamDirector.IsPlaying) ImpactSystem.SpawnBulletImpact(hit.point, hit.normal, direction, hitSurface, false);
                     if (!isActor && !damageable.CanBeDamaged && penetrationLeft > 0.02f)
                     {
                         damageScale *= 0.78f;
@@ -138,7 +138,7 @@ namespace LR2.Weapons
 
                 // ---------------------------------------------------------------- world
                 var surface = SurfaceDetector.Detect(col);
-                ImpactSystem.SpawnBulletImpact(hit.point, hit.normal, direction, surface, false);
+                if (!LR2.World.KillcamDirector.IsPlaying) ImpactSystem.SpawnBulletImpact(hit.point, hit.normal, direction, surface, false);
                 var body = col.attachedRigidbody;
                 if (body != null && !body.isKinematic) body.AddForceAtPosition(direction * 6f, hit.point, ForceMode.Impulse);
                 GameEvents.RaiseNoise(shooter, hit.point, 6f, NoiseType.Impact);
@@ -154,7 +154,7 @@ namespace LR2.Weapons
                         penetrationLeft -= thickness * cost;
                         damageScale *= def != null ? def.penetrationDamageScale : 0.6f;
                         penetrated = true;
-                        ImpactSystem.SpawnBulletImpact(exit.point, exit.normal, direction, surface, true);
+                        if (!LR2.World.KillcamDirector.IsPlaying) ImpactSystem.SpawnBulletImpact(exit.point, exit.normal, direction, surface, true);
                         continue;
                     }
                 }
@@ -164,7 +164,8 @@ namespace LR2.Weapons
             }
 
             ProcessNearMisses(shooter, origin, result.endPoint);
-            if (spawnTracer)
+            // B132: the match keeps running behind the killcam; its live rounds must not fly through the replay
+            if (spawnTracer && !LR2.World.KillcamDirector.IsPlaying)
             {
                 Combatant local = Combatant.FindLocalPlayer();
                 bool friendlyTracer = shooter == null || shooter.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, shooter));

@@ -135,6 +135,11 @@ namespace LR2.UI
                                            Seg(p, -0.3f, 0.45f, 0.65f, 0.45f, 0.08f), Seg(p, -0.3f, 0f, 0.65f, 0f, 0.08f), Seg(p, -0.3f, -0.45f, 0.4f, -0.45f, 0.08f));
                 case "back": return p => Arrow(p, 0.65f, 0f, -0.7f, 0f);
                 case "play": return p => Poly(p, V(-0.45f, -0.62f), V(0.68f, 0f), V(-0.45f, 0.62f));
+                // B130: stepper arrows as icons (the "<" / ">" text glyphs did not render in the lobby's heading font)
+                case "chev-left": return p => U(Seg(p, 0.2f, 0.58f, -0.3f, 0f, 0.12f), Seg(p, -0.3f, 0f, 0.2f, -0.58f, 0.12f));
+                case "chev-right": return p => U(Seg(p, -0.2f, 0.58f, 0.3f, 0f, 0.12f), Seg(p, 0.3f, 0f, -0.2f, -0.58f, 0.12f));
+                case "power": return p => U(Cut(Ring(p, 0f, -0.1f, 0.6f, 0.085f), Poly(p, V(-0.32f, 0.95f), V(0f, -0.1f), V(0.32f, 0.95f))),
+                                            Seg(p, 0f, 0f, 0f, 0.82f, 0.085f));
                 case "map": return p => Cut(U(Circle(p, 0f, 0.22f, 0.44f), Poly(p, V(-0.38f, 0.02f), V(0f, -0.82f), V(0.38f, 0.02f))), Circle(p, 0f, 0.22f, 0.17f));
                 case "mode": return p => U(Ring(p, 0f, 0f, 0.55f, 0.07f), Seg(p, 0f, 0.3f, 0f, 0.82f, 0.07f), Seg(p, 0f, -0.3f, 0f, -0.82f, 0.07f),
                                           Seg(p, 0.3f, 0f, 0.82f, 0f, 0.07f), Seg(p, -0.3f, 0f, -0.82f, 0f, 0.07f), Circle(p, 0f, 0f, 0.08f));

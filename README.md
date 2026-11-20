@@ -7,8 +7,16 @@ LeadRush 2 pairs full-body procedural first-person weapon & locomotion animation
 ![LeadRush 2 — Main Menu & Tactical Recon](Docs/Media/main_menu_hero.png)
 
 > **Built by 4 AI agents.** One developer directs; **Claude Code** (`claude-opus-5-5`), **Antigravity ("Gemini")** (`gemini-4-hydrogen` / `argon`), **GitHub Copilot** (`gpt-5.6-luna`), and **OpenAI Codex** (`gpt-6`) write the code, verify metrics, and cross-review through a shared board. The full story — with prompts, agent messages, 4-agent token/usage telemetry (`B56`), and model quality charts:
-> **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)** · **[Who decided what: the developer's and the AI's decisions, feature by feature](Docs/AI_Collaboration/DECISION_PROVENANCE.md)** · **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**.
-> Project documentation: [Project history](Docs/PROJECT_HISTORY.md), [Tooling](Docs/TOOLING.md), and [P3 + HDRP 17.5 Upscaler Benchmark Report](Docs/AI_Collaboration/specs/P3_Report.md).
+>
+> - **[How AI agents are building LeadRush 2](Docs/AI_Collaboration/README.md)**
+> - **[Who decided what: the developer's and the AI's decisions, feature by feature](Docs/AI_Collaboration/DECISION_PROVENANCE.md)**
+> - **[How the AI agents test LeadRush 2 (QA process & pose/aim telemetry)](Docs/AI_Collaboration/QA_PROCESS.md)**
+>
+> Project documentation:
+>
+> - [Project history](Docs/PROJECT_HISTORY.md)
+> - [Tooling](Docs/TOOLING.md)
+> - [P3 + HDRP 17.5 Upscaler Benchmark Report](Docs/AI_Collaboration/specs/P3_Report.md)
 
 ### By the numbers
 
@@ -57,7 +65,16 @@ Every feature in one table, with the developer's words and the AI's decisions: *
 
 ## Screenshots
 
-### Match setup and AI vs AI (`11.19.26.7`)
+### Main menu and match setup (2026-11-20)
+
+The title screen is PLAY, SETTINGS and QUIT as tiles, a CALLSIGN field (your name in every match), and a camera that cuts between
+b-roll shots of your soldier: the gun, a pan across the mask, a low angle, the profile.
+
+<p align="center"><img src="Docs/Media/updates/2026-11-20/title_broll.gif" alt="The title screen's b-roll loop: gun close-up, face pan, low angle and profile shots of the soldier, with the tiles on the left" width="820"></p>
+
+| Gun close-up | Face pan |
+|---|---|
+| ![Title screen: gun close-up](Docs/Media/updates/2026-11-20/title_gun.jpg) | ![Title screen: a pan across the mask](Docs/Media/updates/2026-11-20/title_face.jpg) |
 
 ![The skirmish lobby: PLAY opens a roster of up to 20 bots, each with its own difficulty and team, presets, and match settings](Docs/Media/match_setup.jpg)
 

@@ -69,8 +69,11 @@ namespace LR2.World
         private struct RecordedShot
         {
             public float time;
+            public Combatant shooter; // B132: the replay draws only the killer's rounds
             public Vector3 origin;
             public Vector3 direction;
+            public Vector3 endPoint;
+            public bool hasEnd;
             public bool played;
         }
 
@@ -120,6 +123,7 @@ namespace LR2.World
         private Transform _puppetMuzzle;
         private MuzzleFlash[] _puppetMuzzleFlashes;
         private readonly List<Renderer> _hiddenLive = new List<Renderer>();
+        private readonly List<WeaponLaser> _pausedLasers = new List<WeaponLaser>(); // B132: live lasers re-enable their beams
         private bool _puppets;
         private const float SampleInterval = 1f / 60f;
 
@@ -244,7 +248,8 @@ namespace LR2.World
         private void OnShotFired(ShotEvent e)
         {
             if (_playing || e.shooter == null) return;
-            _shotLog.Add(new RecordedShot { time = Time.time, origin = e.origin, direction = e.direction, played = false });
+            _shotLog.Add(new RecordedShot { time = Time.time, shooter = e.shooter, origin = e.origin, direction = e.direction,
+                                            endPoint = e.endPoint, hasEnd = e.hasEndPoint, played = false });
             float cutoff = Time.time - 6f;
             while (_shotLog.Count > 0 && _shotLog[0].time < cutoff) _shotLog.RemoveAt(0);
         }
@@ -368,13 +373,7 @@ namespace LR2.World
             _replayEndTime = _killTime + postKillWindow;
             // Body/aim windows are copied in Begin(), after the post-kill window (the victim's ragdoll) has been recorded.
 
-            _replayShots.Clear();
-            for (int i = 0; i < _shotLog.Count; i++)
-            {
-                var s = _shotLog[i];
-                if (s.time >= _replayStartTime && s.time <= _replayEndTime)
-                    _replayShots.Add(s);
-            }
+            _replayShots.Clear(); // filled in Begin(): the fatal round is logged only after this kill event
 
             _replayHits.Clear();
             bool hasKillHit = false;
@@ -810,7 +809,8 @@ namespace LR2.World
                 Combatant killerCombatant = _killer != null ? _killer.Combatant : null;
                 Combatant local = Combatant.FindLocalPlayer();
                 bool killerFriendly = killerCombatant != null && (killerCombatant.IsLocalPlayer || (local != null && !TeamUtil.AreHostile(local, killerCombatant)));
-                if (!_hsActive) TracerSystem.Spawn(muzzle, s.origin + s.direction * 40f, killerFriendly); // the bullet cam draws its own round
+                Vector3 end = s.hasEnd ? s.endPoint : s.origin + s.direction * 40f; // B132: where the round really went
+                if (!_hsActive) TracerSystem.Spawn(muzzle, end, killerFriendly); // the bullet cam draws its own round
                 if (_puppetMuzzleFlashes != null)
                 {
                     for (int m = 0; m < _puppetMuzzleFlashes.Length; m++)
@@ -1074,11 +1074,18 @@ namespace LR2.World
             if (_victim.DroppedWeapon != null)
                 foreach (var r in _victim.DroppedWeapon.GetComponentsInChildren<Renderer>(true))
                     if (r.enabled) { r.enabled = false; _hiddenLive.Add(r); }
+            // the live lasers turn their beams back on every frame; pause them so only the puppet's laser shows
+            _pausedLasers.Clear();
+            foreach (var sc in new[] { _killer, _victim })
+                foreach (var wl in sc.GetComponentsInChildren<WeaponLaser>(true))
+                    if (wl.enabled) { wl.enabled = false; _pausedLasers.Add(wl); }
             _puppets = true;
         }
 
         private void DestroyPuppets()
         {
+            foreach (var wl in _pausedLasers) if (wl != null) wl.enabled = true;
+            _pausedLasers.Clear();
             foreach (var r in _hiddenLive) if (r != null) r.enabled = true;
             _hiddenLive.Clear();
             foreach (var p in new[] { _killerPuppet, _victimPuppet, _killerGunPuppet, _victimGunPuppet })
@@ -1136,6 +1143,21 @@ namespace LR2.World
             CopyWindow(_victim, _replayStartTime, _replayEndTime, _victimReplay);
             CopyPoseWindow(_killer, _replayStartTime, _replayEndTime, _killerPoseReplay);
             CopyPoseWindow(_victim, _replayStartTime, _replayEndTime, _victimPoseReplay);
+
+            // B132 (user 11-20: "while showing the replay, the bots bullets are going totally in the wrong direction"):
+            // the log holds every soldier's shots and each replayed one is drawn from the killer's muzzle, so other bots'
+            // rounds (and the victim's own) left the killer's gun in their shooters' directions. Killer's only, as the hits
+            // already were. Selected here, not in OnKilled: the fatal round's ShotFired comes after the Killed event.
+            _replayShots.Clear();
+            for (int i = 0; i < _shotLog.Count; i++)
+            {
+                var rs = _shotLog[i];
+                if (rs.time >= _replayStartTime && rs.time <= _replayEndTime && rs.shooter == _event.killer)
+                {
+                    rs.played = false;
+                    _replayShots.Add(rs);
+                }
+            }
 
             BuildPuppets();
             if (!_puppets)

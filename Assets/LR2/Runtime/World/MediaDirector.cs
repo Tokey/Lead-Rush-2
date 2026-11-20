@@ -102,8 +102,9 @@ namespace LR2.World
         // ------------------------------------------------------------------ menu, lobby, AI vs AI
         private IEnumerator MenuRun()
         {
-            yield return new WaitForSecondsRealtime(3.5f);
-            yield return Frames("menu_title", 28, 0.12f);
+            yield return new WaitForSecondsRealtime(1.5f);
+            // B130: the title is a ~21 s loop of hard-cut b-roll shots; sample the whole loop
+            yield return Frames("menu_title", 48, 0.45f);
             var menu = FindAnyObjectByType<LR2.UI.MainMenuController>();
             if (menu == null || menu.duelButton == null) { Note("no main menu"); yield break; }
             menu.duelButton.onClick.Invoke(); // PLAY

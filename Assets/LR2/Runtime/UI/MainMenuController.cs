@@ -170,6 +170,7 @@ namespace LR2.UI
             LR2.World.SkyCloudMotion.Ensure();
             BuildSkirmishLobby();
             HideLegacyBotDifficultyControls();
+            BuildTitleTiles();
 
             if (duelButton != null && _lobby == null) duelButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.Duel, duelSettings));
             if (ctfButton != null) ctfButton.onClick.AddListener(() => OpenDeployLobbyOrPlay(GameModeType.CaptureTheFlag, ctfSettings));
@@ -242,6 +243,236 @@ namespace LR2.UI
                 var rt = (RectTransform)b.transform;
                 rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, slots[0] - step * k++);
             }
+        }
+
+        /// <summary>
+        /// B130 (user 11-20): "remove the map selection thing from main menu thats not needed anymore, maybe place the avatar
+        /// there ... in the main menu the black bg tint may not be needed ... make the play settings etc buttons a bit cooler?
+        /// maybe tiles?". The map card and the dark left shade go (maps are picked in the lobby). PLAY, SETTINGS and QUIT
+        /// become tiles with an icon, a title and a line saying what is inside. <see cref="LR2.World.MenuCinematic"/> films the
+        /// hero on the right, where the card was.
+        /// </summary>
+        private void BuildTitleTiles()
+        {
+            if (mainPanel == null || _lobby == null) return;
+            var card = mainPanel.transform.Find("MapPreviewCard");
+            if (card != null) card.gameObject.SetActive(false);
+            var shade = mainPanel.transform.parent != null ? mainPanel.transform.parent.Find("LeftShade") : null;
+            if (shade != null) shade.gameObject.SetActive(false);
+            var theme = Resources.Load<UITheme>("LR2/UITheme");
+            Color accent = theme != null ? theme.accent : new Color(1f, 0.71f, 0.28f);
+            float top = 252f;
+            top = Tile(duelButton, "play", "PLAY", "SKIRMISH  ·  1V1 TO 4-WAY  ·  AI VS AI", 128f, top, accent, theme, true);
+            top = Tile(settingsButton, "gear", "SETTINGS", "GRAPHICS  ·  CONTROLS  ·  AUDIO", 86f, top, accent, theme, false);
+            Tile(quitButton, "power", "QUIT", "BACK TO THE DESKTOP", 86f, top, accent, theme, false);
+            BuildCallsignField(theme, accent);
+        }
+
+        /// <summary>
+        /// B131 (user 11-20: "a place to put our names in the game, that will be used throuout instead of operator"): a
+        /// CALLSIGN field in the top-right corner of the title screen. It writes <see cref="LR2Settings.PlayerName"/>, which
+        /// names the player's soldier in every match (kill feed, scoreboard, chat, killcam) and shows next to YOU in the lobby.
+        /// </summary>
+        private void BuildCallsignField(UITheme theme, Color accent)
+        {
+            if (mainPanel == null || mainPanel.transform.Find("Callsign") != null) return;
+            var root = new GameObject("Callsign", typeof(RectTransform));
+            root.transform.SetParent(mainPanel.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.sizeDelta = new Vector2(420f, 100f);
+            rt.anchoredPosition = new Vector2(-48f, -38f);
+
+            var capGo = new GameObject("Caption", typeof(RectTransform));
+            capGo.transform.SetParent(root.transform, false);
+            var cap = capGo.AddComponent<TextMeshProUGUI>();
+            if (theme != null && theme.headingFont != null) cap.font = theme.headingFont;
+            cap.text = "CALLSIGN"; // user 11-20: no hint line
+            cap.richText = true;
+            cap.fontSize = 17f;
+            cap.color = accent;
+            cap.characterSpacing = 3f;
+            cap.alignment = TextAlignmentOptions.BottomLeft;
+            cap.textWrappingMode = TextWrappingModes.NoWrap;
+            cap.raycastTarget = false;
+            var crt = cap.rectTransform;
+            crt.anchorMin = new Vector2(0f, 0.66f); crt.anchorMax = new Vector2(1f, 1f);
+            crt.offsetMin = new Vector2(2f, 0f); crt.offsetMax = new Vector2(0f, -4f);
+
+            var go = TMP_DefaultControls.CreateInputField(new TMP_DefaultControls.Resources());
+            go.name = "CallsignField";
+            go.transform.SetParent(root.transform, false);
+            var frt = (RectTransform)go.transform;
+            frt.anchorMin = new Vector2(0f, 0f); frt.anchorMax = new Vector2(1f, 0.62f);
+            frt.pivot = new Vector2(0.5f, 0.5f);
+            frt.offsetMin = frt.offsetMax = Vector2.zero;
+            var bg = go.GetComponent<Image>();
+            if (bg != null) { bg.sprite = null; bg.color = new Color(0.03f, 0.036f, 0.043f, 0.74f); }
+            TileImage(go.transform, "Edge", null, accent, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(3f, 0f));
+            var icon = TileImage(go.transform, "Icon", LR2Icons.Get("player"), new Color(1f, 1f, 1f, 0.78f), new Vector2(0f, 0.5f),
+                                 new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(32f, 0f), new Vector2(30f, 30f));
+            icon.preserveAspect = true;
+
+            var input = go.GetComponent<TMP_InputField>();
+            if (input.textViewport != null)
+            {
+                input.textViewport.offsetMin = new Vector2(60f, 4f);
+                input.textViewport.offsetMax = new Vector2(-16f, -4f);
+            }
+            if (input.textComponent is TextMeshProUGUI txt)
+            {
+                if (theme != null && theme.headingFont != null) txt.font = theme.headingFont;
+                txt.fontSize = 27f;
+                txt.color = Color.white;
+                txt.characterSpacing = 2f;
+                txt.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+            if (input.placeholder is TextMeshProUGUI ph)
+            {
+                if (theme != null && theme.bodyFont != null) ph.font = theme.bodyFont;
+                ph.text = "TYPE YOUR NAME";
+                ph.fontSize = 22f;
+                ph.fontStyle = FontStyles.Normal;
+                ph.color = new Color(1f, 1f, 1f, 0.32f);
+                ph.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+            input.characterLimit = 16;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            input.customCaretColor = true;
+            input.caretColor = accent;
+            input.caretWidth = 3;
+            input.selectionColor = new Color(accent.r, accent.g, accent.b, 0.35f);
+            input.onValidateInput = (text, index, ch) =>
+                char.IsLetterOrDigit(ch) || ch == ' ' || ch == '_' || ch == '-' || ch == '.' ? ch : '\0';
+            input.SetTextWithoutNotify(LR2Settings.PlayerName);
+            input.onEndEdit.AddListener(v =>
+            {
+                string clean = CleanCallsign(v);
+                if (clean != LR2Settings.PlayerName) LR2Settings.PlayerName = clean;
+                input.SetTextWithoutNotify(clean);
+                if (_lobby != null) _lobby.RefreshRoster();
+            });
+        }
+
+        /// <summary>Trimmed, single-spaced, at most 16 characters; empty falls back to the old default.</summary>
+        public static string CleanCallsign(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "Operator";
+            var parts = raw.Trim().Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+            string s = string.Join(" ", parts);
+            return s.Length > 16 ? s.Substring(0, 16).TrimEnd() : s;
+        }
+
+        private static float Tile(Button b, string icon, string title, string subtitle, float h, float top, Color accent,
+                                  UITheme theme, bool primary)
+        {
+            if (b == null || !b.gameObject.activeSelf) return top;
+            float w = primary ? 580f : 520f;
+            var rt = (RectTransform)b.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.sizeDelta = new Vector2(w, h);
+            rt.anchoredPosition = new Vector2(66f, top);
+
+            var bg = b.GetComponent<Image>();
+            if (bg != null) bg.color = primary ? new Color(0.10f, 0.08f, 0.045f, 0.74f) : new Color(0.03f, 0.036f, 0.043f, 0.62f);
+            var cb = b.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.7f, 1.6f, 1.4f, 1.25f);
+            cb.pressedColor = new Color(2.1f, 1.9f, 1.6f, 1.3f);
+            cb.selectedColor = new Color(1.4f, 1.35f, 1.25f, 1.15f);
+            cb.fadeDuration = 0.08f;
+            b.colors = cb;
+
+            // the builder's hover bar (UIButtonFX scales it in) becomes a full-height stripe
+            if (b.transform.Find("Accent") is RectTransform bar)
+            {
+                bar.anchorMin = new Vector2(0f, 0f); bar.anchorMax = new Vector2(0f, 1f);
+                bar.pivot = new Vector2(0f, 0.5f);
+                bar.sizeDelta = new Vector2(primary ? 10f : 8f, 0f);
+                bar.anchoredPosition = Vector2.zero;
+            }
+            var fx = b.GetComponent<UIButtonFX>();
+            if (fx != null) fx.hoverScale = 1.015f;
+
+            TileImage(b.transform, "TileEdge", null, new Color(accent.r, accent.g, accent.b, primary ? 1f : 0.35f),
+                      new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(3f, 0f));
+
+            float iconSize = Mathf.Round(h * (primary ? 0.42f : 0.40f));
+            float iconX = 22f + iconSize * 0.5f + (primary ? 8f : 4f);
+            Color iconIdle = primary ? accent : new Color(1f, 1f, 1f, 0.82f);
+            var ic = TileImage(b.transform, "TileIcon", LR2Icons.Get(icon), iconIdle, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                               new Vector2(0.5f, 0.5f), new Vector2(iconX, 0f), new Vector2(iconSize, iconSize));
+            ic.preserveAspect = true;
+
+            float textX = iconX + iconSize * 0.5f + 22f;
+            var labelTf = b.transform.Find("Label");
+            var label = labelTf != null ? labelTf.GetComponent<TMP_Text>() : b.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = title;
+                label.fontSize = primary ? 46f : 31f;
+                label.alignment = TextAlignmentOptions.BottomLeft;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Overflow;
+                var lt = label.rectTransform;
+                lt.anchorMin = new Vector2(0f, 0.44f); lt.anchorMax = new Vector2(1f, 1f);
+                lt.pivot = new Vector2(0f, 0.5f);
+                lt.offsetMin = new Vector2(textX, 0f); lt.offsetMax = new Vector2(-60f, -6f);
+            }
+            var subTf = b.transform.Find("TileSubtitle");
+            var sub = subTf != null ? subTf.GetComponent<TextMeshProUGUI>() : null;
+            if (sub == null)
+            {
+                var subGo = new GameObject("TileSubtitle", typeof(RectTransform));
+                subGo.transform.SetParent(b.transform, false);
+                sub = subGo.AddComponent<TextMeshProUGUI>();
+            }
+            if (theme != null && theme.bodyFont != null) sub.font = theme.bodyFont;
+            else if (label != null) sub.font = label.font;
+            sub.text = subtitle;
+            sub.fontSize = primary ? 18f : 15.5f;
+            sub.color = new Color(1f, 1f, 1f, primary ? 0.72f : 0.58f);
+            sub.characterSpacing = 2f;
+            sub.alignment = TextAlignmentOptions.TopLeft;
+            sub.textWrappingMode = TextWrappingModes.NoWrap;
+            sub.overflowMode = TextOverflowModes.Ellipsis;
+            sub.raycastTarget = false;
+            var st = sub.rectTransform;
+            st.anchorMin = new Vector2(0f, 0f); st.anchorMax = new Vector2(1f, 0.44f);
+            st.offsetMin = new Vector2(textX, 6f); st.offsetMax = new Vector2(-60f, -2f);
+
+            float chev = Mathf.Round(h * 0.26f);
+            var chevImg = TileImage(b.transform, "TileChevron", LR2Icons.Get("chev-right"), new Color(1f, 1f, 1f, 0.38f),
+                                    new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-34f, 0f),
+                                    new Vector2(chev, chev));
+            chevImg.preserveAspect = true;
+
+            var tfx = b.GetComponent<TitleTileFX>();
+            if (tfx == null) tfx = b.gameObject.AddComponent<TitleTileFX>();
+            tfx.chevron = chevImg.rectTransform;
+            tfx.chevronImage = chevImg;
+            tfx.icon = ic;
+            tfx.iconIdle = iconIdle;
+            tfx.iconHover = primary ? Color.Lerp(accent, Color.white, 0.35f) : accent;
+            return top - h - 14f;
+        }
+
+        private static Image TileImage(Transform parent, string name, Sprite sprite, Color color, Vector2 aMin, Vector2 aMax,
+                                       Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            var existing = parent.Find(name);
+            var go = existing != null ? existing.gameObject : new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.color = color;
+            img.raycastTarget = false;
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = aMin; rt.anchorMax = aMax; rt.pivot = pivot;
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            return img;
         }
 
         private void HideLegacyBotDifficultyControls()

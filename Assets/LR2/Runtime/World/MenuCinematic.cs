@@ -22,8 +22,10 @@ namespace LR2.World
         private struct Shot
         {
             public Func<(Vector3 pos, Vector3 look)> pose;
+            /// <summary>B130 b-roll: a pose driven by the shot's progress (0 to 1), entered with a hard cut.</summary>
+            public Func<float, (Vector3 pos, Vector3 look)> poseT;
             public float fov, seconds;
-            public bool firstPerson;
+            public bool firstPerson, cut;
         }
 
         private Camera _cam;
@@ -32,7 +34,7 @@ namespace LR2.World
         private readonly List<MenuActor> _all = new List<MenuActor>();
         private readonly List<Shot> _shots = new List<Shot>();
         private int _state = int.MinValue, _shot;
-        private float _shotEnds, _blendStart, _blendDur = 1.4f, _slow = 0.6f, _baseFixed = 0.02f;
+        private float _shotEnds, _shotStart, _blendStart, _blendDur = 1.4f, _slow = 0.6f, _baseFixed = 0.02f;
         private Vector3 _fromPos, _mainPos;
         private Quaternion _fromRot, _mainRot;
         private float _fromFov = 60f, _mainFov = 38f;
@@ -50,6 +52,7 @@ namespace LR2.World
         /// <summary>Back to real time before a match loads (the loading routine must not run in slow motion).</summary>
         public static void Release()
         {
+            LR2.Audio.LR2Audio.MenuQuiet = false; // the match keeps its gunfire and footsteps
             if (Instance == null) return;
             Instance._released = true;
             Time.timeScale = 1f;
@@ -59,11 +62,13 @@ namespace LR2.World
         private void Awake()
         {
             Instance = this;
+            LR2.Audio.LR2Audio.MenuQuiet = true; // B134: the menu soldiers walk and fire without sound
             _baseFixed = Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : 0.02f;
         }
 
         private void OnDestroy()
         {
+            LR2.Audio.LR2Audio.MenuQuiet = false;
             if (Instance == this) Instance = null;
             Time.timeScale = 1f;
             Time.fixedDeltaTime = _baseFixed;
@@ -175,8 +180,16 @@ namespace LR2.World
                     Add(() => FrontOf(_e1), 36f, 5f);
                     break;
                 default:
+                    // B130 (user 11-20: "place the avatar there and keep moving the cam in a cinematic way? like show the gun
+                    // then cut, show the face from left to right then show another angle, like broll"): hard cuts between
+                    // drifting shots of the hero, framed on the right where the map card was; the tiles sit on the left.
                     _slow = 0.6f;
-                    Add(() => (_mainPos, _mainPos + _mainRot * Vector3.forward * 4f), 0f, 11f); Add(HeroOrbit, 36f, 8f);
+                    AddCut(TitleWide, 38f, 4.6f);
+                    AddCut(GunPush, 30f, 3.1f);
+                    AddCut(FacePan, 28f, 3.8f);
+                    AddCut(LowAngle, 34f, 3.3f);
+                    AddCut(ProfileTrack, 30f, 3.2f);
+                    AddCut(HandsToMask, 30f, 3.4f);
                     break;
             }
             _shot = -1;
@@ -198,6 +211,9 @@ namespace LR2.World
         private void Add(Func<(Vector3, Vector3)> pose, float fov, float seconds, bool fp = false) =>
             _shots.Add(new Shot { pose = pose, fov = fov, seconds = seconds, firstPerson = fp });
 
+        private void AddCut(Func<float, (Vector3, Vector3)> pose, float fov, float seconds) =>
+            _shots.Add(new Shot { poseT = pose, fov = fov, seconds = seconds, cut = true });
+
         private void NextShot()
         {
             if (_shots.Count == 0) return;
@@ -205,8 +221,8 @@ namespace LR2.World
             _fromRot = _cam.transform.rotation;
             _fromFov = _cam.fieldOfView;
             _shot = (_shot + 1) % _shots.Count;
-            _blendStart = Time.unscaledTime;
-            _blendDur = _shots[_shot].firstPerson ? 0.7f : 1.5f;
+            _blendStart = _shotStart = Time.unscaledTime;
+            _blendDur = _shots[_shot].cut ? 0f : _shots[_shot].firstPerson ? 0.7f : 1.5f;
             _shotEnds = Time.unscaledTime + _shots[_shot].seconds;
         }
 
@@ -268,6 +284,83 @@ namespace LR2.World
             return (new Vector3(-6.0f + drift, 1.15f, -2.2f), new Vector3(0.6f, 1.15f, -3.3f));
         }
 
+        // ------------------------------------------------------------------ title b-roll (B130)
+        private static float Ease(float k) => k * k * (3f - 2f * k);
+
+        /// <summary>Aim the camera so the subject sits right of centre (at 0.5 + bias / 2 of the screen width).</summary>
+        private (Vector3, Vector3) FrameRight(Vector3 cam, Vector3 subject, float vfov, float bias)
+        {
+            Vector3 fwd = subject - cam;
+            float d = fwd.magnitude;
+            if (d < 1e-3f) return (cam, subject);
+            fwd /= d;
+            Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+            float aspect = _cam != null && _cam.aspect > 0.1f ? _cam.aspect : 16f / 9f;
+            float halfW = Mathf.Tan(vfov * 0.5f * Mathf.Deg2Rad) * aspect;
+            return (cam, subject - right * (d * halfW * bias));
+        }
+
+        /// <summary>The opening wide: the menu camera's own spot, the hero moved to the right third, a slow slide.</summary>
+        private (Vector3, Vector3) TitleWide(float k)
+        {
+            Vector3 subject = _heroB.transform.position + Vector3.up * 1.15f;
+            Vector3 side = Vector3.Cross(Vector3.up, (subject - _mainPos).normalized);
+            Vector3 cam = _mainPos + side * Mathf.Lerp(-0.25f, 0.25f, k) + Vector3.up * 0.05f;
+            return FrameRight(cam, subject, 38f, 0.46f);
+        }
+
+        /// <summary>Gun close-up: the camera rides along the weapon from the receiver to the muzzle.</summary>
+        private (Vector3, Vector3) GunPush(float k)
+        {
+            var gun = _hero != null ? _hero.ActiveFirearm : null;
+            Vector3 eye = Eye(_heroB);
+            Quaternion yaw = YawRot(_heroB);
+            Vector3 muzzle = gun != null && gun.Muzzle != null ? gun.Muzzle.position : eye + yaw * new Vector3(0.1f, -0.3f, 0.7f);
+            Vector3 root = gun != null ? gun.transform.position : eye + yaw * new Vector3(0.12f, -0.35f, 0.15f);
+            Vector3 axis = muzzle - root;
+            if (axis.sqrMagnitude < 1e-4f) axis = yaw * Vector3.forward;
+            axis.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, axis).normalized;
+            if (Vector3.Dot(side, _mainPos - root) < 0f) side = -side; // the side the menu camera sees, which is lit
+            Vector3 focus = Vector3.Lerp(root, muzzle, Mathf.Lerp(0.15f, 0.75f, Ease(k)));
+            return FrameRight(focus + side * 0.62f + Vector3.up * 0.12f - axis * 0.1f, focus, 30f, 0.44f);
+        }
+
+        /// <summary>Face pan: an arc across the mask, from the viewer's left to the viewer's right.</summary>
+        private (Vector3, Vector3) FacePan(float k)
+        {
+            Vector3 head = Eye(_heroB) - Vector3.up * 0.05f;
+            float a = Mathf.Lerp(40f, -40f, Ease(k));
+            Vector3 cam = head + Quaternion.AngleAxis(a, Vector3.up) * (YawRot(_heroB) * Vector3.forward) * 1.15f + Vector3.up * 0.03f;
+            return FrameRight(cam, head, 28f, 0.38f);
+        }
+
+        /// <summary>Low angle from the front, pushing in slowly.</summary>
+        private (Vector3, Vector3) LowAngle(float k)
+        {
+            Vector3 at = _heroB.transform.position;
+            Vector3 cam = at + YawRot(_heroB) * new Vector3(0.7f, 0.32f, Mathf.Lerp(2.3f, 1.8f, Ease(k)));
+            return FrameRight(cam, at + Vector3.up * 1.35f, 34f, 0.36f);
+        }
+
+        /// <summary>Profile from the hero's left, tracking forward.</summary>
+        private (Vector3, Vector3) ProfileTrack(float k)
+        {
+            Vector3 at = _heroB.transform.position;
+            Vector3 cam = at + YawRot(_heroB) * new Vector3(-1.45f, 1.45f, Mathf.Lerp(0.55f, 1.0f, k));
+            return FrameRight(cam, Eye(_heroB) - Vector3.up * 0.2f, 30f, 0.34f);
+        }
+
+        /// <summary>Tilt up from the hands on the rifle to the mask.</summary>
+        private (Vector3, Vector3) HandsToMask(float k)
+        {
+            Quaternion yaw = YawRot(_heroB);
+            Vector3 eye = Eye(_heroB);
+            Vector3 hands = eye - Vector3.up * 0.42f + yaw * new Vector3(0.05f, 0f, 0.3f);
+            Vector3 subject = Vector3.Lerp(hands, eye - Vector3.up * 0.04f, Ease(k));
+            return FrameRight(eye + yaw * new Vector3(0.45f, -0.2f, 1.15f), subject, 30f, 0.3f);
+        }
+
         // ------------------------------------------------------------------ per frame
         private void LateUpdate()
         {
@@ -278,20 +371,24 @@ namespace LR2.World
             if (Time.unscaledTime >= _shotEnds) NextShot();
 
             var shot = _shots[_shot];
-            var (pos, look) = shot.pose();
-            float u = Mathf.Clamp01((Time.unscaledTime - _blendStart) / _blendDur);
+            var (pos, look) = shot.poseT != null
+                ? shot.poseT(Mathf.Clamp01((Time.unscaledTime - _shotStart) / Mathf.Max(0.01f, shot.seconds)))
+                : shot.pose();
+            float u = _blendDur <= 0f ? 1f : Mathf.Clamp01((Time.unscaledTime - _blendStart) / _blendDur);
             float e = u * u * (3f - 2f * u);
             // handheld breathing on top (none in first person: the head bob is already in the eye)
             float t = Time.unscaledTime * 0.17f;
             Vector3 n = new Vector3(Mathf.PerlinNoise(t, 1.3f) - 0.5f, Mathf.PerlinNoise(2.7f, t) - 0.5f, Mathf.PerlinNoise(t, 5.1f) - 0.5f) * 2f;
             Vector3 r = new Vector3(Mathf.PerlinNoise(t * 0.8f, 9.1f) - 0.5f, Mathf.PerlinNoise(4.4f, t * 0.8f) - 0.5f, 0f) * 2f;
             float hand = shot.firstPerson ? 0f : 1f;
+            // close-ups shake less in position (5 cm of drift at 40 cm reads as a wobble, not a handheld camera)
+            float near = Mathf.Clamp((look - pos).magnitude / 2.5f, 0.2f, 1f);
             // user 11-19 "handheld perlin noise camera motion ... very slight": a faint faster octave (~0.85 Hz, ~0.2 deg,
             // under 1 cm) on top of the slow drift, so the camera breathes like it is held
             float t2 = Time.unscaledTime * 0.85f;
             Vector3 n2 = new Vector3(Mathf.PerlinNoise(t2, 11.3f) - 0.5f, Mathf.PerlinNoise(12.7f, t2) - 0.5f, Mathf.PerlinNoise(t2, 15.1f) - 0.5f) * 2f;
             Vector3 r2 = new Vector3(Mathf.PerlinNoise(t2 * 1.1f, 19.1f) - 0.5f, Mathf.PerlinNoise(14.4f, t2 * 1.1f) - 0.5f, Mathf.PerlinNoise(t2 * 0.9f, 17.7f) - 0.5f) * 2f;
-            Vector3 p = pos + (Vector3.Scale(n, new Vector3(0.05f, 0.035f, 0.03f)) + Vector3.Scale(n2, new Vector3(0.006f, 0.005f, 0.004f))) * hand;
+            Vector3 p = pos + (Vector3.Scale(n, new Vector3(0.05f, 0.035f, 0.03f)) + Vector3.Scale(n2, new Vector3(0.006f, 0.005f, 0.004f))) * hand * near;
             Quaternion q = Quaternion.LookRotation((look - pos).sqrMagnitude > 1e-4f ? look - pos : Vector3.forward, Vector3.up)
                            * Quaternion.Euler((Vector3.Scale(r, new Vector3(0.5f, 0.8f, 0f)) + Vector3.Scale(r2, new Vector3(0.18f, 0.22f, 0.12f))) * hand);
             _cam.transform.SetPositionAndRotation(Vector3.Lerp(_fromPos, p, e), Quaternion.Slerp(_fromRot, q, e));
