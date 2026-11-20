@@ -359,9 +359,42 @@ namespace LR2.Characters
         }
 
         // ------------------------------------------------------------------ update
+        /// <summary>
+        /// B125 A/B switch: <c>-lr2NoItemReset</c> restores the old behaviour, where LR2's after-animation edits of the visible
+        /// gun stay on its transform into the next frame and Kinemation reads them back (the bench then reproduces the bug).
+        /// </summary>
+        public static readonly bool ItemFeedbackReset = Array.IndexOf(Environment.GetCommandLineArgs(), "-lr2NoItemReset") < 0;
+        /// <summary>B125 telemetry: how far LR2's after-animation edits had moved the visible gun off its Kinemation pose (m), read before the reset.</summary>
+        public float LastItemFeedbackOffset { get; private set; }
+        /// <summary>B125 telemetry: the same edit as an angle (deg).</summary>
+        public float LastItemFeedbackAngle { get; private set; }
+
+        /// <summary>
+        /// B125 (user 11-19: "ADSing going wild ... during ADS, when I hit other obstacles, and maybe death"). The visible gun is a
+        /// child of the driver's IK WeaponBone, and LR2 edits it after Kinemation every frame (RetargetProxy: eye-plane push, flip
+        /// guard, reload bridge, prone tuck). Those edits are for the rendered frame only, but they stayed on the transform until
+        /// WeaponAntiClip's LateUpdate, and Kinemation's ADS layer reads the gun's aim point from the transforms in Update
+        /// (AdsLayerJob.UpdatePlayableJobData -> GetLocalAimPoint) before that. So every edit came back one frame later as an aim
+        /// point offset that ADS "corrected" by moving the weapon bone the other way, and the next edit grew to undo that: near
+        /// an obstacle in ADS (wall tuck pulls the gun back, eye-plane push shoves it forward) the loop has a gain of 1 and runs away.
+        /// Runs before FPSAnimator.Update (order 0), so Kinemation always sees the gun at its own pose.
+        /// </summary>
+        private void ResetItemBeforeKinemation()
+        {
+            var item = ActiveItem;
+            if (item == null) { LastItemFeedbackOffset = LastItemFeedbackAngle = 0f; return; }
+            var t = item.transform;
+            LastItemFeedbackOffset = t.localPosition.magnitude;
+            LastItemFeedbackAngle = Quaternion.Angle(Quaternion.identity, t.localRotation);
+            if (!ItemFeedbackReset) return;
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+        }
+
         private void Update()
         {
             if (!_initialized) return;
+            ResetItemBeforeKinemation();
 
             if (IsDead)
             {

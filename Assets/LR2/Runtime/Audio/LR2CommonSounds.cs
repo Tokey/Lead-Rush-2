@@ -63,6 +63,8 @@ namespace LR2.Audio
 
         [Header("World")]
         public SoundSet orbExplode = new SoundSet(AudioCategory.Sfx, 1f, 50f, 1f);
+        /// <summary>B126 (user 11-20: "add explosion sfx when the drones explode"): the blast itself; orbExplode is its debris tail.</summary>
+        public SoundSet droneExplode = new SoundSet(AudioCategory.Sfx, 1f, 90f, 1f);
         public SoundSet orbAlert = new SoundSet(AudioCategory.Sfx, 0.8f, 30f, 1f);
 
         [Header("Ambience loops")]

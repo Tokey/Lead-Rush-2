@@ -362,6 +362,22 @@ namespace LR2.Weapons
                             _runtimeAdsSettings.hideFlags = HideFlags.HideAndDontSave;
                             _runtimeProfile.settings[i] = _runtimeAdsSettings;
                         }
+                        else if (_runtimeProfile.settings[i] is KINEMATION.FPSAnimationFramework.Runtime.Layers.CollisionLayer.CollisionLayerSettings origCol)
+                        {
+                            // B125 (user 11-19: "during ADS, when I hit other obstacles"; -lr2AdsWallCheck: the full wall tuck swung
+                            // the rifle 23 deg off the sight line in ADS). Same gate as LR2ContentBuilder.TuneHumanoidCollision,
+                            // applied here too so it holds without a rebuild: at full ADS 12 % of the tuck is left.
+                            var col = Instantiate(origCol);
+                            col.name = $"{origCol.name}_{name}_Runtime";
+                            col.hideFlags = HideFlags.HideAndDontSave;
+                            var blends = new List<CurveBlend>();
+                            if (col.curveBlending != null)
+                                foreach (var b in col.curveBlending)
+                                    if (b.name != FPSANames.AimingWeight) blends.Add(b);
+                            blends.Add(new CurveBlend { name = FPSANames.AimingWeight, mode = ECurveBlendMode.Mask, clampMin = 0.12f, source = ECurveSource.Input });
+                            col.curveBlending = blends;
+                            _runtimeProfile.settings[i] = col;
+                        }
                     }
                 }
                 _entity.animatorProfile = _runtimeProfile;

@@ -173,6 +173,111 @@ namespace LR2.World
             return sb.ToString();
         }
 
+        // ------------------------------------------------------------------ B125 black box: the frames around a raw flip
+        private sealed class BBTrack
+        {
+            public readonly System.Collections.Generic.Queue<string> ring = new System.Collections.Generic.Queue<string>();
+            public float prevRaw = -1f; public int after = -1; public bool prevAim;
+        }
+        private readonly System.Collections.Generic.Dictionary<Combatant, BBTrack> _bb = new System.Collections.Generic.Dictionary<Combatant, BBTrack>();
+        private readonly System.Text.StringBuilder _bbOut = new System.Text.StringBuilder();
+        private int _bbEvents;
+
+        private void BlackBox(Combatant c, LR2.Characters.SoldierController sc, Transform item, Quaternion aimRot, float devRaw, float calib, float t0)
+        {
+            if (devRaw < 0f) return;
+            if (!_bb.TryGetValue(c, out var b)) _bb[c] = b = new BBTrack();
+            var ik = item.parent;
+            var head = sc.Animator != null ? sc.Animator.GetBoneTransform(HumanBodyBones.Head) : null;
+            var hand = sc.Animator != null ? sc.Animator.GetBoneTransform(HumanBodyBones.RightHand) : null;
+            Vector3 le = ik != null && head != null ? (Quaternion.Inverse(head.rotation) * ik.rotation).eulerAngles : Vector3.zero;
+            Vector3 lp = ik != null && head != null ? head.InverseTransformPoint(ik.position) * 100f : Vector3.zero;
+            float handDev = hand != null ? Quaternion.Angle(aimRot, hand.rotation) : -1f;
+            float ads = 0f, turn = 0f; Vector4 dl = Vector4.zero;
+            var ui = sc.UserInput;
+            if (ui != null)
+            {
+                int ai = ui.GetPropertyIndex("AimingWeight"); if (ai >= 0) ads = ui.GetValue<float>(ai);
+                int ti = ui.GetPropertyIndex(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.TurnOffset); if (ti >= 0) turn = ui.GetValue<float>(ti);
+                int di = ui.GetPropertyIndex(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSANames.MouseDeltaInput); if (di >= 0) dl = ui.GetValue<Vector4>(di);
+            }
+            bool wallRay = ik != null && Physics.Raycast(ik.position - ik.forward * 0.12f, ik.forward, 0.5f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore);
+            string clip = "-";
+            var an = sc.Animator;
+            if (an != null && an.isActiveAndEnabled) { var ci = an.GetCurrentAnimatorClipInfo(0); if (ci.Length > 0 && ci[0].clip != null) clip = ci[0].clip.name + "@" + an.GetCurrentAnimatorStateInfo(0).normalizedTime.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture); }
+            bool aimToggle = sc.IsAiming != b.prevAim; b.prevAim = sc.IsAiming;
+            string line = FormattableString.Invariant(
+                $"{Time.time - t0:0.000} raw={devRaw:0} ikLocalRot=({le.x:0},{le.y:0},{le.z:0}) ikLocalPos=({lp.x:0},{lp.y:0},{lp.z:0})cm handVsAim={handDev:0} calib={calib:0.0} ") + FormattableString.Invariant(
+                $"ads={ads:0.00}{(aimToggle ? (sc.IsAiming ? " AIM-IN" : " AIM-OUT") : "")} turn={turn:0} dLook=({dl.x:0.0},{dl.y:0.0}) speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} ") + FormattableString.Invariant(
+                $"wallRay={wallRay} sprint={sc.IsSprinting} reload={sc.IsReloading} switch={sc.IsSwitchingWeapon} clip={clip} dt={Time.deltaTime * 1000f:0}ms");
+            b.ring.Enqueue(line);
+            while (b.ring.Count > 40) b.ring.Dequeue();
+            if (b.after >= 0)
+            {
+                _bbOut.AppendLine("   + " + line);
+                if (--b.after < 0) _bbOut.AppendLine();
+            }
+            else if (_bbEvents < 8 && b.prevRaw >= 0f && devRaw - b.prevRaw > 60f)
+            {
+                _bbEvents++;
+                _bbOut.AppendLine(FormattableString.Invariant($"=== EVENT {_bbEvents}: {c.DisplayName} raw {b.prevRaw:0} -> {devRaw:0} in one frame (40 frames before, 10 after)"));
+                foreach (var l in b.ring) _bbOut.AppendLine("     " + l);
+                b.after = 10;
+            }
+            b.prevRaw = devRaw;
+        }
+
+        private sealed class KinTrack
+        {
+            public object profile; public int layersHash; public int count; public bool init;
+            public Quaternion calibRot; public Vector3 calibPos; public bool calibInit;
+            public Transform hand, wbRight; public float spawnTime; public bool wasAlive;
+        }
+        private readonly System.Collections.Generic.Dictionary<LR2.Characters.SoldierController, KinTrack> _kin =
+            new System.Collections.Generic.Dictionary<LR2.Characters.SoldierController, KinTrack>();
+        private static readonly System.Reflection.FieldInfo ActiveProfileField = typeof(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSBoneController)
+            .GetField("_activeProfile", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        private static readonly System.Reflection.FieldInfo LayersField = typeof(KINEMATION.FPSAnimationFramework.Runtime.Core.FPSBoneController)
+            .GetField("_animationLayers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        /// <summary>
+        /// B125: Kinemation re-link detection per soldier (the active profile or the layer playables change: every layer job is
+        /// rebuilt and PoseSampler.Initialize re-bakes IK WeaponBoneRight's offset from the right hand from the rig's current
+        /// pose) and how far that calibration has moved from the soldier's first one.
+        /// </summary>
+        private (bool relinked, int count, float alive, float calib, float calibCm, string profile) KinState(LR2.Characters.SoldierController sc)
+        {
+            if (!_kin.TryGetValue(sc, out var k)) _kin[sc] = k = new KinTrack();
+            bool alive = !sc.IsDead;
+            if (alive && !k.wasAlive) k.spawnTime = Time.time;
+            k.wasAlive = alive;
+            var bc = sc.GetComponent<KINEMATION.FPSAnimationFramework.Runtime.Core.FPSBoneController>();
+            bool relinked = false; string pname = "-";
+            if (bc != null && ActiveProfileField != null && LayersField != null)
+            {
+                var prof = ActiveProfileField.GetValue(bc);
+                int h = 0;
+                if (LayersField.GetValue(bc) is System.Collections.IList list && list.Count > 0)
+                    h = ((KINEMATION.FPSAnimationFramework.Runtime.Core.AnimationLayer)list[0]).playable.GetHandle().GetHashCode();
+                pname = prof is UnityEngine.Object o && o != null ? o.name : "null";
+                if (k.init && (!ReferenceEquals(prof, k.profile) || h != k.layersHash)) { relinked = true; k.count++; }
+                k.profile = prof; k.layersHash = h; k.init = true;
+            }
+            if (k.hand == null && sc.Animator != null)
+            {
+                k.hand = sc.Animator.GetBoneTransform(HumanBodyBones.RightHand);
+                if (k.hand != null) foreach (Transform ch in k.hand) if (ch.name == "IK WeaponBoneRight") k.wbRight = ch;
+            }
+            float calib = 0f, calibCm = 0f;
+            if (k.wbRight != null)
+            {
+                if (!k.calibInit) { k.calibRot = k.wbRight.localRotation; k.calibPos = k.wbRight.localPosition; k.calibInit = true; }
+                calib = Quaternion.Angle(k.calibRot, k.wbRight.localRotation);
+                calibCm = (k.wbRight.localPosition - k.calibPos).magnitude * 100f;
+            }
+            return (relinked, k.count, Time.time - k.spawnTime, calib, calibCm, pname);
+        }
+
         // ------------------------------------------------------------------ accuracy and K/D bench
         /// <summary>Plays the AI vs AI bench for -lr2BenchSeconds (default 120) and writes shots, hits, kills and deaths per difficulty.</summary>
         private IEnumerator BenchRun()
@@ -203,6 +308,15 @@ namespace LR2.World
             var baseline = new System.Collections.Generic.Dictionary<string, Quaternion>();
             var lastLog = new System.Collections.Generic.Dictionary<Combatant, float>();
             var prevRot = new System.Collections.Generic.Dictionary<Combatant, Quaternion>();
+            // B125 v3: sampled at the end of the frame (the rendered gun and this frame's aim); the raw Kinemation weapon bone is
+            // the gun's parent (its rest local pose is identity), so raw and shown separate Kinemation from LR2's edits
+            var eof = new WaitForEndOfFrame();
+            var prevShown = new System.Collections.Generic.Dictionary<Combatant, Quaternion>();
+            int rawFlips = 0, adsFrames = 0, adsJitter = 0, pushFrames = 0; float maxRaw = 0f, maxAdsJump = 0f, maxFeedback = 0f, maxFeedbackDeg = 0f, maxPush = 0f;
+            // B125 v4: Kinemation re-links (FPSBoneController rebuilds every layer job and PoseSampler.Initialize re-bakes the
+            // hand-to-gun offset of IK WeaponBoneRight from whatever pose the rig is in) and that calibration's drift
+            int relinks = 0; float maxCalib = 0f;
+            var relinkLog = new System.Text.StringBuilder();
             while (Time.time - t0 < secs && (MatchManager.Instance == null || MatchManager.Instance.State != MatchState.Ended))
             {
                 if (holdShots < 2 && Time.time - t0 > 15f + 25f * holdShots && SpectatorCamera.Instance != null)
@@ -233,6 +347,39 @@ namespace LR2.World
                         continue;
                     }
                     float dev = Quaternion.Angle(local, baseline[key]);
+                    Transform ikBone = item.transform.parent;
+                    float devRaw = ikBone != null ? Quaternion.Angle(Quaternion.Inverse(aimRot) * ikBone.rotation, baseline[key]) : dev;
+                    if (devRaw > 60f) rawFlips++;
+                    maxRaw = Mathf.Max(maxRaw, devRaw);
+                    maxFeedback = Mathf.Max(maxFeedback, sc.LastItemFeedbackOffset);
+                    maxFeedbackDeg = Mathf.Max(maxFeedbackDeg, sc.LastItemFeedbackAngle);
+                    var px = sc.GetComponent<LR2.Characters.RetargetProxy>();
+                    float pushNow = px != null ? px.LastEyePlanePush : 0f;
+                    maxPush = Mathf.Max(maxPush, pushNow);
+                    var kin = KinState(sc);
+                    BlackBox(c, sc, item.transform, aimRot, ikBone != null ? Quaternion.Angle(Quaternion.Inverse(aimRot) * ikBone.rotation, baseline[key]) : -1f, kin.calib, t0);
+                    if (kin.relinked)
+                    {
+                        relinks++;
+                        if (relinkLog.Length < 30000)
+                            relinkLog.AppendLine(FormattableString.Invariant($"{Time.time - t0:0.00}s RELINK {c.DisplayName} {key} n={kin.count} alive={kin.alive:0.0}s ads={sc.IsAiming} speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} calib={kin.calib:0.0}deg/{kin.calibCm:0.0}cm profile={kin.profile}"));
+                    }
+                    maxCalib = Mathf.Max(maxCalib, kin.calib);
+                    float adsW = 0f;
+                    if (sc.UserInput != null) { int ai = sc.UserInput.GetPropertyIndex("AimingWeight"); if (ai >= 0) adsW = sc.UserInput.GetValue<float>(ai); }
+                    if (adsW > 0.9f)
+                    {
+                        adsFrames++;
+                        if (pushNow > 0.001f) pushFrames++;
+                        if (prevShown.TryGetValue(c, out var ps))
+                        {
+                            float jump = Quaternion.Angle(ps, local);
+                            maxAdsJump = Mathf.Max(maxAdsJump, jump);
+                            if (jump > 10f) adsJitter++;
+                        }
+                        prevShown[c] = local;
+                    }
+                    else prevShown.Remove(c);
                     float rate = prevRot.TryGetValue(c, out var pr) && Time.deltaTime > 1e-4f ? Quaternion.Angle(pr, item.transform.rotation) / Time.deltaTime : 0f;
                     prevRot[c] = item.transform.rotation;
                     if (dev < 10f && normalLogged < 3 && !sprint && Time.time - t0 > 5f)
@@ -266,7 +413,7 @@ namespace LR2.World
                         flipLog.AppendLine(FormattableString.Invariant(
                             $"{Time.time - t0:0.00}s {c.DisplayName} {key} dev={dev:0} rate={rate:0}dps muzzle={muzzleAng:0} local=({e.x:0},{e.y:0},{e.z:0}) base=({be.x:0},{be.y:0},{be.z:0}) ") + FormattableString.Invariant(
                             $"sprint={sprint} reload={gun.IsReloading} switch={sc.IsSwitchingWeapon} ads={sc.IsAiming} prone={sc.ProneWeightEffective:0.00} wall={wall} ") + FormattableString.Invariant(
-                            $"near={near:0.0}m({nearName}) speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} pitch={sc.Pitch:0} goal={c.GetComponent<LR2.AI.BotController>()?.CurrentGoalName}") + RigState(sc, item.transform));
+                            $"near={near:0.0}m({nearName}) speed={(sc.Movement != null ? sc.Movement.Speed : 0f):0.0} pitch={sc.Pitch:0} goal={c.GetComponent<LR2.AI.BotController>()?.CurrentGoalName} calib={kin.calib:0.0}deg/{kin.calibCm:0.0}cm relinks={kin.count} alive={kin.alive:0.0}s") + RigState(sc, item.transform));
                     }
                 }
                 if (burstOn != null && burstDev > 80f && SpectatorCamera.Instance != null)
@@ -278,13 +425,14 @@ namespace LR2.World
                     yield return Frames($"flip{bursts}", 10, 0.06f);
                     continue;
                 }
-                yield return null;
+                yield return eof;
             }
             foreach (var (ls, a) in ablated) if (ls != null) ls.alpha = a;
             int guardFrames = 0;
             foreach (var px in FindObjectsByType<LR2.Characters.RetargetProxy>(FindObjectsSortMode.None)) guardFrames += px.FlipGuardFrames;
+            File.WriteAllText(Path.Combine(_out, "blackbox.txt"), _bbOut.ToString());
             File.WriteAllText(Path.Combine(_out, "flips.txt"), FormattableString.Invariant(
-                $"guard={LR2.Characters.RetargetProxy.FlipGuardEnabled} guardFrames={guardFrames} ablate={ablate} samples={samples} flips(dev>60)={flips} max={maxDev:0} nearWall={flipsNearWall} nearSoldier(<1.2m)={flipsNearSoldier} sprint={flipsSprint} reload={flipsReload} switch={flipsSwitch} bursts={bursts}") + "\n" + flipLog);
+                $"relinks={relinks} maxCalibDrift={maxCalib:0.0}deg itemReset={LR2.Characters.SoldierController.ItemFeedbackReset} guard={LR2.Characters.RetargetProxy.FlipGuardEnabled} guardFrames={guardFrames} ablate={ablate} samples={samples} flips(dev>60)={flips} max={maxDev:0} rawFlips={rawFlips} maxRaw={maxRaw:0} adsFrames={adsFrames} adsJitter(>10deg/frame)={adsJitter} maxAdsJump={maxAdsJump:0} pushFramesInAds={pushFrames} maxPush={maxPush * 100f:0.0}cm maxFeedback={maxFeedback * 100f:0.0}cm/{maxFeedbackDeg:0}deg nearWall={flipsNearWall} nearSoldier(<1.2m)={flipsNearSoldier} sprint={flipsSprint} reload={flipsReload} switch={flipsSwitch} bursts={bursts}") + "\n" + relinkLog + flipLog);
             Note($"weapon flips: {flips} of {samples} (max {maxDev:0}, wall {flipsNearWall}, soldier {flipsNearSoldier}, sprint {flipsSprint}, reload {flipsReload}, switch {flipsSwitch})");
             var rows = new System.Collections.Generic.SortedDictionary<string, int[]>();
             foreach (var c in Combatant.All)

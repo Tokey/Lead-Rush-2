@@ -169,7 +169,12 @@ namespace LR2.Game
             }
             else if (explosionPrefab != null) LR2Pool.Spawn(explosionPrefab, transform.position, Quaternion.identity, 4f);
             var s = LR2CommonSounds.Instance;
-            if (s != null) LR2Audio.PlayAt(s.orbExplode, transform.position);
+            if (s != null)
+            {
+                // B126: the blast (heard across the map), then the debris rattle that used to be the only sound
+                LR2Audio.PlayAt(s.droneExplode, transform.position);
+                LR2Audio.PlayAt(s.orbExplode, transform.position, 0.8f, 0.05f);
+            }
             foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
             foreach (var col in GetComponentsInChildren<Collider>()) col.enabled = false;
             if (glow != null) glow.enabled = false;

@@ -307,6 +307,8 @@ namespace LR2.Characters
                         ? _soldier.ViewCamera.transform.forward
                         : (_soldier.AimDirection.sqrMagnitude > 1e-4f ? _soldier.AimDirection : transform.forward);
                     float fwdDist = Vector3.Dot(itemTf.position - eyeRef, aimFwd);
+                    LastEyePlaneDist = fwdDist;
+                    LastEyePlanePush = Mathf.Max(0f, 0.08f - fwdDist);
                     if (fwdDist < 0.08f)
                     {
                         Vector3 push = aimFwd * (0.08f - fwdDist);
@@ -380,6 +382,9 @@ namespace LR2.Characters
             pose.bodyRotation = rotWorld;
         }
 
+        /// <summary>B125 telemetry: the gun pivot's distance in front of the eye plane before the B59b push (m), and the push applied (m).</summary>
+        public float LastEyePlaneDist { get; private set; }
+        public float LastEyePlanePush { get; private set; }
         /// <summary>B125 flip guard: larger of the muzzle-to-aim angle and the gun roll this frame, before the clamp (deg).</summary>
         public float FlipGuardAngle { get; private set; }
         /// <summary>B125: frames on which the guard turned the gun back since this soldier spawned.</summary>

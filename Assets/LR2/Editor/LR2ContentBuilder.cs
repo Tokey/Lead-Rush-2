@@ -565,6 +565,8 @@ namespace LR2.EditorTools
             if (common.playerHurt != null) { common.playerHurt.volume = 0.34f; common.playerHurt.pitch = new Vector2(0.85f, 0.94f); }
             if (common.bulletWhizz != null) { common.bulletWhizz.minDistance = 2.5f; common.bulletWhizz.maxDistance = 16f; common.bulletWhizz.pitch = new Vector2(0.94f, 1.08f); }
             if (common.bulletCrack != null) { common.bulletCrack.minDistance = 2.5f; common.bulletCrack.maxDistance = 18f; common.bulletCrack.pitch = new Vector2(0.95f, 1.06f); }
+            // B126: drone blast (Common/droneExplode, private MW SFX C4 bodies; the folder is git-ignored like all LR2 audio)
+            if (common.droneExplode != null) { common.droneExplode.volume = 1f; common.droneExplode.minDistance = 4f; common.droneExplode.maxDistance = 90f; common.droneExplode.pitch = new Vector2(0.94f, 1.06f); common.droneExplode.priority = 64; }
             EditorUtility.SetDirty(common);
 
             var foley = LoadOrCreate<FoleyLibrary>(ResDir + "/FoleyLibrary.asset");
@@ -1448,6 +1450,17 @@ namespace LR2.EditorTools
                 col.secondaryPose = col.primaryPose;
                 EditorUtility.SetDirty(col);
             }
+                // B125 (user 11-19: "it's happening during ADS, when I hit other obstacles"; reproduced by -lr2AdsWallCheck:
+                // pressed into a wall in ADS the full tuck swung the rifle 23 deg off the sight line, top rail in view). The tuck
+                // pivots about the weapon bone, which sits at the eye in ADS, so the whole gun crosses the view. Keep the existing
+                // FullBodyWeight mask and add the ADS weight, like the sway layer: at full ADS 12 % of the tuck is left (about
+                // 3 deg and 7 mm), so the sights stay on target and the barrel just meets the wall.
+                var blends = new List<CurveBlend>();
+                if (col.curveBlending != null)
+                    foreach (var b in col.curveBlending)
+                        if (b.name != FPSANames.AimingWeight) blends.Add(b);
+                blends.Add(new CurveBlend { name = FPSANames.AimingWeight, mode = ECurveBlendMode.Mask, clampMin = 0.12f, source = ECurveSource.Input });
+                col.curveBlending = blends;
         }
 
         /// <summary>

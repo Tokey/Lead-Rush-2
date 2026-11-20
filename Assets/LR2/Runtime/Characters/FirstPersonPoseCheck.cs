@@ -142,6 +142,8 @@ namespace LR2.Characters
             bool aimRun = Array.IndexOf(args, "-lr2AimTest") >= 0, gifRun = Array.IndexOf(args, "-lr2GifRun") >= 0;
             // -lr2DeathTest: ADS sight alignment + death/respawn pose integrity in six states (user 11-18 14:10), then quit.
             if (Array.IndexOf(args, "-lr2DeathTest") >= 0) { yield return DeathTest(); Finish(); yield break; }
+            // -lr2AdsWallCheck: B125 "ADSing going wild ... when I hit other obstacles, and maybe death" (user 11-19), then quit.
+            if (Array.IndexOf(args, "-lr2AdsWallCheck") >= 0) { yield return AdsWallCheck(); Finish(); yield break; }
             // -lr2GripCheck: where each hand sits on the gun (weapon space) + the gun's underside profile (B26/B49), then quit.
             if (Array.IndexOf(args, "-lr2GripCheck") >= 0) { yield return GripCheck(); Finish(); yield break; }
             // -lr2FxShots: fire close-ups and forced thunderstorm rain (B87/B93/B97/B101), then quit.
@@ -1155,6 +1157,172 @@ namespace LR2.Characters
             _cmd.aim = true; yield return Wait(1.2f);
             Note(AdsLine($"wall-{label} ADS after the wall"));
             _cmd.aim = false; yield return Wait(0.5f);
+        }
+
+        // ------------------------------------------------------------------ B125: ADS against obstacles, and death
+        private string _adsCase;
+        private bool _adsRecording;
+        private readonly System.Text.StringBuilder _adsCsv = new System.Text.StringBuilder();
+        private readonly Dictionary<string, AdsStats> _adsStats = new Dictionary<string, AdsStats>();
+
+        private sealed class AdsStats
+        {
+            public int frames, adsFrames;
+            public float maxMuzzle, maxRoll, maxJump, maxPush, maxFeedback, maxFeedbackAngle, maxIkReach, pushGrowth;
+            public float firstPush = -1f, lastPush;
+        }
+
+        /// <summary>
+        /// B125: the player aims down sights into walls (head on, at 45 degrees, sliding along), into another soldier, and dies
+        /// against a wall while aiming, then aims again after the respawn. Every frame: ADS weight, gun muzzle and roll against the
+        /// camera, frame-to-frame jump, B59b eye-plane push, how far LR2's edits had moved the gun before Kinemation read it, the
+        /// driver's weapon bone distance from its head (a runaway shows as metres). PASS lines at the end; the known-bad A/B is
+        /// <c>-lr2NoItemReset -lr2NoFlipGuard</c>.
+        /// </summary>
+        private IEnumerator AdsWallCheck()
+        {
+            _adsCsv.AppendLine("case,t,ads,muzzleDeg,rollDeg,jumpDeg,eyePlane,push,feedbackCm,feedbackDeg,ikReach,guard,dead");
+            StartCoroutine(AdsRecorder());
+            Note($"ADSWALL itemReset={SoldierController.ItemFeedbackReset} flipGuard={RetargetProxy.FlipGuardEnabled}");
+            Vector3 start = new Vector3(24f, 0.05f, 0f);
+            float wallYaw = 0f, wallD = float.MaxValue;
+            for (int i = 0; i < 16; i++)
+            {
+                float y = i * 22.5f;
+                Vector3 dir = Quaternion.Euler(0f, y, 0f) * Vector3.forward;
+                if (Physics.Raycast(start + Vector3.up * 1.3f, dir, out var hit, 30f, LR2Layers.EnvironmentMask, QueryTriggerInteraction.Ignore) && hit.distance > 2.5f && hit.distance < wallD)
+                { wallD = hit.distance; wallYaw = y; }
+            }
+            if (wallD == float.MaxValue) { Note("ADSWALL no wall within 30 m"); yield break; }
+            Note($"ADSWALL wall {wallD:0.0} m at yaw {wallYaw:0}");
+
+            // 1) ADS straight into the wall, hold, slide left and right along it, back off
+            yield return AdsWallRun("head_on", start, wallYaw, wallD, 0f, true);
+            // 2) the same at 45 degrees to the wall
+            yield return AdsWallRun("angle45", start, wallYaw + 45f, wallD * 1.41f, 0f, false);
+            // 3) ADS into another soldier standing in the way
+            if (_enemy != null)
+            {
+                if (_soldier.IsDead) { float w = Time.time + 12f; while (_soldier.IsDead && Time.time < w) yield return null; }
+                float openYaw = OpenYaw();
+                _soldier.Teleport(start, openYaw);
+                _enemy.Teleport(start + Quaternion.Euler(0f, openYaw, 0f) * Vector3.forward * 2.2f, openYaw + 180f);
+                _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = openYaw;
+                yield return Wait(0.8f);
+                _adsCase = "soldier"; _cmd.aim = true; yield return Wait(0.9f);
+                _cmd.move = new Vector2(0f, 1f); yield return Wait(2.6f);
+                yield return Capture("adswall_soldier_contact", "ADS pushed into a soldier");
+                _cmd.move = new Vector2(1f, 0f); yield return Wait(1.0f);
+                _cmd.move = Vector2.zero; _cmd.aim = false; yield return Wait(0.6f);
+                _adsCase = null;
+            }
+            // 4) die against the wall while aiming, respawn, aim again
+            yield return AdsWallRun("death", start, wallYaw, wallD, 0f, false, kill: true);
+
+            _adsRecording = false;
+            File.WriteAllText(Path.Combine(_outDir, "adswall.csv"), _adsCsv.ToString());
+            foreach (var kv in _adsStats)
+            {
+                var s = kv.Value;
+                bool runaway = s.pushGrowth > 0.10f || s.maxIkReach > 0.9f;
+                bool pass = s.maxMuzzle < 20f && s.maxRoll < 20f && s.maxJump < 25f && !runaway;
+                Note($"ADSWALL {(pass ? "PASS" : "FAIL")} [{kv.Key}] frames={s.frames} adsFrames={s.adsFrames} maxMuzzleVsCam={s.maxMuzzle:0.0} maxRoll={s.maxRoll:0.0} " +
+                     $"maxJump={s.maxJump:0.0}deg/frame maxPush={s.maxPush * 100f:0.0}cm pushGrowth={s.pushGrowth * 100f:0.0}cm " +
+                     $"maxFeedback={s.maxFeedback * 100f:0.0}cm/{s.maxFeedbackAngle:0.0}deg maxIkReach={s.maxIkReach:0.00}m");
+            }
+        }
+
+        /// <summary>One wall run: aim, walk into the wall and keep pushing, slide along it, back off (or die against it).</summary>
+        private IEnumerator AdsWallRun(string label, Vector3 start, float yaw, float dist, float pitch, bool slide, bool kill = false)
+        {
+            if (_soldier.IsDead) { float w = Time.time + 12f; while (_soldier.IsDead && Time.time < w) yield return null; }
+            _soldier.Teleport(start, yaw);
+            _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw; _cmd.aimPitch = pitch;
+            yield return Wait(0.8f);
+            _adsCase = label;
+            _cmd.aim = true; yield return Wait(0.9f);
+            _cmd.move = new Vector2(0f, 1f);
+            yield return Wait(dist / 2.2f + 1.6f);        // ADS walk is slow: arrive, then keep pressing into the wall
+            yield return Capture($"adswall_{label}_1_contact", $"ADS {label} pressed into the wall");
+            if (slide)
+            {
+                _cmd.move = new Vector2(-1f, 0.6f); yield return Wait(1.6f);
+                yield return Capture($"adswall_{label}_2_slide", $"ADS {label} sliding along the wall");
+                _cmd.move = new Vector2(1f, 0.6f); yield return Wait(1.6f);
+            }
+            if (kill)
+            {
+                yield return Wait(0.6f);
+                _soldier.Health.Kill();
+                _cmd = SoldierInput.Empty; _cmd.absoluteLook = true; _cmd.aimYaw = yaw;
+                float until = Time.time + 14f;
+                while (_soldier.IsDead && Time.time < until) yield return null;
+                if (_soldier.IsDead) { Note("ADSWALL [death] no respawn within 14 s"); _adsCase = null; yield break; }
+                _cmd.aimYaw = _soldier.Yaw;
+                yield return Wait(0.4f);
+                _adsCase = "death_respawn_ads";
+                _cmd.aim = true; yield return Wait(1.6f);
+                yield return Capture("adswall_death_respawn_ads", "ADS right after the respawn");
+                _cmd.move = new Vector2(0f, 1f); yield return Wait(2.0f);   // and walk while aiming
+                _cmd.move = Vector2.zero;
+            }
+            _cmd.move = new Vector2(0f, -1f); yield return Wait(1.0f);
+            _cmd.move = Vector2.zero;
+            yield return Capture($"adswall_{label}_3_after", $"ADS {label} after backing off");
+            _cmd.aim = false; yield return Wait(0.6f);
+            _adsCase = null;
+        }
+
+        /// <summary>Per-frame recorder for <see cref="AdsWallCheck"/> (after this frame's animation and LR2 edits).</summary>
+        private IEnumerator AdsRecorder()
+        {
+            _adsRecording = true;
+            Quaternion prevLocal = Quaternion.identity; bool havePrev = false;
+            var eof = new WaitForEndOfFrame();
+            while (_adsRecording)
+            {
+                yield return eof;
+                if (_adsCase == null || _soldier == null) { havePrev = false; continue; }
+                var cam = _soldier.ViewCamera;
+                var item = _soldier.ActiveItem != null ? _soldier.ActiveItem.transform : null;
+                var fa = _soldier.ActiveFirearm;
+                bool dead = _soldier.IsDead;
+                if (cam == null || item == null || dead)
+                {
+                    _adsCsv.AppendLine(FormattableString.Invariant($"{_adsCase},{Time.time:0.000},,,,,,,,,,,{(dead ? 1 : 0)}"));
+                    havePrev = false; continue;
+                }
+                float ads = Mathf.Max(0f, UserFloat("AimingWeight"));
+                Transform muzzle = fa != null && fa.Muzzle != null ? fa.Muzzle : item;
+                float muzzleDeg = Vector3.Angle(muzzle.forward, cam.transform.forward);
+                float rollDeg = Mathf.Abs(Vector3.SignedAngle(Vector3.ProjectOnPlane(cam.transform.up, muzzle.forward), Vector3.ProjectOnPlane(item.up, muzzle.forward), muzzle.forward));
+                Quaternion local = Quaternion.Inverse(cam.transform.rotation) * item.rotation;
+                float jump = havePrev ? Quaternion.Angle(prevLocal, local) : 0f;
+                prevLocal = local; havePrev = true;
+                var head = _soldier.Animator != null ? _soldier.Animator.GetBoneTransform(HumanBodyBones.Head) : null;
+                float reach = head != null && item.parent != null ? Vector3.Distance(item.parent.position, head.position) : -1f;
+                float push = _proxy != null ? _proxy.LastEyePlanePush : 0f, eye = _proxy != null ? _proxy.LastEyePlaneDist : 0f;
+                float fb = _soldier.LastItemFeedbackOffset, fbDeg = _soldier.LastItemFeedbackAngle;
+                float guard = _proxy != null ? _proxy.FlipGuardAngle : 0f;
+                _adsCsv.AppendLine(FormattableString.Invariant(
+                    $"{_adsCase},{Time.time:0.000},{ads:0.00},{muzzleDeg:0.0},{rollDeg:0.0},{jump:0.0},{eye:0.000},{push:0.000},{fb * 100f:0.0},{fbDeg:0.0},{reach:0.000},{guard:0.0},0"));
+                if (!_adsStats.TryGetValue(_adsCase, out var st)) _adsStats[_adsCase] = st = new AdsStats();
+                st.frames++;
+                st.maxPush = Mathf.Max(st.maxPush, push);
+                st.maxFeedback = Mathf.Max(st.maxFeedback, fb);
+                st.maxFeedbackAngle = Mathf.Max(st.maxFeedbackAngle, fbDeg);
+                st.maxIkReach = Mathf.Max(st.maxIkReach, reach);
+                if (ads > 0.9f)
+                {
+                    st.adsFrames++;
+                    st.maxMuzzle = Mathf.Max(st.maxMuzzle, muzzleDeg);
+                    st.maxRoll = Mathf.Max(st.maxRoll, rollDeg);
+                    st.maxJump = Mathf.Max(st.maxJump, jump);
+                    if (st.firstPush < 0f) st.firstPush = push;
+                    st.lastPush = push;
+                    st.pushGrowth = Mathf.Max(st.pushGrowth, push - st.firstPush);
+                }
+            }
         }
 
         /// <summary>Scripted bot input: absolute aim at the target's chest, ADS held, trigger on demand.</summary>
