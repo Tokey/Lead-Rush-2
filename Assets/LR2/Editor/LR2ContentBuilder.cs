@@ -1448,8 +1448,6 @@ namespace LR2.EditorTools
                 // input is above zero; the demo rifle's secondary is a 90-degree yaw (C23: the rifle lay sideways across the
                 // view at 74 degrees against a wall) and the pistol's drops it 20 cm. One tuck for both.
                 col.secondaryPose = col.primaryPose;
-                EditorUtility.SetDirty(col);
-            }
                 // B125 (user 11-19: "it's happening during ADS, when I hit other obstacles"; reproduced by -lr2AdsWallCheck:
                 // pressed into a wall in ADS the full tuck swung the rifle 23 deg off the sight line, top rail in view). The tuck
                 // pivots about the weapon bone, which sits at the eye in ADS, so the whole gun crosses the view. Keep the existing
@@ -1461,6 +1459,8 @@ namespace LR2.EditorTools
                         if (b.name != FPSANames.AimingWeight) blends.Add(b);
                 blends.Add(new CurveBlend { name = FPSANames.AimingWeight, mode = ECurveBlendMode.Mask, clampMin = 0.12f, source = ECurveSource.Input });
                 col.curveBlending = blends;
+                EditorUtility.SetDirty(col);
+            }
         }
 
         /// <summary>
@@ -1515,9 +1515,18 @@ namespace LR2.EditorTools
             Debug.Log($"[LR2] B117 turn in place: {states} turn clip state(s) at 1x, {entries} turn entries at 0.12 s (reverted from B117)");
         }
 
+        private const string SwayTunedLabel = "LR2SwayTuned";
+
         private static void TuneHumanoidSway(FPSAnimatorProfile profile)
         {
             if (profile == null) return;
+            // B135 (user 11-20: "this is how we can modify the sway of ads"): the defaults below go in once (a fresh
+            // Kinemation import has no label); after that the Sway layer is the developer's to edit in Kinemation's
+            // profile inspector (Edit Layer), and rebuilds leave it alone instead of resetting it.
+            var labels = new List<string>(AssetDatabase.GetLabels(profile));
+            if (labels.Contains(SwayTunedLabel)) return;
+            labels.Add(SwayTunedLabel);
+            AssetDatabase.SetLabels(profile, labels.ToArray());
             foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(profile)))
             {
                 if (!(sub is SwayLayerSettings sway)) continue;

@@ -281,6 +281,7 @@ task quality per agent and model (chart in [Docs/AI_Collaboration](Docs/AI_Colla
 | B132 | bug | Killcam replay: bot bullets fly in totally wrong directions (user 11-20 13:38) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 14:56 | Killer-only rounds selected at Begin (fatal round included), drawn to their real end points; live tracers/impacts suppressed and live lasers paused while the replay plays. Review workflow found D89/D90. |
 | B133 | docs | Bot Lab recoil: show where the bot aims first, and pull-down plots (user 11-20 14:43) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 14:56 | Bot Lab v14: crosshair on the chest before each spray, first round on the aim point, two plots (round heights vs no pull-down; one kick and the pull back), hover readout. Headless Edge: 0 errors. |
 | B134 | feature | Main menu: no shooting and walking sounds (user 11-20 14:50) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 14:56 | LR2Audio.MenuQuiet set by MenuCinematic (off at Release/OnDestroy): Weapons, Footsteps and Sfx at zero volume in the menu. |
+| B135 | tune | Where are Kinemation's animator layer settings (Sway, ADS ...)? Add them if missing; they are how ADS sway is tuned (user 11-20 15:1x) | Claude | claude-opus-5-5 | user | READY FOR REVIEW | - | 15:37 | Not missing: all 13 layers live in AnimatorProfile_Rifle_Humanoid / Pistol_Humanoid (KinemationDemo, git-ignored). Builder sway defaults now applied once (label LR2SwayTuned) so edits survive rebuilds; TOOLING section. |
 
 ## 4. Ownership (who may edit what)
 
@@ -772,3 +773,5 @@ You are **Codex** (OpenAI Codex CLI / VS Code agent), the fourth agent on the **
 - [Claude claude-opus-5-5 14:35] [TICK] Six queued ticks: Gemini down, Copilot retired, Codex B124 already verified (C95); nothing to review. Working B130 title tiles + b-roll, B131 callsign, B132 killcam tracers (user).
 - [Claude claude-opus-5-5 14:54] [TICK] Others down/retired, nothing to review. Claude: B132 killcam replay fixes (review workflow found 2 more causes, fixed), B130-B134 menu/callsign/Bot Lab v14/menu-quiet; killcam capture running; push after the UI review.
 - [Claude claude-opus-5-5 15:04] [PUSH] a6dea1f: B130-B134 (title tiles + b-roll, callsign, killcam replay rounds, Bot Lab v14, quiet menu) and the review fixes; player build 15:04 success, errors=0. Unity free.
+- [Claude claude-opus-5-5 15:13] [TICK] No change: Gemini down, Copilot retired, Codex B124 verified (C95); B130-B134 READY FOR REVIEW (user playtest); Unity free.
+- [Claude claude-opus-5-5 15:37] [USER] B135: Kinemation layers located; sway defaults applied once; also committed the B125 builder brace fix (D93, HEAD's editor code did not compile).

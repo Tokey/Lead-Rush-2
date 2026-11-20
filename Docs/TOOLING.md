@@ -82,3 +82,23 @@ Run commands from the Unity project root unless a command explicitly names a pro
 | `-lr2SharedIkMotions`, `-lr2NoItemReset` | Restore the old behaviour (shared motion assets, no gun-pose reset) for A/B tests |
 | `-lr2LlmTeams Alpha,Bravo`, `-lr2LlmModel <name>`, `-lr2LlmInterval <s>`, `-lr2GroqKeyFile <path>` | LLM squad commander for those teams; the key can also come from `GROQ_API_KEY` or `groq_api_key.txt` in the persistent data folder |
 
+## Tuning ADS sway (Kinemation animator layers)
+
+Every LR2 rifle (MK18, AK-12, AK-74N, FAL) uses Kinemation's `Assets/KinemationDemo/AnimatorProfiles/AnimatorProfile_Rifle_Humanoid`
+and the MK23 uses `AnimatorProfile_Pistol_Humanoid` (the soldiers are Humanoid rigs; `AnimatorProfile_Mk18` is the demo's Generic-rig
+profile and is not used). Select the profile and press **Edit Layer** next to a layer, as in Kinemation's videos. All 13 layers are there.
+
+| What to change | Where |
+|---|---|
+| How much sway is left at full ADS | `SwayLayerSettings` > Curve Blending > `AimingWeight` (Mask) **Clamp Min**: 0 = none, 1 = full; LR2 default 0.22 |
+| Weapon lag when turning | `SwayLayerSettings` > Aim Sway Position / Rotation Spring |
+| Weapon motion when walking | `SwayLayerSettings` > Move Sway Position / Rotation Spring |
+| Idle breathing on top | `AdditiveLayerSettings` |
+
+- The builder writes its sway defaults once and marks the profile with the asset label `LR2SwayTuned`. After that, rebuilds leave
+  the Sway layer alone. Remove the label to get the defaults back.
+- The ADS speed in `AdsLayerSettings` and the wall tuck in ADS (`CollisionLayerSettings`, 12 % at full ADS) are set per weapon at
+  run time by `LR2Firearm` (from `WeaponDefinition.adsTime`), so edit those in code, not in the profile.
+- The profiles are cloned per weapon when it is equipped. Change values before pressing Play, or switch weapons to pick them up.
+- `Assets/KinemationDemo` is a paid pack and is not in git, so profile edits stay on this machine.
+
